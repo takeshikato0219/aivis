@@ -127,6 +127,6 @@ sonarqube_quality_gate:
       - .sonar/cache
   script:
     - sonar-scanner
-  allow_failure: true
+  allow_failure: false
   only:
     - main
