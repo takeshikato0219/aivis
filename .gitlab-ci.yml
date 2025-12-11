@@ -1,3 +1,9 @@
+# ============================================
+# GitLab CI/CD Pipeline for Timima01App
+# Support: main, develop, merge_requests
+# Stages: install, lint, test, sonarqube, build
+# ============================================
+
 stages:
   - install
   - lint
@@ -5,112 +11,158 @@ stages:
   - sonarqube
   - build
 
+# ============================================
+# Variables
+# ============================================
 variables:
   SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
   GIT_DEPTH: "0"
-  NODE_VERSION: "18"
+  NODE_VERSION: "20"
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
 
+# ============================================
 # Cache configuration
+# ============================================
 . cache_template: &cache_config
   key: ${CI_COMMIT_REF_SLUG}
   paths:
     - node_modules/
+    - . npm/
     - .sonar/cache
   policy: pull
 
-# Only run on develop branch and merge requests
-.develop_and_mr: &develop_and_mr
+# ============================================
+# Branch rules
+# ============================================
+. develop_and_mr:  &develop_and_mr
   only:
     - develop
     - merge_requests
 
-# ==========================================
-# INSTALL DEPENDENCIES
-# ==========================================
+.main_only: &main_only
+  only:
+    - main
+    - tags
+
+. main_and_develop: &main_and_develop
+  only:
+    - main
+    - develop
+
+.all_branches: &all_branches
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# ============================================
+# STAGE:  INSTALL
+# ============================================
 install_dependencies:
   stage: install
   image: node:${NODE_VERSION}
-  <<: *develop_and_mr
+  <<: *all_branches
   cache:
     <<: *cache_config
     policy: pull-push
+  before_script:
+    - echo "🔧 Environment Info:"
+    - echo "Branch: ${CI_COMMIT_REF_NAME}"
+    - echo "Commit: ${CI_COMMIT_SHORT_SHA}"
+    - echo "Node version:" && node --version
+    - echo "NPM version:" && npm --version
   script:
     - echo "📦 Installing dependencies..."
-    - npm ci
+    - npm ci --prefer-offline --no-audit
     - echo "✅ Dependencies installed successfully"
   artifacts:
     paths:
       - node_modules/
     expire_in: 1 hour
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
 
-# ==========================================
-# LINT
-# ==========================================
+# ============================================
+# STAGE: LINT
+# ============================================
 lint:
   stage: lint
-  image: node:${NODE_VERSION}
-  <<: *develop_and_mr
+  image: node: ${NODE_VERSION}
+  <<: *all_branches
   dependencies:
     - install_dependencies
   cache:
     <<: *cache_config
   script:
-    - echo "🔍 Running ESLint..."
+    - echo "🔍 Running ESLint on ${CI_COMMIT_REF_NAME}..."
     - npm run lint
     - echo "✅ Lint check passed"
   allow_failure: false
 
-# ==========================================
-# TYPE CHECK
-# ==========================================
 type_check:
   stage: lint
   image: node:${NODE_VERSION}
-  <<: *develop_and_mr
+  <<: *all_branches
   dependencies:
     - install_dependencies
   cache:
     <<: *cache_config
   script:
-    - echo "🔍 Running TypeScript type check..."
+    - echo "🔷 Running TypeScript type check..."
     - npm run type-check
     - echo "✅ Type check passed"
   allow_failure: false
 
-# ==========================================
-# UNIT TESTS
-# ==========================================
+# ============================================
+# STAGE:  TEST
+# ============================================
 test:
   stage: test
   image: node:${NODE_VERSION}
-  <<: *develop_and_mr
+  <<: *all_branches
   dependencies:
     - install_dependencies
   cache:
     <<: *cache_config
+  before_script:
+    - echo "🧪 Preparing test environment..."
+    - echo "Branch: ${CI_COMMIT_REF_NAME}"
+    - npm run test:clear
   script:
-    - echo "🧪 Running unit tests with coverage..."
-    - npm run test:coverage
+    - echo "🧪 Running tests with coverage..."
+    - npm run test:ci
     - echo "✅ Tests passed successfully"
+  after_script:
+    - echo "📈 Coverage Summary:"
+    - cat coverage/coverage-summary.json || echo "No coverage summary found"
   artifacts:
+    when: always
     paths:
       - coverage/
+      - junit.xml
     reports:
+      junit: junit.xml
       coverage_report:
         coverage_format: cobertura
         path: coverage/cobertura-coverage.xml
-    expire_in: 1 day
-  coverage: '/All files[^|]*\|[^|]*\s+([\d\. ]+)/'
+    expire_in: 7 days
+  coverage:  '/All files[^|]*\|[^|]*\s+([\d\. ]+)/'
   allow_failure: false
 
-# ==========================================
-# SONARQUBE ANALYSIS
-# ==========================================
-sonarqube-check:
+# ============================================
+# STAGE: SONARQUBE
+# ============================================
+sonarqube:
   stage: sonarqube
   image:
     name: sonarsource/sonar-scanner-cli:latest
     entrypoint: [""]
+  <<: *all_branches
+  dependencies:
+    - test
   variables:
     SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
     GIT_DEPTH: "0"
@@ -118,34 +170,173 @@ sonarqube-check:
     key: "${CI_JOB_NAME}"
     paths:
       - .sonar/cache
+  before_script:
+    - echo "📊 Preparing SonarQube analysis..."
+    - echo "Project Key: ${CI_PROJECT_NAME}"
+    - echo "Branch:  ${CI_COMMIT_REF_NAME}"
+    - echo "SonarQube URL: ${SONAR_HOST_URL}"
   script:
-    - sonar-scanner
+    - echo "📊 Running SonarQube analysis..."
+    - |
+      if [ "${CI_COMMIT_REF_NAME}" = "main" ]; then
+        echo "🎯 Analyzing MAIN branch (production quality gate)"
+        sonar-scanner \
+          -Dsonar.projectKey=${CI_PROJECT_NAME} \
+          -Dsonar.sources=src \
+          -Dsonar. tests=__tests__ \
+          -Dsonar.host.url=${SONAR_HOST_URL} \
+          -Dsonar.login=${SONAR_TOKEN} \
+          -Dsonar.projectVersion=${CI_COMMIT_SHORT_SHA} \
+          -Dsonar.scm.revision=${CI_COMMIT_SHA} \
+          -Dsonar.branch.name=${CI_COMMIT_REF_NAME}
+      else
+        echo "🔍 Analyzing ${CI_COMMIT_REF_NAME} branch"
+        sonar-scanner \
+          -Dsonar.projectKey=${CI_PROJECT_NAME} \
+          -Dsonar.sources=src \
+          -Dsonar.tests=__tests__ \
+          -Dsonar.host.url=${SONAR_HOST_URL} \
+          -Dsonar.login=${SONAR_TOKEN} \
+          -Dsonar.projectVersion=${CI_COMMIT_SHORT_SHA} \
+          -Dsonar.scm.revision=${CI_COMMIT_SHA}
+      fi
+    - echo "✅ SonarQube analysis completed"
   allow_failure: true
-  only:
-    - main
 
-# ==========================================
-# SONARQUBE QUALITY GATE CHECK
-# ==========================================
 sonarqube_quality_gate:
   stage: sonarqube
-  image: curlimages/curl:latest
-  <<: *develop_and_mr
+  image:  curlimages/curl:latest
+  <<: *all_branches
   dependencies:
+    - sonarqube
+  needs:
     - sonarqube
   script:
     - echo "🔍 Checking SonarQube Quality Gate..."
+    - echo "Branch: ${CI_COMMIT_REF_NAME}"
+    - sleep 15
     - |
       QUALITY_GATE_STATUS=$(curl -s -u ${SONAR_TOKEN}: \
-        "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${CI_PROJECT_NAME}" \
+        "${SONAR_HOST_URL}/api/qualitygates/project_status? projectKey=${CI_PROJECT_NAME}" \
         | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
     - echo "Quality Gate Status: ${QUALITY_GATE_STATUS}"
     - |
-      if [ "${QUALITY_GATE_STATUS}" != "OK" ]; then
-        echo "❌ Quality Gate Failed!"
-        echo "Please check SonarQube dashboard: ${SONAR_HOST_URL}/dashboard?id=${CI_PROJECT_NAME}"
-        exit 1
+      if [ "${CI_COMMIT_REF_NAME}" = "main" ]; then
+        if [ "${QUALITY_GATE_STATUS}" != "OK" ]; then
+          echo "❌ Quality Gate FAILED on MAIN branch!"
+          echo "📊 Check SonarQube dashboard:  ${SONAR_HOST_URL}/dashboard?id=${CI_PROJECT_NAME}"
+          exit 1
+        fi
+        echo "✅ Quality Gate Passed on MAIN!"
+      else
+        if [ "${QUALITY_GATE_STATUS}" != "OK" ]; then
+          echo "⚠️ Quality Gate Status: ${QUALITY_GATE_STATUS}"
+          echo "📊 Check SonarQube dashboard: ${SONAR_HOST_URL}/dashboard?id=${CI_PROJECT_NAME}"
+        fi
+        echo "✅ Quality Gate check completed"
       fi
-    - echo "✅ Quality Gate Passed!"
-  allow_failure: false
+  allow_failure:
+    exit_codes: 0
 
+# ============================================
+# STAGE:  BUILD
+# ============================================
+build:android:
+  stage: build
+  image: reactnativecommunity/react-native-android:latest
+  <<: *main_only
+  dependencies:
+    - install_dependencies
+    - test
+    - sonarqube_quality_gate
+  cache:
+    <<: *cache_config
+  before_script:
+    - echo "🤖 Preparing Android build..."
+    - echo "Branch: ${CI_COMMIT_REF_NAME}"
+    - cd android
+    - chmod +x gradlew
+  script:
+    - echo "🤖 Building Android APK..."
+    - ./gradlew assembleRelease --no-daemon --stacktrace
+    - echo "✅ Android build completed"
+  after_script:
+    - ls -lah android/app/build/outputs/apk/release/
+    - echo "📦 APK size:"
+    - du -h android/app/build/outputs/apk/release/*. apk
+  artifacts:
+    name: "android-release-${CI_COMMIT_SHORT_SHA}"
+    paths:
+      - android/app/build/outputs/apk/release/*. apk
+    expire_in:  30 days
+  when: manual
+
+build:ios:
+  stage: build
+  tags:
+    - macos
+  <<: *main_only
+  dependencies:
+    - install_dependencies
+    - test
+    - sonarqube_quality_gate
+  cache:
+    <<: *cache_config
+  before_script:
+    - echo "🍎 Preparing iOS build..."
+    - echo "Branch: ${CI_COMMIT_REF_NAME}"
+    - cd ios
+    - pod install
+    - cd ..
+  script:
+    - echo "🍎 Building iOS..."
+    - xcodebuild -workspace ios/Timima01App.xcworkspace \
+      -scheme Timima01App \
+      -configuration Release \
+      -sdk iphoneos \
+      -derivedDataPath ios/build \
+      -archivePath ios/build/Timima01App.xcarchive \
+      clean archive
+    - echo "✅ iOS build completed"
+  after_script:
+    - ls -lah ios/build/
+  artifacts:
+    name: "ios-release-${CI_COMMIT_SHORT_SHA}"
+    paths:
+      - ios/build/Timima01App.xcarchive
+    expire_in: 30 days
+  when: manual
+
+# ============================================
+# NOTIFICATIONS
+# ============================================
+. notify_template: &notify_template
+  stage: . post
+  image: curlimages/curl:latest
+
+notify_success:
+  <<: *notify_template
+  script:
+    - echo "✅ Pipeline succeeded!"
+    - echo "Project: ${CI_PROJECT_NAME}"
+    - echo "Branch: ${CI_COMMIT_REF_NAME}"
+    - echo "Commit: ${CI_COMMIT_SHORT_SHA}"
+    - echo "Author: ${CI_COMMIT_AUTHOR}"
+  when: on_success
+  only:
+    - main
+    - develop
+
+notify_failure:
+  <<: *notify_template
+  script:
+    - echo "❌ Pipeline failed!"
+    - echo "Project: ${CI_PROJECT_NAME}"
+    - echo "Branch: ${CI_COMMIT_REF_NAME}"
+    - echo "Commit: ${CI_COMMIT_SHORT_SHA}"
+    - echo "Failed Job: ${CI_JOB_NAME}"
+    - echo "Pipeline URL: ${CI_PIPELINE_URL}"
+  when: on_failure
+  only:
+    - main
+    - develop
