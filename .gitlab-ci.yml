@@ -19,45 +19,11 @@ variables:
   npm_config_cache: "$CI_PROJECT_DIR/.npm"
 
 # ============================================
-# Cache configuration
-# ============================================
-. cache_template:
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - node_modules/
-      - .npm/
-      - .sonar/cache
-    policy: pull
-
-# ============================================
-# Branch rules
-# ============================================
-.develop_and_mr:
-  only:
-    - develop
-    - merge_requests
-
-.main_only:
-  only:
-    - main
-    - tags
-
-. all_branches:
-  only:
-    - main
-    - develop
-    - merge_requests
-
-# ============================================
-# STAGE:  INSTALL
+# STAGE: INSTALL
 # ============================================
 install_dependencies:
   stage: install
   image: node:20
-  extends:
-    - .all_branches
-    - .cache_template
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
@@ -76,6 +42,10 @@ install_dependencies:
     paths:
       - node_modules/
     expire_in: 1 hour
+  only:
+    - main
+    - develop
+    - merge_requests
   retry:
     max: 2
     when:
@@ -88,29 +58,43 @@ install_dependencies:
 lint:
   stage: lint
   image: node:20
-  extends:
-    - .all_branches
-    - .cache_template
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+      - .npm/
+    policy: pull
   dependencies:
     - install_dependencies
   script:
     - echo "Running ESLint..."
     - npm run lint
     - echo "Lint check passed"
+  only:
+    - main
+    - develop
+    - merge_requests
   allow_failure: false
 
 type_check:
   stage: lint
   image: node:20
-  extends:
-    - .all_branches
-    - .cache_template
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+      - .npm/
+    policy: pull
   dependencies:
     - install_dependencies
   script:
     - echo "Running TypeScript check..."
     - npm run type-check
     - echo "Type check passed"
+  only:
+    - main
+    - develop
+    - merge_requests
   allow_failure: false
 
 # ============================================
@@ -119,14 +103,17 @@ type_check:
 test:
   stage: test
   image: node:20
-  extends:
-    - .all_branches
-    - . cache_template
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+      - .npm/
+    policy: pull
   dependencies:
     - install_dependencies
   before_script:
     - echo "Branch ${CI_COMMIT_REF_NAME}"
-    - npm run test: clear
+    - npm run test:clear
   script:
     - echo "Running tests with coverage..."
     - npm run test:ci
@@ -140,24 +127,26 @@ test:
       - coverage/
       - junit.xml
     reports:
-      junit:  junit.xml
+      junit: junit.xml
       coverage_report:
         coverage_format: cobertura
         path: coverage/cobertura-coverage.xml
     expire_in: 7 days
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
+  only:
+    - main
+    - develop
+    - merge_requests
   allow_failure: false
 
 # ============================================
-# STAGE: SONARQUBE
+# STAGE:  SONARQUBE
 # ============================================
 sonarqube:
   stage: sonarqube
   image:
     name: sonarsource/sonar-scanner-cli:latest
-    entrypoint: [""]
-  extends:
-    - .all_branches
+    entrypoint: [ "" ]
   dependencies:
     - test
   variables:
@@ -179,7 +168,7 @@ sonarqube:
           -Dsonar.sources=src \
           -Dsonar.tests=__tests__ \
           -Dsonar.host.url=${SONAR_HOST_URL} \
-          -Dsonar.login=${SONAR_TOKEN} \
+          -Dsonar. login=${SONAR_TOKEN} \
           -Dsonar.projectVersion=${CI_COMMIT_SHORT_SHA} \
           -Dsonar.scm.revision=${CI_COMMIT_SHA} \
           -Dsonar.branch.name=${CI_COMMIT_REF_NAME}
@@ -187,20 +176,22 @@ sonarqube:
         sonar-scanner \
           -Dsonar.projectKey=${CI_PROJECT_NAME} \
           -Dsonar.sources=src \
-          -Dsonar. tests=__tests__ \
-          -Dsonar.host. url=${SONAR_HOST_URL} \
-          -Dsonar.login=${SONAR_TOKEN} \
+          -Dsonar.tests=__tests__ \
+          -Dsonar.host.url=${SONAR_HOST_URL} \
+          -Dsonar. login=${SONAR_TOKEN} \
           -Dsonar.projectVersion=${CI_COMMIT_SHORT_SHA} \
           -Dsonar.scm.revision=${CI_COMMIT_SHA}
       fi
     - echo "SonarQube analysis completed"
+  only:
+    - main
+    - develop
+    - merge_requests
   allow_failure: true
 
 sonarqube_quality_gate:
   stage: sonarqube
-  image:  curlimages/curl:latest
-  extends:
-    - .all_branches
+  image: curlimages/curl:latest
   dependencies:
     - sonarqube
   needs:
@@ -223,6 +214,10 @@ sonarqube_quality_gate:
       else
         echo "Quality Gate check completed"
       fi
+  only:
+    - main
+    - develop
+    - merge_requests
   allow_failure: true
 
 # ============================================
@@ -230,10 +225,13 @@ sonarqube_quality_gate:
 # ============================================
 build_android:
   stage: build
-  image: reactnativecommunity/react-native-android:latest
-  extends:
-    - .main_only
-    - .cache_template
+  image:
+    reactnativecommunity/react-native-android: latest
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+    policy: pull
   dependencies:
     - install_dependencies
     - test
@@ -247,21 +245,26 @@ build_android:
     - ./gradlew assembleRelease --no-daemon --stacktrace
     - echo "Build completed"
   after_script:
-    - ls -lah android/app/build/outputs/apk/release/
+    - ls -lah android/app/build/outputs/apk/release/ || true
   artifacts:
     name: android-release-${CI_COMMIT_SHORT_SHA}
     paths:
       - android/app/build/outputs/apk/release/*. apk
-    expire_in:  30 days
+    expire_in: 30 days
+  only:
+    - main
+    - tags
   when: manual
 
 build_ios:
   stage: build
   tags:
     - macos
-  extends:
-    - .main_only
-    - .cache_template
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+    policy: pull
   dependencies:
     - install_dependencies
     - test
@@ -275,11 +278,16 @@ build_ios:
     - echo "Building iOS archive..."
     - xcodebuild -workspace ios/Timima01App.xcworkspace -scheme Timima01App -configuration Release -sdk iphoneos -derivedDataPath ios/build -archivePath ios/build/Timima01App.xcarchive clean archive
     - echo "Build completed"
+  after_script:
+    - ls -lah ios/build/ || true
   artifacts:
     name: ios-release-${CI_COMMIT_SHORT_SHA}
     paths:
       - ios/build/Timima01App.xcarchive
     expire_in: 30 days
+  only:
+    - main
+    - tags
   when: manual
 
 # ============================================
@@ -299,7 +307,7 @@ notify_success:
     - develop
 
 notify_failure:
-  stage:  .post
+  stage: .post
   image: curlimages/curl:latest
   script:
     - echo "Pipeline failed"
