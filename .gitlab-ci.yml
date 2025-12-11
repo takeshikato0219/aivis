@@ -154,17 +154,9 @@ quality_gate:
   script:
     - echo "Checking Quality Gate..."
     - sleep 10
-    - >
-      STATUS=$(curl -s -u "${SONAR_TOKEN}:" 
-      "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}")
+    - STATUS=$(curl -s -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}")
     - echo "Response: $STATUS"
-    - |
-      if echo "$STATUS" | grep -q '"status":"ERROR"'; then
-        echo "❌ Quality Gate FAILED"
-        exit 1
-      else
-        echo "✔️ Quality Gate PASSED"
-      fi
+    - if echo "$STATUS" | grep -q '"status":"ERROR"'; then echo "❌ Quality Gate FAILED"; exit 1; else echo "✔️ Quality Gate PASSED"; fi
   allow_failure: false
   dependencies: []
   needs: ["sonarqube"]
