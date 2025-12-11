@@ -15,7 +15,6 @@ stages:
 variables:
   SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
   GIT_DEPTH: "0"
-  NODE_VERSION: "20"
   npm_config_cache: "$CI_PROJECT_DIR/.npm"
 
 # ============================================
@@ -97,8 +96,9 @@ test:
     policy: pull
   dependencies:
     - install_dependencies
-  script:
+  before_script:
     - npm run test:clear
+  script:
     - echo "Running tests..."
     - npm run test:ci
   artifacts:
@@ -115,7 +115,7 @@ test:
     - merge_requests
 
 # ============================================
-# SONARQUBE
+# SONARQUBE SCAN
 # ============================================
 sonarqube:
   stage: sonarqube
@@ -146,7 +146,7 @@ sonarqube:
   allow_failure: true
 
 # ============================================
-# QUALITY GATE
+# QUALITY GATE CHECK
 # ============================================
 sonarqube_quality_gate:
   stage: quality_gate
@@ -156,22 +156,21 @@ sonarqube_quality_gate:
   needs:
     - sonarqube
   script:
-    - echo "Waiting for SonarQube analysis..."
+    - echo "Checking Quality Gate..."
     - sleep 10
     - |
       STATUS=$(curl -s -u ${SONAR_TOKEN}: \
       "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${CI_PROJECT_NAME}" \
       | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
 
-    - echo "Quality Gate Status: ${STATUS}"
+      echo "Quality Gate Status: $STATUS"
 
-    - |
-      if [ "${STATUS}" != "OK" ]; then
+      if [ "$STATUS" != "OK" ]; then
         echo "❌ Quality Gate FAILED"
         exit 1
       fi
 
-    - echo "✔ Quality Gate PASSED"
+      echo "✔ Quality Gate PASSED"
   only:
     - main
     - develop
