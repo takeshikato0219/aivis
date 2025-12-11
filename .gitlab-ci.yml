@@ -28,7 +28,7 @@ install_dependencies:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - node_modules/
-      - . npm/
+      - .npm/
     policy: pull-push
   before_script:
     - echo "Branch ${CI_COMMIT_REF_NAME}"
@@ -98,7 +98,7 @@ type_check:
   allow_failure: false
 
 # ============================================
-# STAGE: TEST
+# STAGE:  TEST
 # ============================================
 test:
   stage: test
@@ -128,9 +128,6 @@ test:
       - junit.xml
     reports:
       junit: junit.xml
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage/cobertura-coverage.xml
     expire_in: 7 days
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   only:
@@ -146,7 +143,7 @@ sonarqube:
   stage: sonarqube
   image:
     name: sonarsource/sonar-scanner-cli:latest
-    entrypoint: [ "" ]
+    entrypoint: [""]
   dependencies:
     - test
   variables:
@@ -168,7 +165,7 @@ sonarqube:
           -Dsonar.sources=src \
           -Dsonar.tests=__tests__ \
           -Dsonar.host.url=${SONAR_HOST_URL} \
-          -Dsonar. login=${SONAR_TOKEN} \
+          -Dsonar.login=${SONAR_TOKEN} \
           -Dsonar.projectVersion=${CI_COMMIT_SHORT_SHA} \
           -Dsonar.scm.revision=${CI_COMMIT_SHA} \
           -Dsonar.branch.name=${CI_COMMIT_REF_NAME}
@@ -178,7 +175,7 @@ sonarqube:
           -Dsonar.sources=src \
           -Dsonar.tests=__tests__ \
           -Dsonar.host.url=${SONAR_HOST_URL} \
-          -Dsonar. login=${SONAR_TOKEN} \
+          -Dsonar.login=${SONAR_TOKEN} \
           -Dsonar.projectVersion=${CI_COMMIT_SHORT_SHA} \
           -Dsonar.scm.revision=${CI_COMMIT_SHA}
       fi
@@ -221,12 +218,11 @@ sonarqube_quality_gate:
   allow_failure: true
 
 # ============================================
-# STAGE: BUILD
+# STAGE:  BUILD
 # ============================================
 build_android:
   stage: build
-  image:
-    reactnativecommunity/react-native-android: latest
+  image: reactnativecommunity/react-native-android:latest
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
