@@ -38,14 +38,18 @@ const TextInput: React.FC<TextInputProps> = ({
 }) => {
   const [secureText, setSecureText] = useState(secureTextEntry);
 
-  const rightIconComponent = secureTextEntry ? (
-    <PaperTextInput.Icon
-      icon={secureText ? 'eye' : 'eye-off'}
-      onPress={() => setSecureText(!secureText)}
-    />
-  ) : rightIcon ? (
-    <PaperTextInput.Icon icon={rightIcon} />
-  ) : undefined;
+  let rightIconComponent;
+
+  if (secureTextEntry) {
+    rightIconComponent = (
+      <PaperTextInput.Icon
+        icon={secureText ? 'eye' : 'eye-off'}
+        onPress={() => setSecureText(!secureText)}
+      />
+    );
+  } else if (rightIcon) {
+    rightIconComponent = <PaperTextInput.Icon icon={rightIcon} />;
+  }
 
   return (
     <PaperTextInput
