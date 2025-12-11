@@ -128,54 +128,45 @@ sonarqube:
       - .sonar/cache
   script:
     - echo "Running SonarQube analysis..."
-    - rm -f junit.xml
-    - rm -f **/junit.xml || true
-    - sonar-scanner \
-      -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-      -Dsonar.sources=src \
-      -Dsonar.tests=__tests__ \
-      -Dsonar.host.url=${SONAR_HOST_URL} \
-      -Dsonar.login=${SONAR_TOKEN} \
-      -Dsonar.projectVersion=${CI_COMMIT_SHORT_SHA} \
-      -Dsonar.scm.revision=${CI_COMMIT_SHA} \
-      -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info \
-      -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+
+    - |
+      sonar-scanner \
+        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+        -Dsonar.sources=src \
+        -Dsonar.tests=__tests__ \
+        -Dsonar.host.url=${SONAR_HOST_URL} \
+        -Dsonar.login=${SONAR_TOKEN} \
+        -Dsonar.projectVersion=${CI_COMMIT_SHORT_SHA} \
+        -Dsonar.scm.revision=${CI_COMMIT_SHA} \
+        -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info \
+        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
   only:
     - main
     - develop
     - merge_requests
-  allow_failure: true
 
 # ============================================
 # QUALITY GATE
 # ============================================
-sonarqube_quality_gate:
+quality_gate:
   stage: quality_gate
   image: curlimages/curl:latest
-  dependencies:
-    - sonarqube
-  needs:
-    - sonarqube
   script:
     - echo "Checking Quality Gate..."
     - sleep 10
-
-    # Query sonar
+    - >
+      STATUS=$(curl -s -u "${SONAR_TOKEN}:" 
+      "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}")
+    - echo "Response: $STATUS"
     - |
-      STATUS=$(curl -s -u "${SONAR_TOKEN}:" \
-        "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" \
-        | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
-
-      echo "Quality Gate Status: $STATUS"
-
-      if [ "$STATUS" != "OK" ]; then
+      if echo "$STATUS" | grep -q '"status":"ERROR"'; then
         echo "❌ Quality Gate FAILED"
         exit 1
+      else
+        echo "✔️ Quality Gate PASSED"
       fi
+  allow_failure: false
+  dependencies: []
+  needs: ["sonarqube"]
 
-      echo "✔ Quality Gate PASSED"
-  only:
-    - main
-    - develop
-    - merge_requests
 
