@@ -1,0 +1,151 @@
+stages:
+  - install
+  - lint
+  - test
+  - sonarqube
+  - build
+
+variables:
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  GIT_DEPTH: "0"
+  NODE_VERSION: "18"
+
+# Cache configuration
+. cache_template: &cache_config
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .sonar/cache
+  policy: pull
+
+# Only run on develop branch and merge requests
+.develop_and_mr: &develop_and_mr
+  only:
+    - develop
+    - merge_requests
+
+# ==========================================
+# INSTALL DEPENDENCIES
+# ==========================================
+install_dependencies:
+  stage: install
+  image: node:${NODE_VERSION}
+  <<: *develop_and_mr
+  cache:
+    <<: *cache_config
+    policy: pull-push
+  script:
+    - echo "📦 Installing dependencies..."
+    - npm ci
+    - echo "✅ Dependencies installed successfully"
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 hour
+
+# ==========================================
+# LINT
+# ==========================================
+lint:
+  stage: lint
+  image: node:${NODE_VERSION}
+  <<: *develop_and_mr
+  dependencies:
+    - install_dependencies
+  cache:
+    <<: *cache_config
+  script:
+    - echo "🔍 Running ESLint..."
+    - npm run lint
+    - echo "✅ Lint check passed"
+  allow_failure: false
+
+# ==========================================
+# TYPE CHECK
+# ==========================================
+type_check:
+  stage: lint
+  image: node:${NODE_VERSION}
+  <<: *develop_and_mr
+  dependencies:
+    - install_dependencies
+  cache:
+    <<: *cache_config
+  script:
+    - echo "🔍 Running TypeScript type check..."
+    - npm run type-check
+    - echo "✅ Type check passed"
+  allow_failure: false
+
+# ==========================================
+# UNIT TESTS
+# ==========================================
+test:
+  stage: test
+  image: node:${NODE_VERSION}
+  <<: *develop_and_mr
+  dependencies:
+    - install_dependencies
+  cache:
+    <<: *cache_config
+  script:
+    - echo "🧪 Running unit tests with coverage..."
+    - npm run test:coverage
+    - echo "✅ Tests passed successfully"
+  artifacts:
+    paths:
+      - coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    expire_in: 1 day
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\. ]+)/'
+  allow_failure: false
+
+# ==========================================
+# SONARQUBE ANALYSIS
+# ==========================================
+sonarqube-check:
+  stage: sonarqube
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+    GIT_DEPTH: "0"
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner
+  allow_failure: true
+  only:
+    - main
+
+# ==========================================
+# SONARQUBE QUALITY GATE CHECK
+# ==========================================
+sonarqube_quality_gate:
+  stage: sonarqube
+  image: curlimages/curl:latest
+  <<: *develop_and_mr
+  dependencies:
+    - sonarqube
+  script:
+    - echo "🔍 Checking SonarQube Quality Gate..."
+    - |
+      QUALITY_GATE_STATUS=$(curl -s -u ${SONAR_TOKEN}: \
+        "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${CI_PROJECT_NAME}" \
+        | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+    - echo "Quality Gate Status: ${QUALITY_GATE_STATUS}"
+    - |
+      if [ "${QUALITY_GATE_STATUS}" != "OK" ]; then
+        echo "❌ Quality Gate Failed!"
+        echo "Please check SonarQube dashboard: ${SONAR_HOST_URL}/dashboard?id=${CI_PROJECT_NAME}"
+        exit 1
+      fi
+    - echo "✅ Quality Gate Passed!"
+  allow_failure: false
+

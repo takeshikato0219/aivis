@@ -1,9 +1,15 @@
-# OSX
-#
+# macOS
 .DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # Xcode
-#
 build/
 *.pbxuser
 !default.pbxuser
@@ -21,11 +27,10 @@ DerivedData
 *.ipa
 *.xcuserstate
 **/.xcode.env.local
+*.xcworkspace/contents.xcworkspacedata
+xcuserdata/
 
 # Android/IntelliJ
-#
-build/
-.idea
 .gradle
 local.properties
 *.iml
@@ -35,19 +40,20 @@ local.properties
 !debug.keystore
 .kotlin/
 
-# node.js
-#
+# Node.js / JavaScript
 node_modules/
-npm-debug.log
-yarn-error.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
-# screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/
+# Metro
+.metro-health-check*
 
+# Testing
+coverage/
+*.lcov
+
+# Fastlane
 **/fastlane/report.xml
 **/fastlane/Preview.html
 **/fastlane/screenshots
@@ -60,12 +66,6 @@ yarn-error.log
 **/Pods/
 /vendor/bundle/
 
-# Temporary files created by Metro to check the health of the file watcher
-.metro-health-check*
-
-# testing
-/coverage
-
 # Yarn
 .yarn/*
 !.yarn/patches
@@ -73,3 +73,14 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# SonarQube
+.sonar/
+.scannerwork/

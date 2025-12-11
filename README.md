@@ -1,97 +1,251 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# React Native Base Project
 
-# Getting Started
+A production-ready React Native boilerplate featuring TypeScript, Redux Toolkit, Axios, robust error handling, unit testing, and GitLab CI/CD integration with SonarQube.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+---
 
-## Step 1: Start Metro
+## 📋 Table of Contents
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack & Dependency Versions](#tech-stack--dependency-versions)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Development](#development)
+- [Testing](#testing)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [SonarQube Integration](#sonarqube-integration)
+- [Code Quality](#code-quality)
+- [Usage Examples](#usage-examples)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+---
 
-```sh
-# Using npm
-npm start
+## 🎯 Overview
 
-# OR using Yarn
-yarn start
+This template helps you kickstart mobile app development with best practices, modular architecture, and automated code quality – all ready for CI/CD with SonarQube analysis.
+
+- **Strict TypeScript:** Enforces type safety throughout the stack.
+- **Well-Tested:** Unit and integration tests with high coverage.
+- **Advanced CI/CD:** GitLab CI pipeline with code quality gates.
+- **Scalable Structure:** Modular, industry-standard organization.
+- **Developer Experience:** Clear docs, reusable modules, fast dev cycles.
+
+---
+
+## ✨ Features
+
+### Core Features
+- ✅ TypeScript 5.8.3 & Strict Mode
+- ✅ Redux Toolkit 2.11.0 & Redux Persist
+- ✅ Axios 1.13.2 – global interceptors and error handling
+- ✅ Component styles as `.styles.ts` files
+- ✅ Centralized API endpoints and constants
+- ✅ React Navigation 7.x: stack, tabs, drawer
+- ✅ Material Design w/ React Native Paper 5.14.5
+
+### Error Handling
+- ✅ Global error boundary (React)
+- ✅ Crash reporter (device info logging)
+- ✅ Network monitor (online/offline detection, offline banner)
+- ✅ Custom hooks for recovery and monitoring
+
+### Quality & Testing
+- ✅ ESLint 8.19.0, Prettier 3.7.4, Husky 9.1.7, lint-staged 16.2.7
+- ✅ TypeScript static analysis
+- ✅ Jest 29.6.3 & @testing-library/react-native 13.3.3
+- ✅ High coverage requirement
+- ✅ SonarQube scan and quality gate enforced
+
+### CI/CD & Productivity
+- ✅ GitLab CI integration
+- ✅ Automated test and SonarQube analysis on pull/merge
+- ✅ Fast refresh & hot reload
+- ✅ Path aliases for imports with babel-plugin-module-resolver
+- ✅ API configs in `.env` for easy switching
+
+### UX/UI
+- ✅ Responsive design for layouts and orientation
+- ✅ Theme system: colors, fonts, spacing
+- ✅ Offline banner, loading indicator components
+
+### Internationalization
+- ✅ i18next 25.7.2, react-i18next 16.4.1, react-native-localize 3.6.0
+- ✅ Built-in English and Japanese translations
+
+---
+
+## 🛠 Tech Stack & Dependency Versions
+
+| Category                 | Package                                         | Version     | Description                       |
+|--------------------------|-------------------------------------------------|------------|-----------------------------------|
+| **Core**                 | react-native                                    | 0.82.1     | Mobile framework                   |
+|                          | react                                           | 19.1.1     | UI library                         |
+|                          | typescript                                      | 5.8.3      | Type-safe development              |
+| **Navigation**           | @react-navigation/native                        | 7.1.24     | Core navigation                    |
+|                          | @react-navigation/stack                         | 7.6.11     | Stack navigation                   |
+|                          | @react-navigation/bottom-tabs                   | 7.8.11     | Tab navigation                     |
+|                          | @react-navigation/drawer                        | 7.7.8      | Drawer navigation                  |
+|                          | react-native-screens                            | 4.18.0     | Screen optimization                |
+|                          | react-native-safe-area-context                  | 5.6.2      | Safe areas                         |
+|                          | react-native-gesture-handler                    | 2.29.1     | Gesture management                 |
+| **State Management**     | @reduxjs/toolkit                                | 2.11.0     | State management                   |
+|                          | react-redux                                     | 9.2.0      | Redux bindings                     |
+|                          | redux-persist                                   | *          | Persist Redux store                |
+| **UI Components**        | react-native-paper                              | 5.14.5     | Material Design UI                 |
+|                          | react-native-vector-icons                       | 10.3.0     | Icon set                           |
+| **Network & Storage**    | axios                                           | 1.13.2     | HTTP client                        |
+|                          | @react-native-community/netinfo                 | 11.4.1     | Network monitoring                 |
+|                          | @react-native-async-storage/async-storage       | 2.2.0      | State storage                      |
+| **Internationalization** | i18next                                         | 25.7.2     | i18n engine                        |
+|                          | react-i18next                                   | 16.4.1     | React bindings for i18n            |
+|                          | react-native-localize                           | 3.6.0      | Locale detection                   |
+| **Utilities**            | react-native-device-info                        | 15.0.1     | Device info                        |
+| **Testing**              | jest                                            | 29.6.3     | Unit testing                       |
+|                          | @testing-library/react-native                   | 13.3.3     | Testing utilities                   |
+|                          | @testing-library/jest-native                    | 5.4.3      | Jest matchers                      |
+|                          | husky                                           | 9.1.7      | Git hooks                          |
+|                          | lint-staged                                     | 16.2.7     | Staged linting                     |
+| **Code Quality**         | eslint                                          | 8.19.0     | JS linting                         |
+|                          | @typescript-eslint/eslint-plugin                | 8.48.1     | ESLint for TS                      |
+|                          | @typescript-eslint/parser                       | 8.48.1     | ESLint TS parser                   |
+|                          | prettier                                        | 3.7.4      | Code formatting                    |
+|                          | sonarqube-scanner                               | 4.3.2      | SonarQube quality analysis         |
+| **Dev Tools**            | babel-plugin-module-resolver                    | 5.0.2      | Path aliases                       |
+
+*See [`package.json`](./package.json) for the complete list.*
+
+---
+
+## 📁 Project Structure
+
+```text
+Timima01App/
+├── src/
+│   ├── api/             # API logic: axios instance, endpoints, authentication
+│   ├── components/      # Reusable UI components and their styles
+│   ├── config/          # Application configuration (LogBox, etc.)
+│   ├── constants/       # Colors, themes, constants
+│   ├── hooks/           # Custom React hooks
+│   ├── i18n/            # Internationalization config and translations
+│   ├── navigation/      # Navigators and routing types
+│   ├── providers/       # App-level context providers
+│   ├── redux/           # Redux store, slices, and persistence config
+│   ├── screens/         # Application screens, grouped by feature
+│   ├── types/           # Shared TypeScript types and module declarations
+│   └── utils/           # Utility functions (error/crash handling, storage, validation)
+├── ios/                 # iOS native project
+├── android/             # Android native project
+├── App.tsx              # App root component
+├── index.js             # Entry point
+├── babel.config.js      # Babel config
+├── metro.config.js      # Metro bundler config
+├── tsconfig.json        # TypeScript config
+├── package.json         # Dependency manifest
+└── README.md            # Documentation (this file)
 ```
 
-## Step 2: Build and run your app
+#### Example folder contents
+- **api/**: `axios.ts`, `authApi.ts`, `endpoints.ts`
+- **components/**: `Button/`, `ErrorBoundary/`, `OfflineBanner/`
+- **screens/**: `HomeScreen/`, `LoginScreen/`, `ProfileScreen/`, etc.
+- **i18n/**: `index.ts`, `locales/en.json`, `locales/ja.json`
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+---
 
-### Android
+## 🚀 Getting Started
 
-```sh
-# Using npm
-npm run android
+### Prerequisites
 
-# OR using Yarn
-yarn android
+- Node.js >= 18.x
+- npm or yarn
+- Xcode (for iOS)
+- Android Studio (for Android)
+- GitLab Account (for CI/CD)
+- SonarQube server and token (for code quality)
+
+### Install and Run
+
+```bash
+# Clone the repo
+git clone https://your-gitlab-repo-url.git
+cd Timima01App
+
+# Install JavaScript dependencies
+npm install             # or yarn install
+
+# iOS: Install CocoaPods
+cd ios && pod install && cd ..
+
+# Start Metro bundler and launch app
+yarn ios        # For iOS
+yarn android    # For Android
+yarn start      # Metro server
 ```
 
-### iOS
+---
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+## 🧪 Development & Testing
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+```bash
+# Unit and Integration tests
+npm test
 
-```sh
-bundle install
+# Watch mode and update coverage
+npm test -- --watch
+npm test -- --coverage
+
+# Linting and formatting
+npm run lint
+npm run lint:fix
+
+# Type checking
+npm run type-check
+
+# Update snapshots
+npm test -- -u
+
+# SonarQube analysis (local)
+npm run sonar
 ```
 
-Then, and every time you update your native dependencies, run:
+---
 
-```sh
-bundle exec pod install
+## 🔑 API & Environment Variables
+
+Set API endpoints and secrets via `.env`:
+
+```env
+API_BASE_URL=https://api.example.com
+SONAR_HOST_URL=http://your-sonarqube-server:9000
+SONAR_TOKEN=your-sonar-token
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+---
 
-```sh
-# Using npm
-npm run ios
+## 🌀 CI/CD & Code Quality
 
-# OR using Yarn
-yarn ios
-```
+- Automated test and SonarQube scan on push and merge.
+- Quality gates enforced via SonarQube.
+- CI configured on GitLab for continuous feedback.
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+---
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## 📚 Usage & Best Practices
 
-## Step 3: Modify your app
+- Use path aliases (`@components`, `@screens`, etc.) for scalable code.
+- Place feature screens in dedicated folders for maintainability.
+- Centralize API, config, styling, and environment settings.
+- Maintain translations in `i18n/locales`.
+- Enforce lint and type check pre-commit via Husky/Lint-Staged.
 
-Now that you have successfully run the app, let's make changes!
+---
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+---
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+## 📝 License
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+[MIT](LICENSE)

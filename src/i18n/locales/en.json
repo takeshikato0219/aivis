@@ -1,0 +1,54 @@
+{
+  "common": {
+    "welcome": "Welcome Back!",
+    "logout": "Logout",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "retry": "Retry",
+    "online": "Online",
+    "offline": "Offline"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "forgotPassword": "Forgot Password? ",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signInButton": "Signing in...",
+    "createAccount": "Create Account",
+    "dontHaveAccount": "Don't have an account?",
+    "loginSuccess": "Login successful!",
+    "loginError": "Please enter email and password",
+    "invalidEmail": "Please enter a valid email address"
+  },
+  "home": {
+    "title": "Welcome Back!",
+    "quickActions": "Quick Actions",
+    "statistics": "Statistics",
+    "recentActivity": "Recent Activity",
+    "total": "Total",
+    "done": "Done",
+    "pending": "Pending",
+    "designComponents": "Design Components",
+    "networkDebug": "Network Debug",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "taskCompleted": "Task #{{number}} completed",
+    "hoursAgo": "{{hours}} hours ago"
+  },
+  "profile": {},
+  "offline": {
+    "title": "No Internet Connection",
+    "retry": "Retry",
+    "checking": "Checking..."
+  }
+}
