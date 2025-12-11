@@ -8,4 +8,15 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'warn',
     'no-void': ['error', { allowAsStatement: true }],
   },
+  ignorePatterns: [
+    'node_modules/',
+    'android/',
+    'ios/',
+    'coverage/',
+    '.metro/',
+    'dist/',
+    'build/',
+    '*. log',
+    'junit.xml',
+  ],
 };

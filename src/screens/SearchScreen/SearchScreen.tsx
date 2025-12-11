@@ -38,8 +38,8 @@ const SearchScreen = () => {
               <Text variant="titleMedium" style={styles.sectionTitle}>
                 Recent Searches
               </Text>
-              {recentSearches.map((item, idx) => (
-                <List.Item key={`${item}-${idx}`} title={item} left={renderHistoryIcon} />
+              {recentSearches.map((item) => (
+                <List.Item key={item} title={item} left={renderHistoryIcon} />
               ))}
             </Card.Content>
           </Card>

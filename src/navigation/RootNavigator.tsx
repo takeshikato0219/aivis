@@ -3,15 +3,12 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAppSelector } from '@redux/store';
 import { RootStackParamList } from './types';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, ActivityIndicator, View } from 'react-native';
+import { COLORS } from '@constants/theme';
 
 // Import navigators
 import AuthNavigator from './AuthNavigator';
 import AppNavigator from './AppNavigator';
-
-// Import components
-import { ActivityIndicator, View } from 'react-native';
-import { COLORS } from '@constants/theme';
 
 const Stack = createStackNavigator<RootStackParamList>();
 

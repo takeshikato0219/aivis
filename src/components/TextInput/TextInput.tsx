@@ -38,6 +38,15 @@ const TextInput: React.FC<TextInputProps> = ({
 }) => {
   const [secureText, setSecureText] = useState(secureTextEntry);
 
+  const rightIconComponent = secureTextEntry ? (
+    <PaperTextInput.Icon
+      icon={secureText ? 'eye' : 'eye-off'}
+      onPress={() => setSecureText(!secureText)}
+    />
+  ) : rightIcon ? (
+    <PaperTextInput.Icon icon={rightIcon} />
+  ) : undefined;
+
   return (
     <PaperTextInput
       label={label}
@@ -46,16 +55,7 @@ const TextInput: React.FC<TextInputProps> = ({
       placeholder={placeholder}
       mode={mode}
       left={icon ? <PaperTextInput.Icon icon={icon} /> : undefined}
-      right={
-        secureTextEntry ? (
-          <PaperTextInput.Icon
-            icon={secureText ? 'eye' : 'eye-off'}
-            onPress={() => setSecureText(!secureText)}
-          />
-        ) : rightIcon ? (
-          <PaperTextInput.Icon icon={rightIcon} />
-        ) : undefined
-      }
+      right={rightIconComponent}
       secureTextEntry={secureText}
       keyboardType={keyboardType}
       multiline={multiline}
