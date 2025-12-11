@@ -4,15 +4,16 @@ import { COLORS } from '@constants/theme';
 // Calculate top offset for Dynamic Island
 const getTopOffset = () => {
   if (Platform.OS === 'ios') {
-    // iPhone with Dynamic Island needs more offset
-    const iosVersion = parseInt(Platform.Version as string, 10);
-    if (iosVersion >= 16) {
-      // iPhone 14 Pro+, 15 Pro+, 16 Pro+ have Dynamic Island
-      return 54;
+    const version =
+      typeof Platform.Version === 'string' ? parseInt(Platform.Version, 10) : Platform.Version;
+
+    if (version >= 16) {
+      return 54; // Dynamic Island
     }
-    // iPhone with notch
+
     return (StatusBar.currentHeight || 0) + 44;
   }
+
   return StatusBar.currentHeight || 0;
 };
 
