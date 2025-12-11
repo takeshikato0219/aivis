@@ -30,10 +30,8 @@ install_dependencies:
       - node_modules/
       - .npm/
     policy: pull-push
-  before_script:
-    - echo "Node version: $(node --version)"
-    - echo "NPM version: $(npm --version)"
   script:
+    - echo "Installing dependencies..."
     - npm ci --prefer-offline --no-audit
   artifacts:
     paths:
@@ -59,6 +57,7 @@ lint:
   dependencies:
     - install_dependencies
   script:
+    - echo "Running ESLint..."
     - npm run lint
   only:
     - main
@@ -77,6 +76,7 @@ type_check:
   dependencies:
     - install_dependencies
   script:
+    - echo "Running TypeScript..."
     - npm run type-check
   only:
     - main
@@ -94,11 +94,13 @@ test:
     paths:
       - node_modules/
       - .npm/
+    policy: pull
   dependencies:
     - install_dependencies
   before_script:
-    - npm run test:clear || true
+    - npm run test:clear
   script:
+    - echo "Running tests..."
     - npm run test:ci
   artifacts:
     when: always
@@ -127,21 +129,17 @@ sonarqube:
     key: sonarqube-cache
     paths:
       - .sonar/cache
-  before_script:
-    - echo "Running SonarQube Scanner..."
-    - echo "Project Key: ${SONAR_PROJECT_KEY}"
-    - echo "Coverage lcov: coverage/lcov.info"
-  script:
-    - sonar-scanner \
-      -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+  script: |
+    echo "Running SonarQube analysis..."
+
+    sonar-scanner \
+      -Dsonar.projectKey=${CI_PROJECT_NAME} \
       -Dsonar.sources=src \
       -Dsonar.tests=__tests__ \
       -Dsonar.host.url=${SONAR_HOST_URL} \
-      -Dsonar.token=${SONAR_TOKEN} \
-      -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info \
-      -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
-      -Dsonar.testExecutionReportPaths=junit.xml \
-      -Dsonar.sourceEncoding=UTF-8
+      -Dsonar.login=${SONAR_TOKEN} \
+      -Dsonar.projectVersion=${CI_COMMIT_SHORT_SHA} \
+      -Dsonar.scm.revision=${CI_COMMIT_SHA}
   only:
     - main
     - develop
