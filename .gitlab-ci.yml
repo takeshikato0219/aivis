@@ -148,17 +148,31 @@ sonarqube:
 # ============================================
 # QUALITY GATE
 # ============================================
-quality_gate:
+sonarqube_quality_gate:
   stage: quality_gate
   image: curlimages/curl:latest
+  dependencies:
+    - sonarqube
+  needs:
+    - sonarqube
   script:
     - echo "Checking Quality Gate..."
     - sleep 10
-    - STATUS=$(curl -s -u "${SONAR_TOKEN}:" "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}")
-    - echo "Response: $STATUS"
-    - if echo "$STATUS" | grep -q '"status":"ERROR"'; then echo "❌ Quality Gate FAILED"; exit 1; else echo "✔️ Quality Gate PASSED"; fi
-  allow_failure: false
-  dependencies: []
-  needs: ["sonarqube"]
+    - |
+      STATUS=$(curl -s -u "${SONAR_TOKEN}:" \
+        "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" \
+        | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
 
+      echo "Quality Gate Status: $STATUS"
+
+      if [ "$STATUS" != "OK" ]; then
+        echo "❌ Quality Gate FAILED"
+        exit 1
+      fi
+
+      echo "✔ Quality Gate PASSED"
+  only:
+    - main
+    - develop
+    - merge_requests
 
