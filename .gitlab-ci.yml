@@ -1,5 +1,5 @@
 # ============================================
-# GitLab CI/CD - Timima01App (Fixed)
+# GitLab CI/CD - Timima01App (FINAL)
 # ============================================
 
 stages:
@@ -13,7 +13,7 @@ variables:
   SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
   GIT_DEPTH: "0"
   npm_config_cache: "$CI_PROJECT_DIR/.npm"
-  SONAR_PROJECT_KEY: "Timima01App"
+  SONAR_PROJECT_KEY: "Timima01-app"
 
 # ============================================
 # INSTALL
@@ -28,7 +28,6 @@ install_dependencies:
       - .npm/
     policy: pull-push
   script:
-    - echo "Installing dependencies..."
     - npm ci --prefer-offline --no-audit
   artifacts:
     paths:
@@ -45,16 +44,9 @@ install_dependencies:
 lint:
   stage: lint
   image: node:20
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - node_modules/
-      - .npm/
-    policy: pull
   dependencies:
     - install_dependencies
   script:
-    - echo "Running ESLint..."
     - npm run lint
   only:
     - main
@@ -64,16 +56,9 @@ lint:
 type_check:
   stage: lint
   image: node:20
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - node_modules/
-      - .npm/
-    policy: pull
   dependencies:
     - install_dependencies
   script:
-    - echo "Running TypeScript..."
     - npm run type-check
   only:
     - main
@@ -86,18 +71,11 @@ type_check:
 test:
   stage: test
   image: node:20
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - node_modules/
-      - .npm/
-    policy: pull
   dependencies:
     - install_dependencies
   before_script:
     - npm run test:clear || true
   script:
-    - echo "Running tests..."
     - npm run test:ci
   artifacts:
     when: always
@@ -123,23 +101,11 @@ sonarqube:
   dependencies:
     - test
   cache:
-    key: sonarqube-cache
+    key: sonar-cache
     paths:
       - .sonar/cache
   script:
-    - echo "Running SonarQube analysis..."
-
-    - |
-      sonar-scanner \
-        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-        -Dsonar.sources=src \
-        -Dsonar.tests=__tests__ \
-        -Dsonar.host.url=${SONAR_HOST_URL} \
-        -Dsonar.login=${SONAR_TOKEN} \
-        -Dsonar.projectVersion=${CI_COMMIT_SHORT_SHA} \
-        -Dsonar.scm.revision=${CI_COMMIT_SHA} \
-        -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info \
-        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+    - sonar-scanner
   only:
     - main
     - develop
@@ -158,21 +124,14 @@ sonarqube_quality_gate:
   script:
     - echo "Checking Quality Gate..."
     - sleep 10
-    - |
-      STATUS=$(curl -s -u "${SONAR_TOKEN}:" \
-        "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" \
-        | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
-
-      echo "Quality Gate Status: $STATUS"
-
-      if [ "$STATUS" != "OK" ]; then
-        echo "❌ Quality Gate FAILED"
-        exit 1
-      fi
-
-      echo "✔ Quality Gate PASSED"
+    - >
+      STATUS=$(curl -s -u "${SONAR_TOKEN}:" 
+      "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" 
+      | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+    - echo "Quality Gate Status: $STATUS"
+    - if [ "$STATUS" != "OK" ]; then echo "❌ FAILED"; exit 1; fi
+    - echo "✔ PASSED"
   only:
     - main
     - develop
     - merge_requests
-
