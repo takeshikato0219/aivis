@@ -115,6 +115,7 @@ sonarqube:
 # QUALITY GATE
 # ============================================
 sonarqube_quality_gate:
+  stage: quality_gate
   image:
     name: sonarsource/sonar-scanner-cli:latest
     entrypoint: [""]
@@ -130,3 +131,5 @@ sonarqube_quality_gate:
   allow_failure: false
   only:
     - main
+    - develop
+    - merge_requests
