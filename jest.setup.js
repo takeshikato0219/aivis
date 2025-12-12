@@ -6,15 +6,101 @@
 import '@testing-library/jest-native/extend-expect';
 
 // ============================================
+// MOCK REACT NATIVE VECTOR ICONS
+// ============================================
+
+jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  const MockIcon = (props) => {
+    return React.createElement(
+      Text,
+      {
+        testID: props.testID || 'mock-icon',
+        onPress: props.onPress,
+        accessible: true,
+        accessibilityRole: 'imagebutton',
+      },
+      props.name || 'icon'
+    );
+  };
+
+  MockIcon.getImageSource = jest.fn(() => Promise.resolve(''));
+  MockIcon.loadFont = jest.fn(() => Promise.resolve());
+
+  return MockIcon;
+});
+
+jest.mock('react-native-vector-icons/MaterialIcons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  const MockIcon = (props) => {
+    return React.createElement(
+      Text,
+      {
+        testID: props.testID || 'mock-icon',
+        onPress: props.onPress,
+      },
+      props.name || 'icon'
+    );
+  };
+
+  return MockIcon;
+});
+
+// ============================================
+// MOCK REACT NATIVE PAPER - COMPLETE
+// ============================================
+
+jest.mock('react-native-paper', () => {
+  const React = require('react');
+  const RN = require('react-native');
+  const RealModule = jest.requireActual('react-native-paper');
+
+  // Mock Icon component
+  const MockIcon = (props) => {
+    return React.createElement(
+      RN.TouchableOpacity,
+      {
+        testID: props.testID || (props.icon ? `${props.icon}-icon` : 'paper-icon'),
+        onPress: props.onPress,
+        disabled: props.disabled,
+      },
+      React.createElement(RN.Text, {}, props.icon || 'icon')
+    );
+  };
+
+  // Mock TextInput with Icon subcomponent
+  const MockTextInput = (props) => {
+    return React.createElement(RN.TextInput, {
+      ...props,
+      testID: props.testID || 'text-input',
+    });
+  };
+
+  // Add Icon as a subcomponent
+  MockTextInput.Icon = MockIcon;
+
+  return {
+    ...RealModule,
+    Portal: ({ children }) => children,
+    TextInput: MockTextInput,
+    // Mock other Paper components if needed
+    Button: RealModule.Button,
+    Card: RealModule.Card,
+  };
+});
+
+// ============================================
 // MOCK STORAGE & NETWORK
 // ============================================
 
-// AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
-// NetInfo
 jest.mock('@react-native-community/netinfo', () => ({
   addEventListener: jest.fn(() => jest.fn()),
   fetch: jest.fn(() =>
@@ -72,25 +158,6 @@ jest.mock('@react-navigation/native', () => {
     useIsFocused: jest.fn(() => true),
   };
 });
-
-// ============================================
-// MOCK REACT NATIVE PAPER
-// ============================================
-
-jest.mock('react-native-paper', () => {
-  const RealModule = jest.requireActual('react-native-paper');
-  return {
-    ...RealModule,
-    Portal: ({ children }) => children,
-  };
-});
-
-// ============================================
-// MOCK VECTOR ICONS
-// ============================================
-
-jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => 'Icon');
-jest.mock('react-native-vector-icons/MaterialIcons', () => 'Icon');
 
 // ============================================
 // MOCK GESTURE HANDLER
@@ -211,7 +278,6 @@ jest.mock('i18next', () => ({
 // GLOBAL MOCKS
 // ============================================
 
-// Fetch mock
 global.fetch = jest.fn(() =>
   Promise.resolve({
     ok: true,
@@ -220,14 +286,56 @@ global.fetch = jest.fn(() =>
   })
 );
 
-// Alert mock
 global.alert = jest.fn();
+
+// ============================================
+// SUPPRESS CONSOLE WARNINGS
+// ============================================
+
+const originalWarn = console.warn;
+const originalError = console.error;
+
+beforeAll(() => {
+  console.warn = jest.fn((...args) => {
+    const message = args[0];
+
+    // Suppress react-native-paper icon warnings
+    if (
+      typeof message === 'string' &&
+      (message.includes('Tried to use the icon') ||
+        message.includes('react-native-paper') ||
+        message.includes('icon libraries'))
+    ) {
+      return;
+    }
+
+    originalWarn(...args);
+  });
+
+  console.error = jest.fn((...args) => {
+    const message = args[0];
+
+    // Suppress common React warnings in tests
+    if (
+      typeof message === 'string' &&
+      (message.includes('Warning:  ReactDOM.render') || message.includes('not wrapped in act'))
+    ) {
+      return;
+    }
+
+    originalError(...args);
+  });
+});
+
+afterAll(() => {
+  console.warn = originalWarn;
+  console.error = originalError;
+});
 
 // ============================================
 // GLOBAL CONFIGURATION
 // ============================================
 
-// Set test timeout
 jest.setTimeout(10000);
 
 // ============================================

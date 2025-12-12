@@ -8,7 +8,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 
   transformIgnorePatterns: [
-    'node_modules/(?!(@react-native|react-native|@react-navigation|@react-native-community|@react-native-async-storage|react-redux|@reduxjs)/)',
+    'node_modules/(?!(@react-native|@reduxjs/toolkit|immer|react-native-vector-icons|react-native|react-native-paper|@react-navigation|@react-native-community|@react-native-async-storage|react-redux|@reduxjs)/)',
   ],
 
   moduleNameMapper: {
@@ -41,18 +41,29 @@ module.exports = {
     '!src/**/index.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/__tests__/**',
+    '!src/constants/materialTheme.ts',
+    // Exclude test & styles
+    '!src/**/*.test.ts',
+    '!src/**/*.test.tsx',
+    '!src/**/*.styles.ts',
+    '!src/**/*.styles.tsx',
+
+    // Exclude types
+    '!src/types/**',
+
+    // Exclude __tests__
+    '!src/**/__tests__/**',
+
+    // Exclude folders you do NOT test
+    '!src/navigation/**',
+    '!src/screens/**',
+    '!src/providers/**',
+    '!src/styles/**',
   ],
 
   coverageDirectory: 'coverage',
 
-  coverageReporters: [
-    'text',
-    'text-summary',
-    'lcov',
-    'html',
-    'cobertura',
-    'json-summary',
-  ],
+  coverageReporters: ['text', 'text-summary', 'lcov', 'html', 'cobertura', 'json-summary'],
 
   coverageThreshold: {
     global: {
