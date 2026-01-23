@@ -1,5 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Animated, ImageBackground, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Animated,
+  ImageBackground,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,7 +47,11 @@ const SetupComplete: React.FC = () => {
   };
 
   const handleGoToCameraSettings = () => {
-    // TODO: Implement camera settings navigation
+    Alert.alert('', 'Comming soon: Camera settings will be available in a future update.', [
+      {
+        text: 'OK',
+      },
+    ]);
   };
 
   const Content = (

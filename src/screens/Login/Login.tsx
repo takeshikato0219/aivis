@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector, store } from '@redux/store';
 import { loginAsync, verifyTokenAsync } from '@redux/slices/authSlice';
 import Button from '@components/Button/Button';
@@ -29,7 +28,7 @@ import { showCommonAlert } from '@components/Alert/Alert';
 import { useTranslation } from 'react-i18next';
 import { EmailOutlineIcon, LockOutlineIcon } from '@components/IconCustom/IconCustom';
 import { LoginScreenNavigationProp } from '@navigation/types';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
 import LoginBackground from '@assets/svg/login-background.svg';
 import Logo from '@assets/svg/logo.svg';
 import { setAuthData } from '@utils/authStorage';
