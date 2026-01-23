@@ -1,0 +1,57 @@
+<svg width="440" height="956" viewBox="0 0 440 956"
+     xmlns="http://www.w3.org/2000/svg">
+
+    <defs>
+        <!-- glow top-left -->
+        <radialGradient id="glow1" cx="20%" cy="10%" r="70%">
+            <stop offset="0%" stop-color="#00D8FF" stop-opacity="0.45"/>
+            <stop offset="60%" stop-color="#00FF59" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#00FF59" stop-opacity="0"/>
+        </radialGradient>
+
+        <!-- glow bottom-right -->
+        <radialGradient id="glow2" cx="80%" cy="95%" r="70%">
+            <stop offset="0%" stop-color="#0050FF" stop-opacity="0.45"/>
+            <stop offset="60%" stop-color="#00FFFF" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#00FFFF" stop-opacity="0"/>
+        </radialGradient>
+
+        <!-- soft blur -->
+        <filter id="blurSoft" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="80"/>
+        </filter>
+
+        <clipPath id="clip">
+            <rect width="440" height="956"/>
+        </clipPath>
+    </defs>
+
+    <g clip-path="url(#clip)">
+        <!-- background -->
+
+        <rect width="440" height="956" fill="#020205"/>
+
+        <!-- light layers -->
+        <rect width="440" height="956" fill="url(#glow1)" filter="url(#blurSoft)"/>
+        <rect width="440" height="956" fill="url(#glow2)" filter="url(#blurSoft)"/>
+
+        <!-- white soft shapes (giữ nguyên) -->
+        <path d="M100.646 -28.724C102.24 -21.7845 99.5418 -24.139 96.966 -22.2802C76.1148 -7.65766 50.3574 0.397143 29.0155 14.6479L32.2046 -34.0526C54.6503 -40.9921 79.3039 -38.5137 100.646 -28.724Z"
+              fill="white" opacity="0.08"/>
+
+        <path d="M129.347 46.3713L69.2464 7.46048L112.175 -15.7125C130.328 0.520961 130.819 23.6939 129.347 46.743Z"
+              fill="white" opacity="0.08"/>
+
+        <path d="M11.8448 51.9477L-22.6212 24.5614C-15.5072 0.397049 -1.27932 -16.9517 20.3078 -28.9719L11.8448 51.9477Z"
+              fill="white" opacity="0.08"/>
+
+        <path d="M68.7563 118.121C48.273 122.582 23.2515 125.308 6.0799 111.429L74.7663 69.4204L68.5109 118.121Z"
+              fill="white" opacity="0.08"/>
+
+        <path d="M-25.3203 40.671L34.7803 79.5818C25.8265 84.4147 0.0691251 103.746 -8.14872 100.029C-23.3579 93.0891 -27.8961 55.5414 -25.3203 40.671Z"
+              fill="white" opacity="0.08"/>
+
+        <path d="M80.6533 109.818C86.1728 87.7606 85.0689 64.3398 89.3618 42.0342C89.8524 39.4319 88.0125 35.5904 93.532 37.5731C97.4569 39.184 123.582 58.3916 123.582 61.9853C123.828 75.2447 95.1265 107.216 80.6533 109.818Z"
+              fill="white" opacity="0.08"/>
+    </g>
+</svg>

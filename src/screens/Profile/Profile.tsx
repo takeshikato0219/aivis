@@ -1,0 +1,141 @@
+import React from 'react';
+import { ScrollView, View, Text, Image, TouchableOpacity, ImageBackground } from 'react-native';
+import { useAppSelector, useAppDispatch } from '@redux/store';
+import { useNavigation } from '@react-navigation/native';
+import { useAppSetup } from '@hooks/useAppSetup';
+import { styles } from './Profile.styles';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import HomeBackgroundImage from '@assets/png/home-background.png';
+import { HomeScreenNavigationProp } from '@navigation/types';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { logout } from '@redux/slices/authSlice';
+import { removeAuthData } from '@utils/authStorage';
+import BackIcon from '@assets/svg/icon-back.svg';
+
+const Profile = () => {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const { user } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+  const { t } = useTranslation();
+
+  // USING COMMON HOOKS
+  useAppSetup({ screenName: 'Profile' });
+
+  const goToEditProfile = () => {
+    navigation.navigate('EditProfile' as any);
+  };
+
+  const goToChangePassword = () => {
+    navigation.navigate('ChangePassword' as any);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await removeAuthData();
+      dispatch(logout());
+    } catch (error) {
+      console.error('Logout error:', error);
+      dispatch(logout());
+    }
+  };
+
+  const goBack = () => {
+    navigation.goBack();
+  };
+
+  return (
+    <View style={styles.wrapper}>
+      <ImageBackground
+        source={HomeBackgroundImage}
+        style={styles.backgroundImage}
+        resizeMode="stretch"
+        imageStyle={styles.imageStyle}
+      >
+        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={goBack} style={styles.backButton}>
+              <BackIcon />
+            </TouchableOpacity>
+
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>{t('drawer.profile', 'Profile')}</Text>
+            </View>
+          </View>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {/* Profile Info Section */}
+            <View style={styles.profileCard}>
+              {user?.avatar_url ? (
+                <View style={styles.avatarContainer}>
+                  <Image source={{ uri: user?.avatar_url }} style={styles.avatar} />
+                </View>
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Icon name="account" size={50} color="#34C759" />
+                </View>
+              )}
+
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>{user?.name || 'User Name'}</Text>
+                <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+                <Text style={styles.userPhone}>{user?.phone || 'Phone not provided'}</Text>
+              </View>
+            </View>
+
+            {/* Settings Section */}
+            <View style={styles.settingsSection}>
+              <TouchableOpacity style={styles.settingItem} onPress={goToEditProfile}>
+                <View style={styles.settingLeft}>
+                  <Icon name="account-edit" size={24} color="#34C759" />
+                  <Text style={styles.settingText}>{t('profile.editProfile')}</Text>
+                </View>
+                <Icon name="chevron-right" size={24} color="#FFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <Icon name="shield-account" size={24} color="#34C759" />
+                  <Text style={styles.settingText}>{t('profile.privacy')}</Text>
+                </View>
+                <Icon name="chevron-right" size={24} color="#FFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.settingItem} onPress={goToChangePassword}>
+                <View style={styles.settingLeft}>
+                  <Icon name="lock" size={24} color="#34C759" />
+                  <Text style={styles.settingText}>{t('profile.changePassword')}</Text>
+                </View>
+                <Icon name="chevron-right" size={24} color="#FFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <Icon name="cog-outline" size={24} color="#34C759" />
+                  <Text style={styles.settingText}>{t('profile.settings')}</Text>
+                </View>
+                <Icon name="chevron-right" size={24} color="#FFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <Icon name="help-circle-outline" size={24} color="#34C759" />
+                  <Text style={styles.settingText}>{t('profile.help')}</Text>
+                </View>
+                <Icon name="chevron-right" size={24} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Logout Button */}
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Icon name="logout" size={24} color="#FF5252" />
+              <Text style={styles.logoutText}>{t('drawer.logout')}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
+  );
+};
+
+export default Profile;

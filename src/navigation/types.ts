@@ -1,6 +1,5 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 // ===== ROOT STACK =====
 export type RootStackParamList = {
@@ -19,53 +18,61 @@ export type AuthStackParamList = {
 
 // ===== APP STACK =====
 export type AppStackParamList = {
-  MainTabs: undefined;
-  Demo: undefined;
-  NetworkDebug: undefined;
-};
-
-// ===== BOTTOM TAB =====
-export type BottomTabParamList = {
-  HomeTab: undefined;
-  SearchTab: undefined;
-  NotificationsTab: undefined;
-  ProfileTab: { userId?: string };
+  Introduce: undefined;
+  Home: undefined;
+  Notifications: undefined;
+  Detail: {
+    name?: string;
+    id?: string;
+    cameraId?: string;
+  };
+  CameraLive: {
+    cameraId: string;
+    cameraName?: string;
+    baseUrl?: string;
+  };
+  QRScanner: undefined;
+  CameraSetup: { qrData: string | null };
+  SetupComplete: { cameraName: string; ssid: string };
+  Profile: undefined;
+  EditProfile: undefined;
+  ChangePassword: undefined;
+  DetectionZoneSetup: {
+    cameraId: string;
+    cameraSnapshot?: string;
+  };
 };
 
 // ===== NAVIGATION PROPS =====
 
+export type HomeScreenNavigationProp = CompositeNavigationProp<
+  StackNavigationProp<AppStackParamList, 'Home'>,
+  StackNavigationProp<RootStackParamList, 'App'>
+>;
+
 // Auth
 export type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'>;
 
-// Bottom Tab Screens với App Stack + Tab Navigation access
-export type HomeScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<BottomTabParamList, 'HomeTab'>,
-  StackNavigationProp<AppStackParamList>
->;
+export type DetailScreenNavigationProp = StackNavigationProp<AppStackParamList, 'Detail'>;
+export type DetailScreenRouteProp = RouteProp<AppStackParamList, 'Detail'>;
 
-export type SearchScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<BottomTabParamList, 'SearchTab'>,
-  StackNavigationProp<AppStackParamList>
->;
+export type CameraLiveScreenNavigationProp = StackNavigationProp<AppStackParamList, 'CameraLive'>;
+export type CameraLiveScreenRouteProp = RouteProp<AppStackParamList, 'CameraLive'>;
 
-export type NotificationsScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<BottomTabParamList, 'NotificationsTab'>,
-  StackNavigationProp<AppStackParamList>
->;
+export type CameraSetupScreenNavigationProp = StackNavigationProp<AppStackParamList, 'CameraSetup'>;
+export type CameraSetupScreenRouteProp = RouteProp<AppStackParamList, 'CameraSetup'>;
 
-export type ProfileScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<BottomTabParamList, 'ProfileTab'>,
-  StackNavigationProp<AppStackParamList>
->;
-
-export type ProfileScreenRouteProp = RouteProp<BottomTabParamList, 'ProfileTab'>;
-
-// App Stack Screens
-export type DemoScreenNavigationProp = StackNavigationProp<AppStackParamList, 'Demo'>;
-export type NetworkDebugScreenNavigationProp = StackNavigationProp<
+export type DetectionZoneSetupScreenNavigationProp = StackNavigationProp<
   AppStackParamList,
-  'NetworkDebug'
+  'DetectionZoneSetup'
 >;
+export type DetectionZoneSetupScreenRouteProp = RouteProp<AppStackParamList, 'DetectionZoneSetup'>;
+
+export type SetupCompleteScreenNavigationProp = StackNavigationProp<
+  AppStackParamList,
+  'SetupComplete'
+>;
+export type SetupCompleteScreenRouteProp = RouteProp<AppStackParamList, 'SetupComplete'>;
 
 // ===== DECLARE GLOBAL =====
 declare global {

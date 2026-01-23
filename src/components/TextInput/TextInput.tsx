@@ -1,27 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, ReactNode } from 'react';
 import { TextInput as PaperTextInput } from 'react-native-paper';
-import { ViewStyle, TextInputProps as RNTextInputProps } from 'react-native';
+import { ViewStyle, TextInputProps as RNTextInputProps, Keyboard } from 'react-native';
 import { styles } from './TextInput.styles';
 
 interface TextInputProps {
-  label: string;
+  label?: string;
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
   mode?: 'flat' | 'outlined';
-  icon?: string;
+  icon?: string | (() => ReactNode);
   rightIcon?: string;
   secureTextEntry?: boolean;
   keyboardType?: RNTextInputProps['keyboardType'];
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoComplete?: string;
   multiline?: boolean;
   numberOfLines?: number;
   error?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
+  testID?: string;
+  placeholderTextColor?: string;
 }
 
 const TextInput: React.FC<TextInputProps> = ({
-  label,
+  label = '',
   value,
   onChangeText,
   placeholder,
@@ -30,26 +34,39 @@ const TextInput: React.FC<TextInputProps> = ({
   rightIcon,
   secureTextEntry = false,
   keyboardType = 'default',
+  autoCapitalize,
+  autoComplete,
   multiline = false,
   numberOfLines = 1,
   error = false,
   disabled = false,
   style,
+  testID,
+  placeholderTextColor,
 }) => {
   const [secureText, setSecureText] = useState(secureTextEntry);
 
-  let rightIconComponent;
+  // Build right icon component
+  const getRightIcon = () => {
+    if (secureTextEntry) {
+      return (
+        <PaperTextInput.Icon
+          icon={secureText ? 'eye-outline' : 'eye-off-outline'}
+          onPress={() => {
+            setSecureText(!secureText);
+            Keyboard.dismiss();
+          }}
+          forceTextInputFocus={false}
+        />
+      );
+    }
 
-  if (secureTextEntry) {
-    rightIconComponent = (
-      <PaperTextInput.Icon
-        icon={secureText ? 'eye' : 'eye-off'}
-        onPress={() => setSecureText(!secureText)}
-      />
-    );
-  } else if (rightIcon) {
-    rightIconComponent = <PaperTextInput.Icon icon={rightIcon} />;
-  }
+    if (rightIcon) {
+      return <PaperTextInput.Icon icon={rightIcon} />;
+    }
+
+    return undefined;
+  };
 
   return (
     <PaperTextInput
@@ -58,15 +75,27 @@ const TextInput: React.FC<TextInputProps> = ({
       onChangeText={onChangeText}
       placeholder={placeholder}
       mode={mode}
-      left={icon ? <PaperTextInput.Icon icon={icon} /> : undefined}
-      right={rightIconComponent}
+      left={
+        icon ? (
+          typeof icon === 'string' ? (
+            <PaperTextInput.Icon icon={icon} />
+          ) : (
+            <PaperTextInput.Icon icon={icon} />
+          )
+        ) : undefined
+      }
+      right={getRightIcon()}
       secureTextEntry={secureText}
       keyboardType={keyboardType}
+      autoCapitalize={autoCapitalize}
+      autoComplete={autoComplete as any}
       multiline={multiline}
       numberOfLines={numberOfLines}
       error={error}
       disabled={disabled}
       style={[styles.input, style]}
+      testID={testID}
+      placeholderTextColor={placeholderTextColor}
     />
   );
 };

@@ -4,13 +4,16 @@ import reducer, {
   logout,
   AuthState,
   loginAsync,
+  registerAsync,
+  refreshTokenAsync,
 } from '@redux/slices/authSlice';
-import { User } from '@api/authService';
+import type { User } from '@api/types/authTypes';
 
 describe('authSlice', () => {
   const initialState: AuthState = {
     user: null,
-    token: null,
+    accessToken: null,
+    refreshToken: null,
     isLoading: false,
     error: null,
     isAuthenticated: false,
@@ -29,6 +32,7 @@ describe('authSlice', () => {
     expect(reducer(initialState, setUser(user))).toEqual({
       ...initialState,
       user,
+      isAuthenticated: true,
     });
   });
 
@@ -40,9 +44,9 @@ describe('authSlice', () => {
       isAuthenticated: true,
     };
     expect(reducer(state, logout())).toEqual({
-      ...state,
+      ...initialState,
       user: null,
-      token: null,
+      token: 'token',
       isAuthenticated: false,
     });
   });
@@ -64,7 +68,6 @@ describe('authSlice', () => {
     expect(state.isLoading).toBe(false);
     expect(state.isAuthenticated).toBe(true);
     expect(state.user).toEqual(payload.user);
-    expect(state.token).toBe(payload.token);
   });
 
   it('should handle loginAsync.rejected', () => {
@@ -75,5 +78,44 @@ describe('authSlice', () => {
     const state = reducer(initialState, action);
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('Login failed');
+  });
+
+  it('should handle registerAsync.pending', () => {
+    const action = { type: registerAsync.pending.type };
+    const state = reducer(initialState, action);
+    expect(state.isLoading).toBe(true);
+    expect(state.error).toBeNull();
+  });
+
+  it('should handle registerAsync.rejected', () => {
+    const action = { type: registerAsync.rejected.type, payload: 'Registration failed' };
+    const state = reducer(initialState, action);
+    expect(state.isLoading).toBe(false);
+    expect(state.error).toBe('Registration failed');
+  });
+
+  it('should handle refreshTokenAsync.pending', () => {
+    const action = { type: refreshTokenAsync.pending.type };
+    const state = reducer(initialState, action);
+    expect(state.isLoading).toBe(true);
+  });
+
+  it('should handle refreshTokenAsync.fulfilled', () => {
+    const payload = { accessToken: 'new-token', refreshToken: 'new-refresh' };
+    const action = { type: refreshTokenAsync.fulfilled.type, payload };
+    const state = reducer({ ...initialState, accessToken: 'old-token' }, action);
+    expect(state.isLoading).toBe(false);
+    expect(state.accessToken).toBe('new-token');
+    expect(state.refreshToken).toBe('new-refresh');
+    expect(state.error).toBeNull();
+  });
+
+  it('should handle refreshTokenAsync.rejected', () => {
+    const action = { type: refreshTokenAsync.rejected.type, payload: 'Token refresh failed' };
+    const state = reducer(initialState, action);
+    expect(state.isLoading).toBe(false);
+    expect(state.error).toBe('Token refresh failed');
+    expect(state.isAuthenticated).toBe(false);
+    expect(state.user).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button as PaperButton } from 'react-native-paper';
-import { ViewStyle } from 'react-native';
+import { ViewStyle, TextStyle } from 'react-native';
 import { styles } from './Button.styles';
 
 interface ButtonProps {
@@ -12,6 +12,7 @@ interface ButtonProps {
   disabled?: boolean;
   style?: ViewStyle;
   contentStyle?: ViewStyle;
+  labelStyle?: TextStyle;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -23,6 +24,7 @@ const Button: React.FC<ButtonProps> = ({
   disabled = false,
   style,
   contentStyle,
+  labelStyle,
 }) => {
   return (
     <PaperButton
@@ -31,8 +33,9 @@ const Button: React.FC<ButtonProps> = ({
       icon={icon}
       loading={loading}
       disabled={disabled}
-      style={[styles.button, style]}
+      style={[styles.button, disabled && styles.disabledButton, style]}
       contentStyle={[styles.content, contentStyle]}
+      labelStyle={[styles.label, labelStyle]}
     >
       {title}
     </PaperButton>

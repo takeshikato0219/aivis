@@ -3,7 +3,7 @@ import { LogBox, StatusBar, useColorScheme, Appearance } from 'react-native';
 import { Provider } from 'react-redux';
 import { PaperProvider } from 'react-native-paper';
 import { store } from '@redux/store';
-import { paperLightTheme, paperDarkTheme } from '@constants/materialTheme';
+import { paperDarkTheme } from '@constants/materialTheme';
 import ErrorBoundary from '@components/ErrorBoundary/ErrorBoundary';
 import OfflineBanner from '@components/OfflineBanner/OfflineBanner';
 import ErrorHandler from '@utils/errorHandler';
@@ -28,7 +28,8 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [i18nInitialized, setI18nInitialized] = useState(false);
 
   const isDarkMode = colorScheme === 'dark';
-  const theme = isDarkMode ? paperDarkTheme : paperLightTheme;
+  // const theme = isDarkMode ? paperDarkTheme : paperLightTheme;
+  const theme = paperDarkTheme;
 
   useEffect(() => {
     const initializeApp = async () => {

@@ -1,19 +1,25 @@
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import ErrorHandler from '../utils/errorHandler';
 import NetworkMonitor from '../utils/networkMonitor';
 import { API_BASE_URL } from './apiEndpoints';
+import { store } from '@redux/store';
+import { getCurrentLanguage } from '@/i18n';
 
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    accept: 'application/json',
+  },
 });
 
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (!NetworkMonitor.isConnected()) throw new Error('No internet connection');
-    const token = '';
+    const state = store.getState();
+    const token = state.auth.accessToken;
     if (token) config.headers.Authorization = `Bearer ${token}`;
+    config.headers['Accept-Language'] = getCurrentLanguage();
     return config;
   },
   (error: AxiosError) => {
@@ -27,8 +33,8 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const appError = ErrorHandler.handleApiError(error, error.config?.url);
-    return Promise.reject(appError);
+    const processedError = ErrorHandler.handleApiError(error);
+    return Promise.reject(processedError);
   }
 );
 

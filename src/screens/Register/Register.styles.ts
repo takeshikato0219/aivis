@@ -1,0 +1,292 @@
+import { StyleSheet } from 'react-native';
+import { BORDER_RADIUS, COLORS, FONTS } from '@constants/theme';
+import { isTablet } from '@utils/responsive';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  scrollContentTablet: {
+    paddingHorizontal: 40,
+  },
+  header: {
+    alignItems: 'center',
+    flex: 0.5,
+    justifyContent: 'center',
+  },
+  headerTablet: {
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  title: {
+    fontSize: isTablet() ? 25 : 16,
+    lineHeight: isTablet() ? 32 : FONTS.sizes.sm + 8,
+    textAlign: 'center',
+    marginTop: isTablet() ? 40 : 29,
+  },
+  card: {
+    marginBottom: 16,
+    flex: isTablet() ? 0.5 : 1,
+    backgroundColor: 'transparent',
+    elevation: 0,
+    borderWidth: 0,
+  },
+  label: {
+    fontSize: FONTS.sizes.md,
+    fontWeight: FONTS.weights.medium,
+    color: COLORS.success,
+    marginBottom: 4,
+  },
+  loginButton: {
+    flex: 1,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.success,
+    fontSize: FONTS.sizes.xl,
+    height: isTablet() ? 70 : 52,
+    justifyContent: 'center',
+  },
+  disableButton: {
+    flex: 1,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.gray696969,
+    fontSize: FONTS.sizes.xl,
+    height: isTablet() ? 70 : 52,
+    justifyContent: 'center',
+  },
+  btnSignIn: {
+    fontSize: FONTS.sizes.md,
+    color: COLORS.background,
+  },
+  styleLoginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
+  },
+  input: {
+    marginBottom: 12,
+    backgroundColor: COLORS['3E3E3E'],
+    fontSize: isTablet() ? 25 : 19,
+    height: isTablet() ? 70 : 56,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  absoluteFill: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  termOfUse: {
+    color: COLORS.B8B8B8,
+    marginTop: isTablet() ? 0 : 15,
+    fontSize: isTablet() ? 25 : 16,
+    marginRight: 30,
+  },
+  loginHere: {
+    color: COLORS.success,
+    fontSize: isTablet() ? 25 : 16,
+    marginTop: 39,
+  },
+  bottomStyle: {
+    flex: isTablet() ? 0.2 : 0.5,
+  },
+  styleErrorText: {
+    color: COLORS.error,
+    marginBottom: 5,
+    fontSize: isTablet() ? 25 : 16,
+  },
+
+  // Image Upload Styles
+  imageUploadContainer: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  uploadPlaceholder: {
+    borderWidth: 2,
+    borderColor: COLORS.BBBBBB,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5F5F5',
+    minHeight: 300,
+  },
+  uploadText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  uploadSubtext: {
+    fontSize: 12,
+    color: COLORS.BBBBBB,
+    textAlign: 'center',
+  },
+  imagePreviewContainer: {
+    alignItems: 'center',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 300,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+  },
+  imageActions: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 12,
+    width: '100%',
+  },
+  changeImageButton: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  changeImageText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  removeImageButton: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#FF5252',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  removeImageText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // Modal Styles - Animated Bottom Sheet (UPDATED)
+  modalOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'flex-end',
+    zIndex: 9999,
+    elevation: 9999,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+    paddingBottom: 34,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 10000,
+  },
+  modalDragIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#DDDDDD',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    backgroundColor: 'white',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  modalOptionsContainer: {
+    paddingVertical: 8,
+    backgroundColor: 'white',
+  },
+  modalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'white',
+  },
+  modalButtonIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  modalButtonContent: {
+    flex: 1,
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  modalButtonDescription: {
+    fontSize: 13,
+    color: '#999',
+  },
+  modalFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: 'white',
+  },
+  modalCancelButton: {
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    textAlign: 'center',
+  },
+});

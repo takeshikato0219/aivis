@@ -22,6 +22,7 @@ module.exports = {
     '^@redux/(.*)$': '<rootDir>/src/redux/$1',
     '^@constants/(.*)$': '<rootDir>/src/constants/$1',
     '^@styles/(.*)$': '<rootDir>/src/styles/$1',
+    '^@assets/(.*)$': '<rootDir>/src/assets/$1',
     '^@types/(.*)$': '<rootDir>/src/types/$1',
     '^@providers/(.*)$': '<rootDir>/src/providers/$1',
     '^@i18n/(.*)$': '<rootDir>/src/i18n/$1',
@@ -67,10 +68,10 @@ module.exports = {
 
   coverageThreshold: {
     global: {
-      branches: 0,
-      functions: 0,
-      lines: 0,
-      statements: 0,
+      branches: 50,
+      functions: 50,
+      lines: 50,
+      statements: 50,
     },
   },
 
