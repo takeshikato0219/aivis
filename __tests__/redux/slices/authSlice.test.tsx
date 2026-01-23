@@ -28,7 +28,7 @@ describe('authSlice', () => {
   });
 
   it('should handle setUser', () => {
-    const user: User = { id: '1', name: 'Test', email: 'test@example.com' };
+    const user: User = { id: '1', email: 'test@example.com', name: 'Test', phone: '1234567890' };
     expect(reducer(initialState, setUser(user))).toEqual({
       ...initialState,
       user,
@@ -39,7 +39,7 @@ describe('authSlice', () => {
   it('should handle logout', () => {
     const state = {
       ...initialState,
-      user: { id: '1', name: 'Test', email: 'test@example.com' },
+      user: { id: '1', email: 'test@example.com', name: 'Test', phone: '1234567890' },
       token: 'token',
       isAuthenticated: true,
     };

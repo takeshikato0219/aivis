@@ -19,7 +19,7 @@ describe('AuthStorage', () => {
 
   describe('setUserData', () => {
     it('should store user data', async () => {
-      const userData = { id: '1', name: 'Test User', email: 'test@example.com' };
+      const userData = { id: '1', email: 'test@example.com', name: 'Test', phone: '1234567890' };
 
       await authStorage.setUserData(userData);
 
@@ -31,7 +31,7 @@ describe('AuthStorage', () => {
     it('should store auth data', async () => {
       const accessToken = 'token123';
       const refreshToken = 'refresh456';
-      const user = { id: '1', name: 'Test User' };
+      const user = { id: '1', email: 'test@example.com', name: 'Test', phone: '1234567890' };
 
       await authStorage.setAuthData(accessToken, refreshToken, user);
 
