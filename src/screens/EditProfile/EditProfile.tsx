@@ -39,9 +39,8 @@ import { useImagePicker } from '@hooks/useImagePicker';
 import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';
 import BackIcon from '@assets/svg/icon-back.svg';
 import authService from '@api/authService';
-import { setUser } from '@redux/slices/authSlice';
+import { setUser, logout } from '@redux/slices/authSlice';
 import { removeAuthData, setUserData } from '@utils/authStorage';
-import { logout } from '@redux/slices/authSlice';
 
 const EditProfile: React.FC = () => {
   const responsive = useResponsive();
@@ -157,9 +156,7 @@ const EditProfile: React.FC = () => {
 
   const isSubmitEnabled = hasChanges && isFormValid;
 
-  const handleSave = async () => {
-    if (!isSubmitEnabled) return;
-
+  const validateForm = () => {
     const imageValidation = validateImage(selectedImage);
     setImageError(imageValidation ?? null);
 
@@ -167,35 +164,96 @@ const EditProfile: React.FC = () => {
     const isEmailValid = emailInput.validate();
     const isPhoneValid = phoneInput.validate();
 
+    return { isNameValid, isEmailValid, isPhoneValid, imageValidation };
+  };
+
+  const buildUpdateData = () => {
+    const updateData: any = {};
+
+    // Build basic fields
+    if (nameInput.value !== initialValues.name) {
+      updateData.name = nameInput.value;
+    }
+    if (emailInput.value !== initialValues.email) {
+      updateData.email = emailInput.value;
+    }
+    if (phoneInput.value !== initialValues.phone) {
+      updateData.phone = phoneInput.value;
+    }
+
+    // Handle avatar logic
+    updateData.avatar = getAvatarUpdateData();
+
+    return updateData;
+  };
+
+  const getAvatarUpdateData = () => {
+    const currentImageUri = selectedImage?.uri || user?.avatar_url || '';
+
+    if (currentImageUri !== initialImage) {
+      if (selectedImage) {
+        return {
+          uri: selectedImage.uri,
+          type: selectedImage.type || 'image/jpeg',
+          name: selectedImage.fileName || `avatar_${Date.now()}.jpg`,
+        };
+      } else if (!selectedImage && user?.avatar_url) {
+        return '';
+      }
+    }
+    return undefined;
+  };
+
+  const showSuccessAlert = (isEmailChanged: boolean) => {
+    if (isEmailChanged) {
+      Alert.alert(
+        t('profile.updateSuccess'),
+        t('profile.emailChangeDetectedMessage'),
+        [
+          {
+            text: t('profile.loginAgain', 'Login Again'),
+            onPress: async () => {
+              await removeAuthData();
+              dispatch(logout());
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+    } else {
+      Alert.alert(t('profile.updateSuccess'), t('profile.updateSuccessMessage'), [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    }
+  };
+
+  const updateLocalState = () => {
+    setInitialValues({
+      name: nameInput.value,
+      email: emailInput.value,
+      phone: phoneInput.value,
+      avatar: selectedImage?.uri || user?.avatar_url || '',
+    });
+    setInitialImage(selectedImage?.uri || user?.avatar_url || '');
+
+    passwordInput.setValue('');
+    passwordConfirm.setValue('');
+  };
+
+  const handleSave = async () => {
+    if (!isSubmitEnabled) return;
+
+    const { isNameValid, isEmailValid, isPhoneValid, imageValidation } = validateForm();
+
     if (!isNameValid || !isEmailValid || !isPhoneValid || imageValidation) {
       return;
     }
 
     try {
-      const updateData: any = {};
-
-      if (nameInput.value !== initialValues.name) {
-        updateData.name = nameInput.value;
-      }
-      if (emailInput.value !== initialValues.email) {
-        updateData.email = emailInput.value;
-      }
-      if (phoneInput.value !== initialValues.phone) {
-        updateData.phone = phoneInput.value;
-      }
-
-      const currentImageUri = selectedImage?.uri || user?.avatar_url || '';
-      if (currentImageUri !== initialImage) {
-        if (selectedImage) {
-          updateData.avatar = {
-            uri: selectedImage.uri,
-            type: selectedImage.type || 'image/jpeg',
-            name: selectedImage.fileName || `avatar_${Date.now()}.jpg`,
-          };
-        } else if (!selectedImage && user?.avatar_url) {
-          updateData.avatar = '';
-        }
-      }
+      const updateData = buildUpdateData();
 
       if (Object.keys(updateData).length > 0) {
         console.log(updateData);
@@ -204,42 +262,10 @@ const EditProfile: React.FC = () => {
         dispatch(setUser(updatedUser));
         await setUserData(updatedUser);
       }
+
       const isEmailChanged = emailInput.value !== initialValues.email;
-
-      if (isEmailChanged) {
-        Alert.alert(
-          t('profile.updateSuccess'),
-          t('profile.emailChangeDetectedMessage'),
-          [
-            {
-              text: t('profile.loginAgain', 'Login Again'),
-              onPress: async () => {
-                await removeAuthData();
-                dispatch(logout());
-              },
-            },
-          ],
-          { cancelable: false }
-        );
-      } else {
-        Alert.alert(t('profile.updateSuccess'), t('profile.updateSuccessMessage'), [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]);
-      }
-
-      setInitialValues({
-        name: nameInput.value,
-        email: emailInput.value,
-        phone: phoneInput.value,
-        avatar: selectedImage?.uri || user?.avatar_url || '',
-      });
-      setInitialImage(selectedImage?.uri || user?.avatar_url || '');
-
-      passwordInput.setValue('');
-      passwordConfirm.setValue('');
+      showSuccessAlert(isEmailChanged);
+      updateLocalState();
     } catch (error: any) {
       handleError(error);
     }
@@ -259,6 +285,14 @@ const EditProfile: React.FC = () => {
     showsVerticalScrollIndicator: false,
     testID: 'edit-profile-scroll',
   };
+
+  const getImageErrorMessage = () => {
+    if (imageError === 'required') return t('validate.avatarRequired');
+    if (imageError === 'size') return t('validate.avatarSize');
+    return t('validate.avatarType');
+  };
+
+  const imageErrorMessage = imageError ? getImageErrorMessage() : null;
 
   const renderHeader = () => (
     <View style={[styles.header, responsive.isTablet && styles.headerTablet]}>
@@ -301,14 +335,8 @@ const EditProfile: React.FC = () => {
               <Icon name="camera" size={20} color="#FFF" />
             </TouchableOpacity>
           </View>
-          {imageError && hasChanges && (
-            <Text style={styles.styleErrorText}>
-              {imageError === 'required'
-                ? t('validate.avatarRequired')
-                : imageError === 'size'
-                  ? t('validate.avatarSize')
-                  : t('validate.avatarType')}
-            </Text>
+          {imageError && hasChanges && imageErrorMessage && (
+            <Text style={styles.styleErrorText}>{imageErrorMessage}</Text>
           )}
         </View>
 

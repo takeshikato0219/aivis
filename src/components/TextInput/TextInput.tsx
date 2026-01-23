@@ -14,7 +14,7 @@ interface TextInputProps {
   secureTextEntry?: boolean;
   keyboardType?: RNTextInputProps['keyboardType'];
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  autoComplete?: string;
+  autoComplete?: RNTextInputProps['autoComplete'];
   multiline?: boolean;
   numberOfLines?: number;
   error?: boolean;
@@ -46,6 +46,8 @@ const TextInput: React.FC<TextInputProps> = ({
 }) => {
   const [secureText, setSecureText] = useState(secureTextEntry);
 
+  const leftIcon = icon ? <PaperTextInput.Icon icon={icon} /> : undefined;
+
   // Build right icon component
   const getRightIcon = () => {
     if (secureTextEntry) {
@@ -75,15 +77,7 @@ const TextInput: React.FC<TextInputProps> = ({
       onChangeText={onChangeText}
       placeholder={placeholder}
       mode={mode}
-      left={
-        icon ? (
-          typeof icon === 'string' ? (
-            <PaperTextInput.Icon icon={icon} />
-          ) : (
-            <PaperTextInput.Icon icon={icon} />
-          )
-        ) : undefined
-      }
+      left={leftIcon}
       right={getRightIcon()}
       secureTextEntry={secureText}
       keyboardType={keyboardType}

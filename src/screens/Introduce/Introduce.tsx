@@ -52,48 +52,88 @@ export default function Introduce() {
     navigation.navigate('Home' as any);
   };
 
-  const renderItem = ({ item }: { item: { key: string; image: any } }) => {
-    const isPortrait = !isLandscape;
+  const calculateDimensions = (
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    slideSize: { width: number; height: number },
+    isPortrait: boolean
+  ) => {
     const slideWidth = slideSize.width;
     const slideHeight = slideSize.height * (isTablet() ? 0.6 : 0.46);
     const imageWidth = slideWidth * 0.85;
-    const imageHeight = isPortrait
-      ? slideSize.height * (isTablet() ? 0.45 : 0.36)
-      : imageWidth * 0.6;
 
-    const renderImage = () =>
-      typeof item.image === 'function' ? (
+    // Extract the portrait height multiplier
+    const portraitHeightMultiplier = isTablet() ? 0.45 : 0.36;
+    const imageHeight = isPortrait ? slideSize.height * portraitHeightMultiplier : imageWidth * 0.6;
+
+    return { slideWidth, slideHeight, imageWidth, imageHeight };
+  };
+
+  const renderSlideImage = (
+    item: { image: any },
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    slideSize: { width: number; height: number },
+    isPortrait: boolean
+  ) => {
+    if (typeof item.image === 'function') {
+      return (
         <item.image
-          width={isPortrait ? slideWidth : '100%'}
+          width={isPortrait ? slideSize.width : '100%'}
           height={isPortrait ? slideSize.height : '100%'}
           preserveAspectRatio={!isPortrait ? 'xMidYMid meet' : undefined}
         />
-      ) : (
-        <Image source={item.image} resizeMode="contain" />
       );
+    }
 
-    const content = (
-      <View style={[styles.slideInner, { width: imageWidth, height: imageHeight }]}>
-        {renderImage()}
-      </View>
-    );
+    return <Image source={item.image} resizeMode="contain" />;
+  };
+
+  const renderSlideContent = (
+    item: { image: any },
+    dimensions: any,
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    slideSize: any,
+    isPortrait: boolean
+  ) => {
+    const { imageWidth, imageHeight } = dimensions;
 
     return (
-      <View
-        style={[styles.slide, { width: slideWidth, height: isPortrait ? slideHeight : undefined }]}
-      >
-        {isPortrait ? (
-          content
-        ) : (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.styleLandscape}
-          >
-            {content}
-          </ScrollView>
-        )}
+      <View style={[styles.slideInner, { width: imageWidth, height: imageHeight }]}>
+        {renderSlideImage(item, slideSize, isPortrait)}
       </View>
     );
+  };
+
+  const renderSlideWithLayout = (
+    content: React.ReactNode,
+    dimensions: any,
+    isPortrait: boolean
+  ) => {
+    const { slideWidth, slideHeight } = dimensions;
+
+    if (isPortrait) {
+      return (
+        <View style={[styles.slide, { width: slideWidth, height: slideHeight }]}>{content}</View>
+      );
+    }
+
+    return (
+      <View style={[styles.slide, { width: slideWidth }]}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.styleLandscape}
+        >
+          {content}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const renderItem = ({ item }: { item: { key: string; image: any } }) => {
+    const isPortrait = !isLandscape;
+    const dimensions = calculateDimensions(slideSize, isPortrait);
+    const content = renderSlideContent(item, dimensions, slideSize, isPortrait);
+
+    return renderSlideWithLayout(content, dimensions, isPortrait);
   };
 
   return (

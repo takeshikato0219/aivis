@@ -1,10 +1,9 @@
 import { useEffect, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@redux/store';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import authService from '@api/authService';
 import { setUser, logout } from '@redux/slices/authSlice';
 import { setUserData, removeAuthData } from '@utils/authStorage';
-import { AppState } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 

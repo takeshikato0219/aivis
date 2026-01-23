@@ -53,8 +53,6 @@ const Notifications = () => {
     },
   ];
 
-  // const unreadCount = notifications.filter((n) => n.unread).length;
-
   return (
     <View style={styles.container}>
       <ImageBackground

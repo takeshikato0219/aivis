@@ -192,9 +192,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({ isOpen, onClose, avatarUrl }) =
             {/* Menu Items */}
             {isLandscape ? (
               <ScrollView style={styles.menuList} contentContainerStyle={styles.menuListContent}>
-                {menuItems.map((item, index) => (
+                {menuItems.map((item) => (
                   <TouchableOpacity
-                    key={index}
+                    key={item.label}
                     style={[styles.menuItem, item.danger && styles.menuItemDanger]}
                     onPress={item.onPress}
                     activeOpacity={0.7}
@@ -208,9 +208,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({ isOpen, onClose, avatarUrl }) =
               </ScrollView>
             ) : (
               <View style={styles.menuList}>
-                {menuItems.map((item, index) => (
+                {menuItems.map((item) => (
                   <TouchableOpacity
-                    key={index}
+                    key={item.label}
                     style={[styles.menuItem, item.danger && styles.menuItemDanger]}
                     onPress={item.onPress}
                     activeOpacity={0.7}

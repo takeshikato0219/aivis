@@ -18,7 +18,7 @@ import TextInput from '@components/TextInput/TextInput';
 import { LockOutlineIcon } from '@components/IconCustom/IconCustom';
 import { COLORS } from '@constants/theme';
 import Button from '@components/Button/Button';
-import { useAppSelector } from '@redux/store';
+import { useAppSelector, useAppDispatch } from '@redux/store';
 import { useTranslation } from 'react-i18next';
 import { useInput } from '@hooks/useInput';
 import { isPassword, isPasswordConfirm } from '@utils/validate';
@@ -32,7 +32,6 @@ import HomeBackgroundImage from '@assets/png/home-background.png';
 import authService from '@api/authService';
 import { removeAuthData } from '@utils/authStorage';
 import { logout } from '@redux/slices/authSlice';
-import { useAppDispatch } from '@redux/store';
 
 const ChangePassword: React.FC = () => {
   const responsive = useResponsive();

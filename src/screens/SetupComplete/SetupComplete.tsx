@@ -38,7 +38,9 @@ const SetupComplete: React.FC = () => {
     navigation.navigate('Home' as any);
   };
 
-  const handleGoToCameraSettings = () => {};
+  const handleGoToCameraSettings = () => {
+    // TODO: Implement camera settings navigation
+  };
 
   const Content = (
     <View style={styles.content}>

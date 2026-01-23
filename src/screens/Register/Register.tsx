@@ -131,142 +131,144 @@ const Register: React.FC = () => {
     }
   };
 
-  const handleRegister = async () => {
-    // Validate image
+  const validateRegistrationInputs = () => {
     const imageValidation = validateImage(selectedImage);
     setImageError(imageValidation ?? null);
 
-    // Validate inputs
-    const isNameValid = nameInput.validate();
-    const isEmailValid = emailInput.validate();
-    const isPhoneValid = phoneInput.validate();
-    const isPasswordValid = passwordInput.validate();
-    const isPasswordConfirmValid = passwordConfirm.validate();
+    const validations = {
+      isNameValid: nameInput.validate(),
+      isEmailValid: emailInput.validate(),
+      isPhoneValid: phoneInput.validate(),
+      isPasswordValid: passwordInput.validate(),
+      isPasswordConfirmValid: passwordConfirm.validate(),
+    };
 
-    // Check validation
-    if (
-      !isNameValid ||
-      !isEmailValid ||
-      !isPhoneValid ||
-      !isPasswordValid ||
-      !isPasswordConfirmValid ||
-      imageValidation
-    ) {
-      return;
+    const isAllValid = Object.values(validations).every((v) => v) && !imageValidation;
+
+    return { validations, imageValidation, isAllValid };
+  };
+
+  const registerOnAndroid = async () => {
+    const formData = new FormData();
+    formData.append('name', nameInput.value);
+    formData.append('email', emailInput.value);
+    formData.append('password', passwordInput.value);
+    formData.append('confirm_password', passwordConfirm.value);
+    formData.append('phone', phoneInput.value);
+
+    if (selectedImage) {
+      formData.append('avatar', {
+        uri: selectedImage.uri,
+        type: selectedImage.type || 'image/png',
+        name: selectedImage.fileName || 'avatar.png',
+      } as any);
     }
 
-    // Check network
+    const url = `${API_BASE_URL}${API_ENDPOINTS.AUTH.REGISTER}`.replace(/\/+$/, '');
+    const response = await axios.post(url, formData, {
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 30000,
+    });
+
+    const registerResult = response.data.data;
+    const userInfo = mapApiResponseToUser(registerResult);
+
+    return { registerResult, userInfo };
+  };
+
+  const registerOnOtherPlatforms = async () => {
+    const avatarFile = selectedImage
+      ? {
+          uri: selectedImage.uri,
+          type: selectedImage.type || 'image/jpeg',
+          name: selectedImage.fileName || `avatar_${Date.now()}.jpg`,
+        }
+      : null;
+
+    const registerData = {
+      email: emailInput.value,
+      password: passwordInput.value,
+      confirm_password: passwordConfirm.value,
+      name: nameInput.value,
+      phone: phoneInput.value,
+      avatar: avatarFile,
+    };
+
+    const registerResult = await dispatch(registerAsync(registerData)).unwrap();
+    const userInfo = registerResult.user;
+
+    return { registerResult, userInfo };
+  };
+
+  const mapApiResponseToUser = (registerResult: any): User => ({
+    id: registerResult.user_info.id,
+    email: registerResult.user_info.email,
+    name: registerResult.user_info.name,
+    phone: registerResult.user_info.phone,
+    line_user_id: registerResult.user_info.line_user_id,
+    is_admin: registerResult.user_info.is_admin,
+    is_active: registerResult.user_info.is_active,
+    created_at: registerResult.user_info.created_at,
+    updated_at: registerResult.user_info.updated_at,
+    avatar_path: registerResult.user_info.avatar_path,
+    avatar_url: registerResult.user_info.avatar_url,
+  });
+
+  const handleRegistrationSuccess = async (registerResult: any, userInfo: User) => {
+    await disableBiometricLogin();
+
+    const accessToken = registerResult.access_token ?? registerResult.accessToken ?? '';
+    const refreshToken = registerResult.refresh_token ?? registerResult.refreshToken ?? '';
+
+    await setAuthData(accessToken, refreshToken, userInfo);
+
+    dispatch(setUser(userInfo));
+    dispatch(setTokens({ accessToken, refreshToken }));
+
+    Alert.alert(
+      t('auth.registerSuccess', 'Registration Successful'),
+      t('auth.welcomeMessage', 'Welcome! You can now access all features.'),
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            dispatch(setAuthenticated());
+            openModalBiometricEnable({ accessToken, refreshToken });
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRegister = async () => {
+    const { isAllValid } = validateRegistrationInputs();
+    if (!isAllValid) return;
+
     if (!isConnected) {
       handleNetworkError();
       return;
     }
 
     try {
-      let registerResult;
-      let userInfo: User;
+      const { registerResult, userInfo } =
+        Platform.OS === 'android' ? await registerOnAndroid() : await registerOnOtherPlatforms();
 
-      if (Platform.OS === 'android') {
-        const formData = new FormData();
-        formData.append('name', nameInput.value);
-        formData.append('email', emailInput.value);
-        formData.append('password', passwordInput.value);
-        formData.append('confirm_password', passwordConfirm.value);
-        formData.append('phone', phoneInput.value);
-
-        if (selectedImage) {
-          formData.append('avatar', {
-            uri: selectedImage.uri,
-            type: selectedImage.type || 'image/png',
-            name: selectedImage.fileName || 'avatar.png',
-          } as any);
-        }
-
-        const url = `${API_BASE_URL}${API_ENDPOINTS.AUTH.REGISTER}`.replace(/\/+$/, '');
-        const response = await axios.post(url, formData, {
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'multipart/form-data',
-          },
-          timeout: 30000,
-        });
-
-        registerResult = response.data.data;
-
-        userInfo = {
-          id: registerResult.user_info.id,
-          email: registerResult.user_info.email,
-          name: registerResult.user_info.name,
-          phone: registerResult.user_info.phone,
-          line_user_id: registerResult.user_info.line_user_id,
-          is_admin: registerResult.user_info.is_admin,
-          is_active: registerResult.user_info.is_active,
-          created_at: registerResult.user_info.created_at,
-          updated_at: registerResult.user_info.updated_at,
-          avatar_path: registerResult.user_info.avatar_path,
-          avatar_url: registerResult.user_info.avatar_url,
-        };
-      } else {
-        let avatarFile = null;
-        if (selectedImage) {
-          avatarFile = {
-            uri: selectedImage.uri,
-            type: selectedImage.type || 'image/jpeg',
-            name: selectedImage.fileName || `avatar_${Date.now()}.jpg`,
-          };
-        }
-
-        const registerData = {
-          email: emailInput.value,
-          password: passwordInput.value,
-          confirm_password: passwordConfirm.value,
-          name: nameInput.value,
-          phone: phoneInput.value,
-          avatar: avatarFile,
-        };
-
-        registerResult = await dispatch(registerAsync(registerData)).unwrap();
-        userInfo = registerResult.user;
-      }
-
-      await disableBiometricLogin();
-
-      // Save auth data to AsyncStorage
-      await setAuthData(
-        registerResult.access_token ?? registerResult.accessToken ?? '',
-        registerResult.refresh_token ?? registerResult.refreshToken ?? '',
-        userInfo
-      );
-
-      // Update Redux store
-      dispatch(setUser(userInfo));
-      dispatch(
-        setTokens({
-          accessToken: registerResult.access_token ?? registerResult.accessToken ?? '',
-          refreshToken: registerResult.refresh_token ?? registerResult.refreshToken ?? '',
-        })
-      );
-
-      // Show success alert
-      Alert.alert(
-        t('auth.registerSuccess', 'Registration Successful'),
-        t('auth.welcomeMessage', 'Welcome! You can now access all features.'),
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              dispatch(setAuthenticated());
-              openModalBiometricEnable({
-                accessToken: registerResult.access_token ?? registerResult.accessToken ?? '',
-                refreshToken: registerResult.refresh_token ?? registerResult.refreshToken ?? '',
-              });
-            },
-          },
-        ]
-      );
+      await handleRegistrationSuccess(registerResult, userInfo);
     } catch (error: any) {
       handleError(error);
     }
   };
+
+  const getImageErrorMessage = () => {
+    if (imageError === 'required') return t('validate.avatarRequired');
+    if (imageError === 'size') return t('validate.avatarSize');
+    return t('validate.avatarType');
+  };
+
+  const imageErrorMessage = imageError ? getImageErrorMessage() : null;
 
   const goToLogin = () => {
     navigation.navigate('Login' as never);
@@ -444,14 +446,8 @@ const Register: React.FC = () => {
                     </TouchableOpacity>
                   )}
                 </View>
-                {imageError && (
-                  <Text style={styles.styleErrorText}>
-                    {imageError === 'required'
-                      ? t('validate.avatarRequired')
-                      : imageError === 'size'
-                        ? t('validate.avatarSize')
-                        : t('validate.avatarType')}
-                  </Text>
+                {imageError && imageErrorMessage && (
+                  <Text style={styles.styleErrorText}>{imageErrorMessage}</Text>
                 )}
               </View>
               <View style={styles.checkboxRow}>

@@ -28,7 +28,6 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [i18nInitialized, setI18nInitialized] = useState(false);
 
   const isDarkMode = colorScheme === 'dark';
-  // const theme = isDarkMode ? paperDarkTheme : paperLightTheme;
   const theme = paperDarkTheme;
 
   useEffect(() => {

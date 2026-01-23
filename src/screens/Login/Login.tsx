@@ -12,7 +12,7 @@ import {
 import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { useAppDispatch, useAppSelector } from '@redux/store';
+import { useAppDispatch, useAppSelector, store } from '@redux/store';
 import { loginAsync, verifyTokenAsync } from '@redux/slices/authSlice';
 import Button from '@components/Button/Button';
 import TextInput from '@components/TextInput/TextInput';
@@ -29,13 +29,11 @@ import { showCommonAlert } from '@components/Alert/Alert';
 import { useTranslation } from 'react-i18next';
 import { EmailOutlineIcon, LockOutlineIcon } from '@components/IconCustom/IconCustom';
 import { LoginScreenNavigationProp } from '@navigation/types';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import LoginBackground from '@assets/svg/login-background.svg';
 import Logo from '@assets/svg/logo.svg';
 import { setAuthData } from '@utils/authStorage';
-import { store } from '@redux/store';
 import { disableBiometricLogin } from '@/services/biometricService';
-import { useIsFocused } from '@react-navigation/native';
 
 const Login: React.FC = () => {
   const isFocused = useIsFocused();
@@ -123,8 +121,8 @@ const Login: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (
+  const shouldTriggerBiometricAutoLogin = () => {
+    return (
       isFocused &&
       biometricInfo.available &&
       isBiometricEnabled &&
@@ -132,35 +130,47 @@ const Login: React.FC = () => {
       !hasPromptedRef.current &&
       !isLoading &&
       isConnected
-    ) {
-      const timeSinceFocus = Date.now() - screenFocusTimeRef.current;
+    );
+  };
 
-      if (timeSinceFocus < 1000) {
-        return;
+  const shouldSkipDueToTiming = () => {
+    const timeSinceFocus = Date.now() - screenFocusTimeRef.current;
+    return timeSinceFocus < 1000;
+  };
+
+  const performBiometricAutoLogin = async () => {
+    if (!isMountedRef.current) return;
+    if (!biometricInfo.available || !isBiometricEnabled) return;
+    if (!isConnected) return;
+
+    try {
+      const credentials = await getCredentials();
+      if (!isMountedRef.current) return;
+
+      await biometricAutoLogin(credentials ?? {});
+    } catch (err: any) {
+      if (isMountedRef.current && isConnected) {
+        handleError(err, true);
       }
-
-      hasPromptedRef.current = true;
-
-      const timer = setTimeout(async () => {
-        if (!isMountedRef.current) return;
-        if (!biometricInfo.available || !isBiometricEnabled) return;
-        if (!isConnected) return;
-
-        try {
-          const credentials = await getCredentials();
-
-          if (!isMountedRef.current) return;
-
-          await biometricAutoLogin(credentials ?? {});
-        } catch (err: any) {
-          if (isMountedRef.current && isConnected) {
-            handleError(err, true);
-          }
-        }
-      }, 800);
-
-      return () => clearTimeout(timer);
     }
+  };
+
+  useEffect(() => {
+    if (!shouldTriggerBiometricAutoLogin()) {
+      return;
+    }
+
+    if (shouldSkipDueToTiming()) {
+      return;
+    }
+
+    hasPromptedRef.current = true;
+
+    const timer = setTimeout(async () => {
+      await performBiometricAutoLogin();
+    }, 800);
+
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isFocused,
@@ -169,9 +179,6 @@ const Login: React.FC = () => {
     isBiometricLoading,
     isLoading,
     isConnected,
-    getCredentials,
-    dispatch,
-    handleError,
   ]);
 
   const handleBiometricLogin = async () => {
@@ -204,9 +211,71 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleLogin = async () => {
+  const validateLoginInputs = () => {
     const isEmailValid = emailOrPhoneInput.validate();
     const isPasswordValid = passwordInput.validate();
+    return { isEmailValid, isPasswordValid };
+  };
+
+  const showBiometricEnablePrompt = async (loginResult: any) => {
+    if (!biometricInfo.available || isBiometricEnabled) {
+      await saveCredentials({
+        accessToken: loginResult.accessToken,
+        refreshToken: loginResult.refreshToken,
+      });
+      return;
+    }
+
+    setTimeout(() => {
+      showCommonAlert({
+        title: t('biometric.enableTitle', { type: biometricTypeName }),
+        message: t('biometric.enableMessage', { type: biometricTypeName }),
+        buttons: [
+          { text: t('common.notNow'), style: 'cancel' },
+          {
+            text: t('common.enable'),
+            onPress: async () => {
+              const saved = await saveCredentials({
+                accessToken: loginResult.accessToken,
+                refreshToken: loginResult.refreshToken,
+              });
+              showCommonAlert({
+                title: saved ? t('common.success') : t('common.error'),
+                message: saved
+                  ? t('biometric.enabled', { type: biometricTypeName })
+                  : t('biometric.failed', { type: biometricTypeName }),
+              });
+            },
+          },
+        ],
+      });
+    }, 100);
+  };
+
+  const handleLoginSuccess = async (loginResult: any) => {
+    await setAuthData(
+      loginResult.accessToken ?? '',
+      loginResult.refreshToken ?? '',
+      loginResult.user
+    );
+
+    await showBiometricEnablePrompt(loginResult);
+  };
+
+  const handleLoginError = (err: any) => {
+    console.log(err);
+    if (err.message) {
+      showCommonAlert({
+        title: t('auth.loginFailed'),
+        message: err.message,
+      });
+    } else {
+      handleError(err, true);
+    }
+  };
+
+  const handleLogin = async () => {
+    const { isEmailValid, isPasswordValid } = validateLoginInputs();
 
     if (!isEmailValid || !isPasswordValid) {
       return;
@@ -219,54 +288,15 @@ const Login: React.FC = () => {
 
     try {
       const loginResult = await dispatch(
-        loginAsync({ email: emailOrPhoneInput.value, password: passwordInput.value })
+        loginAsync({
+          email: emailOrPhoneInput.value,
+          password: passwordInput.value,
+        })
       ).unwrap();
-      await setAuthData(
-        loginResult.accessToken ?? '',
-        loginResult.refreshToken ?? '',
-        loginResult.user
-      );
-      if (biometricInfo.available && !isBiometricEnabled) {
-        setTimeout(() => {
-          showCommonAlert({
-            title: t('biometric.enableTitle', { type: biometricTypeName }),
-            message: t('biometric.enableMessage', { type: biometricTypeName }),
-            buttons: [
-              { text: t('common.notNow'), style: 'cancel' },
-              {
-                text: t('common.enable'),
-                onPress: async () => {
-                  const saved = await saveCredentials({
-                    accessToken: loginResult.accessToken,
-                    refreshToken: loginResult.refreshToken,
-                  });
-                  showCommonAlert({
-                    title: saved ? t('common.success') : t('common.error'),
-                    message: saved
-                      ? t('biometric.enabled', { type: biometricTypeName })
-                      : t('biometric.failed', { type: biometricTypeName }),
-                  });
-                },
-              },
-            ],
-          });
-        }, 100);
-      } else {
-        await saveCredentials({
-          accessToken: loginResult.accessToken,
-          refreshToken: loginResult.refreshToken,
-        });
-      }
+
+      await handleLoginSuccess(loginResult);
     } catch (err: any) {
-      console.log(err);
-      if (err.message) {
-        showCommonAlert({
-          title: t('auth.loginFailed'),
-          message: err.message,
-        });
-      } else {
-        handleError(err, true);
-      }
+      handleLoginError(err);
     }
   };
 
