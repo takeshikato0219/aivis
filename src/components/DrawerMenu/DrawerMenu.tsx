@@ -44,7 +44,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({ isOpen, onClose, avatarUrl }) =
     if (isPad) {
       return isLandscape ? 380 : 340;
     }
-    return isLandscape ? 300 : 300;
+    return 300;
   };
 
   const [drawerWidth, setDrawerWidth] = React.useState(getDrawerWidth());

@@ -164,7 +164,10 @@ const Register: React.FC = () => {
       } as any);
     }
 
-    const url = `${API_BASE_URL}${API_ENDPOINTS.AUTH.REGISTER}`.replace(/\/+$/, '');
+    let url = `${API_BASE_URL}${API_ENDPOINTS.AUTH.REGISTER}`;
+    while (url.endsWith('/')) {
+      url = url.slice(0, -1);
+    }
     const response = await axios.post(url, formData, {
       headers: {
         Accept: 'application/json',

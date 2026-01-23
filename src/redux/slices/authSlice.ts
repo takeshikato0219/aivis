@@ -146,7 +146,7 @@ export const registerAsync = createAsyncThunk<
   }
 });
 
-export const setAuthenticated = createAsyncThunk('auth/setAuthenticated', async (_, {}) => {
+export const setAuthenticated = createAsyncThunk('auth/setAuthenticated', async (_) => {
   return true;
 });
 

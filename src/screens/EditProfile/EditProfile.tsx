@@ -246,29 +246,35 @@ const EditProfile: React.FC = () => {
   const handleSave = async () => {
     if (!isSubmitEnabled) return;
 
-    const { isNameValid, isEmailValid, isPhoneValid, imageValidation } = validateForm();
-
-    if (!isNameValid || !isEmailValid || !isPhoneValid || imageValidation) {
-      return;
-    }
+    const validation = validateForm();
+    if (!isFormValidationPassed(validation)) return;
 
     try {
-      const updateData = buildUpdateData();
-
-      if (Object.keys(updateData).length > 0) {
-        console.log(updateData);
-        const updatedUser = await authService.updateProfile(updateData);
-        console.log(updatedUser);
-        dispatch(setUser(updatedUser));
-        await setUserData(updatedUser);
-      }
-
-      const isEmailChanged = emailInput.value !== initialValues.email;
-      showSuccessAlert(isEmailChanged);
-      updateLocalState();
+      await processProfileUpdate();
     } catch (error: any) {
       handleError(error);
     }
+  };
+
+  const isFormValidationPassed = (validation: ReturnType<typeof validateForm>) => {
+    const { isNameValid, isEmailValid, isPhoneValid, imageValidation } = validation;
+    return isNameValid && isEmailValid && isPhoneValid && !imageValidation;
+  };
+
+  const processProfileUpdate = async () => {
+    const updateData = buildUpdateData();
+
+    if (Object.keys(updateData).length > 0) {
+      console.log(updateData);
+      const updatedUser = await authService.updateProfile(updateData);
+      console.log(updatedUser);
+      dispatch(setUser(updatedUser));
+      await setUserData(updatedUser);
+    }
+
+    const isEmailChanged = emailInput.value !== initialValues.email;
+    showSuccessAlert(isEmailChanged);
+    updateLocalState();
   };
 
   const handleBack = () => {
