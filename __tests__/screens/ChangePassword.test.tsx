@@ -42,7 +42,11 @@ describe('ChangePassword Logic Tests', () => {
 
       const result = await authService.changePassword('oldPass123!', 'newPass123!', 'newPass123!');
 
-      expect(authService.changePassword).toHaveBeenCalledWith('oldPass123!', 'newPass123!', 'newPass123!');
+      expect(authService.changePassword).toHaveBeenCalledWith(
+        'oldPass123!',
+        'newPass123!',
+        'newPass123!'
+      );
       expect(result).toEqual(mockResponse);
     });
 
@@ -54,7 +58,11 @@ describe('ChangePassword Logic Tests', () => {
         authService.changePassword('oldPass123!', 'newPass123!', 'newPass123!')
       ).rejects.toThrow('API Error');
 
-      expect(authService.changePassword).toHaveBeenCalledWith('oldPass123!', 'newPass123!', 'newPass123!');
+      expect(authService.changePassword).toHaveBeenCalledWith(
+        'oldPass123!',
+        'newPass123!',
+        'newPass123!'
+      );
     });
   });
 
@@ -94,7 +102,8 @@ describe('ChangePassword Logic Tests', () => {
 
       const oldValid = isPassword(validPasswords.old) === undefined;
       const newValid = isPassword(validPasswords.new) === undefined;
-      const confirmValid = isPasswordConfirm(validPasswords.new, validPasswords.confirm) === undefined;
+      const confirmValid =
+        isPasswordConfirm(validPasswords.new, validPasswords.confirm) === undefined;
 
       expect(oldValid).toBe(true);
       expect(newValid).toBe(true);

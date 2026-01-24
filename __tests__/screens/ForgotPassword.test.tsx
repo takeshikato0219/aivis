@@ -1,8 +1,4 @@
-import React from 'react';
 import { Alert } from 'react-native';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { renderWithProviders } from '../helpers/renderWithProviders';
-import ForgotPassword from '../../src/screens/ForgotPassword/ForgotPassword';
 
 // ===== MOCK EXTERNAL DEPENDENCIES =====
 
@@ -301,6 +297,7 @@ describe('ForgotPassword Component Logic', () => {
         const response = await mockForgotPassword(mockEmailInput.value);
 
         // Simulate Alert.alert call
+        // @ts-ignore
         mockAlert(response.message, undefined, [
           {
             text: 'OK',
@@ -321,7 +318,9 @@ describe('ForgotPassword Component Logic', () => {
 
         // Simulate pressing OK
         const alertCall = mockAlert.mock.calls[0];
+        // @ts-ignore
         const okButton = alertCall[2].find((btn: any) => btn.text === 'OK');
+        // @ts-ignore
         okButton.onPress();
 
         expect(mockGoBack).toHaveBeenCalled();

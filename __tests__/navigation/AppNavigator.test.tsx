@@ -13,6 +13,7 @@ jest.mock('@constants/theme', () => ({
 
 // ===== MOCK SCREEN COMPONENTS =====
 jest.mock('@screens/Introduce/Introduce', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockIntroduce() {
@@ -20,6 +21,7 @@ jest.mock('@screens/Introduce/Introduce', () => {
   };
 });
 jest.mock('@screens/Home/Home', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockHome() {
@@ -27,6 +29,7 @@ jest.mock('@screens/Home/Home', () => {
   };
 });
 jest.mock('@screens/Detail/Detail', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockDetail() {
@@ -34,6 +37,7 @@ jest.mock('@screens/Detail/Detail', () => {
   };
 });
 jest.mock('@screens/CameraLiveView/CameraLiveView', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockCameraLiveView() {
@@ -41,6 +45,7 @@ jest.mock('@screens/CameraLiveView/CameraLiveView', () => {
   };
 });
 jest.mock('@screens/Notifications/Notifications', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockNotifications() {
@@ -48,6 +53,7 @@ jest.mock('@screens/Notifications/Notifications', () => {
   };
 });
 jest.mock('@screens/QRScanner/QRScanner', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockQRScanner() {
@@ -55,6 +61,7 @@ jest.mock('@screens/QRScanner/QRScanner', () => {
   };
 });
 jest.mock('@screens/CameraSetup/CameraSetup', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockCameraSetup() {
@@ -62,6 +69,7 @@ jest.mock('@screens/CameraSetup/CameraSetup', () => {
   };
 });
 jest.mock('@screens/SetupComplete/SetupComplete', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockSetupComplete() {
@@ -69,6 +77,7 @@ jest.mock('@screens/SetupComplete/SetupComplete', () => {
   };
 });
 jest.mock('@screens/Profile/Profile', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockProfile() {
@@ -76,6 +85,7 @@ jest.mock('@screens/Profile/Profile', () => {
   };
 });
 jest.mock('@screens/EditProfile/EditProfile', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockEditProfile() {
@@ -83,6 +93,7 @@ jest.mock('@screens/EditProfile/EditProfile', () => {
   };
 });
 jest.mock('@screens/ChangePassword/ChangePassword', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockChangePassword() {
@@ -90,6 +101,7 @@ jest.mock('@screens/ChangePassword/ChangePassword', () => {
   };
 });
 jest.mock('@screens/DetectionZoneSetup/DetectionZoneSetup', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { View } = require('react-native');
   return function MockDetectionZoneSetup() {
@@ -102,7 +114,10 @@ describe('AppNavigator', () => {
     jest.useFakeTimers();
   });
 
-  const renderAppNavigator = (initialState?: { routes: { name: string; params?: object }[]; index: number }) =>
+  const renderAppNavigator = (initialState?: {
+    routes: { name: string; params?: object }[];
+    index: number;
+  }) =>
     render(
       <NavigationContainer {...(initialState && { initialState: initialState as any })}>
         <AppNavigator />

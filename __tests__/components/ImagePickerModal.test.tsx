@@ -1,7 +1,7 @@
 import React from 'react';
 import { Animated } from 'react-native';
 import { render, fireEvent, screen } from '@testing-library/react-native';
-import { ImagePickerModal } from '../../src/components/ImagePickerModal/ImagePickerModal';
+import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';
 
 // ===== MOCK EXTERNAL DEPENDENCIES =====
 
@@ -14,6 +14,7 @@ jest.mock('react-i18next', () => ({
 
 // Mock react-native-vector-icons
 jest.mock('react-native-vector-icons/MaterialIcons', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const React = require('react');
   const { Text } = require('react-native');
   return function MockIcon({ name, size, color }: any) {
@@ -24,6 +25,7 @@ jest.mock('react-native-vector-icons/MaterialIcons', () => {
 // Mock react-native-paper
 jest.mock('react-native-paper', () => ({
   Text: ({ children, ...props }: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-shadow
     const React = require('react');
     const { Text: RNText } = require('react-native');
     return <RNText {...props}>{children}</RNText>;
@@ -43,12 +45,38 @@ jest.mock('../../src/components/ImagePickerModal/ImagePickerModal.styles', () =>
     modalOverlay: { flex: 1 },
     modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
     modalContent: { backgroundColor: 'white', borderTopLeftRadius: 12, borderTopRightRadius: 12 },
-    modalDragIndicator: { width: 40, height: 4, backgroundColor: '#CCCCCC', borderRadius: 2, alignSelf: 'center', marginVertical: 8 },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
+    modalDragIndicator: {
+      width: 40,
+      height: 4,
+      backgroundColor: '#CCCCCC',
+      borderRadius: 2,
+      alignSelf: 'center',
+      marginVertical: 8,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+    },
     modalTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
     modalOptionsContainer: { paddingHorizontal: 16 },
-    modalButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-    modalButtonIconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+    modalButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F0F0F0',
+    },
+    modalButtonIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: '#F5F5F5',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
     modalButtonContent: { flex: 1 },
     modalButtonText: { fontSize: 16, fontWeight: '500', color: '#333' },
     modalButtonDescription: { fontSize: 14, color: '#666', marginTop: 2 },
@@ -205,6 +233,7 @@ describe('ImagePickerModal Component', () => {
 
       // The opacity animation should be applied to the backdrop
       expect(opacityAnim).toBeInstanceOf(Animated.Value);
+      // @ts-ignore
       expect(opacityAnim._value).toBe(0.5);
     });
 
@@ -237,13 +266,19 @@ describe('ImagePickerModal Component', () => {
 
     it('handles multiple rapid presses correctly', () => {
       const onTakePhoto = jest.fn();
-      const { getByTestId } = render(<ImagePickerModal {...defaultProps} onTakePhoto={onTakePhoto} />);
+      const { getByTestId } = render(
+        <ImagePickerModal {...defaultProps} onTakePhoto={onTakePhoto} />
+      );
 
+      // @ts-ignore
       const cameraButton = getByTestId('icon-camera-alt').parent.parent;
 
       // Simulate rapid presses
+      // @ts-ignore
       fireEvent.press(cameraButton);
+      // @ts-ignore
       fireEvent.press(cameraButton);
+      // @ts-ignore
       fireEvent.press(cameraButton);
 
       expect(onTakePhoto).toHaveBeenCalledTimes(3);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, waitFor } from '@testing-library/react-native';
 import AppProvider from '../../src/providers/AppProvider';
 
 // ===== MOCK @/i18n =====
@@ -25,7 +25,9 @@ jest.mock('@utils/networkMonitor', () => ({
 const mockSendPendingReports = jest.fn(() => Promise.resolve());
 const mockReportCrash = jest.fn(() => Promise.resolve());
 jest.mock('@utils/crashReporter', () => ({
+  // @ts-ignore
   sendPendingReports: (...args: unknown[]) => mockSendPendingReports(...args),
+  // @ts-ignore
   reportCrash: (...args: unknown[]) => mockReportCrash(...args),
 }));
 
@@ -40,7 +42,7 @@ jest.mock('@constants/materialTheme', () => ({
 // Use real @redux/store
 
 describe('AppProvider', () => {
-  const getInitI18nMock = () => (require('@/i18n').initI18n as jest.Mock);
+  const getInitI18nMock = () => require('@/i18n').initI18n as jest.Mock;
   const getNetworkMonitor = () => require('@utils/networkMonitor');
 
   beforeEach(() => {
