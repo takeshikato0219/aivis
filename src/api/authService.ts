@@ -14,22 +14,26 @@ class AuthService {
     return {
       accessToken: resData.access_token,
       refreshToken: resData.refresh_token,
-      user: {
-        id: resData.user_info.id,
-        name: resData.user_info.name,
-        email: resData.user_info.email,
-        phone: resData.user_info.phone,
-        line_user_id: resData.user_info.line_user_id,
-        is_admin: resData.user_info.is_admin,
-        is_active: resData.user_info.is_active,
-        created_at: resData.user_info.created_at,
-        updated_at: resData.user_info.updated_at,
-        deleted_at: resData.user_info.deleted_at,
-        avatar_path: resData.user_info.avatar_path,
-        avatar_url: resData.user_info.avatar_url,
-        status: resData.user_info.status,
-        type: resData.user_info.type,
-      },
+      user: this.mapApiUserToUser(resData.user_info),
+    };
+  }
+
+  private mapApiUserToUser(data: Record<string, any>): User {
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      line_user_id: data.line_user_id,
+      is_admin: data.is_admin,
+      is_active: data.is_active,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      deleted_at: data.deleted_at,
+      avatar_path: data.avatar_path,
+      avatar_url: data.avatar_url,
+      status: data.status,
+      type: data.type,
     };
   }
 
@@ -42,22 +46,7 @@ class AuthService {
     const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
     const response = await axiosInstance.get(API_ENDPOINTS.AUTH.ME, config);
     const resData = response.data.data || response.data;
-    return {
-      id: resData.id,
-      name: resData.name,
-      email: resData.email,
-      phone: resData.phone,
-      line_user_id: resData.line_user_id,
-      is_admin: resData.is_admin,
-      is_active: resData.is_active,
-      created_at: resData.created_at,
-      updated_at: resData.updated_at,
-      deleted_at: resData.deleted_at,
-      avatar_path: resData.avatar_path,
-      avatar_url: resData.avatar_url,
-      status: resData.status,
-      type: resData.type,
-    };
+    return this.mapApiUserToUser(resData);
   }
 
   async refreshToken(
@@ -144,22 +133,7 @@ class AuthService {
     });
 
     const resData = response.data.data || response.data;
-    return {
-      id: resData.id,
-      name: resData.name,
-      email: resData.email,
-      phone: resData.phone,
-      line_user_id: resData.line_user_id,
-      is_admin: resData.is_admin,
-      is_active: resData.is_active,
-      created_at: resData.created_at,
-      updated_at: resData.updated_at,
-      deleted_at: resData.deleted_at,
-      avatar_path: resData.avatar_path,
-      avatar_url: resData.avatar_url,
-      status: resData.status,
-      type: resData.type,
-    };
+    return this.mapApiUserToUser(resData);
   }
 
   async forgotPassword(email: string): Promise<ForgotPasswordResponse> {

@@ -113,7 +113,7 @@ const ChangePassword: React.FC = () => {
       >
         <SafeAreaView style={[styles.container]}>
           <View style={styles.headerRow}>
-            <TouchableOpacity onPress={goBack} style={styles.backButton}>
+            <TouchableOpacity onPress={goBack} style={styles.backButton} testID="back-button">
               <BackIcon />
             </TouchableOpacity>
             <View style={styles.headerTitleContainer}>
