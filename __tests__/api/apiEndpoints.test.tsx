@@ -25,7 +25,6 @@ describe('API_ENDPOINTS', () => {
     expect(API_ENDPOINTS.AUTH.FORGOT_PASSWORD).toBe('/auth/forgot-password');
     expect(API_ENDPOINTS.AUTH.RESET_PASSWORD).toBe('/auth/reset-password');
     expect(API_ENDPOINTS.AUTH.VERIFY_EMAIL).toBe('/auth/verify-email');
-    expect(API_ENDPOINTS.AUTH.GET_PROFILE).toBe('/auth/profile');
     expect(API_ENDPOINTS.AUTH.UPDATE_PROFILE).toBe('/auth/profile');
   });
 });

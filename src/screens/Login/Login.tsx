@@ -12,7 +12,7 @@ import {
 import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector, store } from '@redux/store';
-import { loginAsync, verifyTokenAsync } from '@redux/slices/authSlice';
+import { loginAsync, socialLoginAsync, verifyTokenAsync } from '@redux/slices/authSlice';
 import Button from '@components/Button/Button';
 import TextInput from '@components/TextInput/TextInput';
 import { useResponsive } from '@hooks/useResponsive';
@@ -26,13 +26,20 @@ import { useInput } from '@hooks/useInput';
 import { COLORS, FONTS } from '@constants/theme';
 import { showCommonAlert } from '@components/Alert/Alert';
 import { useTranslation } from 'react-i18next';
-import { EmailOutlineIcon, LockOutlineIcon } from '@components/IconCustom/IconCustom';
+import {
+  EmailOutlineIcon,
+  GoogleIconComponent,
+  LineIconComponent,
+  LockOutlineIcon,
+} from '@components/IconCustom/IconCustom';
 import { LoginScreenNavigationProp } from '@navigation/types';
 import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
 import LoginBackground from '@assets/svg/login-background.svg';
 import Logo from '@assets/svg/logo.svg';
 import { setAuthData } from '@utils/authStorage';
 import { disableBiometricLogin } from '@/services/biometricService';
+import lineAuthService from '@api/lineAuthService';
+import googleAuthService from '@api/googleAuthService';
 
 const Login: React.FC = () => {
   const isFocused = useIsFocused();
@@ -262,7 +269,6 @@ const Login: React.FC = () => {
   };
 
   const handleLoginError = (err: any) => {
-    console.log(err);
     if (err.message) {
       showCommonAlert({
         title: t('auth.loginFailed'),
@@ -305,6 +311,53 @@ const Login: React.FC = () => {
 
   const handleForgotPassword = () => {
     navigation.navigate('ForgotPassword');
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!isConnected) {
+      handleNetworkError();
+      return;
+    }
+
+    try {
+      const googleUser = await googleAuthService.signIn();
+
+      const loginResult = await dispatch(
+        socialLoginAsync({
+          provider: 'google',
+          token: googleUser.idToken,
+          email: googleUser.user.email,
+          name: googleUser.user.name,
+        })
+      ).unwrap();
+
+      await handleLoginSuccess(loginResult);
+    } catch (err: any) {
+      handleLoginError(err);
+    }
+  };
+
+  const handleLineLogin = async () => {
+    if (!isConnected) {
+      handleNetworkError();
+      return;
+    }
+
+    try {
+      const lineUser = await lineAuthService.signIn();
+
+      const loginResult = await dispatch(
+        socialLoginAsync({
+          provider: 'line',
+          token: lineUser.accessToken,
+          name: lineUser.user.displayName,
+        })
+      ).unwrap();
+
+      await handleLoginSuccess(loginResult);
+    } catch (err: any) {
+      handleLoginError(err);
+    }
   };
 
   // Conditional container: ScrollView in landscape, View in portrait
@@ -407,6 +460,36 @@ const Login: React.FC = () => {
                     disabled={isLoading}
                     isEnabled={isBiometricEnabled}
                   />
+                </View>
+                <View>
+                  <TouchableOpacity
+                    style={[styles.socialGoogleButton, isLoading && styles.disabledButton]}
+                    onPress={handleGoogleLogin}
+                    disabled={isLoading}
+                    testID="google-login-button"
+                  >
+                    <View style={styles.socialButtonContent}>
+                      <GoogleIconComponent />
+                      <Text style={[styles.socialButtonText, isLoading && styles.disabledText]}>
+                        {t('auth.signInWithGoogle')}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                <View>
+                  <TouchableOpacity
+                    style={[styles.socialLineButton, isLoading && styles.disabledButton]}
+                    onPress={handleLineLogin}
+                    disabled={isLoading}
+                    testID="line-login-button"
+                  >
+                    <View style={styles.socialButtonContent}>
+                      <LineIconComponent />
+                      <Text style={[styles.socialButtonText, isLoading && styles.disabledText]}>
+                        {t('auth.signInWithLine')}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>

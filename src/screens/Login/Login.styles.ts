@@ -115,4 +115,49 @@ export const styles = StyleSheet.create({
     marginBottom: 5,
     fontSize: isTablet() ? 25 : 16,
   },
+  socialGoogleButton: {
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  socialLineButton: {
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    marginVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialButtonText: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: '#ccc',
+  },
 });

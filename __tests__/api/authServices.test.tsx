@@ -1,6 +1,6 @@
 // __tests__/api/authService.test.ts
 import AuthService from '../../src/api/authService';
-import { LoginRequest, User } from '@api/types/authTypes';
+import { LoginRequest } from '@api/types/authTypes';
 import axiosInstance from '../../src/api/axiosConfig';
 import { API_ENDPOINTS } from '@api/apiEndpoints';
 
@@ -68,20 +68,6 @@ describe('AuthService', () => {
     (axiosInstance.post as jest.Mock).mockResolvedValue({});
     await AuthService.logout();
     expect(axiosInstance.post).toHaveBeenCalledWith(API_ENDPOINTS.AUTH.LOGOUT);
-  });
-
-  it('getProfile returns user data', async () => {
-    const mockUser: User = {
-      id: '1',
-      email: 'test@example.com',
-      name: 'Test',
-      phone: '1234567890',
-    };
-    (axiosInstance.get as jest.Mock).mockResolvedValue({ data: mockUser });
-
-    const res = await AuthService.getProfile();
-    expect(axiosInstance.get).toHaveBeenCalledWith(API_ENDPOINTS.AUTH.GET_PROFILE);
-    expect(res).toEqual(mockUser);
   });
 
   it('register calls axios with correct params and returns data', async () => {

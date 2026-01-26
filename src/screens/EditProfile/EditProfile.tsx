@@ -21,14 +21,7 @@ import Button from '@components/Button/Button';
 import { useAppDispatch, useAppSelector } from '@redux/store';
 import { useTranslation } from 'react-i18next';
 import { useInput } from '@hooks/useInput';
-import {
-  isEmail,
-  isPassword,
-  isPasswordConfirm,
-  isPhoneNumber,
-  validateImage,
-  isName,
-} from '@utils/validate';
+import { isEmail, isPhoneNumber, validateImage, isName } from '@utils/validate';
 import { useErrorHandler } from '@hooks/useErrorHandler';
 import { useAppSetup } from '@hooks/useAppSetup';
 import { useNavigation } from '@react-navigation/native';
@@ -39,7 +32,7 @@ import { useImagePicker } from '@hooks/useImagePicker';
 import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';
 import BackIcon from '@assets/svg/icon-back.svg';
 import authService from '@api/authService';
-import { setUser, logout } from '@redux/slices/authSlice';
+import { logout, setUser } from '@redux/slices/authSlice';
 import { removeAuthData, setUserData } from '@utils/authStorage';
 
 const EditProfile: React.FC = () => {
@@ -71,6 +64,14 @@ const EditProfile: React.FC = () => {
       };
       setInitialValues(newInitialValues);
       setInitialImage(user.avatar_url || '');
+
+      // Reset input values when user data changes
+      nameInput.setValue(user.name || '');
+      emailInput.setValue(user.email || '');
+      phoneInput.setValue(user.phone || '');
+
+      // Reset selected image when user data changes
+      setSelectedImage(null);
     }
   }, [user]);
 
@@ -84,6 +85,7 @@ const EditProfile: React.FC = () => {
     handleChooseFromLibrary,
     handleRemoveImage,
     closeModal,
+    setSelectedImage,
   } = useImagePicker();
 
   // Form inputs
@@ -103,14 +105,6 @@ const EditProfile: React.FC = () => {
   const phoneInput = useInput({
     validateFn: isPhoneNumber,
     initialValue: user?.phone || '',
-  });
-
-  const passwordInput = useInput({
-    validateFn: isPassword,
-  });
-
-  const passwordConfirm = useInput({
-    validateFn: (value) => isPasswordConfirm(passwordInput.value, value),
   });
 
   const hasChanges = React.useMemo(() => {
@@ -140,19 +134,16 @@ const EditProfile: React.FC = () => {
     let fieldsValid = true;
 
     if (nameInput.value.trim() !== '') {
-      fieldsValid = fieldsValid && isName(nameInput.value) === undefined;
+      fieldsValid = fieldsValid && (isName(nameInput.value) === undefined);
     }
-    if (emailInput.value.trim() !== '') {
-      fieldsValid = fieldsValid && isEmail(emailInput.value) === undefined;
-    }
+
     if (phoneInput.value.trim() !== '') {
-      fieldsValid = fieldsValid && isPhoneNumber(phoneInput.value) === undefined;
+      fieldsValid = fieldsValid && (isPhoneNumber(phoneInput.value) === undefined);
     }
 
     const imageValid = !validateImage(selectedImage);
-
     return fieldsValid && imageValid;
-  }, [hasChanges, nameInput.value, emailInput.value, phoneInput.value, selectedImage]);
+  }, [hasChanges, nameInput.value, phoneInput.value, selectedImage]);
 
   const isSubmitEnabled = hasChanges && isFormValid;
 
@@ -238,9 +229,6 @@ const EditProfile: React.FC = () => {
       avatar: selectedImage?.uri || user?.avatar_url || '',
     });
     setInitialImage(selectedImage?.uri || user?.avatar_url || '');
-
-    passwordInput.setValue('');
-    passwordConfirm.setValue('');
   };
 
   const handleSave = async () => {
@@ -265,11 +253,9 @@ const EditProfile: React.FC = () => {
     const updateData = buildUpdateData();
 
     if (Object.keys(updateData).length > 0) {
-      console.log(updateData);
       const updatedUser = await authService.updateProfile(updateData);
-      console.log(updatedUser);
-      dispatch(setUser(updatedUser));
       await setUserData(updatedUser);
+      dispatch(setUser(updatedUser));
     }
 
     const isEmailChanged = emailInput.value !== initialValues.email;

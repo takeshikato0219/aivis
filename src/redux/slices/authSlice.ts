@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import authService from '@api/authService';
-import { LoginRequest, LoginResponse, User } from '@api/types/authTypes';
+import { LoginRequest, LoginResponse, SocialLoginRequest, User } from '@api/types/authTypes';
 
 // STATE
 export interface AuthState {
@@ -166,6 +166,21 @@ const setAuthSuccessState = (
   state.error = null;
 };
 
+export const socialLoginAsync = createAsyncThunk<
+  LoginResponse,
+  SocialLoginRequest,
+  { rejectValue: AuthError }
+>('auth/socialLogin', async (socialData, { rejectWithValue }) => {
+  try {
+    return await authService.socialLogin(socialData);
+  } catch (error: any) {
+    return rejectWithValue({
+      message: error.message,
+      statusCode: error.apiStatusCode || error.statusCode,
+    });
+  }
+});
+
 // SLICE
 const authSlice = createSlice({
   name: 'auth',
@@ -206,6 +221,21 @@ const authSlice = createSlice({
           typeof action.payload === 'string'
             ? action.payload
             : action.payload?.message || 'An error occurred';
+      });
+
+    // SOCIAL LOGIN
+    builder
+      .addCase(socialLoginAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(socialLoginAsync.fulfilled, (state, action) => {
+        setAuthSuccessState(state, action.payload);
+      })
+      .addCase(socialLoginAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.error = action.payload?.message || 'Đăng nhập thất bại';
       });
 
     // LOGOUT

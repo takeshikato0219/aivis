@@ -6,7 +6,7 @@ import { styles } from './TextInput.styles';
 interface TextInputProps {
   label?: string;
   value: string;
-  onChangeText: (text: string) => void;
+  onChangeText?: (text: string) => void;
   placeholder?: string;
   mode?: 'flat' | 'outlined';
   icon?: string | (() => ReactNode);

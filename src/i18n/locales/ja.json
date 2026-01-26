@@ -49,7 +49,9 @@
     "completion": "送信",
     "registerSuccess": "登録完了",
     "welcomeMessage": "ようこそ！すべての機能をご利用いただけます。",
-    "loginFailed": "ログインに失敗しました"
+    "loginFailed": "ログインに失敗しました",
+    "signInWithGoogle": "Googleでログイン",
+    "signInWithLine": "LINEでログイン"
   },
   "home":  {
     "title": "お帰りなさい！",

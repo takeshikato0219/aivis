@@ -5,6 +5,7 @@ import {
   ForgotPasswordResponse,
   LoginRequest,
   LoginResponse,
+  SocialLoginRequest,
   User,
 } from '@api/types/authTypes';
 
@@ -60,11 +61,6 @@ class AuthService {
 
   async logout(): Promise<void> {
     await axiosInstance.post(API_ENDPOINTS.AUTH.LOGOUT);
-  }
-
-  async getProfile(): Promise<User> {
-    const response = await axiosInstance.get<User>(API_ENDPOINTS.AUTH.GET_PROFILE);
-    return response.data;
   }
 
   async register(data: {
@@ -152,6 +148,11 @@ class AuthService {
       confirm_new_password: confirmPassword,
     });
     return response.data;
+  }
+
+  async socialLogin(data: SocialLoginRequest): Promise<LoginResponse> {
+    const response = await axiosInstance.post(API_ENDPOINTS.AUTH.SOCIAL_LOGIN, data);
+    return this.mapLoginResponse(response);
   }
 }
 

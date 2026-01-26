@@ -38,3 +38,10 @@ export interface ChangePasswordResponse {
   message: string;
   error?: object;
 }
+
+export interface SocialLoginRequest {
+  provider: 'google' | 'line';
+  token: string;
+  email?: string;
+  name?: string;
+}

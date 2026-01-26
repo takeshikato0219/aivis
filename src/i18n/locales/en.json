@@ -49,7 +49,9 @@
     "completion": "Completion",
     "registerSuccess": "Registration Successful",
     "welcomeMessage": "Welcome! You can now access all features.",
-    "loginFailed": "Login Failed"
+    "loginFailed": "Login Failed",
+    "signInWithGoogle": "Sign in with Google",
+    "signInWithLine": "Sign in with Line"
   },
   "home": {
     "title": "Welcome Back!",
