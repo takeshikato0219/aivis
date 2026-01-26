@@ -26,11 +26,12 @@
       "@constants/*": ["src/constants/*"],
       "@styles/*": ["src/styles/*"],
       "@types/*": ["src/types/*"],
+      "@assets/*": ["src/assets/*"],
       "@test-helpers/*": ["__tests__/helpers/*"],
       "@i18n": ["i18n"],
       "@i18n/*": ["i18n/*"],
     }
   },
-  "include": ["src/**/*", "App.tsx", "__tests__/**/*"],
+  "include": ["src/**/*", "App.tsx", "__tests__/**/*", "src/@types/svg.d.ts"],
   "exclude": ["node_modules", "babel.config.js", "metro.config.js", "jest.config.js"]
 }

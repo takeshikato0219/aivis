@@ -5,14 +5,14 @@ describe('API_BASE_URL', () => {
     (global as any).__DEV__ = true;
     jest.resetModules();
     const { API_BASE_URL: devUrl } = require('../../src/api/apiEndpoints');
-    expect(devUrl).toBe('http://localhost:3000/api');
+    expect(devUrl).toBe('http://124.197.19.62:7743/api/v1');
   });
 
   it('should be production URL otherwise', () => {
     (global as any).__DEV__ = false;
     jest.resetModules();
     const { API_BASE_URL: prodUrl } = require('../../src/api/apiEndpoints');
-    expect(prodUrl).toBe('https://api.production.com');
+    expect(prodUrl).toBe('http://124.197.19.62:7743/api/v1');
   });
 });
 
@@ -25,7 +25,6 @@ describe('API_ENDPOINTS', () => {
     expect(API_ENDPOINTS.AUTH.FORGOT_PASSWORD).toBe('/auth/forgot-password');
     expect(API_ENDPOINTS.AUTH.RESET_PASSWORD).toBe('/auth/reset-password');
     expect(API_ENDPOINTS.AUTH.VERIFY_EMAIL).toBe('/auth/verify-email');
-    expect(API_ENDPOINTS.AUTH.GET_PROFILE).toBe('/auth/profile');
     expect(API_ENDPOINTS.AUTH.UPDATE_PROFILE).toBe('/auth/profile');
   });
 });

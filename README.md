@@ -151,7 +151,7 @@ Timima01App/
 #### Example folder contents
 - **api/**: `axios.ts`, `authApi.ts`, `endpoints.ts`
 - **components/**: `Button/`, `ErrorBoundary/`, `OfflineBanner/`
-- **screens/**: `HomeScreen/`, `LoginScreen/`, `ProfileScreen/`, etc.
+- **screens/**: `Home/`, `Login/`, `Profile/`, etc.
 - **i18n/**: `index.ts`, `locales/en.json`, `locales/ja.json`
 
 ---

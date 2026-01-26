@@ -3,7 +3,9 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { AuthStackParamList } from './types';
 
 // Import screens
-import LoginScreen from '../screens/LoginScreen/LoginScreen';
+import Login from '@screens/Login/Login';
+import Register from '@screens/Register/Register';
+import ForgotPassword from '@screens/ForgotPassword/ForgotPassword';
 
 const Stack = createStackNavigator<AuthStackParamList>();
 
@@ -13,7 +15,7 @@ const AuthNavigator = () => {
       initialRouteName="Login"
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#FFFFFF' },
+        cardStyle: { backgroundColor: 'transparent' },
         // Animation config
         gestureEnabled: true,
         gestureDirection: 'horizontal',
@@ -21,9 +23,24 @@ const AuthNavigator = () => {
     >
       <Stack.Screen
         name="Login"
-        component={LoginScreen}
+        component={Login}
         options={{
           title: 'Sign In',
+          animation: 'none',
+        }}
+      />
+      <Stack.Screen
+        name="Register"
+        component={Register}
+        options={{
+          title: 'Sign Up',
+        }}
+      />
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPassword}
+        options={{
+          title: 'Forgot Password',
         }}
       />
     </Stack.Navigator>

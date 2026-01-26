@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Timima01App</string>
+	<string>Aivis</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -27,12 +27,20 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<false/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
+    <dict>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>124.197.19.62</key>
+            <dict>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+                <key>NSExceptionRequiresForwardSecrecy</key>
+                <false/>
+            </dict>
+        </dict>
+    </dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>RCTNewArchEnabled</key>
@@ -62,5 +70,17 @@
       <string>Feather.ttf</string>
       <string>Entypo.ttf</string>
     </array>
+    <key>NSFaceIDUsageDescription</key>
+    <string>We need Face ID to securely log you in</string>
+    <key>NSBiometricUsageDescription</key>
+    <string>We need biometric authentication to securely log you in</string>
+    <key>NSCameraUsageDescription</key>
+    <string>$(PRODUCT_NAME) needs access to your camera to take photos</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>The app needs microphone access to communicate via the camera.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>$(PRODUCT_NAME) needs access to your photo library to select photos</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>$(PRODUCT_NAME) needs access to save photos to your library</string>
 </dict>
 </plist>

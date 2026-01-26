@@ -206,6 +206,15 @@ jest.mock('react-native-safe-area-context', () => {
     SafeAreaConsumer: ({ children }) => children(inset),
     useSafeAreaInsets: jest.fn(() => inset),
     useSafeAreaFrame: jest.fn(() => ({ x: 0, y: 0, width: 390, height: 844 })),
+    // Required by @react-navigation/stack StackView
+    SafeAreaInsetsContext: {
+      Consumer: ({ children }) => (typeof children === 'function' ? children(inset) : children),
+      Provider: ({ children }) => children,
+    },
+    initialWindowMetrics: {
+      frame: { x: 0, y: 0, width: 390, height: 844 },
+      insets: { top: 0, left: 0, right: 0, bottom: 0 },
+    },
   };
 });
 

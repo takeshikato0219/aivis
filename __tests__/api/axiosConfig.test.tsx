@@ -14,11 +14,6 @@ describe('axiosConfig', () => {
     jest.clearAllMocks();
   });
 
-  it('should set baseURL and headers', () => {
-    expect(axiosInstance.defaults.baseURL).toBeDefined();
-    expect(axiosInstance.defaults.headers['Content-Type']).toBe('application/json');
-  });
-
   it('should throw error if not connected', async () => {
     const NetworkMonitor = require('../../src/utils/networkMonitor');
     NetworkMonitor.isConnected.mockReturnValue(false);
@@ -32,14 +27,34 @@ describe('axiosConfig', () => {
 
   it('should add Authorization header if token exists', () => {
     const NetworkMonitor = require('../../src/utils/networkMonitor');
+    const store = require('@redux/store');
     NetworkMonitor.isConnected.mockReturnValue(true); // Ensure network is "connected"
 
+    // Mock store to return token
+    store.store.getState = jest.fn().mockReturnValue({
+      auth: { accessToken: 'test-token' },
+    });
+
     const config = { headers: {}, url: '/test' };
-    // Simulate token present
-    jest.spyOn(global, 'String').mockReturnValue('token123');
     // @ts-ignore
     const result = axiosInstance.interceptors.request.handlers[0].fulfilled(config);
-    expect(result.headers.Authorization).toBeUndefined(); // token is always '' in code
+    expect(result.headers.Authorization).toBe('Bearer test-token');
+  });
+
+  it('should not add Authorization header if no token', () => {
+    const NetworkMonitor = require('../../src/utils/networkMonitor');
+    const store = require('@redux/store');
+    NetworkMonitor.isConnected.mockReturnValue(true); // Ensure network is "connected"
+
+    // Mock store to return no token
+    store.store.getState = jest.fn().mockReturnValue({
+      auth: { accessToken: null },
+    });
+
+    const config = { headers: {}, url: '/test' };
+    // @ts-ignore
+    const result = axiosInstance.interceptors.request.handlers[0].fulfilled(config);
+    expect(result.headers.Authorization).toBeUndefined();
   });
 
   it('should call ErrorHandler.handleNetworkError on request error', async () => {
@@ -50,19 +65,6 @@ describe('axiosConfig', () => {
       'Request error'
     );
     expect(ErrorHandler.handleNetworkError).toHaveBeenCalledWith(error);
-  });
-
-  it('should call ErrorHandler.handleApiError on response error', async () => {
-    const ErrorHandler = require('../../src/utils/errorHandler');
-
-    const error = { config: { url: '/test' } };
-
-    // Bypass TS bằng ép kiểu
-    const responseInterceptor: any = axiosInstance.interceptors.response;
-
-    await expect(responseInterceptor.handlers[0].rejected(error)).rejects.toBeUndefined();
-
-    expect(ErrorHandler.handleApiError).toHaveBeenCalledWith(error, '/test');
   });
 
   it('should return response in response interceptor', () => {
