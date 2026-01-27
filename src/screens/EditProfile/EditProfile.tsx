@@ -34,6 +34,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import authService from '@api/authService';
 import { logout, setUser } from '@redux/slices/authSlice';
 import { removeAuthData, setUserData } from '@utils/authStorage';
+import { ShopIconComponent } from '@components/IconCustom/IconCustom';
 
 const EditProfile: React.FC = () => {
   const responsive = useResponsive();
@@ -73,6 +74,7 @@ const EditProfile: React.FC = () => {
       // Reset selected image when user data changes
       setSelectedImage(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const {
@@ -107,6 +109,10 @@ const EditProfile: React.FC = () => {
     initialValue: user?.phone || '',
   });
 
+  const agencyCodeInput = useInput({
+    validateFn: (value) => value,
+  });
+
   const hasChanges = React.useMemo(() => {
     const currentImageUri = selectedImage?.uri || user?.avatar_url || '';
 
@@ -134,11 +140,11 @@ const EditProfile: React.FC = () => {
     let fieldsValid = true;
 
     if (nameInput.value.trim() !== '') {
-      fieldsValid = fieldsValid && (isName(nameInput.value) === undefined);
+      fieldsValid = fieldsValid && isName(nameInput.value) === undefined;
     }
 
     if (phoneInput.value.trim() !== '') {
-      fieldsValid = fieldsValid && (isPhoneNumber(phoneInput.value) === undefined);
+      fieldsValid = fieldsValid && isPhoneNumber(phoneInput.value) === undefined;
     }
 
     const imageValid = !validateImage(selectedImage);
@@ -311,7 +317,7 @@ const EditProfile: React.FC = () => {
               />
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Icon name="account" size={50} color="#34C759" />
+                <Icon name="account" size={50} color="#00ADD4" />
               </View>
             )}
             {selectedImage ? (
@@ -385,6 +391,18 @@ const EditProfile: React.FC = () => {
         {phoneInput.error && hasChanges && (
           <Text style={styles.styleErrorText}>{t('validate.' + phoneInput.error)}</Text>
         )}
+
+        <Text style={styles.label}>{t('register.agencyCode')}</Text>
+        <TextInput
+          value={agencyCodeInput.value}
+          onChangeText={agencyCodeInput.handleChange}
+          icon={ShopIconComponent}
+          placeholder={t('register.agencyCodePlaceholder')}
+          autoCapitalize="none"
+          disabled={isLoading}
+          style={styles.input}
+          placeholderTextColor={COLORS.BBBBBB}
+        />
       </View>
     </View>
   );

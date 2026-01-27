@@ -1,49 +1,54 @@
-import { Linking } from 'react-native';
+import Line from '@xmartlabs/react-native-line';
 
-export interface LineSignInResponse {
+export interface LineLoginResult {
   accessToken: string;
-  user: {
-    userId: string;
-    displayName: string;
-    pictureUrl?: string;
-    statusMessage?: string;
-  };
+  userId: string;
+  displayName: string;
+  pictureUrl?: string;
+  statusMessage?: string;
 }
 
-class LineAuthService {
-  private channelId = 'YOUR_LINE_CHANNEL_ID'; // Từ LINE Developers Console
-  private callbackUrl = 'yourapp://line-login'; // Deep link URL scheme của app
+export const loginWithLine = async (): Promise<LineLoginResult> => {
+  try {
+    console.log('[LINE] start login');
 
-  constructor() {
-    // Không cần configure cho LINE Login v2.1
-  }
+    const result = await Line.login({});
 
-  async signIn(): Promise<LineSignInResponse> {
-    try {
-      // Tạo LINE Login URL
-      const loginUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${this.channelId}&redirect_uri=${encodeURIComponent(this.callbackUrl)}&state=random_state_string&scope=profile%20openid%20email`;
+    if (!result?.accessToken?.accessToken) {
+      throw new Error('Không lấy được access token từ LINE');
+    }
 
-      // Mở LINE app hoặc browser
-      const supported = await Linking.canOpenURL(loginUrl);
-      if (!supported) {
-        throw new Error('Không thể mở LINE');
-      }
+    if (!result?.userProfile) {
+      throw new Error('Không lấy được thông tin người dùng LINE');
+    }
 
-      await Linking.openURL(loginUrl);
+    return {
+      accessToken: result.accessToken.accessToken,
+      userId: result.userProfile.userId,
+      displayName: result.userProfile.displayName,
+      pictureUrl: result.userProfile.pictureUrl,
+      statusMessage: result.userProfile.statusMessage,
+    };
+  } catch (e: any) {
+    console.error('[LINE] login error', e);
 
-      // Trong thực tế, bạn cần xử lý deep link callback
-      // Đây chỉ là placeholder - bạn cần implement deep link handling
-      throw new Error('LINE login cần implement deep link handling. Tạm thời chưa hỗ trợ.');
-    } catch (error: any) {
-      console.log(error);
-      throw new Error('Đăng nhập LINE thất bại');
+    switch (e?.code) {
+      case 'CANCEL':
+        throw new Error('Bạn đã huỷ đăng nhập LINE');
+      case 'AUTHENTICATION_AGENT_ERROR':
+        throw new Error('Vui lòng cài đặt ứng dụng LINE');
+      case 'NETWORK_ERROR':
+        throw new Error('Lỗi mạng, vui lòng thử lại');
+      default:
+        throw new Error(e?.message || 'Đăng nhập LINE thất bại');
     }
   }
+};
 
-  async signOut() {
-    // LINE không có concept sign out rõ ràng cho mobile apps
-    console.log('LINE sign out - không cần implement');
+export const logoutLine = async () => {
+  try {
+    await Line.logout();
+  } catch (e) {
+    console.warn('[LINE] logout failed', e);
   }
-}
-
-export default new LineAuthService();
+};

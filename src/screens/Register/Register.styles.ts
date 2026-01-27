@@ -43,13 +43,13 @@ export const styles = StyleSheet.create({
   label: {
     fontSize: FONTS.sizes.md,
     fontWeight: FONTS.weights.medium,
-    color: COLORS.success,
+    color: COLORS.main,
     marginBottom: 4,
   },
   loginButton: {
     flex: 1,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.success,
+    backgroundColor: COLORS.main,
     fontSize: FONTS.sizes.xl,
     height: isTablet() ? 70 : 52,
     justifyContent: 'center',
@@ -98,7 +98,7 @@ export const styles = StyleSheet.create({
     marginRight: 30,
   },
   loginHere: {
-    color: COLORS.success,
+    color: COLORS.main,
     fontSize: isTablet() ? 25 : 16,
     marginTop: 39,
   },

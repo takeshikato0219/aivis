@@ -40,8 +40,5 @@ export interface ChangePasswordResponse {
 }
 
 export interface SocialLoginRequest {
-  provider: 'google' | 'line';
-  token: string;
-  email?: string;
-  name?: string;
+  id_token: string;
 }

@@ -51,7 +51,14 @@
     "welcomeMessage": "ようこそ！すべての機能をご利用いただけます。",
     "loginFailed": "ログインに失敗しました",
     "signInWithGoogle": "Googleでログイン",
-    "signInWithLine": "LINEでログイン"
+    "signInWithLine": "LINEでログイン",
+    "userCancelledLogin": "ユーザーがログインをキャンセルしました。",
+    "loginIsInProgress": "ログイン処理中です。",
+    "googlePlayServicesAreNotAvailable": "Google Play サービスが利用できません。",
+    "googleSignInFailed": "Google ログインに失敗しました。",
+    "errorWhileSigningOutOfGoogle": "Google ログアウト時にエラーが発生しました：",
+    "errorWhileRevokingAccess": "アクセス権の取り消し時にエラーが発生しました：",
+    "errorWhileClearingCachedToken": "キャッシュされたトークンの削除時にエラーが発生しました："
   },
   "home":  {
     "title": "お帰りなさい！",
@@ -199,7 +206,9 @@
     "chooseFromLibrary": "ライブラリから選択",
     "selectFromYourPhotoGallery": "フォトギャラリーから選択",
     "cancel": "キャンセル",
-    "namePlaceHolder": "名前"
+    "namePlaceHolder": "名前",
+    "agencyCode": "代理店コード",
+    "agencyCodePlaceholder": "代理店コードを入力してください。"
   },
   "permission": {
     "imageTitle": "画像をアップロード",

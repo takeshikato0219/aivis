@@ -54,7 +54,7 @@ export const styles = StyleSheet.create({
   label: {
     fontSize: FONTS.sizes.md,
     fontWeight: FONTS.weights.medium,
-    color: COLORS.success,
+    color: COLORS.main,
     marginBottom: 4,
   },
   input: {
@@ -71,7 +71,7 @@ export const styles = StyleSheet.create({
     bottom: 0,
   },
   loginHere: {
-    color: COLORS.success,
+    color: COLORS.main,
     fontSize: isTablet() ? 25 : 16,
     marginTop: 39,
   },
@@ -81,7 +81,7 @@ export const styles = StyleSheet.create({
     fontSize: isTablet() ? 25 : 16,
   },
   button: {
-    backgroundColor: COLORS.success,
+    backgroundColor: COLORS.main,
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',

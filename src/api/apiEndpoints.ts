@@ -13,7 +13,7 @@ export const API_ENDPOINTS = {
     UPDATE_PROFILE: '/auth/profile',
     ME: '/auth/me',
     CHANGE_PASSWORD: '/auth/change-password',
-    SOCIAL_LOGIN: '/auth/social-login',
+    GOOGLE_LOGIN: '/oauth/google/login',
   },
 };
 

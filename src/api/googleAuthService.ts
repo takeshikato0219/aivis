@@ -1,4 +1,5 @@
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import i18n from '@/i18n';
 
 export interface GoogleSignInResponse {
   idToken: string;
@@ -13,18 +14,14 @@ export interface GoogleSignInResponse {
 }
 
 export class GoogleAuthService {
-  private webClientId = 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
-  private iosClientId = 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com';
+  private webClientId = '531701025722-l31am96d43d4povmpo746lf5t9tm39gv.apps.googleusercontent.com';
+  private iosClientId = '531701025722-4kn96h41jre9ut0nf65e15t0117l3k20.apps.googleusercontent.com';
 
   constructor() {
     this.configure();
   }
 
   configure() {
-    if (!this.webClientId || this.webClientId === 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com') {
-      console.warn('Google Sign-In chưa được cấu hình đúng. Vui lòng cập nhật webClientId');
-    }
-
     GoogleSignin.configure({
       webClientId: this.webClientId,
       offlineAccess: true,
@@ -53,25 +50,25 @@ export class GoogleAuthService {
       await GoogleSignin.hasPlayServices();
       const result = (await GoogleSignin.signIn()) as any;
       return {
-        idToken: result.idToken,
+        idToken: result.data.idToken,
         user: {
-          id: result.user.id,
-          email: result.user.email,
-          name: result.user.name,
-          photo: result.user.photo,
-          familyName: result.user.familyName,
-          givenName: result.user.givenName,
+          id: result.data.user.id,
+          email: result.data.user.email,
+          name: result.data.user.name,
+          photo: result.data.user.photo,
+          familyName: result.data.user.familyName,
+          givenName: result.data.user.givenName,
         },
       };
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        throw new Error('Người dùng đã hủy đăng nhập');
+        throw new Error(i18n.t('auth.userCancelledLogin'));
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        throw new Error('Đăng nhập đang được xử lý');
+        throw new Error(i18n.t('auth.loginIsInProgress'));
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        throw new Error('Google Play Services không khả dụng');
+        throw new Error(i18n.t('auth.googlePlayServicesAreNotAvailable'));
       } else {
-        throw new Error('Đăng nhập Google thất bại');
+        throw new Error(i18n.t('auth.googleSignInFailed'));
       }
     }
   }
@@ -80,7 +77,7 @@ export class GoogleAuthService {
     try {
       await GoogleSignin.signOut();
     } catch (error) {
-      console.error('Lỗi khi đăng xuất Google:', error);
+      console.error(error);
     }
   }
 
@@ -88,7 +85,7 @@ export class GoogleAuthService {
     try {
       await GoogleSignin.revokeAccess();
     } catch (error) {
-      console.error('Lỗi khi revoke access:', error);
+      console.error(error);
     }
   }
 
@@ -97,7 +94,7 @@ export class GoogleAuthService {
       const tokens = await GoogleSignin.getTokens();
       await GoogleSignin.clearCachedAccessToken(tokens.accessToken);
     } catch (error) {
-      console.error('Lỗi khi clear cached token:', error);
+      console.error(error);
     }
   }
 

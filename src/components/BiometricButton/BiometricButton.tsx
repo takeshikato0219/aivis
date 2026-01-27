@@ -41,7 +41,7 @@ export const BiometricButton: React.FC<any> = ({
         <Icon
           source={iconName}
           size={responsive.isTablet ? 35 : 26}
-          color={disabled ? COLORS.textSecondary : COLORS.success}
+          color={disabled ? COLORS.textSecondary : COLORS.main}
         />
       </Pressable>
     </View>

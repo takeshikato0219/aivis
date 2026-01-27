@@ -79,7 +79,7 @@ const Home = () => {
                   onError={() => setAvatarError(true)}
                 />
               ) : (
-                <Icon name="account" size={50} color="#34C759" style={styles.avatar} />
+                <Icon name="account" size={50} color="#00ADD4" style={styles.avatar} />
               )}
               <View style={styles.headerInfo}>
                 <Text style={styles.userName}>{t('home.welcomeBack')}</Text>

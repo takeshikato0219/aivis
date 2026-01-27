@@ -51,7 +51,14 @@
     "welcomeMessage": "Welcome! You can now access all features.",
     "loginFailed": "Login Failed",
     "signInWithGoogle": "Sign in with Google",
-    "signInWithLine": "Sign in with Line"
+    "signInWithLine": "Sign in with Line",
+    "userCancelledLogin": "User cancelled login",
+    "loginIsInProgress": "Login is in progress",
+    "googlePlayServicesAreNotAvailable": "Google Play Services are not available",
+    "googleSignInFailed": "Google sign in failed",
+    "errorWhileSigningOutOfGoogle": "Error while signing out of Google:",
+    "errorWhileRevokingAccess": "Error while revoking access:",
+    "errorWhileClearingCachedToken": "Error while clearing cached token:"
   },
   "home": {
     "title": "Welcome Back!",
@@ -158,7 +165,9 @@
     "chooseFromLibrary": "Choose from Library",
     "selectFromYourPhotoGallery": "Select from your photo gallery",
     "cancel": "Cancel",
-    "namePlaceHolder": "Enter your name"
+    "namePlaceHolder": "Enter your name",
+    "agencyCode": "Agency Code",
+    "agencyCodePlaceholder": "Please enter your agency code."
   },
   "permission": {
     "imageTitle": "Upload image",

@@ -41,6 +41,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     flex: isTablet() ? 0.3 : 0.5,
     justifyContent: 'center',
+    height: 200,
   },
   headerTablet: {
     paddingTop: 4,
@@ -61,7 +62,7 @@ export const styles = StyleSheet.create({
   loginButton: {
     flex: 1,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.success,
+    backgroundColor: COLORS.main,
     height: isTablet() ? 70 : 52,
     justifyContent: 'center',
     marginRight: 26,
@@ -85,7 +86,7 @@ export const styles = StyleSheet.create({
   },
   fixedBottom: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 10,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -98,7 +99,7 @@ export const styles = StyleSheet.create({
   label: {
     fontSize: FONTS.sizes.md,
     fontWeight: FONTS.weights.medium,
-    color: COLORS.success,
+    color: COLORS.main,
     marginBottom: 4,
   },
   btnSignIn: {
@@ -107,7 +108,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   labelStyleForgotText: {
-    color: COLORS.success,
+    color: COLORS.main,
     fontSize: isTablet() ? 25 : 16,
   },
   styleErrorText: {

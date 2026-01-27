@@ -38,7 +38,7 @@ import LoginBackground from '@assets/svg/login-background.svg';
 import Logo from '@assets/svg/logo.svg';
 import { setAuthData } from '@utils/authStorage';
 import { disableBiometricLogin } from '@/services/biometricService';
-import lineAuthService from '@api/lineAuthService';
+import { loginWithLine } from '@api/lineAuthService';
 import googleAuthService from '@api/googleAuthService';
 
 const Login: React.FC = () => {
@@ -321,16 +321,11 @@ const Login: React.FC = () => {
 
     try {
       const googleUser = await googleAuthService.signIn();
-
       const loginResult = await dispatch(
         socialLoginAsync({
-          provider: 'google',
-          token: googleUser.idToken,
-          email: googleUser.user.email,
-          name: googleUser.user.name,
+          id_token: googleUser.idToken,
         })
       ).unwrap();
-
       await handleLoginSuccess(loginResult);
     } catch (err: any) {
       handleLoginError(err);
@@ -344,25 +339,34 @@ const Login: React.FC = () => {
     }
 
     try {
-      const lineUser = await lineAuthService.signIn();
+      console.log('[Login] LINE login start');
+
+      const lineUser = await loginWithLine();
 
       const loginResult = await dispatch(
         socialLoginAsync({
-          provider: 'line',
-          token: lineUser.accessToken,
-          name: lineUser.user.displayName,
+          id_token: lineUser.accessToken,
         })
       ).unwrap();
 
       await handleLoginSuccess(loginResult);
     } catch (err: any) {
-      handleLoginError(err);
+      console.error('[Login] LINE login error', err);
+
+      showCommonAlert({
+        title: t('auth.loginFailed'),
+        message: err.message || t('auth.loginFailed'),
+        buttons: [{ text: t('common.ok') }],
+      });
     }
   };
 
-  // Conditional container: ScrollView in landscape, View in portrait
-  const Container = responsive.isLandscape ? ScrollView : View;
-  const containerProps = responsive.isLandscape
+  // Conditional container: ScrollView when screen is small or in landscape
+  // iPhone 7/8 has height ~667px, iPhone SE ~568px
+  const isSmallScreen = responsive.height < 700;
+  const shouldUseScrollView = responsive.isLandscape || isSmallScreen;
+  const Container = shouldUseScrollView ? ScrollView : View;
+  const containerProps = shouldUseScrollView
     ? {
         contentContainerStyle: [
           styles.scrollContent,
@@ -371,6 +375,10 @@ const Login: React.FC = () => {
         keyboardShouldPersistTaps: 'handled' as const,
         showsVerticalScrollIndicator: false,
         testID: 'login-scroll',
+        scrollEnabled: true,
+        bounces: true,
+        alwaysBounceVertical: true,
+        overScrollMode: 'always' as const,
       }
     : {
         style: [styles.scrollContent, responsive.isTablet && styles.scrollContentTablet],
@@ -381,11 +389,12 @@ const Login: React.FC = () => {
       <View style={styles.absoluteFill}>
         <LoginBackground width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
       </View>
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? undefined : 'height'}
-      >
-        <Container {...containerProps}>
+      <Container {...containerProps}>
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+        >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <View style={[styles.content, responsive.isTablet && styles.contentTablet]}>
               {/* Header */}
@@ -494,16 +503,16 @@ const Login: React.FC = () => {
               </View>
             </View>
           </TouchableWithoutFeedback>
-        </Container>
-      </KeyboardAvoidingView>
-      <View pointerEvents="box-none" style={styles.fixedBottom}>
-        <View style={styles.styleCreateAcc}>
-          <Text style={styles.registerButton}>{t('auth.dontHaveAnAccountYet')}</Text>
-          <TouchableOpacity onPress={handleRegister}>
-            <Text style={styles.labelStyleForgotText}>{t('auth.register')}</Text>
-          </TouchableOpacity>
+        </KeyboardAvoidingView>
+        <View pointerEvents="box-none" style={styles.fixedBottom}>
+          <View style={styles.styleCreateAcc}>
+            <Text style={styles.registerButton}>{t('auth.dontHaveAnAccountYet')}</Text>
+            <TouchableOpacity onPress={handleRegister}>
+              <Text style={styles.labelStyleForgotText}>{t('auth.register')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </Container>
     </SafeAreaView>
   );
 };
