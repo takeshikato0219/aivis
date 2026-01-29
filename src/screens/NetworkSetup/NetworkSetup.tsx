@@ -155,12 +155,8 @@ const NetworkSetup: React.FC = () => {
       setTimeout(() => {
         navigation.goBack();
       }, 1000);
-
     } catch (error) {
-      Alert.alert(
-        t('networkSetup.connectionFailed') || 'Connection Failed',
-        String(error)
-      );
+      Alert.alert(t('networkSetup.connectionFailed') || 'Connection Failed', String(error));
       setProgress(0.33);
     } finally {
       setConnecting(false);
