@@ -12,6 +12,8 @@ import reducer, {
   verifyTokenAsync,
   checkAuthAsync,
   setAuthenticated,
+  socialLoginAsync,
+  socialLineLoginAsync,
 } from '@redux/slices/authSlice';
 import type { User, LoginResponse } from '@api/types/authTypes';
 
@@ -22,6 +24,8 @@ jest.mock('@api/authService', () => ({
   register: jest.fn(),
   refreshToken: jest.fn(),
   getMe: jest.fn(),
+  socialLogin: jest.fn(),
+  socialLineLogin: jest.fn(),
 }));
 
 // Mock authStorage
@@ -95,13 +99,16 @@ describe('authSlice', () => {
   it('should handle loginAsync.fulfilled', () => {
     const payload = {
       user: { id: '1', name: 'Test', email: 'test@example.com' },
-      token: 'token',
+      accessToken: 'token',
+      refreshToken: 'refresh',
     };
     const action = { type: loginAsync.fulfilled.type, payload };
     const state = reducer(initialState, action);
     expect(state.isLoading).toBe(false);
     expect(state.isAuthenticated).toBe(true);
     expect(state.user).toEqual(payload.user);
+    expect(state.accessToken).toEqual(payload.accessToken);
+    expect(state.refreshToken).toEqual(payload.refreshToken);
   });
 
   it('should handle loginAsync.rejected', () => {
@@ -112,6 +119,70 @@ describe('authSlice', () => {
     const state = reducer(initialState, action);
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('Login failed');
+  });
+
+  it('should handle socialLoginAsync.pending', () => {
+    const action = { type: socialLoginAsync.pending.type };
+    const state = reducer(initialState, action);
+    expect(state.isLoading).toBe(true);
+    expect(state.error).toBeNull();
+  });
+
+  it('should handle socialLoginAsync.fulfilled', () => {
+    const payload = {
+      user: { id: '1', name: 'Social Test', email: 'social@example.com' },
+      accessToken: 'social-token',
+      refreshToken: 'social-refresh',
+    };
+    const action = { type: socialLoginAsync.fulfilled.type, payload };
+    const state = reducer(initialState, action);
+    expect(state.isLoading).toBe(false);
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.user).toEqual(payload.user);
+    expect(state.accessToken).toEqual(payload.accessToken);
+    expect(state.refreshToken).toEqual(payload.refreshToken);
+  });
+
+  it('should handle socialLoginAsync.rejected', () => {
+    const action = {
+      type: socialLoginAsync.rejected.type,
+      payload: { message: 'Social login failed' },
+    };
+    const state = reducer(initialState, action);
+    expect(state.isLoading).toBe(false);
+    expect(state.error).toBe('Social login failed');
+  });
+
+  it('should handle socialLineLoginAsync.pending', () => {
+    const action = { type: socialLineLoginAsync.pending.type };
+    const state = reducer(initialState, action);
+    expect(state.isLoading).toBe(true);
+    expect(state.error).toBeNull();
+  });
+
+  it('should handle socialLineLoginAsync.fulfilled', () => {
+    const payload = {
+      user: { id: '1', name: 'LINE Test', email: 'line@example.com' },
+      accessToken: 'line-token',
+      refreshToken: 'line-refresh',
+    };
+    const action = { type: socialLineLoginAsync.fulfilled.type, payload };
+    const state = reducer(initialState, action);
+    expect(state.isLoading).toBe(false);
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.user).toEqual(payload.user);
+    expect(state.accessToken).toEqual(payload.accessToken);
+    expect(state.refreshToken).toEqual(payload.refreshToken);
+  });
+
+  it('should handle socialLineLoginAsync.rejected', () => {
+    const action = {
+      type: socialLineLoginAsync.rejected.type,
+      payload: { message: 'LINE login failed' },
+    };
+    const state = reducer(initialState, action);
+    expect(state.isLoading).toBe(false);
+    expect(state.error).toBe('LINE login failed');
   });
 
   it('should handle registerAsync.pending', () => {
@@ -483,6 +554,98 @@ describe('authSlice', () => {
 
         expect(result.type).toBe('auth/setAuthenticated/fulfilled');
         expect(result.payload).toBe(true);
+      });
+    });
+
+    describe('socialLoginAsync', () => {
+      it('should handle social login success', async () => {
+        const socialData = {
+          provider: 'google',
+          token: 'social-token',
+          email: 'social@example.com',
+          name: 'Social User',
+        };
+        const mockResponse: LoginResponse = {
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+          user: { id: '1', name: 'Social User', email: 'social@example.com', phone: '1234567890' },
+        };
+
+        mockAuthService.socialLogin.mockResolvedValue(mockResponse);
+
+        // @ts-ignore
+        const result = await socialLoginAsync(socialData)(jest.fn(), jest.fn(), undefined);
+
+        expect(mockAuthService.socialLogin).toHaveBeenCalledWith(socialData);
+        expect(result.type).toBe('auth/socialLogin/fulfilled');
+        expect(result.payload).toEqual(mockResponse);
+      });
+
+      it('should handle social login failure', async () => {
+        const socialData = {
+          provider: 'google',
+          token: 'invalid-token',
+          email: 'social@example.com',
+          name: 'Social User',
+        };
+        const mockError = new Error('Social login failed');
+
+        mockAuthService.socialLogin.mockRejectedValue(mockError);
+
+        // @ts-ignore
+        const result = await socialLoginAsync(socialData)(jest.fn(), jest.fn(), undefined);
+
+        expect(result.type).toBe('auth/socialLogin/rejected');
+        expect(result.payload).toEqual({
+          message: 'Social login failed',
+          statusCode: undefined,
+        });
+      });
+    });
+
+    describe('socialLineLoginAsync', () => {
+      it('should handle LINE social login success', async () => {
+        const socialData = {
+          provider: 'line',
+          token: 'line-token',
+          email: 'line@example.com',
+          name: 'Line User',
+        };
+        const mockResponse: LoginResponse = {
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+          user: { id: '1', name: 'Line User', email: 'line@example.com', phone: '1234567890' },
+        };
+
+        mockAuthService.socialLineLogin.mockResolvedValue(mockResponse);
+
+        // @ts-ignore
+        const result = await socialLineLoginAsync(socialData)(jest.fn(), jest.fn(), undefined);
+
+        expect(mockAuthService.socialLineLogin).toHaveBeenCalledWith(socialData);
+        expect(result.type).toBe('auth/socialLineLogin/fulfilled');
+        expect(result.payload).toEqual(mockResponse);
+      });
+
+      it('should handle LINE social login failure', async () => {
+        const socialData = {
+          provider: 'line',
+          token: 'invalid-token',
+          email: 'line@example.com',
+          name: 'Line User',
+        };
+        const mockError = new Error('LINE login failed');
+
+        mockAuthService.socialLineLogin.mockRejectedValue(mockError);
+
+        // @ts-ignore
+        const result = await socialLineLoginAsync(socialData)(jest.fn(), jest.fn(), undefined);
+
+        expect(result.type).toBe('auth/socialLineLogin/rejected');
+        expect(result.payload).toEqual({
+          message: 'LINE login failed',
+          statusCode: undefined,
+        });
       });
     });
   });
