@@ -19,7 +19,9 @@ export const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   scrollContent: {
+    flex: 1,
     padding: 16,
+    paddingHorizontal: 24,
   },
   headerRow: {
     flexDirection: 'row',
@@ -172,20 +174,55 @@ export const styles = StyleSheet.create({
   },
   manualButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     borderRadius: 40,
     padding: 16,
-    minHeight: 72,
+    height: 56,
     borderWidth: 1,
-    borderColor: 'rgba(0,255,170,0.4)',
+    backgroundColor: COLORS.main,
   },
   manualButtonText: {
-    fontSize: 23,
+    fontSize: 18,
     fontWeight: FONTS.weights.medium,
-    color: '#FFF',
+    color: COLORS.background,
+  },
+  textStyleReady: {
+    color: COLORS.background,
+    fontSize: 28,
+    fontWeight: FONTS.weights.bold,
     textAlign: 'center',
-    flex: 1,
+  },
+  textCameraAndEnsure: {
+    color: COLORS.background,
+    fontSize: 16,
+    fontWeight: FONTS.weights.regular,
+    marginLeft: 5,
+  },
+  styleEmptyList: {
+    flex: 0.8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  styleBottomText: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    position: 'absolute',
+    bottom: 40,
+    left: 16,
+    right: 16,
+    alignSelf: 'stretch',
+  },
+  styleTextFlashing: {
+    color: COLORS.background,
+    marginLeft: 5,
+  },
+  styleGetHelp: {
+    color: COLORS.main,
+  },
+  styleViewCameraAndEnsure: {
+    flexDirection: 'row',
   },
 });

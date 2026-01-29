@@ -20,6 +20,7 @@ import {
   EmailOutlineIcon,
   LockOutlineIcon,
   PhoneOutlineIcon,
+  ShopIconComponent,
 } from '@components/IconCustom/IconCustom';
 import { COLORS } from '@constants/theme';
 import Button from '@components/Button/Button';
@@ -97,6 +98,10 @@ const Register: React.FC = () => {
 
   const passwordConfirm = useInput({
     validateFn: (value) => isPasswordConfirm(passwordInput.value, value),
+  });
+
+  const agencyCodeInput = useInput({
+    validateFn: (value) => value,
   });
 
   const openModalBiometricEnable = (registerResult: {
@@ -363,6 +368,19 @@ const Register: React.FC = () => {
                   <Text style={styles.styleErrorText}>{t('validate.' + phoneInput.error)}</Text>
                 )}
 
+                {/* Agency Code */}
+                <Text style={styles.label}>{t('register.agencyCode')}</Text>
+                <TextInput
+                  value={agencyCodeInput.value}
+                  onChangeText={agencyCodeInput.handleChange}
+                  icon={ShopIconComponent}
+                  placeholder={t('register.agencyCodePlaceholder')}
+                  autoCapitalize="none"
+                  disabled={isLoading}
+                  style={styles.input}
+                  placeholderTextColor={COLORS.BBBBBB}
+                />
+
                 {/* Password */}
                 <Text style={styles.label}>PASSWORD</Text>
                 <TextInput
@@ -458,8 +476,8 @@ const Register: React.FC = () => {
                   value="agree"
                   status={checked ? 'checked' : 'unchecked'}
                   onPress={() => setChecked(!checked)}
-                  color="#4CAF50"
-                  uncheckedColor="#4CAF50"
+                  color="#00ADD4"
+                  uncheckedColor="#00ADD4"
                 />
                 <Text style={styles.termOfUse}>{t('auth.termOfUse')}</Text>
               </View>

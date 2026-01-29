@@ -16,6 +16,10 @@ import Profile from '@screens/Profile/Profile';
 import EditProfile from '@screens/EditProfile/EditProfile';
 import ChangePassword from '@screens/ChangePassword/ChangePassword';
 import DetectionZoneSetup from '@screens/DetectionZoneSetup/DetectionZoneSetup';
+import ConnectDevice from '@screens/ConnectDevice/ConnectDevice';
+import PairingCode from '@screens/PairingCode/PairingCode';
+import ConnectWifiHotspot from '@screens/ConnectWifiHotspot/ConnectWifiHotspot';
+import NetworkSetup from '@screens/NetworkSetup/NetworkSetup';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -116,6 +120,34 @@ const AppNavigator = () => {
       <Stack.Screen
         name="DetectionZoneSetup"
         component={DetectionZoneSetup}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="ConnectDevice"
+        component={ConnectDevice}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="PairingCode"
+        component={PairingCode}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="ConnectWifiHotspot"
+        component={ConnectWifiHotspot}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="NetworkSetup"
+        component={NetworkSetup}
         options={{
           headerShown: false,
         }}

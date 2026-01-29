@@ -5,9 +5,40 @@ import AppNavigator from '../../src/navigation/AppNavigator';
 
 // ===== MOCK @constants/theme =====
 jest.mock('@constants/theme', () => ({
+  COLORS: {
+    main: '#00ADD4',
+    background: '#FFFFFF',
+    BBBBBB: '#BBBBBB',
+    '3E3E3E': '#3E3E3E',
+    primary: '#007AFF',
+    secondary: '#5856D6',
+    success: '#34C759',
+    warning: '#FF9500',
+    error: '#FF3B30',
+    surface: '#F2F2F7',
+    card: '#FFFFFF',
+    text: '#000000',
+    textSecondary: '#8E8E93',
+    textTertiary: '#C7C7CC',
+    border: '#E5E5EA',
+    divider: '#E5E5EA',
+    gray696969: '#696969',
+    CACACA: '#CACACA',
+    gray9A9A9A: '#9A9A9A',
+    B8B8B8: '#B8B8B8',
+    FF0000: '#FF0000',
+  },
   DARK_COLORS: {
     background: '#1C1C1E',
     text: '#FFFFFF',
+  },
+  FONTS: {
+    weights: {
+      medium: '500',
+      regular: '400',
+      semiBold: '600',
+      bold: '700',
+    },
   },
 }));
 
@@ -106,6 +137,38 @@ jest.mock('@screens/DetectionZoneSetup/DetectionZoneSetup', () => {
   const { View } = require('react-native');
   return function MockDetectionZoneSetup() {
     return <View testID="DetectionZoneSetup" />;
+  };
+});
+jest.mock('@screens/ConnectDevice/ConnectDevice', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
+  const React = require('react');
+  const { View } = require('react-native');
+  return function MockConnectDevice() {
+    return <View testID="ConnectDevice" />;
+  };
+});
+jest.mock('@screens/PairingCode/PairingCode', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
+  const React = require('react');
+  const { View } = require('react-native');
+  return function MockPairingCode() {
+    return <View testID="PairingCode" />;
+  };
+});
+jest.mock('@screens/ConnectWifiHotspot/ConnectWifiHotspot', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
+  const React = require('react');
+  const { View } = require('react-native');
+  return function MockConnectWifiHotspot() {
+    return <View testID="ConnectWifiHotspot" />;
+  };
+});
+jest.mock('@screens/NetworkSetup/NetworkSetup', () => {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
+  const React = require('react');
+  const { View } = require('react-native');
+  return function MockNetworkSetup() {
+    return <View testID="NetworkSetup" />;
   };
 });
 

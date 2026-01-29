@@ -51,7 +51,30 @@
     "welcomeMessage": "ようこそ！すべての機能をご利用いただけます。",
     "loginFailed": "ログインに失敗しました",
     "signInWithGoogle": "Googleでログイン",
-    "signInWithLine": "LINEでログイン"
+    "signInWithLine": "LINEでログイン",
+    "userCancelledLogin": "ユーザーがログインをキャンセルしました。",
+    "loginIsInProgress": "ログイン処理中です。",
+    "googlePlayServicesAreNotAvailable": "Google Play サービスが利用できません。",
+    "googleSignInFailed": "Google ログインに失敗しました。",
+    "errorWhileSigningOutOfGoogle": "Google ログアウト時にエラーが発生しました：",
+    "errorWhileRevokingAccess": "アクセス権の取り消し時にエラーが発生しました：",
+    "errorWhileClearingCachedToken": "キャッシュされたトークンの削除時にエラーが発生しました：",
+    "userCancelledLineLogin": "ユーザーがLINEログインをキャンセルしました。",
+    "lineAppNotInstalled": "LINEアプリをインストールしてください。",
+    "lineNetworkError": "ネットワークエラー、もう一度お試しください。",
+    "lineSignInFailed": "LINEログインに失敗しました。",
+    "lineAccessTokenNotFound": "LINEからアクセストークンを取得できませんでした。",
+    "lineUserProfileNotFound": "LINEからユーザー情報を取得できませんでした。",
+    "lineInstallSuggestion": "続行するにはLINEアプリをインストールしてください",
+    "lineAppRequired": "LINEアプリが必要です",
+    "installLineApp": "LINEアプリをインストール",
+    "lineInstallIOS": "App StoreからLINEをダウンロードしてください",
+    "lineInstallAndroid": "Google PlayストアからLINEをダウンロードしてください",
+    "lineIOSSchemeError": "LINE URLスキームが正しく設定されていません",
+    "lineAndroidIntentError": "LINEアプリのインテントが利用できません",
+    "loginWithLineApp": "LINEアプリでログイン",
+    "loginWithBrowser": "ブラウザでログイン（Web）",
+    "webLoginNotAvailable": "Webログインには追加設定が必要です。今はLINEアプリをご使用ください。"
   },
   "home":  {
     "title": "お帰りなさい！",
@@ -70,7 +93,11 @@
     "liveView": "HDライブビュー，",
     "stayConnected": "いつでも接続",
     "addCamera": "カメラを追加",
-    "welcomeBack": "お帰りなさい"
+    "welcomeBack": "お帰りなさい",
+    "readyToPair": "ペアリングの準備はできましたか？",
+    "cameraAndEnsure": "カメラの電源を入れ、信号ランプが青く点滅していることを確認してください。",
+    "lightNotFlashing": "ランプが点滅していませんか？",
+    "getHelp": "ヘルプを見る"
   },
   "profile": {
     "settings": "設定",
@@ -199,7 +226,9 @@
     "chooseFromLibrary": "ライブラリから選択",
     "selectFromYourPhotoGallery": "フォトギャラリーから選択",
     "cancel": "キャンセル",
-    "namePlaceHolder": "名前"
+    "namePlaceHolder": "名前",
+    "agencyCode": "代理店コード",
+    "agencyCodePlaceholder": "代理店コードを入力してください。"
   },
   "permission": {
     "imageTitle": "画像をアップロード",
@@ -240,5 +269,90 @@
   "changePassword": {
     "changePasswordSuccess": "パスワード変更完了",
     "changePasswordSuccessMessage": "パスワードが正常に変更されました。新しいパスワードで再度ログインしてください。"
+  },
+  "bluetoothScreen": {
+    "permissionDenied": "権限が拒否されました",
+    "bluetoothPermissionRequiredToScan": "スキャンするにはBluetoothの権限が必要です。",
+    "bluetoothDisabled.": "Bluetoothが無効になっています",
+    "pleaseEnableBluetoothToScanForDevices": "デバイスをスキャンするにはBluetoothを有効にしてください。",
+    "scanningForDevices": "デバイスをスキャン中...",
+    "scanFinished": "スキャンが完了しました！",
+    "connectDevice": "デバイスを接続",
+    "makeSureYourCameraIsPoweredOn": "カメラの電源が入っていることを確認してください。",
+    "makeSureYourCameraWiFiAPIsPoweredOn": "カメラのWi-Fi APが有効になっていることを確認してください。",
+    "devicesFound": "検出されたデバイス",
+    "accessPointsFound": "検出されたアクセスポイント",
+    "scanAgain": "再スキャン",
+    "noBluetoothDeviceFound": "Bluetoothデバイスが見つかりませんでした。",
+    "connect": "接続",
+    "connecting": "接続中...",
+    "troubleConnecting": "接続でお困りですか？",
+    "signal": "Signal",
+    "unknownDevice": "不明なデバイス",
+    "noWiFiAccessPointFound": "Wi-Fiアクセスポイントが見つかりませんでした。"
+  },
+  "pairingCode": {
+    "pairingCode": "ペアリングコード",
+    "enterPairingCode": "ペアリングコードを入力してください",
+    "enterWifiPairingCode": "WiFiペアリングコードを入力してください",
+    "alphanumericCode": "Jetson Orin デバイスのラベルまたは箱に記載されている6桁の英数字コードを入力してください。",
+    "uniqueToEachDevice": "ペアリングコードは各デバイスごとに固有です。見つからない場合は、元のパッケージまたはカメラモジュール背面のステッカーをご確認ください。",
+    "pairDevice": "デバイスをペアリング",
+    "findTheCode": "コードが見つかりません"
+  },
+  "setupComplete": {
+    "successfullyConnected": "Jetson Orin に正常に接続されました",
+    "communicationEstablished": "APモードでの通信が確立されました。デバイスを登録する準備ができました。",
+    "cancelSetup": "セットアップをキャンセル",
+    "serial": "シリアル："
+  },
+  "QRScan": {
+    "cameraAccess" : "カメラへのアクセス",
+    "cameraAccessIsRequiredToScanTheQRCode" : "QRコードをスキャンするためにカメラへのアクセスが必要です",
+    "doNotAllow" : "許可しない",
+    "allow" : "許可する",
+    "loading" : "読み込み中...",
+    "cameraPermissionRequired" : "カメラの権限が必要です",
+    "toScanTheQRCodePleaseAllowCameraPermissionInSettings." : "QRコードをスキャンするには{'\\n'}設定からカメラの権限を許可してください",
+    "manualConnection" : "手動で接続",
+    "loadingCamera" : "カメラを読み込み中...",
+    "deviceRegistration" : "デバイス登録",
+    "searchingForDevices" : "デバイスを検索中...",
+    "bluetoothConnected" : "Bluetooth接続中",
+    "enterManualCode" : "手動でコードを入力",
+    "agentCode" : "代理店コード"
+  },
+  "wifiHotspot": {
+    "enterPasswordInstruction": "Jetson Orinのローカルホットスポットのデフォルトパスワードを入力してください：",
+    "deviceWillDisconnect": "デバイスがインターネットから切断され、ペアリングされます。",
+    "whereIsThePassword": "パスワードはどこにありますか？",
+    "passwordLocationInfo": "デフォルトのパスワードは通常、Jetson Orinモジュールの下部にあるQRラベルに印刷されています。一般的なデフォルトには",
+    "connectToCamera": "カメラに接続"
+  },
+  "networkSetup": {
+    "networkSetup": "ネットワーク設定",
+    "availableNetworks": "利用可能なネットワーク",
+    "passwordFor": "～のパスワード",
+    "systemCheck": "システムチェック",
+    "inProgress": "進行中...",
+    "checkingInternetConnection": "インターネット接続を確認中...",
+    "permissionRequired": "権限が必要です",
+    "pleaseAllowLocationForWiFiScan": "Wi-Fiをスキャンするには位置情報の権限を許可してください。",
+    "notSupported": "未対応",
+    "wiFiScanningIsNotSupportedOnThisDevice": "このデバイスではWi-Fiのスキャンはサポートされていません。",
+    "plugCameraEthernet": "カメラをイーサネットケーブルに接続してください。",
+    "insertLTESim": "LTE SIMモジュールを挿入し、セットアップ手順に従ってください。",
+    "scanning": "スキャン中...",
+    "rescan": "再スキャン",
+    "secure": "セキュリティ保護",
+    "open": "オープン",
+    "excellentSignal": "非常に良い",
+    "goodSignal": "良い",
+    "weakSignal": "弱い",
+    "noAvailableWifi": "利用可能なWi-Fiが見つかりません。下に引っ張って更新してください。",
+    "currentConnected": "現在接続中: ",
+    "noWifiConnected": "WiFiに接続されていません",
+    "connectionError": "接続エラー",
+    "connectionFailed": "接続に失敗しました"
   }
 }

@@ -9,10 +9,14 @@ export const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 24,
   },
-  styleLandscape: {
+  scrollContainer: {
+    flexGrow: 1,
     alignItems: 'center',
     paddingBottom: 120,
     marginTop: 50,
+  },
+  spacer: {
+    flex: 1,
   },
   backgroundImage: {
     flex: 1,
@@ -41,13 +45,14 @@ export const styles = StyleSheet.create({
   },
   messageContainer: {
     alignItems: 'center',
-    marginBottom: 99,
+    marginBottom: 17,
   },
   successTitle: {
     fontSize: 39,
     fontWeight: FONTS.weights.medium,
     color: COLORS.card,
     marginBottom: 16,
+    textAlign: 'center',
   },
   successMessage: {
     fontSize: 16,
@@ -57,15 +62,14 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cameraCard: {
-    flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 40,
     padding: 20,
-    width: '100%',
     borderWidth: 1,
     borderColor: '#2A3A45',
-    marginBottom: 90,
+    marginBottom: 23,
+    justifyContent: 'center',
   },
   cameraCardLandscape: {
     flexDirection: 'row',
@@ -79,6 +83,11 @@ export const styles = StyleSheet.create({
     marginBottom: 40,
     alignSelf: 'center',
   },
+  cameraCardInfo: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cameraImageContainer: {
     width: 64,
     height: 64,
@@ -87,9 +96,6 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-  },
-  cameraInfo: {
-    flex: 1,
   },
   cameraName: {
     fontSize: 18,
@@ -100,7 +106,6 @@ export const styles = StyleSheet.create({
   cameraSerial: {
     fontSize: 13,
     color: '#9CA3AF',
-    marginBottom: 8,
   },
   statusRow: {
     flexDirection: 'row',
@@ -119,7 +124,12 @@ export const styles = StyleSheet.create({
     fontWeight: '500',
   },
   bottomContainer: {
+    gap: 12,
+    paddingTop: 50,
+  },
+  bottomContainerFixed: {
     paddingBottom: 24,
+    paddingHorizontal: 24,
     gap: 12,
   },
   dashboardButton: {
@@ -151,5 +161,11 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFF',
+  },
+  textNotify: {
+    fontSize: 16,
+    fontWeight: FONTS.weights.regular,
+    color: COLORS.background,
+    textAlign: 'center',
   },
 });

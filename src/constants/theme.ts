@@ -23,6 +23,7 @@ export const COLORS = {
   B8B8B8: '#B8B8B8',
   '3E3E3E': '#3E3E3E',
   FF0000: '#FF0000',
+  main: '#00ADD4',
 };
 
 export const DARK_COLORS = {

@@ -174,7 +174,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({ isOpen, onClose, avatarUrl }) =
                   onError={() => setAvatarError(true)}
                 />
               ) : (
-                <Icon name="account" size={50} color="#34C759" style={styles.avatar} />
+                <Icon name="account" size={50} color="#00ADD4" style={styles.avatar} />
               )}
               <View style={styles.drawerUserInfo}>
                 <Text style={styles.drawerUserName} numberOfLines={1}>

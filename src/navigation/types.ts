@@ -1,5 +1,6 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
+import { Device } from 'react-native-ble-plx';
 
 // ===== ROOT STACK =====
 export type RootStackParamList = {
@@ -41,6 +42,15 @@ export type AppStackParamList = {
     cameraId: string;
     cameraSnapshot?: string;
   };
+  ConnectDevice: undefined;
+  PairingCode: {
+    device?: Device;
+    pairingCode?: string;
+    wifi?: any;
+    isWifi?: boolean;
+  };
+  ConnectWifiHotspot: { wifi: any };
+  NetworkSetup: { cameraAp: string };
 };
 
 // ===== NAVIGATION PROPS =====
@@ -73,6 +83,23 @@ export type SetupCompleteScreenNavigationProp = StackNavigationProp<
   'SetupComplete'
 >;
 export type SetupCompleteScreenRouteProp = RouteProp<AppStackParamList, 'SetupComplete'>;
+
+export type ConnectDeviceScreenNavigationProp = CompositeNavigationProp<
+  StackNavigationProp<AppStackParamList, 'ConnectDevice'>,
+  StackNavigationProp<RootStackParamList, 'App'>
+>;
+
+export type PairingCodeScreenNavigationProp = StackNavigationProp<AppStackParamList, 'PairingCode'>;
+export type PairingCodeScreenRouteProp = RouteProp<AppStackParamList, 'PairingCode'>;
+
+export type ConnectWifiHotspotNavigationProp = StackNavigationProp<
+  AppStackParamList,
+  'ConnectWifiHotspot'
+>;
+export type ConnectWifiHotspotRouteProp = RouteProp<AppStackParamList, 'ConnectWifiHotspot'>;
+
+export type NetworkSetupNavigationProp = StackNavigationProp<AppStackParamList, 'NetworkSetup'>;
+export type NetworkSetupRouteProp = RouteProp<AppStackParamList, 'NetworkSetup'>;
 
 // ===== DECLARE GLOBAL =====
 declare global {
