@@ -312,6 +312,14 @@
     "currentConnected": "Currently connected: ",
     "noWifiConnected": "No WiFi connected",
     "connectionError": "Connection Error",
-    "connectionFailed": "Connection Failed"
+    "connectionFailed": "Connection Failed",
+    "lteConnected": "LTE Connected",
+    "nowUsing": "Now using: ",
+    "wifiScanError": "WiFi scan error",
+    "availableLte": "Detected SIM",
+    "noSimDetected": "No SIM detected",
+    "ltePassword": "Password for SIM/Network",
+    "ltePasswordPlaceholder": "Password",
+    "lteReady": "Ready."
   }
 }

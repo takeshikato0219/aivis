@@ -5,6 +5,7 @@ import GoogleIcon from '@assets/svg/google.svg';
 import LineIcon from '@assets/svg/line.svg';
 import ShopIcon from '@assets/svg/shop.svg';
 import KeyboardIcon from '@assets/svg/keyboard.svg';
+import LockIconNetwork from '@assets/svg/lock-icon.svg';
 
 export const EmailOutlineIcon = () => <MailIcon />;
 
@@ -19,3 +20,5 @@ export const LineIconComponent = () => <LineIcon />;
 export const ShopIconComponent = () => <ShopIcon />;
 
 export const KeyboardIconComponent = () => <KeyboardIcon />;
+
+export const LockIconComponent = () => <LockIconNetwork />;

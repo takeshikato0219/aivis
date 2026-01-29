@@ -29,9 +29,7 @@ import CctvIcon from '@assets/svg/cctv-icon.svg';
 
 const getScanningText = (activeTab: string, scanning: boolean, scanningWifi: boolean, t: any) => {
   const isScanning = activeTab === 'bluetooth' ? scanning : scanningWifi;
-  return isScanning
-    ? t('bluetoothScreen.scanningForDevices')
-    : t('bluetoothScreen.scanFinished');
+  return isScanning ? t('bluetoothScreen.scanningForDevices') : t('bluetoothScreen.scanFinished');
 };
 
 const getHintText = (activeTab: string, t: any) => {

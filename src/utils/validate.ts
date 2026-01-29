@@ -98,6 +98,13 @@ export const isEmail = (value: string) => {
 
 export const isPasswordWifi = (value: string) => {
   if (!value.trim()) return 'passwordRequired';
+
+  // Allow English, Japanese characters, and common password symbols
+  const validPattern = /^[\w\s!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`ぁ-ゖ゠-ヿ一-龯]+$/;
+  if (!validPattern.test(value)) {
+    return 'passwordInvalidCharacters';
+  }
+
   return undefined;
 };
 

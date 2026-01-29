@@ -353,6 +353,14 @@
     "currentConnected": "現在接続中: ",
     "noWifiConnected": "WiFiに接続されていません",
     "connectionError": "接続エラー",
-    "connectionFailed": "接続に失敗しました"
+    "connectionFailed": "接続に失敗しました",
+    "lteConnected": "LTEに接続されました",
+    "nowUsing": "現在使用中：",
+    "wifiScanError": "Wi-Fiスキャンエラー",
+    "availableLte": "SIMカードが検出されました",
+    "noSimDetected": "SIMカードが検出されません",
+    "ltePassword": "SIM／ネットワークのパスワード",
+    "ltePasswordPlaceholder": "Password",
+    "lteReady": "準備完了"
   }
 }

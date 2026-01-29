@@ -1,5 +1,5 @@
 import { StyleSheet, Platform } from 'react-native';
-import { isTablet } from '@utils/responsive';
+import { isTablet, scale } from '@utils/responsive';
 import { COLORS } from '@constants/theme';
 
 export const styles = StyleSheet.create({
@@ -13,7 +13,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    marginTop: 2,
+    marginTop: 10,
     marginBottom: 14,
   },
   backBtn: {
@@ -32,17 +32,21 @@ export const styles = StyleSheet.create({
     gap: 10,
     marginTop: 8,
     marginBottom: 13,
+    backgroundColor: '#1A202C',
+    marginHorizontal: scale(10),
+    borderRadius: 8,
+    paddingVertical: 6,
   },
   tabBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 7,
     paddingHorizontal: 22,
-    borderRadius: 19,
-    backgroundColor: 'rgba(36, 46, 70, 0.7)',
+    borderRadius: 8,
+    backgroundColor: '#1A202C',
   },
   tabBtnActive: {
-    backgroundColor: '#123767',
+    backgroundColor: COLORS.main,
   },
   tabText: {
     color: '#7BAAC4',
@@ -64,7 +68,9 @@ export const styles = StyleSheet.create({
     marginTop: 7,
     marginBottom: 6,
   },
-  listStyle: { maxHeight: 200 },
+  listStyle: {
+    maxHeight: 260,
+  },
   networkItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -179,10 +185,16 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 54,
   },
+  connectBtnDisabled: {
+    backgroundColor: '#817d7d',
+  },
   connectBtnText: {
     color: COLORS.background,
     fontSize: 18,
     fontWeight: '800',
+  },
+  connectBtnTextDisabled: {
+    color: '#666666',
   },
   tabContentCenter: {
     flex: 1,
@@ -237,7 +249,6 @@ export const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(16, 24, 32, 0.95)', // Semi-transparent background
     paddingBottom: Platform.OS === 'ios' ? 40 : 26,
     paddingTop: 10,
   },
@@ -280,5 +291,10 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 7,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#2A3C58',
+    width: '100%',
   },
 });
