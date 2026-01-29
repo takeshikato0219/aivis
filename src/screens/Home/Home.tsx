@@ -23,9 +23,11 @@ import MenuIcon from '@assets/svg/meun-icon.svg';
 import MoveRightIconCircle from '@assets/svg/move-right-circle.svg';
 import DrawerMenu from '@components/DrawerMenu/DrawerMenu';
 import { HomeScreenNavigationProp } from '@navigation/types';
-import MoveRightIcon from '@assets/svg/vector-right.svg';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useUserSync } from '@hooks/useUserSync';
+import CleanShotIcon from '@assets/svg/clean-shot.svg';
+import PlusIcon from '@assets/svg/plus-icon.svg';
+import IconBlue from '@assets/svg/icon-blue.svg';
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -38,15 +40,26 @@ const Home = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const avatarUrl = user?.avatar_url;
   const [avatarError, setAvatarError] = useState(false);
+  const [cameraList, setCameraList] = useState<any[]>([]);
+
   // USING COMMON HOOKS
   const { syncUserData } = useUserSync();
   useAppSetup({ screenName: 'Home' });
+
+  useEffect(() => {
+    fetchCameraList().then((data) => setCameraList(data));
+  }, []);
 
   useEffect(() => {
     if (isDrawerOpen) {
       syncUserData();
     }
   }, [isDrawerOpen, syncUserData]);
+
+  const fetchCameraList = async () => {
+    // const response = await fetch('https://your-api/cameras');
+    return [];
+  };
 
   const goToDetail = () => {
     navigation.navigate('Detail', {
@@ -56,8 +69,8 @@ const Home = () => {
     });
   };
 
-  const goToQrScanner = () => {
-    navigation.navigate('QRScanner' as never);
+  const goToBluetoothScan = () => {
+    navigation.navigate('ConnectDevice' as never);
   };
 
   return (
@@ -98,51 +111,69 @@ const Home = () => {
                 </TouchableOpacity>
               </View>
             </View>
-            <View style={styles.title}>
-              {isPad ? (
-                <Text style={styles.titleText}>
-                  {t('home.liveView')}
-                  {t('home.stayConnected')}
-                </Text>
-              ) : (
-                <>
-                  <Text style={styles.titleText}>{t('home.liveView')}</Text>
-                  <Text style={styles.titleText}>{t('home.stayConnected')}</Text>
-                </>
-              )}
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-              {filters.map((label, idx) => (
-                <TouchableOpacity
-                  key={label}
-                  style={[styles.filterBtn, activeIndex === idx && styles.activeFilterBtn]}
-                  onPress={() => setActiveIndex(idx)}
-                >
-                  <Text style={styles.filterText}>{label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <View style={styles.card}>
-              <View style={styles.videoWrapper}>
-                <Image source={RetangleImage} style={styles.cardImage} />
-              </View>
-              <View style={styles.cardBadge}>
-                <View style={styles.badgeDot} />
-                <Text style={styles.badgeText}>Online</Text>
-              </View>
-              <TouchableOpacity onPress={goToDetail}>
-                <View style={styles.rowCenter}>
-                  <Text style={styles.cardText}>石上１丁目家のカメラ</Text>
-                  <View style={styles.iconCircle}>
-                    <MoveRightIconCircle />
-                  </View>
+            {cameraList.length > 0 ? (
+              <>
+                <View style={styles.title}>
+                  {isPad ? (
+                    <Text style={styles.titleText}>
+                      {t('home.liveView')}
+                      {t('home.stayConnected')}
+                    </Text>
+                  ) : (
+                    <>
+                      <Text style={styles.titleText}>{t('home.liveView')}</Text>
+                      <Text style={styles.titleText}>{t('home.stayConnected')}</Text>
+                    </>
+                  )}
                 </View>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity style={styles.manualButton} onPress={goToQrScanner}>
-              <Icon name="camera" size={32} color="#00D9FF" />
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.filterRow}
+                >
+                  {filters.map((label, idx) => (
+                    <TouchableOpacity
+                      key={label}
+                      style={[styles.filterBtn, activeIndex === idx && styles.activeFilterBtn]}
+                      onPress={() => setActiveIndex(idx)}
+                    >
+                      <Text style={styles.filterText}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                {cameraList.map((camera) => (
+                  <View style={styles.card} key={camera.id}>
+                    <View style={styles.videoWrapper}>
+                      <Image source={RetangleImage} style={styles.cardImage} />
+                    </View>
+                    <View style={styles.cardBadge}>
+                      <View style={styles.badgeDot} />
+                      <Text style={styles.badgeText}>{camera.status}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => goToDetail()}>
+                      <View style={styles.rowCenter}>
+                        <Text style={styles.cardText}>{camera.name}</Text>
+                        <View style={styles.iconCircle}>
+                          <MoveRightIconCircle />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </>
+            ) : (
+              <View style={styles.styleEmptyList}>
+                <CleanShotIcon />
+                <Text style={styles.textStyleReady}>{t('home.readyToPair')}</Text>
+                <View style={styles.styleViewCameraAndEnsure}>
+                  <IconBlue />
+                  <Text style={styles.textCameraAndEnsure}>{t('home.cameraAndEnsure')}</Text>
+                </View>
+              </View>
+            )}
+            <TouchableOpacity style={styles.manualButton} onPress={goToBluetoothScan}>
+              <PlusIcon />
               <Text style={styles.manualButtonText}>{t('home.addCamera')}</Text>
-              <MoveRightIcon />
             </TouchableOpacity>
           </ScrollView>
           <DrawerMenu

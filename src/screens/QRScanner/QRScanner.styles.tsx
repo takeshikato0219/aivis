@@ -1,4 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
+import { COLORS, FONTS } from '@constants/theme';
+import { isTablet } from '@utils/responsive';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
@@ -34,8 +36,9 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContainer: {
-    width: SCREEN_WIDTH - 48,
+    width: SCREEN_WIDTH > 600 ? '80%' : '90%',
     maxWidth: 400,
+    alignSelf: 'center',
   },
   modalContent: {
     borderRadius: 24,
@@ -174,7 +177,6 @@ export const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -187,9 +189,10 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFF',
+    fontSize: 20,
+    fontWeight: FONTS.weights.medium,
+    color: COLORS.background,
+    marginLeft: 14,
   },
   placeholder: {
     width: 40,
@@ -292,10 +295,10 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 40,
     padding: 16,
-    minHeight: 72,
-    marginHorizontal: 24,
+    height: 54,
     borderWidth: 1,
-    borderColor: 'rgba(0,255,170,0.4)',
+    backgroundColor: COLORS.main,
+    marginBottom: 20,
   },
   manualButtonText: {
     fontSize: 15,
@@ -311,5 +314,14 @@ export const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'space-between',
     paddingTop: 40,
+  },
+  styleAgentCodeText: {
+    color: COLORS.background,
+  },
+  input: {
+    marginBottom: 12,
+    backgroundColor: COLORS['3E3E3E'],
+    fontSize: isTablet() ? 25 : 19,
+    height: isTablet() ? 70 : 56,
   },
 });

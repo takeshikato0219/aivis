@@ -181,6 +181,21 @@ export const socialLoginAsync = createAsyncThunk<
   }
 });
 
+export const socialLineLoginAsync = createAsyncThunk<
+  LoginResponse,
+  SocialLoginRequest,
+  { rejectValue: AuthError }
+>('auth/socialLineLogin', async (socialData, { rejectWithValue }) => {
+  try {
+    return await authService.socialLineLogin(socialData);
+  } catch (error: any) {
+    return rejectWithValue({
+      message: error.message,
+      statusCode: error.apiStatusCode || error.statusCode,
+    });
+  }
+});
+
 // SLICE
 const authSlice = createSlice({
   name: 'auth',
@@ -235,7 +250,22 @@ const authSlice = createSlice({
       .addCase(socialLoginAsync.rejected, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = false;
-        state.error = action.payload?.message || 'Đăng nhập thất bại';
+        state.error = action.payload?.message || 'Error occurred';
+      });
+
+    // SOCIAL LINE LOGIN
+    builder
+      .addCase(socialLineLoginAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(socialLineLoginAsync.fulfilled, (state, action) => {
+        setAuthSuccessState(state, action.payload);
+      })
+      .addCase(socialLineLoginAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.error = action.payload?.message || 'Error occurred';
       });
 
     // LOGOUT

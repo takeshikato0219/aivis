@@ -10,7 +10,6 @@ import ErrorHandler from '@utils/errorHandler';
 import NetworkMonitor from '@utils/networkMonitor';
 import CrashReporter from '@utils/crashReporter';
 import { initI18n } from '@/i18n';
-import Line from '@xmartlabs/react-native-line';
 
 // Ignore logs
 LogBox.ignoreLogs(['Non-serializable']);
@@ -32,11 +31,9 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const theme = paperDarkTheme;
 
   useEffect(() => {
-    Line.setup({
-      channelId: '2008969814',
-    });
-
-    console.log('[LINE] SDK setup done');
+    // Line.setup({
+    //   channelId: '2008969814',
+    // });
   }, []);
 
   useEffect(() => {

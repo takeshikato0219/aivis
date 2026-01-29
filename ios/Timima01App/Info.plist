@@ -30,13 +30,17 @@
 				<string>com.googleusercontent.apps.531701025722-4kn96h41jre9ut0nf65e15t0117l3k20</string>
 			</array>
 		</dict>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>line3rdp.$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-			</array>
-		</dict>
+		 <dict>
+             <key>CFBundleTypeRole</key>
+             <string>Editor</string>
+             <key>CFBundleURLSchemes</key>
+             <array>
+                 <string>line3rdp.$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+             </array>
+         </dict>
 	</array>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+    <string>App needs Bluetooth to find and connect to camera devices nearby.</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -64,6 +68,10 @@
 	<string>We need Face ID to securely log you in</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<key>NSLocationAlwaysUsageDescription</key>
+    <string>App needs location access to scan WiFi networks</string>
+	<key>NSLocalNetworkUsageDescription</key>
+    <string>App needs access to local network for WiFi connections</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>The app needs microphone access to communicate via the camera.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -100,6 +108,7 @@
 	<key>LSApplicationQueriesSchemes</key>
     <array>
       <string>lineauth2</string>
+      <string>line</string>
     </array>
 </dict>
 </plist>

@@ -158,6 +158,15 @@ class AuthService {
     });
     return this.mapLoginResponse(response);
   }
+
+  async socialLineLogin(data: SocialLoginRequest): Promise<LoginResponse> {
+    const response = await axiosInstance.post(API_ENDPOINTS.AUTH.LINE_LOGIN, data, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    return this.mapLoginResponse(response);
+  }
 }
 
 export default new AuthService();

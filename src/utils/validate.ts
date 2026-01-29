@@ -96,6 +96,11 @@ export const isEmail = (value: string) => {
   return undefined;
 };
 
+export const isPasswordWifi = (value: string) => {
+  if (!value.trim()) return 'passwordRequired';
+  return undefined;
+};
+
 export const isPassword = (value: string) => {
   if (!value.trim()) return 'passwordRequired';
   if (value.length < 8 || value.length > 64) return 'passwordNotEnoughCharacters';

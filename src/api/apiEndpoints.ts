@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
     ME: '/auth/me',
     CHANGE_PASSWORD: '/auth/change-password',
     GOOGLE_LOGIN: '/oauth/google/login',
+    LINE_LOGIN: '/oauth/line/login',
   },
 };
 

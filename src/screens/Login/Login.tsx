@@ -12,7 +12,12 @@ import {
 import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector, store } from '@redux/store';
-import { loginAsync, socialLoginAsync, verifyTokenAsync } from '@redux/slices/authSlice';
+import {
+  loginAsync,
+  socialLineLoginAsync,
+  socialLoginAsync,
+  verifyTokenAsync,
+} from '@redux/slices/authSlice';
 import Button from '@components/Button/Button';
 import TextInput from '@components/TextInput/TextInput';
 import { useResponsive } from '@hooks/useResponsive';
@@ -38,7 +43,7 @@ import LoginBackground from '@assets/svg/login-background.svg';
 import Logo from '@assets/svg/logo.svg';
 import { setAuthData } from '@utils/authStorage';
 import { disableBiometricLogin } from '@/services/biometricService';
-import { loginWithLine } from '@api/lineAuthService';
+import lineAuthService from '@api/lineAuthService';
 import googleAuthService from '@api/googleAuthService';
 
 const Login: React.FC = () => {
@@ -339,24 +344,19 @@ const Login: React.FC = () => {
     }
 
     try {
-      console.log('[Login] LINE login start');
-
-      const lineUser = await loginWithLine();
-
+      const lineUser = (await Promise.race([lineAuthService.signIn()])) as any;
       const loginResult = await dispatch(
-        socialLoginAsync({
+        socialLineLoginAsync({
           id_token: lineUser.accessToken,
         })
       ).unwrap();
-
       await handleLoginSuccess(loginResult);
     } catch (err: any) {
       console.error('[Login] LINE login error', err);
-
       showCommonAlert({
         title: t('auth.loginFailed'),
         message: err.message || t('auth.loginFailed'),
-        buttons: [{ text: t('common.ok') }],
+        buttons: [{ text: 'OK' }],
       });
     }
   };

@@ -42,6 +42,7 @@ PODS:
   - LineSDKSwift (5.12.0):
     - LineSDKSwift/Core (= 5.12.0)
   - LineSDKSwift/Core (5.12.0)
+  - MultiplatformBleAdapter (0.2.0)
   - PromisesObjC (2.4.0)
   - RCT-Folly (2024.11.18.00):
     - boost
@@ -1819,6 +1820,35 @@ PODS:
     - SocketRocket
   - react-native-biometrics (3.0.1):
     - React-Core
+  - react-native-ble-plx (3.5.0):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - MultiplatformBleAdapter (= 0.2.0)
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - react-native-image-picker (8.2.1):
     - boost
     - DoubleConversion
@@ -2910,6 +2940,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - RNWifi (4.13.6):
+    - React-Core
   - SocketRocket (0.7.1)
   - VisionCamera (4.7.3):
     - VisionCamera/Core (= 4.7.3)
@@ -2963,6 +2995,7 @@ DEPENDENCIES:
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-biometrics (from `../node_modules/react-native-biometrics`)
+  - react-native-ble-plx (from `../node_modules/react-native-ble-plx`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - "react-native-line (from `../node_modules/@xmartlabs/react-native-line`)"
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
@@ -3012,6 +3045,7 @@ DEPENDENCIES:
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
+  - RNWifi (from `../node_modules/react-native-wifi-reborn`)
   - SocketRocket (~> 0.7.1)
   - VisionCamera (from `../node_modules/react-native-vision-camera`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
@@ -3026,6 +3060,7 @@ SPEC REPOS:
     - GTMSessionFetcher
     - JitsiWebRTC
     - LineSDKSwift
+    - MultiplatformBleAdapter
     - PromisesObjC
     - SocketRocket
 
@@ -3115,6 +3150,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
   react-native-biometrics:
     :path: "../node_modules/react-native-biometrics"
+  react-native-ble-plx:
+    :path: "../node_modules/react-native-ble-plx"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
   react-native-line:
@@ -3213,6 +3250,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
     :path: "../node_modules/react-native-vector-icons"
+  RNWifi:
+    :path: "../node_modules/react-native-wifi-reborn"
   VisionCamera:
     :path: "../node_modules/react-native-vision-camera"
   Yoga:
@@ -3235,6 +3274,7 @@ SPEC CHECKSUMS:
   hermes-engine: 273e30e7fb618279934b0b95ffab60ecedb7acf5
   JitsiWebRTC: b47805ab5668be38e7ee60e2258f49badfe8e1d0
   LineSDKSwift: 117c099af28d1918cd620fa411ac05d52deee215
+  MultiplatformBleAdapter: b1fddd0d499b96b607e00f0faa8e60648343dc1d
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 59ec0ac1f2f39672a0c6e6cecdd39383b764646f
   RCTDeprecation: f17e2ebc07876ca9ab8eb6e4b0a4e4647497ae3a
@@ -3270,6 +3310,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 7e7ca4c53288117e7e0406e9eaa804bf259b4b30
   React-microtasksnativemodule: 885bebe5c5f25035e1fd0920776078840a0e3a76
   react-native-biometrics: 352e5a794bfffc46a0c86725ea7dc62deb085bdc
+  react-native-ble-plx: 11f6fd40d1454c0bb4ccfce89645d2dea295b535
   react-native-image-picker: 43e6cd4231e670030fe09b079d696fa5a634ccfc
   react-native-line: 3c2b49a6981909eb8a405b2df2bf2fe15ecee4c7
   react-native-netinfo: f0a9899081c185db1de5bb2fdc1c88c202a059ac
@@ -3319,6 +3360,7 @@ SPEC CHECKSUMS:
   RNScreens: 3693ec4bbc0065151b843269e50e9807644e9918
   RNSVG: 7da7ec33015df45de2516f43bb67ab85c58754bc
   RNVectorIcons: 6acc19c833be864e9c70894e101a587fe491150a
+  RNWifi: dfa2db4c4e46496f53016fb8be32b5a51f13aee4
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   VisionCamera: 3ea10c46a5c612f5f89fb46a54bef4a0de8b58a7
   Yoga: 8e01cef9947ca77f0477a098f0b32848a8e448c6

@@ -58,7 +58,23 @@
     "googleSignInFailed": "Google sign in failed",
     "errorWhileSigningOutOfGoogle": "Error while signing out of Google:",
     "errorWhileRevokingAccess": "Error while revoking access:",
-    "errorWhileClearingCachedToken": "Error while clearing cached token:"
+    "errorWhileClearingCachedToken": "Error while clearing cached token:",
+    "userCancelledLineLogin": "User cancelled LINE login",
+    "lineAppNotInstalled": "Please install the LINE app",
+    "lineNetworkError": "Network error, please try again",
+    "lineSignInFailed": "LINE sign in failed",
+    "lineAccessTokenNotFound": "Could not get access token from LINE",
+    "lineUserProfileNotFound": "Could not get user information from LINE",
+    "lineInstallSuggestion": "Please install the LINE app to continue",
+    "lineAppRequired": "LINE App Required",
+    "installLineApp": "Install LINE App",
+    "lineInstallIOS": "Download LINE from the App Store",
+    "lineInstallAndroid": "Download LINE from Google Play Store",
+    "lineIOSSchemeError": "LINE URL scheme not configured properly",
+    "lineAndroidIntentError": "LINE app intent not available",
+    "loginWithLineApp": "Login with LINE App",
+    "loginWithBrowser": "Login with Browser (Web)",
+    "webLoginNotAvailable": "Web login requires additional setup. Please use LINE app for now."
   },
   "home": {
     "title": "Welcome Back!",
@@ -77,7 +93,11 @@
     "liveView": "HD Live View, ",
     "stayConnected": "Stay connected anytime",
     "addCamera": "Add Camera",
-    "welcomeBack": "Welcome back"
+    "welcomeBack": "Welcome back",
+    "readyToPair": "Ready to Pair?",
+    "cameraAndEnsure": "Please power on the Camera and ensure the signal light is flashing blue.",
+    "lightNotFlashing": "Light not flashing?",
+    "getHelp": "Get help."
   },
   "profile": {
     "settings": "Settings",
@@ -208,5 +228,90 @@
   "changePassword": {
     "changePasswordSuccess": "Password Changed",
     "changePasswordSuccessMessage": "Your password has been changed successfully. Please log in again with your new password."
+  },
+  "bluetoothScreen": {
+    "permissionDenied": "Permission Denied",
+    "bluetoothPermissionRequiredToScan": "Bluetooth permission required to scan.",
+    "bluetoothDisabled": "Bluetooth Disabled",
+    "pleaseEnableBluetoothToScanForDevices": "Please enable Bluetooth to scan for devices.",
+    "scanningForDevices": "Scanning for devices...",
+    "scanFinished": "Scan finished!",
+    "connectDevice": "Connect Device",
+    "makeSureYourCameraIsPoweredOn": "Make sure your camera is powered on.",
+    "makeSureYourCameraWiFiAPIsPoweredOn": "Make sure your camera Wi-Fi AP is powered on.",
+    "devicesFound": "DEVICES FOUND",
+    "accessPointsFound": "ACCESS POINTS FOUND",
+    "scanAgain": "Scan Again",
+    "noBluetoothDeviceFound.": "No Bluetooth device found.",
+    "connect": "Connect",
+    "connecting": "Connecting...",
+    "troubleConnecting": "Trouble connecting?",
+    "signal": "Signal",
+    "unknownDevice": "Unknown Device",
+    "noWiFiAccessPointFound": "No WiFi access point found."
+  },
+  "pairingCode": {
+    "pairingCode": "Pairing Code",
+    "enterPairingCode": "Enter Pairing Code",
+    "enterWifiPairingCode": "Enter WiFi Pairing Code",
+    "alphanumericCode": "Please enter the 6-digit alphanumeric code found on the label or box of your Jetson Orin device.",
+    "uniqueToEachDevice": "The pairing code is unique to each device. If you cannot find it, ensure you're looking at\n the original packaging or the sticker on the back of the camera module.",
+    "pairDevice": "Pair Device",
+    "findTheCode": "I can't find the code"
+  },
+  "setupComplete": {
+    "successfullyConnected": "Successfully Connected to Jetson Orin",
+    "communicationEstablished": "Communication established via AP Mode. You are now ready to register this device.",
+    "cancelSetup": "Cancel Setup",
+    "serial": "Serial:"
+  },
+  "QRScan": {
+    "cameraAccess" : "Camera access",
+    "cameraAccessIsRequiredToScanTheQRCode" : "Camera access is required to scan the QR code",
+    "doNotAllow" : "Do not allow",
+    "allow" : "Allow",
+    "loading" : "Loading...",
+    "cameraPermissionRequired" : "Camera permission required",
+    "toScanTheQRCodePleaseAllowCameraPermissionInSettings." : "To scan the QR code, please allow camera permission in Settings.",
+    "manualConnection" : "Manual connection",
+    "loadingCamera" : "Loading camera...",
+    "deviceRegistration" : "Device Registration",
+    "searchingForDevices" : "Searching for devices...",
+    "bluetoothConnected" : "Bluetooth connected",
+    "enterManualCode" : "Enter manual code",
+    "agentCode" : "Agent Code"
+  },
+  "wifiHotspot": {
+    "enterPasswordInstruction": "Enter the default password for the Jetson Orin's local hotspot:",
+    "deviceWillDisconnect": "Your device will disconnect from the internet to pair.",
+    "whereIsThePassword": "Where is the password?",
+    "passwordLocationInfo": "The default password is usually printed on the QR label located at the bottom of your Jetson Orin module. Common defaults include",
+    "connectToCamera": "Connect to Camera"
+  },
+  "networkSetup": {
+    "networkSetup": "Network Setup",
+    "availableNetworks": "Available Networks",
+    "passwordFor": "Password for",
+    "systemCheck": "SYSTEM CHECK",
+    "inProgress": "In Progress...",
+    "checkingInternetConnection": "Checking internet connection...",
+    "permissionRequired": "Permission required",
+    "pleaseAllowLocationForWiFiScan": "Please allow location for WiFi scan.",
+    "notSupported": "Not supported",
+    "wiFiScanningIsNotSupportedOnThisDevice": "WiFi scanning is not supported on this device.",
+    "plugCameraEthernet": "Plug your camera into an Ethernet cable.",
+    "insertLTESim": "Insert your LTE SIM module and follow setup instructions.",
+    "scanning": "Scanning...",
+    "rescan": "Rescan",
+    "secure": "Secure",
+    "open": "Open",
+    "excellentSignal": "Excellent",
+    "goodSignal": "Good",
+    "weakSignal": "Weak",
+    "noAvailableWifi": "No available Wi-Fi found. Pull to refresh.",
+    "currentConnected": "Currently connected: ",
+    "noWifiConnected": "No WiFi connected",
+    "connectionError": "Connection Error",
+    "connectionFailed": "Connection Failed"
   }
 }
