@@ -205,7 +205,25 @@ const ConnectDevice: React.FC = () => {
     }
   };
 
-  // --- UI ---
+  const scanningText =
+    activeTab === 'bluetooth'
+      ? scanning
+        ? t('bluetoothScreen.scanningForDevices')
+        : t('bluetoothScreen.scanFinished')
+      : scanningWifi
+        ? t('bluetoothScreen.scanningForDevices')
+        : t('bluetoothScreen.scanFinished');
+
+  const hintText =
+    activeTab === 'bluetooth'
+      ? t('bluetoothScreen.makeSureYourCameraIsPoweredOn')
+      : t('bluetoothScreen.makeSureYourCameraWiFiAPIsPoweredOn');
+
+  const devicesFoundText =
+    activeTab === 'bluetooth'
+      ? t('bluetoothScreen.devicesFound') + (scanning ? '' : ` (${devices.length})`)
+      : t('bluetoothScreen.accessPointsFound') + (scanningWifi ? '' : ` (${wifiList.length})`);
+
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
@@ -268,27 +286,10 @@ const ConnectDevice: React.FC = () => {
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            <Text style={styles.scanningText}>
-              {activeTab === 'bluetooth'
-                ? scanning
-                  ? t('bluetoothScreen.scanningForDevices')
-                  : t('bluetoothScreen.scanFinished')
-                : scanningWifi
-                  ? t('bluetoothScreen.scanningForDevices')
-                  : t('bluetoothScreen.scanFinished')}
-            </Text>
-            <Text style={styles.hintText}>
-              {activeTab === 'bluetooth'
-                ? t('bluetoothScreen.makeSureYourCameraIsPoweredOn')
-                : t('bluetoothScreen.makeSureYourCameraWiFiAPIsPoweredOn')}
-            </Text>
+            <Text style={styles.scanningText}>{scanningText}</Text>
+            <Text style={styles.hintText}>{hintText}</Text>
             <View style={styles.devicesHeader}>
-              <Text style={styles.devicesTitle}>
-                {activeTab === 'bluetooth'
-                  ? t('bluetoothScreen.devicesFound') + (scanning ? '' : ` (${devices.length})`)
-                  : t('bluetoothScreen.accessPointsFound') +
-                    (scanningWifi ? '' : ` (${wifiList.length})`)}
-              </Text>
+              <Text style={styles.devicesTitle}>{devicesFoundText}</Text>
               <TouchableOpacity
                 onPress={activeTab === 'bluetooth' ? startBluetoothScan : startWifiScan}
                 disabled={activeTab === 'bluetooth' ? scanning : scanningWifi}

@@ -31,12 +31,6 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const theme = paperDarkTheme;
 
   useEffect(() => {
-    // Line.setup({
-    //   channelId: '2008969814',
-    // });
-  }, []);
-
-  useEffect(() => {
     const initializeApp = async () => {
       try {
         await initI18n();

@@ -18,7 +18,7 @@ const CodeStickerBox = ({ code }: { code: string[] }) => (
       </View>
       <View style={styles.stickerBoxCodeRow}>
         {code.map((c, i) => (
-          <View key={i} style={styles.stickerBoxCodeItem}>
+          <View key={`${c}-${i}`} style={styles.stickerBoxCodeItem}>
             <Text style={styles.stickerBoxCodeText}>{c || '-'}</Text>
           </View>
         ))}
@@ -108,7 +108,7 @@ const PairingCode: React.FC = () => {
             <View style={styles.codeInputsRow}>
               {codes.map((value, idx) => (
                 <TextInput
-                  key={idx}
+                  key={`${value}-${idx}`}
                   ref={inputRefs[idx]}
                   value={value}
                   maxLength={1}

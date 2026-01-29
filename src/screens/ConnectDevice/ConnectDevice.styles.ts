@@ -27,7 +27,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     margin: isTablet() ? 20 : 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
   },
   backBtn: { marginRight: 5, padding: 4 },
   headerTitle: {
@@ -41,6 +41,10 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: isTablet() ? 20 : 13,
     marginVertical: isTablet() ? 16 : 8,
+    backgroundColor: '#1A202C',
+    marginHorizontal: 20,
+    borderRadius: 8,
+    paddingVertical: 4,
   },
   switchBtn: {
     paddingVertical: isTablet() ? 12 : 8,
@@ -50,6 +54,8 @@ export const styles = StyleSheet.create({
     height: isTablet() ? 50 : 45,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#1A202C',
+    width: '45%',
   },
   switchBtnActive: {
     backgroundColor: COLORS.main,

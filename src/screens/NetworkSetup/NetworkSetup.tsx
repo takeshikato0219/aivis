@@ -29,6 +29,25 @@ import { isPasswordWifi } from '@utils/validate';
 import { useAppSelector } from '@redux/store';
 import WifiManager from 'react-native-wifi-reborn';
 
+// Helper functions to avoid nested ternary operations
+const getSignalStyle = (signal: string) => {
+  const signalStyles = {
+    excellent: styles.signalExcellent,
+    good: styles.signalGood,
+    weak: styles.signalWeak,
+  };
+  return signalStyles[signal as keyof typeof signalStyles] || styles.signalWeak;
+};
+
+const getSignalText = (signal: string, t: any) => {
+  const signalTexts = {
+    excellent: t('networkSetup.excellentSignal') || 'Excellent',
+    good: t('networkSetup.goodSignal') || 'Good',
+    weak: t('networkSetup.weakSignal') || 'Weak',
+  };
+  return signalTexts[signal as keyof typeof signalTexts] || 'Weak';
+};
+
 const TABS = [
   { key: 'wifi', title: 'Wi-Fi', icon: <WifiIcon width={22} height={22} /> },
   { key: 'lan', title: 'LAN', icon: <LanIcon width={22} height={22} /> },
@@ -240,30 +259,17 @@ const NetworkSetup: React.FC = () => {
                             ]}
                             onPress={() => {
                               setSelectedWifi(item);
-                              passwordInput.setValue(''); // Reset password khi chọn WiFi khác
+                              passwordInput.setValue('');
                             }}
                           >
                             <View style={styles.networkLeftContent}>
                               <WifiIcon width={24} height={24} />
                               <View>
                                 <Text style={styles.networkName}>{item.name}</Text>
-                                <Text
-                                  style={[
-                                    styles.networkSignal,
-                                    item.signal === 'excellent'
-                                      ? styles.signalExcellent
-                                      : item.signal === 'good'
-                                        ? styles.signalGood
-                                        : styles.signalWeak,
-                                  ]}
-                                >
+                                <Text style={[styles.networkSignal, getSignalStyle(item.signal)]}>
                                   {item.secure ? t('networkSetup.secure') : t('networkSetup.open')}
                                   {' • '}
-                                  {item.signal === 'excellent'
-                                    ? t('networkSetup.excellentSignal')
-                                    : item.signal === 'good'
-                                      ? t('networkSetup.goodSignal')
-                                      : t('networkSetup.weakSignal')}
+                                  {getSignalText(item.signal, t)}
                                 </Text>
                               </View>
                             </View>

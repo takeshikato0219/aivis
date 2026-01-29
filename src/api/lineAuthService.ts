@@ -18,8 +18,6 @@ let isLineSdkConfigured = false;
 export class LineAuthService {
   private channelId = '2008969814';
 
-  constructor() {}
-
   private configure() {
     if (isLineSdkConfigured) {
       return;
