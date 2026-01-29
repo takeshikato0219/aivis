@@ -27,6 +27,19 @@ import { useTranslation } from 'react-i18next';
 import RotateCcwIcon from '@assets/svg/rotate-ccw.svg';
 import CctvIcon from '@assets/svg/cctv-icon.svg';
 
+const getScanningText = (activeTab: string, scanning: boolean, scanningWifi: boolean, t: any) => {
+  const isScanning = activeTab === 'bluetooth' ? scanning : scanningWifi;
+  return isScanning
+    ? t('bluetoothScreen.scanningForDevices')
+    : t('bluetoothScreen.scanFinished');
+};
+
+const getHintText = (activeTab: string, t: any) => {
+  return activeTab === 'bluetooth'
+    ? t('bluetoothScreen.makeSureYourCameraIsPoweredOn')
+    : t('bluetoothScreen.makeSureYourCameraWiFiAPIsPoweredOn');
+};
+
 const ConnectDevice: React.FC = () => {
   const navigation = useNavigation<ConnectDeviceScreenNavigationProp>();
   const [devices, setDevices] = useState<Device[]>([]);
@@ -205,19 +218,8 @@ const ConnectDevice: React.FC = () => {
     }
   };
 
-  const scanningText =
-    activeTab === 'bluetooth'
-      ? scanning
-        ? t('bluetoothScreen.scanningForDevices')
-        : t('bluetoothScreen.scanFinished')
-      : scanningWifi
-        ? t('bluetoothScreen.scanningForDevices')
-        : t('bluetoothScreen.scanFinished');
-
-  const hintText =
-    activeTab === 'bluetooth'
-      ? t('bluetoothScreen.makeSureYourCameraIsPoweredOn')
-      : t('bluetoothScreen.makeSureYourCameraWiFiAPIsPoweredOn');
+  const scanningText = getScanningText(activeTab, scanning, scanningWifi, t);
+  const hintText = getHintText(activeTab, t);
 
   const devicesFoundText =
     activeTab === 'bluetooth'
