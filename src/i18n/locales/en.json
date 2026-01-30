@@ -272,7 +272,7 @@
     "allow" : "Allow",
     "loading" : "Loading...",
     "cameraPermissionRequired" : "Camera permission required",
-    "toScanTheQRCodePleaseAllowCameraPermissionInSettings." : "To scan the QR code, please allow camera permission in Settings.",
+    "toScanTheQRCodePleaseAllowCameraPermissionInSettings" : "To scan the QR code, please allow camera permission in Settings.",
     "manualConnection" : "Manual connection",
     "loadingCamera" : "Loading camera...",
     "deviceRegistration" : "Device Registration",

@@ -1849,6 +1849,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - react-native-carrier-info (1.1.3):
+    - React
   - react-native-image-picker (8.2.1):
     - boost
     - DoubleConversion
@@ -2996,6 +2998,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-biometrics (from `../node_modules/react-native-biometrics`)
   - react-native-ble-plx (from `../node_modules/react-native-ble-plx`)
+  - react-native-carrier-info (from `../node_modules/react-native-carrier-info`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - "react-native-line (from `../node_modules/@xmartlabs/react-native-line`)"
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
@@ -3152,6 +3155,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-biometrics"
   react-native-ble-plx:
     :path: "../node_modules/react-native-ble-plx"
+  react-native-carrier-info:
+    :path: "../node_modules/react-native-carrier-info"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
   react-native-line:
@@ -3311,6 +3316,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 885bebe5c5f25035e1fd0920776078840a0e3a76
   react-native-biometrics: 352e5a794bfffc46a0c86725ea7dc62deb085bdc
   react-native-ble-plx: 11f6fd40d1454c0bb4ccfce89645d2dea295b535
+  react-native-carrier-info: 920b17042a1e8df5a63abe3ef87e878a1d7e6b10
   react-native-image-picker: 43e6cd4231e670030fe09b079d696fa5a634ccfc
   react-native-line: 3c2b49a6981909eb8a405b2df2bf2fe15ecee4c7
   react-native-netinfo: f0a9899081c185db1de5bb2fdc1c88c202a059ac

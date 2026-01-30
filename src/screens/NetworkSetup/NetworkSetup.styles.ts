@@ -279,6 +279,7 @@ export const styles = StyleSheet.create({
   iosWifiContainer: {
     alignItems: 'center',
     marginTop: 30,
+    paddingHorizontal: 20,
   },
   iosWifiText: {
     color: '#A5C0DF',
@@ -290,7 +291,16 @@ export const styles = StyleSheet.create({
     color: '#7CCDFF',
     fontSize: 15,
     fontWeight: '700',
-    marginBottom: 7,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  iosWifiInstruction: {
+    color: '#A6C4DE',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 5,
+    lineHeight: 20,
   },
   divider: {
     height: 1,
