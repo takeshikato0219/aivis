@@ -1,6 +1,6 @@
-import Line from "@xmartlabs/react-native-line";
-import { Linking } from "react-native";
-import { showCommonAlert } from "@components/Alert/Alert";
+import Line from '@xmartlabs/react-native-line';
+import { Linking } from 'react-native';
+import { showCommonAlert } from '@components/Alert/Alert';
 
 export interface LineLoginResult {
   accessToken: string;
@@ -15,6 +15,10 @@ let isLineSdkConfigured = false;
 
 export class LineAuthService {
   private channelId = '2008969814';
+
+  constructor() {
+    this.configure();
+  }
 
   private async isLineAppInstalled(): Promise<boolean> {
     try {
@@ -41,7 +45,6 @@ export class LineAuthService {
   }
 
   async getCurrentUser() {
-    await this.configure();
     try {
       return await Line.getProfile();
     } catch (error) {
@@ -52,7 +55,6 @@ export class LineAuthService {
 
   async isSignedIn(): Promise<boolean> {
     try {
-      await this.configure();
       const token = await Line.getCurrentAccessToken();
       return !!token?.accessToken;
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -63,7 +65,6 @@ export class LineAuthService {
 
   async signOut() {
     try {
-      await this.configure();
       await Line.logout();
     } catch (error: any) {
       showCommonAlert({
@@ -77,21 +78,10 @@ export class LineAuthService {
   async signIn(): Promise<LineLoginResult | undefined> {
     try {
       const isLineInstalled = await this.isLineAppInstalled();
-      try {
-        await this.configure();
-      } catch (error: any) {
-        showCommonAlert({
-          title: 'Error',
-          message: error.message,
-          buttons: [{ text: 'OK' }],
-        });
-      }
-
       const loginOptions = {
         scopes: ['profile', 'openid', 'email'] as any,
         onlyWebLogin: !isLineInstalled,
       };
-
       const result = await Line.login(loginOptions);
       return {
         accessToken: result.accessToken.accessToken,
