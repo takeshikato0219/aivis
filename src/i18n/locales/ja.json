@@ -19,9 +19,10 @@
     "notNow": "今はしない",
     "enable": "有効にする",
     "networkError": "ネットワークエラー",
-    "authError": "認証エラー"
+    "authError": "認証エラー",
+    "areYouSure": "よろしいですか？"
   },
-  "auth":  {
+  "auth": {
     "login": "登錄",
     "register": "登錄",
     "forgotPassword": "パスワードをお忘れですか？",
@@ -76,7 +77,7 @@
     "loginWithBrowser": "ブラウザでログイン（Web）",
     "webLoginNotAvailable": "Webログインには追加設定が必要です。今はLINEアプリをご使用ください。"
   },
-  "home":  {
+  "home": {
     "title": "お帰りなさい！",
     "quickActions": "クイックアクション",
     "statistics": "統計",
@@ -157,7 +158,7 @@
     "checking": "確認中...",
     "pleaseCheckYourConnection.": "通信状況をご確認ください。"
   },
-  "biometric":{
+  "biometric": {
     "notEnabledYet": "最初にメールアドレス/パスワードでログインしてください",
     "notAvailableOnDevice": "{{type}} このデバイスでは利用できません",
     "enableTitle": "有効にする {{type}}?",
@@ -175,14 +176,15 @@
     "liveStream": "ライブ配信",
     "goToHome": "ホーム画面へ"
   },
-  "drawer":  {
+  "drawer": {
     "home": "ホーム",
     "cameraList": "カメラ一覧",
     "settings": "設定",
     "profile": "プロフィール",
     "notifications": "通知",
     "language": "言語",
-    "logout": "ログアウト"
+    "logout": "ログアウト",
+    "setting": "設定"
   },
   "detail": {
     "textNotification": "侵入 知 即時通知"
@@ -215,7 +217,7 @@
     "nameNoEmoji": "名前に絵文字は使用できません",
     "nameNoSpecialChars": "名前に「,」「:」「?」などの記号は使用できません。"
   },
-  "register" : {
+  "register": {
     "change": "変更",
     "remove": "削除",
     "tapToUploadImage": "タップして画像をアップロード",
@@ -307,20 +309,20 @@
     "serial": "シリアル："
   },
   "QRScan": {
-    "cameraAccess" : "カメラへのアクセス",
-    "cameraAccessIsRequiredToScanTheQRCode" : "QRコードをスキャンするためにカメラへのアクセスが必要です",
-    "doNotAllow" : "許可しない",
-    "allow" : "許可する",
-    "loading" : "読み込み中...",
-    "cameraPermissionRequired" : "カメラの権限が必要です",
-    "toScanTheQRCodePleaseAllowCameraPermissionInSettings." : "QRコードをスキャンするには{'\\n'}設定からカメラの権限を許可してください",
-    "manualConnection" : "手動で接続",
-    "loadingCamera" : "カメラを読み込み中...",
-    "deviceRegistration" : "デバイス登録",
-    "searchingForDevices" : "デバイスを検索中...",
-    "bluetoothConnected" : "Bluetooth接続中",
-    "enterManualCode" : "手動でコードを入力",
-    "agentCode" : "代理店コード"
+    "cameraAccess": "カメラへのアクセス",
+    "cameraAccessIsRequiredToScanTheQRCode": "QRコードをスキャンするためにカメラへのアクセスが必要です",
+    "doNotAllow": "許可しない",
+    "allow": "許可する",
+    "loading": "読み込み中...",
+    "cameraPermissionRequired": "カメラの権限が必要です",
+    "toScanTheQRCodePleaseAllowCameraPermissionInSettings.": "QRコードをスキャンするには{'\\n'}設定からカメラの権限を許可してください",
+    "manualConnection": "手動で接続",
+    "loadingCamera": "カメラを読み込み中...",
+    "deviceRegistration": "デバイス登録",
+    "searchingForDevices": "デバイスを検索中...",
+    "bluetoothConnected": "Bluetooth接続中",
+    "enterManualCode": "手動でコードを入力",
+    "agentCode": "代理店コード"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Jetson Orinのローカルホットスポットのデフォルトパスワードを入力してください：",
@@ -328,6 +330,34 @@
     "whereIsThePassword": "パスワードはどこにありますか？",
     "passwordLocationInfo": "デフォルトのパスワードは通常、Jetson Orinモジュールの下部にあるQRラベルに印刷されています。一般的なデフォルトには",
     "connectToCamera": "カメラに接続"
+  },
+  "lineSubscription": {
+    "lineOfficialAccount": "LINE公式アカウント",
+    "subscribeToLine": "LINEを購読",
+    "unsubscribeFromLine": "LINEを解除",
+    "lineSubscriptionDescription": "LINE公式アカウントで通知と更新を受け取れます。すべてのユーザーが利用可能です。",
+    "lineUserDescription": "LINEユーザーとして、LINE公式アカウントで通知と更新を受け取ることができます。",
+    "otherUserDescription": "LINE公式アカウントを購読して通知と更新を受け取れます。LINE認証が必要です。",
+    "subscriptionStatus": "購読ステータス",
+    "subscribed": "購読中",
+    "notSubscribed": "未購読",
+    "checkingStatus": "ステータスを確認中...",
+    "statusUnknown": "不明（LINE認証が必要です）",
+    "subscribing": "購読中...",
+    "unsubscribing": "解除中...",
+    "subscriptionSuccess": "LINE公式アカウントを正常に購読しました",
+    "unsubscriptionSuccess": "LINE公式アカウントの購読を正常に解除しました",
+    "subscriptionError": "LINE購読の更新に失敗しました",
+    "openOfficialAccount": "公式アカウントを開く",
+    "lineRequired": "この機能にはLINEアプリが必要です",
+    "lineLoginRequired": "LINEログインが必要です",
+    "lineLoginRequiredMessage": "LINE公式アカウントを購読するには、まずLINEでログインする必要があります。",
+    "lineSdkLoginRequired": "LINE SDKログインが必要です",
+    "lineSdkLoginRequiredMessage": "LINE公式アカウントを購読するには、まずLINE SDKでログインする必要があります。",
+    "lineAuthRequired": "LINE認証が必要です",
+    "lineAuthRequiredMessage": "LINE公式アカウントを購読するには、まずLINEで認証する必要があります。",
+    "cannotUnsubscribeMessage": "購読を解除するにはLINE認証が必要です。",
+    "loginWithLine": "LINEでログイン"
   },
   "networkSetup": {
     "networkSetup": "ネットワーク設定",

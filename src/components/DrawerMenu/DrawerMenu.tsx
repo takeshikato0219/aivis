@@ -122,6 +122,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({ isOpen, onClose, avatarUrl }) =
       icon: '⚙️',
       label: t('drawer.settings'),
       onPress: () => {
+        navigation.navigate('Setting' as any);
         onClose();
       },
     },

@@ -19,7 +19,8 @@
     "notNow": "Not Now",
     "enable": "Enable",
     "networkError": "Network Error",
-    "authError": "Auth Error"
+    "authError": "Auth Error",
+    "areYouSure": "Are you sure?"
   },
   "auth": {
     "login": "Login",
@@ -118,7 +119,7 @@
     "checking": "Checking...",
     "pleaseCheckYourConnection.": "Please check your connection."
   },
-  "biometric":{
+  "biometric": {
     "notEnabledYet": "Please login with email/password first",
     "notAvailableOnDevice": "{{type}} is not available on this device",
     "enableTitle": "Enable {{type}}?",
@@ -137,11 +138,12 @@
   "drawer": {
     "home": "Home",
     "cameraList": "Camera List",
-    "settings":  "Settings",
-    "profile":  "Profile",
-    "notifications":  "Notifications",
+    "settings": "Settings",
+    "profile": "Profile",
+    "notifications": "Notifications",
     "language": "Language",
-    "logout": "Logout"
+    "logout": "Logout",
+    "setting": "Setting"
   },
   "detail": {
     "textNotification": "Intrusion detection, immediate notification"
@@ -174,7 +176,7 @@
     "nameNoEmoji": "Name cannot contain emoji",
     "nameNoSpecialChars": "Name cannot contain special characters like , : ?"
   },
-  "register" : {
+  "register": {
     "change": "Change",
     "remove": "Remove",
     "tapToUploadImage": "Tap to upload image",
@@ -266,20 +268,20 @@
     "serial": "Serial:"
   },
   "QRScan": {
-    "cameraAccess" : "Camera access",
-    "cameraAccessIsRequiredToScanTheQRCode" : "Camera access is required to scan the QR code",
-    "doNotAllow" : "Do not allow",
-    "allow" : "Allow",
-    "loading" : "Loading...",
-    "cameraPermissionRequired" : "Camera permission required",
-    "toScanTheQRCodePleaseAllowCameraPermissionInSettings" : "To scan the QR code, please allow camera permission in Settings.",
-    "manualConnection" : "Manual connection",
-    "loadingCamera" : "Loading camera...",
-    "deviceRegistration" : "Device Registration",
-    "searchingForDevices" : "Searching for devices...",
-    "bluetoothConnected" : "Bluetooth connected",
-    "enterManualCode" : "Enter manual code",
-    "agentCode" : "Agent Code"
+    "cameraAccess": "Camera access",
+    "cameraAccessIsRequiredToScanTheQRCode": "Camera access is required to scan the QR code",
+    "doNotAllow": "Do not allow",
+    "allow": "Allow",
+    "loading": "Loading...",
+    "cameraPermissionRequired": "Camera permission required",
+    "toScanTheQRCodePleaseAllowCameraPermissionInSettings": "To scan the QR code, please allow camera permission in Settings.",
+    "manualConnection": "Manual connection",
+    "loadingCamera": "Loading camera...",
+    "deviceRegistration": "Device Registration",
+    "searchingForDevices": "Searching for devices...",
+    "bluetoothConnected": "Bluetooth connected",
+    "enterManualCode": "Enter manual code",
+    "agentCode": "Agent Code"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Enter the default password for the Jetson Orin's local hotspot:",
@@ -287,6 +289,34 @@
     "whereIsThePassword": "Where is the password?",
     "passwordLocationInfo": "The default password is usually printed on the QR label located at the bottom of your Jetson Orin module. Common defaults include",
     "connectToCamera": "Connect to Camera"
+  },
+  "lineSubscription": {
+    "lineOfficialAccount": "LINE Official Account",
+    "subscribeToLine": "Subscribe to LINE",
+    "unsubscribeFromLine": "Unsubscribe from LINE",
+    "lineSubscriptionDescription": "Receive notifications and updates via our LINE Official Account. Available to all users.",
+    "lineUserDescription": "As a LINE user, you can subscribe to receive notifications and updates via our LINE Official Account.",
+    "otherUserDescription": "Subscribe to our LINE Official Account to receive notifications and updates. LINE authentication required.",
+    "subscriptionStatus": "Subscription Status",
+    "subscribed": "Subscribed",
+    "notSubscribed": "Not Subscribed",
+    "checkingStatus": "Checking status...",
+    "statusUnknown": "Unknown (requires LINE authentication)",
+    "subscribing": "Subscribing...",
+    "unsubscribing": "Unsubscribing...",
+    "subscriptionSuccess": "Successfully subscribed to LINE Official Account",
+    "unsubscriptionSuccess": "Successfully unsubscribed from LINE Official Account",
+    "subscriptionError": "Failed to update LINE subscription",
+    "openOfficialAccount": "Open Official Account",
+    "lineRequired": "LINE app is required for this feature",
+    "lineLoginRequired": "LINE Login Required",
+    "lineLoginRequiredMessage": "To subscribe to our LINE Official Account, you need to login with LINE first.",
+    "lineSdkLoginRequired": "LINE SDK Login Required",
+    "lineSdkLoginRequiredMessage": "To subscribe to our LINE Official Account, you need to login with LINE SDK first.",
+    "lineAuthRequired": "LINE Authentication Required",
+    "lineAuthRequiredMessage": "To subscribe to our LINE Official Account, you need to authenticate with LINE first.",
+    "cannotUnsubscribeMessage": "You need to be authenticated with LINE to unsubscribe.",
+    "loginWithLine": "Login with LINE"
   },
   "networkSetup": {
     "networkSetup": "Network Setup",
