@@ -98,7 +98,7 @@ export const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: COLORS.success,
+    borderColor: COLORS.main,
   },
   changeAvatarButton: {
     position: 'absolute',
@@ -107,7 +107,7 @@ export const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.success,
+    backgroundColor: COLORS.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -134,7 +134,7 @@ export const styles = StyleSheet.create({
   label: {
     fontSize: FONTS.sizes.md,
     fontWeight: FONTS.weights.medium,
-    color: COLORS.success,
+    color: COLORS.main,
     marginBottom: 4,
   },
   input: {
@@ -155,7 +155,7 @@ export const styles = StyleSheet.create({
   saveButton: {
     height: isTablet() ? 60 : 50,
     borderRadius: 40,
-    backgroundColor: COLORS.success,
+    backgroundColor: COLORS.main,
     justifyContent: 'center',
   },
   btnSave: {

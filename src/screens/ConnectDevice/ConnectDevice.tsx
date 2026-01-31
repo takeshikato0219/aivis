@@ -202,8 +202,7 @@ const ConnectDevice: React.FC = () => {
       setTimeout(() => {
         setConnect(false);
         setAlertShown(false);
-        const code = '86F2A1';
-        navigation.navigate('PairingCode', { device, pairingCode: code });
+        navigation.navigate('PairingCode', { device, pairingCode: '' });
       }, 1200);
     } catch (err) {
       setConnect(false);

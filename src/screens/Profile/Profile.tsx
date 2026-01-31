@@ -30,6 +30,10 @@ const Profile = () => {
     navigation.navigate('ChangePassword' as any);
   };
 
+  const goToSettings = () => {
+    navigation.navigate('Setting' as any);
+  };
+
   const handleLogout = async () => {
     try {
       await removeAuthData();
@@ -72,7 +76,7 @@ const Profile = () => {
                 </View>
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Icon name="account" size={50} color="#34C759" />
+                  <Icon name="account" size={50} color="#00ADD4" />
                 </View>
               )}
 
@@ -87,7 +91,7 @@ const Profile = () => {
             <View style={styles.settingsSection}>
               <TouchableOpacity style={styles.settingItem} onPress={goToEditProfile}>
                 <View style={styles.settingLeft}>
-                  <Icon name="account-edit" size={24} color="#34C759" />
+                  <Icon name="account-edit" size={24} color="#00ADD4" />
                   <Text style={styles.settingText}>{t('profile.editProfile')}</Text>
                 </View>
                 <Icon name="chevron-right" size={24} color="#FFF" />
@@ -95,7 +99,7 @@ const Profile = () => {
 
               <TouchableOpacity style={styles.settingItem}>
                 <View style={styles.settingLeft}>
-                  <Icon name="shield-account" size={24} color="#34C759" />
+                  <Icon name="shield-account" size={24} color="#00ADD4" />
                   <Text style={styles.settingText}>{t('profile.privacy')}</Text>
                 </View>
                 <Icon name="chevron-right" size={24} color="#FFF" />
@@ -103,15 +107,15 @@ const Profile = () => {
 
               <TouchableOpacity style={styles.settingItem} onPress={goToChangePassword}>
                 <View style={styles.settingLeft}>
-                  <Icon name="lock" size={24} color="#34C759" />
+                  <Icon name="lock" size={24} color="#00ADD4" />
                   <Text style={styles.settingText}>{t('profile.changePassword')}</Text>
                 </View>
                 <Icon name="chevron-right" size={24} color="#FFF" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.settingItem}>
+              <TouchableOpacity style={styles.settingItem} onPress={goToSettings}>
                 <View style={styles.settingLeft}>
-                  <Icon name="cog-outline" size={24} color="#34C759" />
+                  <Icon name="cog-outline" size={24} color="#00ADD4" />
                   <Text style={styles.settingText}>{t('profile.settings')}</Text>
                 </View>
                 <Icon name="chevron-right" size={24} color="#FFF" />
@@ -119,7 +123,7 @@ const Profile = () => {
 
               <TouchableOpacity style={styles.settingItem}>
                 <View style={styles.settingLeft}>
-                  <Icon name="help-circle-outline" size={24} color="#34C759" />
+                  <Icon name="help-circle-outline" size={24} color="#00ADD4" />
                   <Text style={styles.settingText}>{t('profile.help')}</Text>
                 </View>
                 <Icon name="chevron-right" size={24} color="#FFF" />

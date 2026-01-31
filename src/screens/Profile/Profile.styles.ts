@@ -71,7 +71,7 @@ export const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: COLORS.success,
+    borderColor: COLORS.main,
   },
   editAvatarButton: {
     position: 'absolute',
@@ -107,7 +107,7 @@ export const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: COLORS.success,
+    borderColor: COLORS.main,
     justifyContent: 'center',
     alignItems: 'center',
   },

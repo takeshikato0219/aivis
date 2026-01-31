@@ -20,7 +20,11 @@
     "enable": "有効にする",
     "networkError": "ネットワークエラー",
     "authError": "認証エラー",
-    "areYouSure": "よろしいですか？"
+    "areYouSure": "よろしいですか？",
+    "ok": "OK",
+    "yes": "はい",
+    "no": "いいえ",
+    "grantPermission": "権限を許可"
   },
   "auth": {
     "login": "登錄",
@@ -392,5 +396,24 @@
     "ltePassword": "SIM／ネットワークのパスワード",
     "ltePasswordPlaceholder": "Password",
     "lteReady": "準備完了"
+  },
+  "faceUpload": {
+    "title": "顔登録",
+    "permissionRequired": "カメラの権限が必要です",
+    "cameraPermissionNeeded": "顔を撮影するためにカメラへのアクセス権が必要です",
+    "noCamera": "カメラが見つかりません",
+    "lookStraight": "正面を向いてください",
+    "turnLeft": "顔を左に向けてください",
+    "turnRight": "顔を右に向けてください",
+    "lookUp": "顔を上に向けてください",
+    "lookDown": "顔を下に向けてください",
+    "tapWhenReady": "顔を枠内に合わせ、ボタンをタップしてください",
+    "complete": "完了",
+    "allPositionsCaptured": "5つの角度の撮影が完了しました！",
+    "captureError": "撮影エラー",
+    "tryAgain": "もう一度お試しください",
+    "retake": "再撮影",
+    "retakeConfirm": "この角度を再撮影しますか？",
+    "cancelConfirm": "本当にキャンセルしますか？"
   }
 }

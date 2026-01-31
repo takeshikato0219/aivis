@@ -21,6 +21,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import LineSubscriptionService, { LineSubscriptionStatus } from '@api/lineSubscriptionService';
 import lineAuthService from '@api/lineAuthService';
 import Line from '@xmartlabs/react-native-line';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const Setting = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -44,22 +45,15 @@ const Setting = () => {
       const isUserLoggedInWithLine = !!user?.line_user_id; // Check if user authenticated with LINE
 
       if (isUserLoggedInWithLine) {
-        // Case 1: User logged in with LINE (has line_user_id)
-        // Check if currently signed in with LINE SDK for subscription status
         const isLineLoggedIn = await checkLineLoginStatus();
 
         if (isLineLoggedIn) {
-          // Can check subscription status
           const status = await LineSubscriptionService.checkSubscriptionStatus();
           setSubscriptionStatus(status);
         } else {
-          // User authenticated with LINE but not currently signed in with SDK
-          // They can still subscribe but status is unknown
           setSubscriptionStatus(null);
         }
       } else {
-        // Case 2: User logged in with other method (no line_user_id)
-        // Cannot check subscription status, but can subscribe by logging in with LINE
         setSubscriptionStatus(null);
       }
     } catch (error) {
@@ -70,12 +64,10 @@ const Setting = () => {
     }
   }, [user?.line_user_id]);
 
-  // Load LINE subscription status on component mount
   useEffect(() => {
     void loadSubscriptionStatus();
   }, [loadSubscriptionStatus]);
 
-  // Refresh subscription status when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       void loadSubscriptionStatus();
@@ -93,43 +85,36 @@ const Setting = () => {
 
   const updateUserWithLineId = async (): Promise<boolean> => {
     try {
-      // Get LINE user profile
       const lineProfile = await Line.getProfile();
       console.log(lineProfile);
       if (!lineProfile?.userId) {
         throw new Error('Unable to get LINE user profile');
       }
 
-      // Update user profile with line_user_id
       try {
         await authService.updateProfile({
           line_user_id: lineProfile.userId,
         });
       } catch (updateError: any) {
-        // If token expired (401), try to refresh token and retry
         if (updateError.statusCode === 401 && refreshToken) {
           try {
             await dispatch(refreshTokenAsync({ refreshToken })).unwrap();
-
-            // Retry update profile with new token
             await authService.updateProfile({
               line_user_id: lineProfile.userId,
             });
           } catch (refreshError) {
             console.error('Failed to refresh token:', refreshError);
-            throw updateError; // Re-throw original error
           }
         } else {
           throw updateError;
         }
       }
 
-      // Refresh user data in Redux store
       await dispatch(checkAuthAsync()).unwrap();
 
       return true;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      console.error('Error updating user with LINE ID:', error);
       return false;
     }
   };
@@ -154,7 +139,6 @@ const Setting = () => {
                   try {
                     const loginResult = await lineAuthService.signIn();
                     if (loginResult) {
-                      // Successfully logged in with LINE SDK, now subscribe
                       await performSubscription();
                     }
                   } catch (loginError) {
@@ -182,11 +166,8 @@ const Setting = () => {
                 try {
                   const loginResult = await lineAuthService.signIn();
                   if (loginResult) {
-                    // Successfully logged in with LINE SDK
-                    // Update user profile with LINE ID and refresh Redux store
                     const updateSuccess = await updateUserWithLineId();
                     if (updateSuccess) {
-                      // Now subscribe to LINE
                       await performSubscription();
                     } else {
                       Alert.alert(
@@ -219,11 +200,9 @@ const Setting = () => {
     try {
       const success = await LineSubscriptionService.subscribeToOfficialAccount();
       if (success) {
-        // Immediately update state to reflect subscription
         setSubscriptionStatus((prev) =>
           prev ? { ...prev, isSubscribed: true } : { isSubscribed: true }
         );
-        // Reload subscription status to ensure UI is updated correctly
         await loadSubscriptionStatus();
       }
     } catch (error) {
@@ -270,6 +249,10 @@ const Setting = () => {
     void LineSubscriptionService.openOfficialAccount();
   };
 
+  const goToFaceUpload = () => {
+    navigation.navigate('FaceUpload');
+  };
+
   return (
     <View style={styles.wrapper}>
       <ImageBackground
@@ -290,42 +273,15 @@ const Setting = () => {
             </View>
           </View>
           <ScrollView contentContainerStyle={styles.scrollContent}>
+            <TouchableOpacity style={styles.settingItem} onPress={goToFaceUpload}>
+              <View style={styles.settingLeft}>
+                <Icon name="face-recognition" size={24} color="#00ADD4" />
+                <Text style={styles.settingText}>{t('faceUpload.title')}</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color="#FFF" />
+            </TouchableOpacity>
             {/* LINE Official Account Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('lineSubscription.lineOfficialAccount')}</Text>
-              <Text style={styles.sectionDescription}>
-                {user?.line_user_id
-                  ? t('lineSubscription.lineUserDescription')
-                  : t('lineSubscription.otherUserDescription')}
-              </Text>
-
-              {/* Subscription Status */}
-              <View style={styles.statusContainer}>
-                <Text style={styles.statusLabel}>{t('lineSubscription.subscriptionStatus')}: </Text>
-                {isLoadingStatus ? (
-                  <View style={styles.statusWithIndicator}>
-                    <ActivityIndicator size="small" color="#00ADD4" />
-                    <Text style={styles.statusText}>{t('lineSubscription.checkingStatus')}</Text>
-                  </View>
-                ) : user?.line_user_id ? (
-                  // User logged in with LINE - can show actual status
-                  <Text
-                    style={[
-                      styles.statusText,
-                      // eslint-disable-next-line react-native/no-inline-styles
-                      { color: subscriptionStatus?.isSubscribed ? '#4CAF50' : '#FF6B6B' },
-                    ]}
-                  >
-                    {subscriptionStatus?.isSubscribed
-                      ? t('lineSubscription.subscribed')
-                      : t('lineSubscription.notSubscribed')}
-                  </Text>
-                ) : (
-                  // User logged in with other method - cannot check status
-                  <Text style={styles.statusText}>{t('lineSubscription.statusUnknown')}</Text>
-                )}
-              </View>
-
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
                 {!subscriptionStatus?.isSubscribed ? (

@@ -20,7 +20,11 @@
     "enable": "Enable",
     "networkError": "Network Error",
     "authError": "Auth Error",
-    "areYouSure": "Are you sure?"
+    "areYouSure": "Are you sure?",
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
+    "grantPermission": "Grant Permission"
   },
   "auth": {
     "login": "Login",
@@ -351,5 +355,24 @@
     "ltePassword": "Password for SIM/Network",
     "ltePasswordPlaceholder": "Password",
     "lteReady": "Ready."
+  },
+  "faceUpload": {
+    "title": "Face Registration",
+    "permissionRequired": "Camera Permission Required",
+    "cameraPermissionNeeded": "We need camera access to capture your face for registration",
+    "noCamera": "No camera device found",
+    "lookStraight": "Look straight ahead",
+    "turnLeft": "Turn your face LEFT",
+    "turnRight": "Turn your face RIGHT",
+    "lookUp": "Tilt your head UP",
+    "lookDown": "Tilt your head DOWN",
+    "tapWhenReady": "Position your face and tap the button",
+    "complete": "Complete",
+    "allPositionsCaptured": "All 5 face positions captured successfully!",
+    "captureError": "Capture Error",
+    "tryAgain": "Please try again",
+    "retake": "Retake",
+    "retakeConfirm": "Do you want to retake this position?",
+    "cancelConfirm": "Are you sure you want to cancel?"
   }
 }

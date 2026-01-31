@@ -52,6 +52,7 @@ export type AppStackParamList = {
   ConnectWifiHotspot: { wifi: any };
   NetworkSetup: { cameraAp: string };
   Setting: undefined;
+  FaceUpload: undefined;
 };
 
 // ===== NAVIGATION PROPS =====
