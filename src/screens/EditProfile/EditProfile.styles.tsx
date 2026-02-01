@@ -61,8 +61,7 @@ export const styles = StyleSheet.create({
   },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
-    marginRight: 40,
+    marginLeft: 20,
   },
   headerTitle: {
     color: COLORS.background,

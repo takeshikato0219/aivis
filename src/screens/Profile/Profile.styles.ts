@@ -39,7 +39,7 @@ export const styles = StyleSheet.create({
   },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
+    marginLeft: 20,
   },
   headerTitle: {
     color: COLORS.background,

@@ -414,6 +414,7 @@
     "tryAgain": "もう一度お試しください",
     "retake": "再撮影",
     "retakeConfirm": "この角度を再撮影しますか？",
-    "cancelConfirm": "本当にキャンセルしますか？"
+    "cancelConfirm": "本当にキャンセルしますか？",
+    "scanning": "スキャン中"
   }
 }

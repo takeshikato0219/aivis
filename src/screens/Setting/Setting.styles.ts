@@ -121,6 +121,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 173, 212, 0.8)',
     borderWidth: 1,
     borderColor: COLORS.background,
+    display: 'none',
   },
   buttonText: {
     color: 'white',
