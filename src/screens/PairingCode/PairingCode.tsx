@@ -28,7 +28,8 @@ const PairingCode: React.FC = () => {
   const isWifi = params?.isWifi;
   const defaultCode = params?.pairingCode || '';
   const { t } = useTranslation();
-  console.log(device, wifi);
+  console.log('PairingCode received device:', device?.id, device?.name);
+  console.log('PairingCode received wifi:', wifi);
   const [codes, setCodes] = useState(() =>
     Array(6)
       .fill('')

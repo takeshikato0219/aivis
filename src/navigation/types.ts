@@ -1,6 +1,5 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
-import { Device } from 'react-native-ble-plx';
 
 // ===== ROOT STACK =====
 export type RootStackParamList = {
@@ -44,7 +43,14 @@ export type AppStackParamList = {
   };
   ConnectDevice: undefined;
   PairingCode: {
-    device?: Device;
+    device?: {
+      id: string;
+      name?: string | null;
+      isConnectable?: boolean | null;
+      localName?: string | null;
+      manufacturerData?: any;
+      serviceUUIDs?: string[] | null;
+    };
     pairingCode?: string;
     wifi?: any;
     isWifi?: boolean;

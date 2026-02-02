@@ -388,6 +388,7 @@
     "noWifiConnected": "WiFiに接続されていません",
     "connectionError": "接続エラー",
     "connectionFailed": "接続に失敗しました",
+    "invalidDevice": "無効なデバイスが選択されました",
     "lteConnected": "LTEに接続されました",
     "nowUsing": "現在使用中：",
     "wifiScanError": "Wi-Fiスキャンエラー",

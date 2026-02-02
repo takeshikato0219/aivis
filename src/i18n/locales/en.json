@@ -347,6 +347,7 @@
     "noWifiConnected": "No WiFi connected",
     "connectionError": "Connection Error",
     "connectionFailed": "Connection Failed",
+    "invalidDevice": "Invalid device selected",
     "lteConnected": "LTE Connected",
     "nowUsing": "Now using: ",
     "wifiScanError": "WiFi scan error",
