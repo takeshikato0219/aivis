@@ -98,6 +98,13 @@ export const isEmail = (value: string) => {
 
 export const isPasswordWifi = (value: string) => {
   if (!value.trim()) return 'passwordRequired';
+
+  // Allow English, Japanese characters, and common password symbols
+  const validPattern = /^[\w\s!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`ぁ-ゖ゠-ヿ一-龯]+$/;
+  if (!validPattern.test(value)) {
+    return 'passwordInvalidCharacters';
+  }
+
   return undefined;
 };
 
@@ -113,7 +120,7 @@ export const isPassword = (value: string) => {
 export const isPhoneNumber = (value: string) => {
   const v = value.trim();
   if (!v) return undefined;
-  // Phone number: starts with 0, 11 digits total
+  // Phone number: starts with 0, 11 digits total (0 + 10 digits)
   if (!/^0\d{10}$/.test(v)) return 'invalidPhone';
   return undefined;
 };

@@ -48,6 +48,7 @@ describe('authSlice', () => {
     isLoading: false,
     error: null,
     isAuthenticated: false,
+    agency_code: null,
   };
 
   it('should return the initial state', () => {

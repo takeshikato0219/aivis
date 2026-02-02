@@ -20,6 +20,8 @@ import ConnectDevice from '@screens/ConnectDevice/ConnectDevice';
 import PairingCode from '@screens/PairingCode/PairingCode';
 import ConnectWifiHotspot from '@screens/ConnectWifiHotspot/ConnectWifiHotspot';
 import NetworkSetup from '@screens/NetworkSetup/NetworkSetup';
+import Setting from '@screens/Setting/Setting';
+import FaceUpload from '@screens/FaceUpload/FaceUpload';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -148,6 +150,20 @@ const AppNavigator = () => {
       <Stack.Screen
         name="NetworkSetup"
         component={NetworkSetup}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="Setting"
+        component={Setting}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="FaceUpload"
+        component={FaceUpload}
         options={{
           headerShown: false,
         }}

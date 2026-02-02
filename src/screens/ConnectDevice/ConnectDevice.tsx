@@ -29,9 +29,7 @@ import CctvIcon from '@assets/svg/cctv-icon.svg';
 
 const getScanningText = (activeTab: string, scanning: boolean, scanningWifi: boolean, t: any) => {
   const isScanning = activeTab === 'bluetooth' ? scanning : scanningWifi;
-  return isScanning
-    ? t('bluetoothScreen.scanningForDevices')
-    : t('bluetoothScreen.scanFinished');
+  return isScanning ? t('bluetoothScreen.scanningForDevices') : t('bluetoothScreen.scanFinished');
 };
 
 const getHintText = (activeTab: string, t: any) => {
@@ -54,7 +52,6 @@ const ConnectDevice: React.FC = () => {
   const [scanningWifi, setScanningWifi] = useState(false);
 
   const { t } = useTranslation();
-  const scanTargetPrefix = 'CAM';
 
   useEffect(() => {
     if (activeTab === 'bluetooth') void startBluetoothScan();
@@ -123,23 +120,6 @@ const ConnectDevice: React.FC = () => {
 
     setDevices([]);
     setScanning(true);
-    setDevices((prev) => {
-      const hasMockDevice = prev.some((device) => (device as any).isMock);
-      if (!hasMockDevice) {
-        const mockDevice = {
-          id: 'MOCK_DEVICE_TEST',
-          name: 'Test Camera Device',
-          connect: async () => {
-            await new Promise((resolve) => setTimeout(resolve, 800));
-            return mockDevice;
-          },
-          isMock: true,
-        } as Device & { isMock?: boolean };
-        return [...prev, mockDevice];
-      }
-      return prev;
-    });
-    // Ngăn double scan
     bleManager.stopDeviceScan();
 
     let scanTimeout: NodeJS.Timeout;
@@ -165,11 +145,8 @@ const ConnectDevice: React.FC = () => {
         }
         return;
       }
-      if (
-        device &&
-        ((device.name && device.name.toUpperCase().startsWith(scanTargetPrefix)) ||
-          !scanTargetPrefix)
-      ) {
+      if (device && (device.name || device.isConnectable === true)) {
+        console.log(JSON.stringify(device, null, 2));
         setDevices((prev) => {
           if (prev.find((d) => d.id === device.id)) return prev;
           return [...prev, device];
@@ -180,7 +157,7 @@ const ConnectDevice: React.FC = () => {
     scanTimeout = setTimeout(() => {
       bleManager.stopDeviceScan();
       setScanning(false);
-    }, 7000);
+    }, 5000);
   };
 
   // --- MOCK WiFi scan ---
@@ -196,22 +173,37 @@ const ConnectDevice: React.FC = () => {
     }, 2000);
   };
 
-  // --- BLE Connect/PairCode ---
-  const mockRequestPairCode = async (device: Device) => {
+  const goToPairCode = async (device: Device) => {
     try {
       setConnect(true);
-      await device.connect();
-      setTimeout(() => {
-        setConnect(false);
-        setAlertShown(false);
-        const code = '86F2A1';
-        navigation.navigate('PairingCode', { device, pairingCode: code });
-      }, 1200);
+
+      const connectionPromise = device.connect();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Connection timeout')), 10000);
+      });
+      await Promise.race([connectionPromise, timeoutPromise]);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      setConnect(false);
+      setAlertShown(false);
+
+      navigation.navigate('PairingCode', {
+        device: {
+          id: device.id,
+          name: device.name,
+          isConnectable: device.isConnectable,
+          localName: device.localName,
+          manufacturerData: device.manufacturerData,
+          serviceUUIDs: device.serviceUUIDs,
+        },
+        pairingCode: '',
+      });
     } catch (err) {
+      console.error('Device connection failed:', err);
       setConnect(false);
       if (!alertShown) {
         setAlertShown(true);
-        Alert.alert('Connect failed', String(err), [
+        Alert.alert(t('bluetoothScreen.connectionFailed'), String(err), [
           { text: 'OK', onPress: () => setAlertShown(false) },
         ]);
       }
@@ -350,7 +342,21 @@ const ConnectDevice: React.FC = () => {
                       </View>
                       <TouchableOpacity
                         style={styles.connectBtn}
-                        onPress={() => mockRequestPairCode(item)}
+                        onPress={() => {
+                          if (item && item.id) {
+                            void goToPairCode(item);
+                          } else {
+                            console.error('Invalid device selected for connection');
+                            if (!alertShown) {
+                              setAlertShown(true);
+                              Alert.alert(
+                                t('bluetoothScreen.error'),
+                                t('bluetoothScreen.invalidDevice'),
+                                [{ text: 'OK', onPress: () => setAlertShown(false) }]
+                              );
+                            }
+                          }
+                        }}
                         disabled={scanning}
                       >
                         <Text style={styles.connectBtnText} numberOfLines={1}>

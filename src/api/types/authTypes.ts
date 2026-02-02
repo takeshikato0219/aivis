@@ -23,6 +23,7 @@ export interface User {
   avatar?: string | null;
   avatar_path?: string | null;
   avatar_url?: string | null;
+  agency_code?: string | null;
   status?: string;
   type?: string;
 }

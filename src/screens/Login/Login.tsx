@@ -344,20 +344,18 @@ const Login: React.FC = () => {
     }
 
     try {
-      const lineUser = (await Promise.race([lineAuthService.signIn()])) as any;
+      const lineUser = await lineAuthService.signIn();
+      if (!lineUser) {
+        return;
+      }
       const loginResult = await dispatch(
         socialLineLoginAsync({
-          id_token: lineUser.accessToken,
+          id_token: lineUser.idToken ?? '',
         })
       ).unwrap();
       await handleLoginSuccess(loginResult);
     } catch (err: any) {
-      console.error('[Login] LINE login error', err);
-      showCommonAlert({
-        title: t('auth.loginFailed'),
-        message: err.message || t('auth.loginFailed'),
-        buttons: [{ text: 'OK' }],
-      });
+      console.error('[Login] Error details:', err);
     }
   };
 

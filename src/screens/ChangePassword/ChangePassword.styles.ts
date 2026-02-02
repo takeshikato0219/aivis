@@ -39,13 +39,13 @@ export const styles = StyleSheet.create({
   label: {
     fontSize: FONTS.sizes.md,
     fontWeight: FONTS.weights.medium,
-    color: COLORS.success,
+    color: COLORS.main,
     marginBottom: 4,
   },
   loginButton: {
     flex: 1,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.success,
+    backgroundColor: COLORS.main,
     fontSize: FONTS.sizes.xl,
     height: isTablet() ? 70 : 52,
     justifyContent: 'center',
@@ -94,7 +94,7 @@ export const styles = StyleSheet.create({
   },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
+    marginLeft: 20,
   },
   headerTitle: {
     color: COLORS.background,

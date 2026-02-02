@@ -23,22 +23,26 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.531701025722-4kn96h41jre9ut0nf65e15t0117l3k20</string>
-			</array>
-		</dict>
-		 <dict>
-             <key>CFBundleTypeRole</key>
-             <string>Editor</string>
-             <key>CFBundleURLSchemes</key>
-             <array>
-                 <string>line3rdp.$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-             </array>
-         </dict>
-	</array>
+        <array>
+            <!-- Google OAuth -->
+            <dict>
+                <key>CFBundleURLSchemes</key>
+                <array>
+                    <string>com.googleusercontent.apps.531701025722-4kn96h41jre9ut0nf65e15t0117l3k20</string>
+                </array>
+            </dict>
+            <!-- LINE SDK -->
+            <dict>
+                <key>CFBundleTypeRole</key>
+                <string>Editor</string>
+                <key>CFBundleURLName</key>
+                <string>line3rdp</string>
+                <key>CFBundleURLSchemes</key>
+                <array>
+                    <string>line3rdp.com.timima01app</string>
+                </array>
+            </dict>
+        </array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
     <string>App needs Bluetooth to find and connect to camera devices nearby.</string>
 	<key>CFBundleVersion</key>
@@ -106,9 +110,9 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>
-    <array>
-      <string>lineauth2</string>
-      <string>line</string>
-    </array>
+        <array>
+            <string>lineauth2</string>
+            <string>line</string>
+        </array>
 </dict>
 </plist>

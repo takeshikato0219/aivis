@@ -10,6 +10,7 @@ export interface AuthState {
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  agency_code: string | null;
 }
 
 export interface AuthError {
@@ -26,6 +27,7 @@ const initialState: AuthState = {
   isLoading: false,
   error: null,
   isAuthenticated: false,
+  agency_code: null,
 };
 
 // ASYNC THUNKS
@@ -136,6 +138,7 @@ export const registerAsync = createAsyncThunk<
     phone: string;
     line_user_id?: string;
     avatar?: any;
+    agency_code?: any;
   },
   { rejectValue: string }
 >('auth/register', async (registerData, { rejectWithValue }) => {
