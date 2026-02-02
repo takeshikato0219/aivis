@@ -3,6 +3,23 @@ import { NavigationContainer } from '@react-navigation/native';
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import AppNavigator from '../../src/navigation/AppNavigator';
 
+// ===== MOCK @xmartlabs/react-native-line =====
+jest.mock('@xmartlabs/react-native-line', () => ({
+  LineLogin: {
+    login: jest.fn(),
+    logout: jest.fn(),
+    getCurrentAccessToken: jest.fn(),
+    getProfile: jest.fn(),
+  },
+}));
+
+// ===== MOCK react-native-vision-camera =====
+jest.mock('react-native-vision-camera', () => ({
+  Camera: () => null,
+  useCameraDevice: () => ({}),
+  useCameraPermission: () => ({ hasPermission: true, requestPermission: jest.fn() }),
+}));
+
 // ===== MOCK @constants/theme =====
 jest.mock('@constants/theme', () => ({
   COLORS: {

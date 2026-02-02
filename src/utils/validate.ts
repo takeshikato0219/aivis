@@ -120,8 +120,8 @@ export const isPassword = (value: string) => {
 export const isPhoneNumber = (value: string) => {
   const v = value.trim();
   if (!v) return undefined;
-  // Phone number: starts with 0, 15 digits total
-  if (!/^0\d{9,14}$/.test(v)) return 'invalidPhone';
+  // Phone number: starts with 0, 11 digits total (0 + 10 digits)
+  if (!/^0\d{10}$/.test(v)) return 'invalidPhone';
   return undefined;
 };
 
