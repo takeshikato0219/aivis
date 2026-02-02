@@ -121,28 +121,12 @@ const ConnectDevice: React.FC = () => {
 
     setDevices([]);
     setScanning(true);
-    setDevices((prev) => {
-      const hasMockDevice = prev.some((device) => (device as any).isMock);
-      if (!hasMockDevice) {
-        const mockDevice = {
-          id: 'MOCK_DEVICE_TEST',
-          name: 'Test Camera Device',
-          connect: async () => {
-            await new Promise((resolve) => setTimeout(resolve, 800));
-            return mockDevice;
-          },
-          isMock: true,
-        } as Device & { isMock?: boolean };
-        return [...prev, mockDevice];
-      }
-      return prev;
-    });
-    // Ngăn double scan
     bleManager.stopDeviceScan();
 
     let scanTimeout: NodeJS.Timeout;
 
     bleManager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
+      console.log(device);
       if (error) {
         setScanning(false);
         if (scanTimeout) clearTimeout(scanTimeout);

@@ -51,6 +51,7 @@ const EditProfile: React.FC = () => {
     email: user?.email || '',
     phone: user?.phone || '',
     avatar: user?.avatar_url || '',
+    agency_code: user?.agency_code || '',
   });
 
   const [initialImage, setInitialImage] = React.useState(user?.avatar_url || '');
@@ -62,6 +63,7 @@ const EditProfile: React.FC = () => {
         email: user.email || '',
         phone: user.phone || '',
         avatar: user.avatar_url || '',
+        agency_code: user.agency_code || '',
       };
       setInitialValues(newInitialValues);
       setInitialImage(user.avatar_url || '');
@@ -120,12 +122,14 @@ const EditProfile: React.FC = () => {
       nameInput.value !== initialValues.name ||
       emailInput.value !== initialValues.email ||
       phoneInput.value !== initialValues.phone ||
+      agencyCodeInput.value !== initialValues.agency_code ||
       currentImageUri !== initialImage
     );
   }, [
     nameInput.value,
     emailInput.value,
     phoneInput.value,
+    agencyCodeInput.value,
     selectedImage?.uri,
     user?.avatar_url,
     initialValues,
@@ -176,6 +180,9 @@ const EditProfile: React.FC = () => {
     }
     if (phoneInput.value !== initialValues.phone) {
       updateData.phone = phoneInput.value;
+    }
+    if (agencyCodeInput.value !== initialValues.agency_code) {
+      updateData.agency_code = agencyCodeInput.value;
     }
 
     // Handle avatar logic
@@ -232,6 +239,7 @@ const EditProfile: React.FC = () => {
       name: nameInput.value,
       email: emailInput.value,
       phone: phoneInput.value,
+      agency_code: agencyCodeInput.value,
       avatar: selectedImage?.uri || user?.avatar_url || '',
     });
     setInitialImage(selectedImage?.uri || user?.avatar_url || '');

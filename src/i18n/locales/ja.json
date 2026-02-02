@@ -415,6 +415,7 @@
     "retake": "再撮影",
     "retakeConfirm": "この角度を再撮影しますか？",
     "cancelConfirm": "本当にキャンセルしますか？",
-    "scanning": "スキャン中"
+    "scanning": "スキャン中",
+    "qualityScore": "スキャン品質"
   }
 }

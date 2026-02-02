@@ -33,6 +33,7 @@ class AuthService {
       deleted_at: data.deleted_at,
       avatar_path: data.avatar_path,
       avatar_url: data.avatar_url,
+      agency_code: data.agency_code,
       status: data.status,
       type: data.type,
     };

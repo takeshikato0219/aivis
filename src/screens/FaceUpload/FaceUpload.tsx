@@ -1,27 +1,48 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  Animated,
-  StatusBar,
-  Image,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Animated, StatusBar, Image } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from './FaceUpload.styles';
 
 const FACE_POSITIONS = [
-  { key: 'center', label: 'Center' },
-  { key: 'left', label: 'Left' },
-  { key: 'right', label: 'Right' },
-  { key: 'up', label: 'Up' },
-  { key: 'down', label: 'Down' },
+  {
+    key: 'center',
+    label: 'Center',
+    instruction: 'Look straight at the camera',
+    scanDuration: 3000,
+    prepareTime: 2000, // Time to prepare before scan
+  },
+  {
+    key: 'left',
+    label: 'Turn Left',
+    instruction: 'Slowly turn your head LEFT',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'right',
+    label: 'Turn Right',
+    instruction: 'Slowly turn your head RIGHT',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'up',
+    label: 'Look Up',
+    instruction: 'Slowly tilt your head UP',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'down',
+    label: 'Look Down',
+    instruction: 'Slowly tilt your head DOWN',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
 ] as const;
 
 type FacePosition = (typeof FACE_POSITIONS)[number]['key'];
@@ -30,6 +51,7 @@ interface FaceData {
   position: FacePosition;
   imageUri: string;
   timestamp: number;
+  scanProgress: number;
 }
 
 const FaceUpload: React.FC = () => {
@@ -39,18 +61,27 @@ const FaceUpload: React.FC = () => {
 
   const [currentPositionIndex, setCurrentPositionIndex] = useState(0);
   const [capturedFaces, setCapturedFaces] = useState<FaceData[]>([]);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [lastCapturedImage, setLastCapturedImage] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [prepareProgress, setPrepareProgress] = useState(0);
+  const [isPreparing, setIsPreparing] = useState(false);
 
   const device = useCameraDevice('front');
   const camera = useRef<Camera>(null);
+  const scanTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const prepareTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const progressAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const successAnim = useRef(new Animated.Value(0)).current;
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const particleAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const currentPosition = FACE_POSITIONS[currentPositionIndex];
 
@@ -61,35 +92,23 @@ const FaceUpload: React.FC = () => {
     }
   }, [hasPermission, requestPermission]);
 
-  // Pulse animation
+  // Breathing animation
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(scaleAnim, {
-          toValue: 1.05,
-          duration: 1000,
+          toValue: 1.03,
+          duration: 1500,
           useNativeDriver: true,
         }),
         Animated.timing(scaleAnim, {
           toValue: 1,
-          duration: 1000,
+          duration: 1500,
           useNativeDriver: true,
         }),
       ])
     ).start();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Countdown logic
-  useEffect(() => {
-    if (countdown !== null && countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (countdown === 0) {
-      void handleCaptureFace();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [countdown]);
+  }, [scaleAnim]);
 
   // Fade in animation
   useEffect(() => {
@@ -98,46 +117,157 @@ const FaceUpload: React.FC = () => {
       duration: 500,
       useNativeDriver: true,
     }).start();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPositionIndex]);
+  }, [currentPositionIndex, fadeAnim]);
 
-  const getPositionInstruction = (position: FacePosition): string => {
-    const instructions: Record<FacePosition, string> = {
-      center: t('faceUpload.lookStraight') || 'Look straight ahead',
-      left: t('faceUpload.turnLeft') || 'Turn your face LEFT',
-      right: t('faceUpload.turnRight') || 'Turn your face RIGHT',
-      up: t('faceUpload.lookUp') || 'Tilt your head UP',
-      down: t('faceUpload.lookDown') || 'Tilt your head DOWN',
+  // Auto start prepare phase when position changes
+  useEffect(() => {
+    if (isProcessing || showPreview) return;
+
+    // Wait 1 second before starting prepare
+    const initTimer = setTimeout(() => {
+      startPrepare();
+    }, 1000);
+
+    return () => {
+      clearTimeout(initTimer);
+      stopPrepare();
+      stopScanning();
     };
-    return instructions[position];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPositionIndex, isProcessing, showPreview]);
+
+  const startPrepare = () => {
+    setIsPreparing(true);
+    setPrepareProgress(0);
+
+    // Progress tracking
+    const startTime = Date.now();
+    progressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / currentPosition.prepareTime) * 100, 100);
+      setPrepareProgress(progress);
+
+      if (progress >= 100) {
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
+      }
+    }, 50);
+
+    // Auto start scan after prepare time
+    prepareTimerRef.current = setTimeout(() => {
+      stopPrepare();
+      startScanning();
+    }, currentPosition.prepareTime);
   };
 
-  const startCapture = () => {
-    if (isProcessing) return;
-    setCountdown(3);
+  const stopPrepare = () => {
+    setIsPreparing(false);
+    setPrepareProgress(0);
 
-    // Animate frame color
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      Animated.timing(fadeAnim, {
+    if (prepareTimerRef.current) {
+      clearTimeout(prepareTimerRef.current);
+      prepareTimerRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
+
+  const startScanning = () => {
+    setIsScanning(true);
+    setScanProgress(0);
+
+    // Scan line animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanLineAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanLineAnim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Particle animation
+    Animated.loop(
+      Animated.timing(particleAnim, {
         toValue: 1,
-        duration: 200,
+        duration: 1500,
         useNativeDriver: true,
-      }).start();
-    });
+      })
+    ).start();
+
+    // Pulse animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Progress tracking
+    const startTime = Date.now();
+    progressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / currentPosition.scanDuration) * 100, 100);
+      setScanProgress(progress);
+
+      if (progress >= 100) {
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
+      }
+    }, 50);
+
+    // Auto capture after scan duration
+    scanTimerRef.current = setTimeout(() => {
+      stopScanning();
+      void handleCaptureFace();
+    }, currentPosition.scanDuration);
+  };
+
+  const stopScanning = () => {
+    setIsScanning(false);
+    scanLineAnim.stopAnimation();
+    particleAnim.stopAnimation();
+    pulseAnim.stopAnimation();
+    scanLineAnim.setValue(0);
+    particleAnim.setValue(0);
+
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
   };
 
   const handleCaptureFace = async () => {
     if (isProcessing || !camera.current) {
-      setCountdown(null);
       return;
     }
 
     setIsProcessing(true);
-    setCountdown(null);
+    stopScanning();
 
     try {
       const photo = await camera.current.takePhoto({
@@ -150,6 +280,7 @@ const FaceUpload: React.FC = () => {
         position: currentPosition.key,
         imageUri,
         timestamp: Date.now(),
+        scanProgress: scanProgress,
       };
 
       setCapturedFaces((prev) => [...prev, faceData]);
@@ -160,13 +291,13 @@ const FaceUpload: React.FC = () => {
       Animated.sequence([
         Animated.timing(successAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 400,
           useNativeDriver: true,
         }),
-        Animated.delay(800),
+        Animated.delay(600),
         Animated.timing(successAnim, {
           toValue: 0,
-          duration: 300,
+          duration: 400,
           useNativeDriver: true,
         }),
       ]).start();
@@ -188,7 +319,7 @@ const FaceUpload: React.FC = () => {
         } else {
           handleComplete([...capturedFaces, faceData]);
         }
-      }, 1500);
+      }, 1400);
     } catch (error) {
       console.error('Capture error:', error);
       Alert.alert(
@@ -196,14 +327,18 @@ const FaceUpload: React.FC = () => {
         t('faceUpload.tryAgain') || 'Please try again'
       );
       setIsProcessing(false);
-      setCountdown(null);
     }
   };
 
   const handleComplete = (allFaces: FaceData[]) => {
+    const avgProgress =
+      allFaces.reduce((sum, face) => sum + face.scanProgress, 0) / allFaces.length;
+    const qualityScore = Math.round(avgProgress);
+
     Alert.alert(
-      '✓ ' + (t('faceUpload.complete') || 'Complete'),
-      t('faceUpload.allPositionsCaptured') || 'All 5 face positions captured successfully!',
+      '✓ ' + (t('faceUpload.complete') || 'Face ID Enrolled'),
+      (t('faceUpload.allPositionsCaptured') || 'All face positions scanned successfully!') +
+        `\n\n${t('faceUpload.qualityScore') || 'Scan Quality'}: ${qualityScore}%`,
       [
         {
           text: t('common.ok') || 'OK',
@@ -219,7 +354,7 @@ const FaceUpload: React.FC = () => {
   const handleRetake = () => {
     Alert.alert(
       t('faceUpload.retake') || 'Retake?',
-      t('faceUpload.retakeConfirm') || 'Do you want to retake this position?',
+      t('faceUpload.retakeConfirm') || 'Do you want to retake this scan?',
       [
         { text: t('common.cancel') || 'Cancel', style: 'cancel' },
         {
@@ -239,6 +374,11 @@ const FaceUpload: React.FC = () => {
     outputRange: ['0%', '100%'],
   });
 
+  const scanLineTranslateY = scanLineAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-162.5, 162.5],
+  });
+
   if (!hasPermission) {
     return (
       <SafeAreaView style={styles.container}>
@@ -247,8 +387,7 @@ const FaceUpload: React.FC = () => {
             {t('faceUpload.permissionRequired') || 'Camera Permission Required'}
           </Text>
           <Text style={styles.permissionText}>
-            {t('faceUpload.cameraPermissionNeeded') ||
-              'We need camera access to capture your face for registration'}
+            {t('faceUpload.cameraPermissionNeeded') || 'We need camera access to scan your face'}
           </Text>
           <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
             <Text style={styles.permissionButtonText}>
@@ -279,7 +418,7 @@ const FaceUpload: React.FC = () => {
       {/* Camera */}
       <Camera
         ref={camera}
-        style={StyleSheet.absoluteFill}
+        style={styles.absoluteFill}
         device={device}
         isActive={!showPreview}
         photo={true}
@@ -287,8 +426,8 @@ const FaceUpload: React.FC = () => {
 
       {/* Preview overlay */}
       {showPreview && lastCapturedImage && (
-        <View style={StyleSheet.absoluteFill}>
-          <Image source={{ uri: lastCapturedImage }} style={StyleSheet.absoluteFill} />
+        <View style={styles.absoluteFill}>
+          <Image source={{ uri: lastCapturedImage }} style={styles.absoluteFill} />
           <Animated.View
             style={[
               styles.successOverlay,
@@ -325,7 +464,7 @@ const FaceUpload: React.FC = () => {
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
 
-            <Text style={styles.title}>{t('faceUpload.title') || 'Face Registration'}</Text>
+            <Text style={styles.title}>{t('faceUpload.title') || 'Face ID Setup'}</Text>
 
             <View style={styles.styleWidth} />
           </View>
@@ -351,44 +490,134 @@ const FaceUpload: React.FC = () => {
               },
             ]}
           >
-            <FaceFrameSVG countdown={countdown} />
+            {/* Prepare Progress Ring */}
+            {isPreparing && (
+              <View style={styles.holdProgressRing}>
+                <Svg width={270} height={351} viewBox="0 0 270 351">
+                  <Circle
+                    cx={135}
+                    cy={175.5}
+                    r={130}
+                    stroke="rgba(255, 255, 255, 0.2)"
+                    strokeWidth={4}
+                    fill="none"
+                  />
+                  <Circle
+                    cx={135}
+                    cy={175.5}
+                    r={130}
+                    stroke="#FFFFFF"
+                    strokeWidth={4}
+                    fill="none"
+                    strokeDasharray={2 * Math.PI * 130}
+                    strokeDashoffset={2 * Math.PI * 130 * (1 - prepareProgress / 100)}
+                    strokeLinecap="round"
+                    transform="rotate(-90 135 175.5)"
+                  />
+                </Svg>
+              </View>
+            )}
+
+            {/* Scanning Line */}
+            {isScanning && (
+              <Animated.View
+                style={[
+                  styles.scanLine,
+                  {
+                    transform: [{ translateY: scanLineTranslateY }],
+                  },
+                ]}
+              >
+                <View style={styles.scanLineGlow} />
+              </Animated.View>
+            )}
+
+            {/* Scanning Particles */}
+            {isScanning && (
+              <Animated.View
+                style={[
+                  styles.scanParticles,
+                  {
+                    opacity: particleAnim.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [0.3, 1, 0.3],
+                    }),
+                  },
+                ]}
+              >
+                {[...Array(8)].map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.particle,
+                      {
+                        left: `${i * 12.5 + 6}%`,
+                        top: `${20 + Math.sin(i) * 30}%`,
+                      },
+                    ]}
+                  />
+                ))}
+              </Animated.View>
+            )}
+
+            <FaceFrameSVG
+              isScanning={isScanning}
+              scanProgress={scanProgress}
+              isPreparing={isPreparing}
+            />
+
+            {/* Corner Indicators with Pulse */}
+            {isScanning && (
+              <Animated.View
+                style={[
+                  styles.cornerIndicators,
+                  {
+                    transform: [{ scale: pulseAnim }],
+                  },
+                ]}
+              >
+                {/* eslint-disable-next-line react-native/no-inline-styles */}
+                <View style={[styles.cornerDot, { top: 10, left: 10 }]} />
+                {/* eslint-disable-next-line react-native/no-inline-styles */}
+                <View style={[styles.cornerDot, { top: 10, right: 10 }]} />
+                {/* eslint-disable-next-line react-native/no-inline-styles */}
+                <View style={[styles.cornerDot, { bottom: 10, left: 10 }]} />
+                {/* eslint-disable-next-line react-native/no-inline-styles */}
+                <View style={[styles.cornerDot, { bottom: 10, right: 10 }]} />
+              </Animated.View>
+            )}
           </Animated.View>
 
           {/* Position Arrow */}
-          {currentPosition.key !== 'center' && <PositionArrow position={currentPosition.key} />}
-
-          {/* Countdown */}
-          {countdown !== null && countdown > 0 && (
-            <Animated.View
-              style={[
-                styles.countdownContainer,
-                {
-                  opacity: fadeAnim,
-                  transform: [
-                    {
-                      scale: fadeAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.5, 1],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <Text style={styles.countdownText}>{countdown}</Text>
-            </Animated.View>
+          {currentPosition.key !== 'center' && !isProcessing && (
+            <PositionArrow position={currentPosition.key} />
           )}
         </View>
 
         {/* Instructions */}
         <Animated.View style={[styles.instructionsContainer, { opacity: fadeAnim }]}>
           <Text style={styles.positionLabel}>{currentPosition.label.toUpperCase()}</Text>
-          <Text style={styles.instruction}>{getPositionInstruction(currentPosition.key)}</Text>
+          <Text style={styles.instruction}>{currentPosition.instruction}</Text>
 
-          {!isProcessing && countdown === null && (
-            <Text style={styles.subInstruction}>
-              {t('faceUpload.tapWhenReady') || 'Position your face and tap the button'}
-            </Text>
+          {/* Status */}
+          {isPreparing && (
+            <View style={styles.feedbackContainer}>
+              {/* eslint-disable-next-line react-native/no-inline-styles */}
+              <Text style={[styles.feedbackText, { color: '#FFFFFF' }]}>
+                {t('faceUpload.preparing') || 'Get ready...'}
+              </Text>
+            </View>
+          )}
+
+          {isScanning && (
+            <View style={styles.scanProgressContainer}>
+              <Text style={styles.scanProgressText}>
+                {t('faceUpload.scanning') || 'Scanning'}: {Math.round(scanProgress)}%
+              </Text>
+              <View style={styles.miniProgressBar}>
+                <View style={[styles.miniProgressFill, { width: `${scanProgress}%` }]} />
+              </View>
+            </View>
           )}
         </Animated.View>
 
@@ -406,32 +635,26 @@ const FaceUpload: React.FC = () => {
           ))}
         </View>
 
-        {/* Capture Button */}
-        <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
-          {!isProcessing && countdown === null && !showPreview && (
-            <TouchableOpacity
-              style={styles.captureButton}
-              onPress={startCapture}
-              activeOpacity={0.7}
-            >
-              <View style={styles.captureButtonInner} />
-            </TouchableOpacity>
-          )}
-
-          {showPreview && (
+        {/* Retake Button */}
+        {showPreview && (
+          <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
             <TouchableOpacity style={styles.retakeButton} onPress={handleRetake}>
               <Text style={styles.retakeButtonText}>{t('faceUpload.retake') || 'Retake'}</Text>
             </TouchableOpacity>
-          )}
-        </SafeAreaView>
+          </SafeAreaView>
+        )}
       </View>
     </View>
   );
 };
 
 // Face Frame SVG Component
-const FaceFrameSVG: React.FC<{ countdown: number | null }> = ({ countdown }) => {
-  const color = countdown !== null ? '#4CAF50' : '#FFFFFF';
+const FaceFrameSVG: React.FC<{
+  isScanning: boolean;
+  scanProgress: number;
+  isPreparing: boolean;
+}> = ({ isScanning, scanProgress, isPreparing }) => {
+  const color = isScanning ? '#4CAF50' : isPreparing ? '#FFFFFF' : '#FFFFFF';
   const size = 250;
   const strokeWidth = 4;
   const cornerLength = 50;
@@ -439,7 +662,12 @@ const FaceFrameSVG: React.FC<{ countdown: number | null }> = ({ countdown }) => 
   return (
     <Svg width={size} height={size * 1.3} viewBox={`0 0 ${size} ${size * 1.3}`}>
       <Defs>
-        <LinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <LinearGradient id="scanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <Stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <Stop offset={`${scanProgress}%`} stopColor={color} stopOpacity="1" />
+          <Stop offset="100%" stopColor={color} stopOpacity="0.3" />
+        </LinearGradient>
+        <LinearGradient id="cornerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <Stop offset="0%" stopColor={color} stopOpacity="1" />
           <Stop offset="100%" stopColor={color} stopOpacity="0.6" />
         </LinearGradient>
@@ -448,7 +676,7 @@ const FaceFrameSVG: React.FC<{ countdown: number | null }> = ({ countdown }) => 
       {/* Top-left corner */}
       <Path
         d={`M ${strokeWidth / 2} ${cornerLength} L ${strokeWidth / 2} ${strokeWidth / 2} L ${cornerLength} ${strokeWidth / 2}`}
-        stroke="url(#grad)"
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
         strokeWidth={strokeWidth}
         fill="none"
         strokeLinecap="round"
@@ -458,7 +686,7 @@ const FaceFrameSVG: React.FC<{ countdown: number | null }> = ({ countdown }) => 
       {/* Top-right corner */}
       <Path
         d={`M ${size - cornerLength} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${cornerLength}`}
-        stroke="url(#grad)"
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
         strokeWidth={strokeWidth}
         fill="none"
         strokeLinecap="round"
@@ -468,7 +696,7 @@ const FaceFrameSVG: React.FC<{ countdown: number | null }> = ({ countdown }) => 
       {/* Bottom-left corner */}
       <Path
         d={`M ${strokeWidth / 2} ${size * 1.3 - cornerLength} L ${strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${cornerLength} ${size * 1.3 - strokeWidth / 2}`}
-        stroke="url(#grad)"
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
         strokeWidth={strokeWidth}
         fill="none"
         strokeLinecap="round"
@@ -478,22 +706,52 @@ const FaceFrameSVG: React.FC<{ countdown: number | null }> = ({ countdown }) => 
       {/* Bottom-right corner */}
       <Path
         d={`M ${size - cornerLength} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - cornerLength}`}
-        stroke="url(#grad)"
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
         strokeWidth={strokeWidth}
         fill="none"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
 
+      {/* Scanning grid lines */}
+      {isScanning && (
+        <>
+          {[...Array(5)].map((_, i) => (
+            <Line
+              key={`h-${i}`}
+              x1={strokeWidth}
+              y1={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
+              x2={size - strokeWidth}
+              y2={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
+              stroke={color}
+              strokeWidth={0.5}
+              opacity={0.3}
+            />
+          ))}
+          {[...Array(4)].map((_, i) => (
+            <Line
+              key={`v-${i}`}
+              x1={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
+              y1={strokeWidth}
+              x2={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
+              y2={size * 1.3 - strokeWidth}
+              stroke={color}
+              strokeWidth={0.5}
+              opacity={0.3}
+            />
+          ))}
+        </>
+      )}
+
       {/* Center dot */}
-      <Circle cx={size / 2} cy={size * 0.65} r={8} fill={color} opacity={0.8} />
+      <Circle cx={size / 2} cy={size * 0.65} r={isScanning ? 6 : 8} fill={color} opacity={0.8} />
     </Svg>
   );
 };
 
 // Position Arrow Component
 const PositionArrow: React.FC<{ position: FacePosition }> = ({ position }) => {
-  const getArrowStyle = (): any => {
+  const getArrowStyle = () => {
     const base = { position: 'absolute' as const };
     switch (position) {
       case 'left':

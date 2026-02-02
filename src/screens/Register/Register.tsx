@@ -160,6 +160,7 @@ const Register: React.FC = () => {
     formData.append('password', passwordInput.value);
     formData.append('confirm_password', passwordConfirm.value);
     formData.append('phone', phoneInput.value);
+    formData.append('agency_code', agencyCodeInput.value);
 
     if (selectedImage) {
       formData.append('avatar', {
@@ -203,6 +204,7 @@ const Register: React.FC = () => {
       name: nameInput.value,
       phone: phoneInput.value,
       avatar: avatarFile,
+      agency_code: agencyCodeInput.value,
     };
 
     const registerResult = await dispatch(registerAsync(registerData)).unwrap();

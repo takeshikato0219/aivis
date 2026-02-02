@@ -248,7 +248,7 @@
     "devicesFound": "DEVICES FOUND",
     "accessPointsFound": "ACCESS POINTS FOUND",
     "scanAgain": "Scan Again",
-    "noBluetoothDeviceFound.": "No Bluetooth device found.",
+    "noBluetoothDeviceFound": "No Bluetooth device found.",
     "connect": "Connect",
     "connecting": "Connecting...",
     "troubleConnecting": "Trouble connecting?",
@@ -374,6 +374,7 @@
     "retake": "Retake",
     "retakeConfirm": "Do you want to retake this position?",
     "cancelConfirm": "Are you sure you want to cancel?",
-    "scanning": "Scanning"
+    "scanning": "Scanning",
+    "qualityScore": "Scan Quality"
   }
 }

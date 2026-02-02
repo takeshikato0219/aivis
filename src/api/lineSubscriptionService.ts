@@ -166,11 +166,6 @@ export class LineSubscriptionService {
         const parsedStatus = JSON.parse(storedStatus);
         // Check if the stored status belongs to the current user
         if (parsedStatus.userId === userId) {
-          console.log(
-            '[LINE Subscription] Found stored status for user:',
-            userId,
-            parsedStatus.isSubscribed
-          );
           return parsedStatus.isSubscribed;
         }
       }
