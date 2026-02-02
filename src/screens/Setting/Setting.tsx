@@ -65,12 +65,12 @@ const Setting = () => {
   }, [user?.line_user_id]);
 
   useEffect(() => {
-    void loadSubscriptionStatus();
+    loadSubscriptionStatus();
   }, [loadSubscriptionStatus]);
 
   useFocusEffect(
     useCallback(() => {
-      void loadSubscriptionStatus();
+      loadSubscriptionStatus();
     }, [loadSubscriptionStatus])
   );
 
