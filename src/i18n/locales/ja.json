@@ -284,7 +284,7 @@
     "scanningForDevices": "デバイスをスキャン中...",
     "scanFinished": "スキャンが完了しました！",
     "connectDevice": "デバイスを接続",
-    "makeSureYourCameraIsPoweredOn": "カメラの電源が入っていることを確認してください。",
+    "makeSureYourCameraIsPoweredOn": "Jetson Orin デバイスの電源が入っていることを確認してください。",
     "makeSureYourCameraWiFiAPIsPoweredOn": "カメラのWi-Fi APが有効になっていることを確認してください。",
     "devicesFound": "検出されたデバイス",
     "accessPointsFound": "検出されたアクセスポイント",
@@ -295,7 +295,8 @@
     "troubleConnecting": "接続でお困りですか？",
     "signal": "Signal",
     "unknownDevice": "不明なデバイス",
-    "noWiFiAccessPointFound": "Wi-Fiアクセスポイントが見つかりませんでした。"
+    "noWiFiAccessPointFound": "Wi-Fiアクセスポイントが見つかりませんでした。",
+    "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Jetson Orin カメラをセットアップするための接続方法を選択してください。"
   },
   "pairingCode": {
     "pairingCode": "ペアリングコード",
@@ -417,6 +418,10 @@
     "retakeConfirm": "この角度を再撮影しますか？",
     "cancelConfirm": "本当にキャンセルしますか？",
     "scanning": "スキャン中",
-    "qualityScore": "スキャン品質"
+    "qualityScore": "スキャン品質",
+    "faceDetectionError": "顔検出エラー",
+    "noFaceDetected": "キャプチャした画像に顔が検出されませんでした。もう一度お試しください。",
+    "multipleFacesDetected": "複数の顔が検出されました。1人の顔だけが見えるようにして、もう一度お試しください。",
+    "getReady": "準備してください..."
   }
 }

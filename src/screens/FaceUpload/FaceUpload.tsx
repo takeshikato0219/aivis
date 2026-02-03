@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import FaceDetection, { FaceDetectionOptions, Face } from '@react-native-ml-kit/face-detection';
 import { styles } from './FaceUpload.styles';
 
 const FACE_POSITIONS = [
@@ -68,6 +69,107 @@ const FaceUpload: React.FC = () => {
   const [scanProgress, setScanProgress] = useState(0);
   const [prepareProgress, setPrepareProgress] = useState(0);
   const [isPreparing, setIsPreparing] = useState(false);
+
+  // Face detection options for static images
+  const faceDetectionOptions: FaceDetectionOptions = {
+    performanceMode: 'accurate',
+    landmarkMode: 'none',
+    contourMode: 'none',
+    classificationMode: 'none',
+    minFaceSize: 0.15,
+    trackingEnabled: false,
+  };
+
+  // Validate face position based on rotation angles
+  const validateFacePosition = (face: Face, position: FacePosition): boolean => {
+    // ML Kit returns angles in degrees, not radians
+    // Normalize to -180 to 180 range
+    const normalizeAngle = (angle: number) => {
+      let normalized = angle % 360;
+      if (normalized > 180) normalized -= 360;
+      if (normalized < -180) normalized += 360;
+      return normalized;
+    };
+
+    const rotationX = normalizeAngle(face.rotationX);
+    const rotationY = normalizeAngle(face.rotationY);
+    const rotationThreshold = 15; // degrees
+
+    // Debug logging
+    console.log(`Face position validation:`, {
+      position,
+      rotationX: rotationX.toFixed(2),
+      rotationY: rotationY.toFixed(2),
+      originalRotationX: face.rotationX.toFixed(2),
+      originalRotationY: face.rotationY.toFixed(2),
+      threshold: rotationThreshold,
+    });
+
+    switch (position) {
+      case 'center':
+        // Face should be relatively straight
+        const isCenter =
+          Math.abs(rotationX) < rotationThreshold && Math.abs(rotationY) < rotationThreshold;
+        console.log(
+          `Center validation: ${isCenter} (|X|=${Math.abs(rotationX).toFixed(1)} < ${rotationThreshold}, |Y|=${Math.abs(rotationY).toFixed(1)} < ${rotationThreshold})`
+        );
+        return isCenter;
+
+      case 'left':
+        // Face should be turned left (negative Y rotation for front camera)
+        const isLeft =
+          rotationY < -rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
+        console.log(
+          `Left validation: ${isLeft} (Y=${rotationY.toFixed(1)} < -${rotationThreshold})`
+        );
+        return isLeft;
+
+      case 'right':
+        // Face should be turned right (positive Y rotation for front camera)
+        const isRight =
+          rotationY > rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
+        console.log(
+          `Right validation: ${isRight} (Y=${rotationY.toFixed(1)} > ${rotationThreshold})`
+        );
+        return isRight;
+
+      case 'up':
+        // Face should be tilted up (positive X rotation for front camera)
+        const isUp = rotationX > rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
+        console.log(`Up validation: ${isUp} (X=${rotationX.toFixed(1)} > ${rotationThreshold})`);
+        return isUp;
+
+      case 'down':
+        // Face should be tilted down (negative X rotation for front camera)
+        const isDown =
+          rotationX < -rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
+        console.log(
+          `Down validation: ${isDown} (X=${rotationX.toFixed(1)} < -${rotationThreshold})`
+        );
+        return isDown;
+
+      default:
+        return false;
+    }
+  };
+
+  // Get error message for incorrect face position
+  const getPositionErrorMessage = (position: FacePosition): string => {
+    switch (position) {
+      case 'center':
+        return 'Please face the camera straight ahead.';
+      case 'left':
+        return 'Please turn your face to the LEFT.';
+      case 'right':
+        return 'Please turn your face to the RIGHT.';
+      case 'up':
+        return 'Please tilt your head UP.';
+      case 'down':
+        return 'Please tilt your head DOWN.';
+      default:
+        return 'Please position your face correctly.';
+    }
+  };
 
   const device = useCameraDevice('front');
   const camera = useRef<Camera>(null);
@@ -276,52 +378,86 @@ const FaceUpload: React.FC = () => {
 
       const imageUri = `file://${photo.path}`;
 
-      const faceData: FaceData = {
-        position: currentPosition.key,
-        imageUri,
-        timestamp: Date.now(),
-        scanProgress: scanProgress,
-      };
+      // Detect faces in the captured image
+      const faces = await FaceDetection.detect(imageUri, faceDetectionOptions);
 
-      setCapturedFaces((prev) => [...prev, faceData]);
-      setLastCapturedImage(imageUri);
-      setShowPreview(true);
+      console.log(`Face detection result: ${faces.length} faces found`);
+      faces.forEach((face, index) => {
+        console.log(
+          `Face ${index}: rotationX=${face.rotationX}, rotationY=${face.rotationY}, rotationZ=${face.rotationZ}`
+        );
+      });
 
-      // Success animation
-      Animated.sequence([
-        Animated.timing(successAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.delay(600),
-        Animated.timing(successAnim, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      // Check if exactly one face is detected and in correct position
+      if (faces.length === 1 && validateFacePosition(faces[0], currentPosition.key)) {
+        const faceData: FaceData = {
+          position: currentPosition.key,
+          imageUri,
+          timestamp: Date.now(),
+          scanProgress: scanProgress,
+        };
 
-      // Progress bar animation
-      const progress = ((currentPositionIndex + 1) / FACE_POSITIONS.length) * 100;
-      Animated.timing(progressAnim, {
-        toValue: progress,
-        duration: 500,
-        useNativeDriver: false,
-      }).start();
+        setCapturedFaces((prev) => [...prev, faceData]);
+        setLastCapturedImage(imageUri);
+        setShowPreview(true);
 
-      // Move to next position or complete
-      setTimeout(() => {
-        setShowPreview(false);
-        if (currentPositionIndex < FACE_POSITIONS.length - 1) {
-          setCurrentPositionIndex(currentPositionIndex + 1);
-          setIsProcessing(false);
-        } else {
-          handleComplete([...capturedFaces, faceData]);
+        // Success animation
+        Animated.sequence([
+          Animated.timing(successAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.delay(600),
+          Animated.timing(successAnim, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]).start();
+
+        // Progress bar animation
+        const progress = ((currentPositionIndex + 1) / FACE_POSITIONS.length) * 100;
+        Animated.timing(progressAnim, {
+          toValue: progress,
+          duration: 500,
+          useNativeDriver: false,
+        }).start();
+
+        // Move to next position or complete
+        setTimeout(() => {
+          setShowPreview(false);
+          if (currentPositionIndex < FACE_POSITIONS.length - 1) {
+            setCurrentPositionIndex(currentPositionIndex + 1);
+            setIsProcessing(false);
+          } else {
+            handleComplete([...capturedFaces, faceData]);
+          }
+        }, 1400);
+      } else {
+        // Show error based on detection result
+        let errorMessage = '';
+
+        if (faces.length === 0) {
+          errorMessage = t('faceUpload.noFaceDetected');
+        } else if (faces.length > 1) {
+          errorMessage = t('faceUpload.multipleFacesDetected');
+        } else if (faces.length === 1) {
+          // Face detected but not in correct position
+          errorMessage = getPositionErrorMessage(currentPosition.key);
         }
-      }, 1400);
+
+        Alert.alert(t('faceUpload.faceDetectionError'), errorMessage, [
+          {
+            text: t('common.retry') || 'Retry',
+            onPress: () => {
+              setIsProcessing(false);
+            },
+          },
+        ]);
+      }
     } catch (error) {
-      console.error('Capture error:', error);
+      console.error('Capture/Face detection error:', error);
       Alert.alert(
         t('faceUpload.captureError') || 'Capture Error',
         t('faceUpload.tryAgain') || 'Please try again'

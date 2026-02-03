@@ -243,7 +243,7 @@
     "scanningForDevices": "Scanning for devices...",
     "scanFinished": "Scan finished!",
     "connectDevice": "Connect Device",
-    "makeSureYourCameraIsPoweredOn": "Make sure your camera is powered on.",
+    "makeSureYourCameraIsPoweredOn": "Make sure your Jetson Orin device is powered on.",
     "makeSureYourCameraWiFiAPIsPoweredOn": "Make sure your camera Wi-Fi AP is powered on.",
     "devicesFound": "DEVICES FOUND",
     "accessPointsFound": "ACCESS POINTS FOUND",
@@ -254,7 +254,8 @@
     "troubleConnecting": "Trouble connecting?",
     "signal": "Signal",
     "unknownDevice": "Unknown Device",
-    "noWiFiAccessPointFound": "No WiFi access point found."
+    "noWiFiAccessPointFound": "No WiFi access point found.",
+    "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Select a connection method to setup your Jetson Orin camera."
   },
   "pairingCode": {
     "pairingCode": "Pairing Code",
@@ -376,6 +377,10 @@
     "retakeConfirm": "Do you want to retake this position?",
     "cancelConfirm": "Are you sure you want to cancel?",
     "scanning": "Scanning",
-    "qualityScore": "Scan Quality"
+    "qualityScore": "Scan Quality",
+    "faceDetectionError": "Face Detection Error",
+    "noFaceDetected": "No face detected in the captured image. Please try again.",
+    "multipleFacesDetected": "Multiple faces detected. Please ensure only one face is visible and try again.",
+    "getReady": "Get ready..."
   }
 }

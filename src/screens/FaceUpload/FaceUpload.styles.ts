@@ -233,6 +233,21 @@ export const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
     borderRadius: 2,
   },
+  positionFeedbackText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  faceDetectionStatus: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  faceDetectionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   positionsIndicator: {
     flexDirection: 'row',
     justifyContent: 'center',
