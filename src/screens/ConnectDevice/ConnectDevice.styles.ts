@@ -234,4 +234,12 @@ export const styles = StyleSheet.create({
     marginTop: 15,
     textAlign: 'center',
   },
+  textHeader: {
+    color: '#C3C3C3',
+    textAlign: 'center',
+    paddingHorizontal: 50,
+    fontSize: 16,
+    fontWeight: FONTS.weights.regular,
+    paddingVertical: 15,
+  },
 });

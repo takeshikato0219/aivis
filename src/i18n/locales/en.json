@@ -343,7 +343,7 @@
     "excellentSignal": "Excellent",
     "goodSignal": "Good",
     "weakSignal": "Weak",
-    "noAvailableWifi": "No available Wi-Fi found. Pull to refresh.",
+    "noAvailableWifi": "No available Wi-Fi found.",
     "currentConnected": "Currently connected: ",
     "noWifiConnected": "No WiFi connected",
     "connectionError": "Connection Error",
@@ -356,7 +356,21 @@
     "noSimDetected": "No SIM detected",
     "ltePassword": "Password for SIM/Network",
     "ltePasswordPlaceholder": "Password",
-    "lteReady": "Ready."
+    "lteReady": "Ready.",
+    "failedToRequestWiFiScanFromDevice": "Failed to request WiFi scan from device",
+    "wiFiRequired": "WiFi Required",
+    "pleaseConnectToWiFiInSettingsFirstThenReturnToTheApp": "Please connect to Wi-Fi in Settings first, then return to the app.",
+    "failedToSendWiFiCredentialsToDevice": "Failed to send WiFi credentials to device",
+    "networkAccessLimited": "Network Access Limited",
+    "wiFiConnectedButInternetAccessMayBeRestrictedYouMightNeedToCompleteAdditionalAuthenticationOrAcceptTerms": "WiFi connected but internet access may be restricted. You might need to complete additional authentication or accept terms.",
+    "tryAgain": "Try Again",
+    "continueAnyway": "Continue Anyway",
+    "connectionIssue": "Connection Issue",
+    "wiFiConnectedButHavingConnectivityIssuesPleaseCheckYourNetworkSettingsOrTryAgain": "WiFi connected but having connectivity issues. Please check your network settings or try again.",
+    "pleaseSelectAWiFiNetworkAndEnterPassword": "Please select a WiFi network and enter password",
+    "deviceFailedToConnectToWiFi": "Device failed to connect to WiFi",
+    "wiFiConnectionTimeout": "WiFi connection timeout",
+    "waitingForCellularConnection": "Waiting for cellular connection..."
   },
   "faceUpload": {
     "title": "Face Registration",
@@ -381,6 +395,12 @@
     "faceDetectionError": "Face Detection Error",
     "noFaceDetected": "No face detected in the captured image. Please try again.",
     "multipleFacesDetected": "Multiple faces detected. Please ensure only one face is visible and try again.",
-    "getReady": "Get ready..."
+    "getReady": "Get ready...",
+    "pleaseFaceTheCameraStraightAhead": "Please face the camera straight ahead.",
+    "pleaseTurnYourFaceToTheLEFT": "Please turn your face to the LEFT.",
+    "pleaseTurnYourFaceToTheRIGHT": "Please turn your face to the RIGHT.",
+    "pleaseTiltYourHeadUP": "Please tilt your head UP.",
+    "pleaseTiltYourHeadDOWN": "Please tilt your head DOWN.",
+    "pleasePositionYourFaceCorrectly": "Please position your face correctly."
   }
 }

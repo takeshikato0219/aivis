@@ -10,6 +10,7 @@ import ErrorHandler from '@utils/errorHandler';
 import NetworkMonitor from '@utils/networkMonitor';
 import CrashReporter from '@utils/crashReporter';
 import { initI18n } from '@/i18n';
+import { jetsonBLEService } from '@/services/jetsonBLEService';
 
 // Ignore logs
 LogBox.ignoreLogs(['Non-serializable']);
@@ -39,6 +40,9 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         console.error('[App] i18n initialization failed:', error);
         setI18nInitialized(true);
       }
+
+      // Initialize BLE service singleton
+      jetsonBLEService.init();
 
       ErrorHandler.setScreen('App');
     };

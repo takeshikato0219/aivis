@@ -384,7 +384,7 @@
     "excellentSignal": "非常に良い",
     "goodSignal": "良い",
     "weakSignal": "弱い",
-    "noAvailableWifi": "利用可能なWi-Fiが見つかりません。下に引っ張って更新してください。",
+    "noAvailableWifi": "利用可能なWi-Fiが見つかりません。",
     "currentConnected": "現在接続中: ",
     "noWifiConnected": "WiFiに接続されていません",
     "connectionError": "接続エラー",
@@ -397,7 +397,21 @@
     "noSimDetected": "SIMカードが検出されません",
     "ltePassword": "SIM／ネットワークのパスワード",
     "ltePasswordPlaceholder": "Password",
-    "lteReady": "準備完了"
+    "lteReady": "準備完了",
+    "failedToRequestWiFiScanFromDevice": "デバイスからWi-Fiスキャンの要求に失敗しました。",
+    "wiFiRequired": "Wi-Fiが必要です",
+    "pleaseConnectToWiFiInSettingsFirstThenReturnToTheApp.": "先に設定でWi-Fiに接続してから、アプリに戻ってください。",
+    "failedToSendWiFiCredentialsToDevice": "Wi-Fi情報の送信に失敗しました。",
+    "networkAccessLimited": "ネットワークアクセスが制限されています",
+    "wiFiConnectedButInternetAccessMayBeRestrictedYouMightNeedToCompleteAdditionalAuthenticationOrAcceptTerms": "Wi-Fiには接続されていますが、インターネットアクセスが制限されている可能性があります。追加の認証を行うか、利用規約に同意する必要があります。",
+    "tryAgain": "再試行",
+    "continueAnyway": "このまま続行",
+    "connectionIssue": "接続の問題が発生しています",
+    "wiFiConnectedButHavingConnectivityIssuesPleaseCheckYourNetworkSettingsOrTryAgain": "Wi-Fiには接続されていますが、通信に問題があります。ネットワーク設定を確認するか、再試行してください。",
+    "pleaseSelectAWiFiNetworkAndEnterPassword": "Wi-Fiネットワークを選択して、パスワードを入力してください。",
+    "deviceFailedToConnectToWiFi": "デバイスのWi-Fi接続に失敗しました。",
+    "wiFiConnectionTimeout": "Wi-Fi接続がタイムアウトしました。",
+    "waitingForCellularConnection": "セルラー接続を待機しています…"
   },
   "faceUpload": {
     "title": "顔登録",
@@ -422,6 +436,12 @@
     "faceDetectionError": "顔検出エラー",
     "noFaceDetected": "キャプチャした画像に顔が検出されませんでした。もう一度お試しください。",
     "multipleFacesDetected": "複数の顔が検出されました。1人の顔だけが見えるようにして、もう一度お試しください。",
-    "getReady": "準備してください..."
+    "getReady": "準備してください...",
+    "pleaseFaceTheCameraStraightAhead": "カメラをまっすぐ見てください。",
+    "pleaseTurnYourFaceToTheLEFT": "顔を左に向けてください。",
+    "pleaseTurnYourFaceToTheRIGHT": "顔を右に向けてください。",
+    "pleaseTiltYourHeadUP": "頭を上に傾けてください。",
+    "pleaseTiltYourHeadDOWN": "頭を下に傾けてください。",
+    "pleasePositionYourFaceCorrectly": "顔の位置を正しくしてください。"
   }
 }

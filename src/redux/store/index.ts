@@ -1,9 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../slices/authSlice';
+import bleReducer from '../slices/bleSlice';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 
 export const store = configureStore({
-  reducer: { auth: authReducer },
+  reducer: {
+    auth: authReducer,
+    ble: bleReducer,
+  },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
 });
 

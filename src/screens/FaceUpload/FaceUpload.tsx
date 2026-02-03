@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert, Animated, StatusBar, Image } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  Animated,
+  StatusBar,
+  Image,
+  Platform,
+} from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
@@ -157,17 +166,17 @@ const FaceUpload: React.FC = () => {
   const getPositionErrorMessage = (position: FacePosition): string => {
     switch (position) {
       case 'center':
-        return 'Please face the camera straight ahead.';
+        return t('faceUpload.pleaseFaceTheCameraStraightAhead');
       case 'left':
-        return 'Please turn your face to the LEFT.';
+        return t('faceUpload.pleaseTurnYourFaceToTheLEFT');
       case 'right':
-        return 'Please turn your face to the RIGHT.';
+        return t('faceUpload.pleaseTurnYourFaceToTheRIGHT');
       case 'up':
-        return 'Please tilt your head UP.';
+        return t('faceUpload.pleaseTiltYourHeadUP');
       case 'down':
-        return 'Please tilt your head DOWN.';
+        return t('faceUpload.pleaseTiltYourHeadDOWN');
       default:
-        return 'Please position your face correctly.';
+        return t('faceUpload.pleasePositionYourFaceCorrectly');
     }
   };
 
@@ -376,7 +385,9 @@ const FaceUpload: React.FC = () => {
         flash: 'off',
       });
 
-      const imageUri = `file://${photo.path}`;
+      const imageUri = Platform.OS === 'ios'
+        ? photo.path
+        : `file://${photo.path}`;
 
       // Detect faces in the captured image
       const faces = await FaceDetection.detect(imageUri, faceDetectionOptions);

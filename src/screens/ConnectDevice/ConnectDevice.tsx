@@ -5,8 +5,6 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  Platform,
-  PermissionsAndroid,
   Alert,
   StatusBar,
   ImageBackground,
@@ -15,17 +13,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ConnectDeviceScreenNavigationProp } from '@navigation/types';
-import { Device } from 'react-native-ble-plx';
+import { SerializableDevice } from '@redux/slices/bleSlice';
 import HomeBackgroundImage from '@assets/png/home-background.png';
 import BackIcon from '@assets/svg/icon-back.svg';
 import BluetoothIcon from '@assets/svg/bluetooth-icon.svg';
 import WifiIcon from '@assets/svg/wifi-vector.svg';
 import { styles } from './ConnectDevice.styles';
 import RadarScan from '@screens/ConnectDevice/RadarScan';
-import bleManager from '@utils/bleManagerSingleton';
 import { useTranslation } from 'react-i18next';
 import RotateCcwIcon from '@assets/svg/rotate-ccw.svg';
 import CctvIcon from '@assets/svg/cctv-icon.svg';
+import { useJetsonBLE } from '@hooks/useJetsonBLE';
 
 const getScanningText = (activeTab: string, scanning: boolean, scanningWifi: boolean, t: any) => {
   const isScanning = activeTab === 'bluetooth' ? scanning : scanningWifi;
@@ -40,8 +38,6 @@ const getHintText = (activeTab: string, t: any) => {
 
 const ConnectDevice: React.FC = () => {
   const navigation = useNavigation<ConnectDeviceScreenNavigationProp>();
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [scanning, setScanning] = useState(false);
   const [isConnect, setConnect] = useState(false);
   const [alertShown, setAlertShown] = useState(false);
 
@@ -51,116 +47,22 @@ const ConnectDevice: React.FC = () => {
   >([]);
   const [scanningWifi, setScanningWifi] = useState(false);
 
+  const { devices, isScanning: scanning, startScan, stopScan, connect } = useJetsonBLE();
+
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (activeTab === 'bluetooth') void startBluetoothScan();
+    if (activeTab === 'bluetooth') void startScan();
     else void startWifiScan();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   useEffect(() => {
     return () => {
-      bleManager.stopDeviceScan();
+      stopScan();
     };
-  }, []);
+  }, [stopScan]);
 
-  useEffect(() => {
-    let subscription: any;
-    try {
-      subscription = bleManager.onStateChange((state) => {
-        if (state === 'PoweredOn') {
-          setAlertShown(false);
-        }
-      }, true);
-    } catch (error) {
-      console.log('Could not subscribe to Bluetooth state changes:', error);
-    }
-    return () => {
-      if (subscription && subscription.remove) {
-        subscription.remove();
-      }
-    };
-  }, []);
-
-  // --- BLE PERMISSION & SCAN ---
-  const requestPermission = async () => {
-    if (Platform.OS === 'android') {
-      const permissions = [
-        'android.permission.BLUETOOTH_SCAN',
-        'android.permission.BLUETOOTH_CONNECT',
-        'android.permission.ACCESS_FINE_LOCATION',
-      ].filter(Boolean);
-      const results = await PermissionsAndroid.requestMultiple(permissions as any);
-      for (const key in results) {
-        if (results[key as keyof typeof results] !== PermissionsAndroid.RESULTS.GRANTED) {
-          if (!alertShown) {
-            setAlertShown(true);
-            Alert.alert(
-              t('bluetoothScreen.permissionDenied'),
-              t('bluetoothScreen.bluetoothPermissionRequiredToScan'),
-              [
-                {
-                  text: 'OK',
-                  onPress: () => setAlertShown(false),
-                },
-              ]
-            );
-          }
-          return false;
-        }
-      }
-    }
-    return true;
-  };
-
-  const startBluetoothScan = async () => {
-    const permissionGranted = await requestPermission();
-    if (!permissionGranted) return;
-
-    setDevices([]);
-    setScanning(true);
-    bleManager.stopDeviceScan();
-
-    let scanTimeout: NodeJS.Timeout;
-
-    bleManager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
-      if (error) {
-        setScanning(false);
-        if (scanTimeout) clearTimeout(scanTimeout);
-        if (error.message?.includes('powered off') || error.message?.includes('disabled')) {
-          if (!alertShown) {
-            setAlertShown(true);
-            Alert.alert(
-              t('bluetoothScreen.bluetoothDisabled'),
-              t('bluetoothScreen.pleaseEnableBluetoothToScanForDevices'),
-              [{ text: 'OK', onPress: () => setAlertShown(false) }]
-            );
-          }
-        } else if (!error.message?.includes('Operation was cancelled') && !alertShown) {
-          setAlertShown(true);
-          Alert.alert('Scan Error', error.message, [
-            { text: 'OK', onPress: () => setAlertShown(false) },
-          ]);
-        }
-        return;
-      }
-      if (device && (device.name || device.isConnectable === true)) {
-        console.log(JSON.stringify(device, null, 2));
-        setDevices((prev) => {
-          if (prev.find((d) => d.id === device.id)) return prev;
-          return [...prev, device];
-        });
-      }
-    });
-
-    scanTimeout = setTimeout(() => {
-      bleManager.stopDeviceScan();
-      setScanning(false);
-    }, 5000);
-  };
-
-  // --- MOCK WiFi scan ---
   const startWifiScan = async () => {
     setScanningWifi(true);
     setWifiList([]);
@@ -173,20 +75,17 @@ const ConnectDevice: React.FC = () => {
     }, 2000);
   };
 
-  const goToPairCode = async (device: Device) => {
+  const goToPairCode = async (device: SerializableDevice) => {
     try {
       setConnect(true);
-
-      const connectionPromise = device.connect();
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Connection timeout')), 10000);
-      });
-      await Promise.race([connectionPromise, timeoutPromise]);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setConnect(false);
       setAlertShown(false);
 
+      // Use the hook's connect method instead of manual BLE connection
+      await connect(device);
+
+      setConnect(false);
+
+      // Navigate to PairingCode with device info
       navigation.navigate('PairingCode', {
         device: {
           id: device.id,
@@ -199,7 +98,6 @@ const ConnectDevice: React.FC = () => {
         pairingCode: '',
       });
     } catch (err) {
-      console.error('Device connection failed:', err);
       setConnect(false);
       if (!alertShown) {
         setAlertShown(true);
@@ -235,6 +133,9 @@ const ConnectDevice: React.FC = () => {
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{t('bluetoothScreen.connectDevice')}</Text>
           </View>
+          <Text style={styles.textHeader}>
+            {t('bluetoothScreen.selectAConnectionMethodToSetupYourJetsonOrinCamera')}
+          </Text>
 
           {/* Tabs */}
           <View style={styles.modeSwitcher}>
@@ -273,6 +174,29 @@ const ConnectDevice: React.FC = () => {
             </View>
           )}
 
+          <Text style={styles.scanningText}>{scanningText}</Text>
+          <Text style={styles.hintText}>{hintText}</Text>
+          <View style={styles.devicesHeader}>
+            <Text style={styles.devicesTitle}>{devicesFoundText}</Text>
+            <TouchableOpacity
+              onPress={activeTab === 'bluetooth' ? startScan : startWifiScan}
+              disabled={activeTab === 'bluetooth' ? scanning : scanningWifi}
+              style={styles.styleRotate}
+            >
+              <RotateCcwIcon />
+              <Text
+                style={[
+                  styles.scanAgain,
+                  (activeTab === 'bluetooth' ? scanning : scanningWifi)
+                    ? styles.scanAgainOpacity
+                    : null,
+                ]}
+              >
+                {t('bluetoothScreen.scanAgain')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Scrollable section */}
           <ScrollView
             style={styles.scrollView}
@@ -280,29 +204,6 @@ const ConnectDevice: React.FC = () => {
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            <Text style={styles.scanningText}>{scanningText}</Text>
-            <Text style={styles.hintText}>{hintText}</Text>
-            <View style={styles.devicesHeader}>
-              <Text style={styles.devicesTitle}>{devicesFoundText}</Text>
-              <TouchableOpacity
-                onPress={activeTab === 'bluetooth' ? startBluetoothScan : startWifiScan}
-                disabled={activeTab === 'bluetooth' ? scanning : scanningWifi}
-                style={styles.styleRotate}
-              >
-                <RotateCcwIcon />
-                <Text
-                  style={[
-                    styles.scanAgain,
-                    (activeTab === 'bluetooth' ? scanning : scanningWifi)
-                      ? styles.scanAgainOpacity
-                      : null,
-                  ]}
-                >
-                  {t('bluetoothScreen.scanAgain')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
             <View style={styles.contentContainer}>
               {activeTab === 'bluetooth'
                 ? scanning && (
