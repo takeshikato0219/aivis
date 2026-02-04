@@ -22,6 +22,7 @@ import ConnectWifiHotspot from '@screens/ConnectWifiHotspot/ConnectWifiHotspot';
 import NetworkSetup from '@screens/NetworkSetup/NetworkSetup';
 import Setting from '@screens/Setting/Setting';
 import FaceUpload from '@screens/FaceUpload/FaceUpload';
+import ConnectionSuccessful from '@screens/ConnectionSuccessful/ConnectionSuccessful';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -166,6 +167,14 @@ const AppNavigator = () => {
         component={FaceUpload}
         options={{
           headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="ConnectionSuccessful"
+        component={ConnectionSuccessful}
+        options={{
+          headerShown: false,
+          gestureEnabled: false,
         }}
       />
     </Stack.Navigator>

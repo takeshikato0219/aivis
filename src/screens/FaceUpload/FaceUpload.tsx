@@ -1,20 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  Animated,
-  StatusBar,
-  Image,
-  Platform,
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Image, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import FaceDetection, { FaceDetectionOptions, Face } from '@react-native-ml-kit/face-detection';
+import FaceDetection, { Face, FaceDetectionOptions } from '@react-native-ml-kit/face-detection';
 import { styles } from './FaceUpload.styles';
 
 const FACE_POSITIONS = [
@@ -104,58 +95,26 @@ const FaceUpload: React.FC = () => {
     const rotationY = normalizeAngle(face.rotationY);
     const rotationThreshold = 15; // degrees
 
-    // Debug logging
-    console.log(`Face position validation:`, {
-      position,
-      rotationX: rotationX.toFixed(2),
-      rotationY: rotationY.toFixed(2),
-      originalRotationX: face.rotationX.toFixed(2),
-      originalRotationY: face.rotationY.toFixed(2),
-      threshold: rotationThreshold,
-    });
-
     switch (position) {
       case 'center':
         // Face should be relatively straight
-        const isCenter =
-          Math.abs(rotationX) < rotationThreshold && Math.abs(rotationY) < rotationThreshold;
-        console.log(
-          `Center validation: ${isCenter} (|X|=${Math.abs(rotationX).toFixed(1)} < ${rotationThreshold}, |Y|=${Math.abs(rotationY).toFixed(1)} < ${rotationThreshold})`
-        );
-        return isCenter;
+        return Math.abs(rotationX) < rotationThreshold && Math.abs(rotationY) < rotationThreshold;
 
       case 'left':
         // Face should be turned left (negative Y rotation for front camera)
-        const isLeft =
-          rotationY < -rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
-        console.log(
-          `Left validation: ${isLeft} (Y=${rotationY.toFixed(1)} < -${rotationThreshold})`
-        );
-        return isLeft;
+        return rotationY < -rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
 
       case 'right':
         // Face should be turned right (positive Y rotation for front camera)
-        const isRight =
-          rotationY > rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
-        console.log(
-          `Right validation: ${isRight} (Y=${rotationY.toFixed(1)} > ${rotationThreshold})`
-        );
-        return isRight;
+        return rotationY > rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
 
       case 'up':
         // Face should be tilted up (positive X rotation for front camera)
-        const isUp = rotationX > rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
-        console.log(`Up validation: ${isUp} (X=${rotationX.toFixed(1)} > ${rotationThreshold})`);
-        return isUp;
+        return rotationX > rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
 
       case 'down':
         // Face should be tilted down (negative X rotation for front camera)
-        const isDown =
-          rotationX < -rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
-        console.log(
-          `Down validation: ${isDown} (X=${rotationX.toFixed(1)} < -${rotationThreshold})`
-        );
-        return isDown;
+        return rotationX < -rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
 
       default:
         return false;
@@ -385,19 +344,12 @@ const FaceUpload: React.FC = () => {
         flash: 'off',
       });
 
-      const imageUri = Platform.OS === 'ios'
-        ? photo.path
-        : `file://${photo.path}`;
+      const imageUri = `file://${photo.path}`;
 
       // Detect faces in the captured image
       const faces = await FaceDetection.detect(imageUri, faceDetectionOptions);
 
       console.log(`Face detection result: ${faces.length} faces found`);
-      faces.forEach((face, index) => {
-        console.log(
-          `Face ${index}: rotationX=${face.rotationX}, rotationY=${face.rotationY}, rotationZ=${face.rotationZ}`
-        );
-      });
 
       // Check if exactly one face is detected and in correct position
       if (faces.length === 1 && validateFacePosition(faces[0], currentPosition.key)) {
@@ -751,7 +703,7 @@ const FaceUpload: React.FC = () => {
             <View style={styles.feedbackContainer}>
               {/* eslint-disable-next-line react-native/no-inline-styles */}
               <Text style={[styles.feedbackText, { color: '#FFFFFF' }]}>
-                {t('faceUpload.preparing') || 'Get ready...'}
+                {t('faceUpload.getReady') || 'Get ready...'}
               </Text>
             </View>
           )}

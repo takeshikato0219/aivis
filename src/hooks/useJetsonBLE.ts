@@ -59,5 +59,6 @@ export function useJetsonBLE() {
 
     // Utils
     clearError: jetsonBLEService.clearError,
+    isStillConnected: jetsonBLEService.isStillConnected.bind(jetsonBLEService),
   };
 }

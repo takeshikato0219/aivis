@@ -142,6 +142,13 @@ const bleSlice = createSlice({
       state.wifiNetworks = [];
       state.wifiScanStatus = WiFiScanStatus.IDLE;
     },
+
+    // Reset only WiFi-related state (keep BLE connection)
+    resetWifiState: (state) => {
+      state.wifiStatus = WiFiStatus.WAITING;
+      state.wifiNetworks = [];
+      state.wifiScanStatus = WiFiScanStatus.IDLE;
+    },
   },
 });
 
@@ -158,6 +165,7 @@ export const {
   setWifiScanStatus,
   resetBleState,
   resetConnectionState,
+  resetWifiState,
 } = bleSlice.actions;
 
 export default bleSlice.reducer;

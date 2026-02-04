@@ -57,9 +57,13 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
     void CrashReporter.sendPendingReports();
 
+    // Cleanup when app is terminated (killed/cleared from background)
     return () => {
       themeSubscription.remove();
       unsubscribeNetwork();
+      // Disconnect BLE when app component unmounts (app is killed/cleared)
+      console.log('[App] App terminating, cleaning up BLE connection...');
+      jetsonBLEService.cleanupAll();
     };
   }, []);
 

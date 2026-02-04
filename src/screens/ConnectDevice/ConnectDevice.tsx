@@ -182,6 +182,7 @@ const ConnectDevice: React.FC = () => {
               onPress={activeTab === 'bluetooth' ? startScan : startWifiScan}
               disabled={activeTab === 'bluetooth' ? scanning : scanningWifi}
               style={styles.styleRotate}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <RotateCcwIcon />
               <Text

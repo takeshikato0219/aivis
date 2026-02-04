@@ -6,6 +6,9 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   safeAreaContainer: {
     flex: 1,
   },

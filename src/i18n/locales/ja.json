@@ -411,7 +411,9 @@
     "pleaseSelectAWiFiNetworkAndEnterPassword": "Wi-Fiネットワークを選択して、パスワードを入力してください。",
     "deviceFailedToConnectToWiFi": "デバイスのWi-Fi接続に失敗しました。",
     "wiFiConnectionTimeout": "Wi-Fi接続がタイムアウトしました。",
-    "waitingForCellularConnection": "セルラー接続を待機しています…"
+    "waitingForCellularConnection": "セルラー接続を待機しています…",
+    "bLEConnectionLostPleaseGoBackAndReconnect": "BLE の接続が失われました。前の画面に戻って、再度接続してください。",
+    "bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect": "Wi-Fi設定中にBLE接続が失われました。前の画面に戻ってデバイスに再接続してから、再度お試しください。"
   },
   "faceUpload": {
     "title": "顔登録",
@@ -443,5 +445,13 @@
     "pleaseTiltYourHeadUP": "頭を上に傾けてください。",
     "pleaseTiltYourHeadDOWN": "頭を下に傾けてください。",
     "pleasePositionYourFaceCorrectly": "顔の位置を正しくしてください。"
+  },
+  "liveStream": {
+    "connectionSuccessful": "接続に成功しました",
+    "startMonitoring": "監視を開始",
+    "faceSetup": "顔の設定",
+    "thisNameWillAppearInYourDashboardAlerts": "この名前はダッシュボードのアラートに表示されます。",
+    "cameraName": "カメラ名",
+    "exampleLivingRoomCamera": "例：リビングカメラ"
   }
 }

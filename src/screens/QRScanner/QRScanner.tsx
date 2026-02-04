@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   StyleSheet,
   ActivityIndicator,
   Alert,
@@ -11,6 +12,7 @@ import {
   ScrollView,
   useWindowDimensions,
   Animated,
+  Keyboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
@@ -71,7 +73,7 @@ const QRScanner: React.FC = () => {
         await AsyncStorage.setItem(CAMERA_PERMISSION_KEY, 'granted');
         setPermissionStatus('granted');
         setShouldMountCamera(true);
-      } else if (cameraPermission === 'not-determined') {
+      } else if (cameraPermission === 'not-determined' || cameraPermission === 'denied') {
         setPermissionStatus('denied');
         Alert.alert(t('QRScan.cameraAccess'), t('QRScan.cameraAccessIsRequiredToScanTheQRCode'), [
           {
@@ -125,7 +127,7 @@ const QRScanner: React.FC = () => {
         setScannedData(qrData || '');
         setIsSearching(true);
         setTimeout(() => {
-          navigation.navigate('CameraSetup', { qrData: qrData || null });
+          navigation.navigate('ConnectionSuccessful');
         }, 2000);
       }
     },
@@ -233,7 +235,6 @@ const QRScanner: React.FC = () => {
           <Text style={styles.flashText}>Flash {isFlashOn ? 'on' : 'off'}</Text>
         </TouchableOpacity>
       </View>
-
       <View style={styles.bottomSection}>
         {isSearching ? (
           <View style={styles.searchingContainer}>
@@ -275,19 +276,21 @@ const QRScanner: React.FC = () => {
         imageStyle={styles.imageStyle}
       >
         {permissionStatus === 'granted' && (
-          <SafeAreaView style={styles.overlay} edges={['top']}>
-            {HeaderContent}
-            {shouldUseScrollView ? (
-              <ScrollView
-                contentContainerStyle={styles.styleScrollView}
-                keyboardShouldPersistTaps="handled"
-              >
-                {BodyContent}
-              </ScrollView>
-            ) : (
-              <View style={styles.styleScrollView}>{BodyContent}</View>
-            )}
-          </SafeAreaView>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <SafeAreaView style={styles.overlay} edges={['top']}>
+              {HeaderContent}
+              {shouldUseScrollView ? (
+                <ScrollView
+                  contentContainerStyle={styles.styleScrollView}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {BodyContent}
+                </ScrollView>
+              ) : (
+                <View style={styles.styleScrollView}>{BodyContent}</View>
+              )}
+            </SafeAreaView>
+          </TouchableWithoutFeedback>
         )}
       </ImageBackground>
     </View>

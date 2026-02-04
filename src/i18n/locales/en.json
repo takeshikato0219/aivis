@@ -370,7 +370,9 @@
     "pleaseSelectAWiFiNetworkAndEnterPassword": "Please select a WiFi network and enter password",
     "deviceFailedToConnectToWiFi": "Device failed to connect to WiFi",
     "wiFiConnectionTimeout": "WiFi connection timeout",
-    "waitingForCellularConnection": "Waiting for cellular connection..."
+    "waitingForCellularConnection": "Waiting for cellular connection...",
+    "bLEConnectionLostPleaseGoBackAndReconnect": "BLE connection lost. Please go back and reconnect.",
+    "bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect": "BLE connection was lost during WiFi setup. Please go back and reconnect to the device, then try again."
   },
   "faceUpload": {
     "title": "Face Registration",
@@ -402,5 +404,13 @@
     "pleaseTiltYourHeadUP": "Please tilt your head UP.",
     "pleaseTiltYourHeadDOWN": "Please tilt your head DOWN.",
     "pleasePositionYourFaceCorrectly": "Please position your face correctly."
+  },
+  "liveStream": {
+    "connectionSuccessful": "Connection Successful",
+    "startMonitoring": "Start Monitoring",
+    "faceSetup": "Face Setup",
+    "thisNameWillAppearInYourDashboardAlerts": "This name will appear in your dashboard alerts.",
+    "cameraName": "Camera name",
+    "exampleLivingRoomCamera": "Example: Living room camera"
   }
 }

@@ -16,6 +16,7 @@ import {
   WiFiScanStatus,
   SerializableDevice,
 } from '@redux/slices/bleSlice';
+import { Platform, PermissionsAndroid } from 'react-native';
 
 // =============================================================================
 // UUIDs — must match config.py on Jetson
@@ -133,7 +134,6 @@ class JetsonBLEService {
         if (monitorError) {
           if (!monitorError.message?.includes('cancelled')) {
             store.dispatch(setError(monitorError.message));
-            store.dispatch(setConnected({ isConnected: false, deviceId: null }));
           }
           return;
         }
@@ -158,7 +158,9 @@ class JetsonBLEService {
         if (characteristic?.value) {
           try {
             const jsonStr = base64ToString(characteristic.value);
+            console.log('jsonStr',jsonStr);
             const data = JSON.parse(jsonStr);
+            console.log('data',data);
             store.dispatch(setWifiScanStatus(data.status));
             store.dispatch(setWifiNetworks(data.networks || []));
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -205,11 +207,50 @@ class JetsonBLEService {
     }
   }
 
+  private async requestAndroidPermissions(): Promise<boolean> {
+    if (Platform.OS !== 'android') return true;
+
+    try {
+      const apiLevel = Platform.Version;
+
+      if (apiLevel >= 31) {
+        // Android 12+
+        const result = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        ]);
+
+        return (
+          result['android.permission.BLUETOOTH_SCAN'] === 'granted' &&
+          result['android.permission.BLUETOOTH_CONNECT'] === 'granted' &&
+          result['android.permission.ACCESS_FINE_LOCATION'] === 'granted'
+        );
+      } else {
+        // Android 11 and below
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        return result === 'granted';
+      }
+    } catch (error) {
+      console.error('[BLE] Permission request error:', error);
+      return false;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // SCAN
   // ---------------------------------------------------------------------------
 
-  startScan = (): void => {
+  startScan = async (): Promise<void> => {
+    const hasPermission = await this.requestAndroidPermissions();
+    if (!hasPermission) {
+      store.dispatch(setError('Bluetooth permissions not granted'));
+      store.dispatch(setScanning(false));
+      return;
+    }
+
     store.dispatch(clearDevices());
     store.dispatch(clearError());
     store.dispatch(setScanning(true));
@@ -316,16 +357,34 @@ class JetsonBLEService {
         stringToBase64(ssid)
       );
 
-      // Write Password → Jetson receives SSID + Password → auto connects to WiFi
+      // Write Password → Jetson receives SSID + Password → auto connects to Wi-Fi
       await this.connectedDevice.writeCharacteristicWithResponseForService(
         SERVICE_UUID,
         PWD_CHAR_UUID,
         stringToBase64(password)
       );
 
+      // Verify BLE connection is still active after sending credentials
+      const isStillConnected = await this.isStillConnected();
+      if (!isStillConnected) {
+        console.warn('[BLE] Connection lost after sending WiFi credentials');
+        store.dispatch(setError('BLE connection lost after sending WiFi credentials'));
+        return false;
+      }
+
       return true;
     } catch (err: any) {
-      store.dispatch(setError(err?.message || 'WiFi information transmission error'));
+      console.error('[BLE] Error sending WiFi credentials:', err);
+
+      // Check if BLE is still connected after error
+      const isStillConnected = await this.isStillConnected();
+      if (!isStillConnected) {
+        console.warn('[BLE] BLE connection lost during WiFi credential transmission');
+        store.dispatch(setError('BLE connection lost. Please reconnect and try again.'));
+      } else {
+        store.dispatch(setError(err?.message || 'WiFi information transmission error'));
+      }
+
       return false;
     }
   };
@@ -336,6 +395,7 @@ class JetsonBLEService {
 
   requestWiFiScan = async (): Promise<boolean> => {
     if (!this.connectedDevice) {
+      console.log('[BLE] Not connected to the device');
       store.dispatch(setError('Not connected to the device'));
       return false;
     }
@@ -378,6 +438,26 @@ class JetsonBLEService {
    */
   isInitialized(): boolean {
     return this.initialized;
+  }
+
+  /**
+   * Check if BLE connection is still active
+   */
+  async isStillConnected(): Promise<boolean> {
+    if (!this.connectedDevice) {
+      return false;
+    }
+
+    try {
+      // Try to read a characteristic to verify connection is still active
+      await this.connectedDevice.readCharacteristicForService(SERVICE_UUID, STATUS_CHAR_UUID);
+      return true;
+    } catch (error) {
+      console.log('[BLE] Connection check failed:', error);
+      // If read fails, connection is likely lost
+      this.connectedDevice = null;
+      return false;
+    }
   }
 }
 

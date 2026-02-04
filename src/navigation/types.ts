@@ -59,6 +59,7 @@ export type AppStackParamList = {
   NetworkSetup: { cameraAp: string };
   Setting: undefined;
   FaceUpload: undefined;
+  ConnectionSuccessful: undefined;
 };
 
 // ===== NAVIGATION PROPS =====
