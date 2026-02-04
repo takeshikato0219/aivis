@@ -1,16 +1,14 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   ImageBackground,
-  Keyboard,
-  KeyboardAvoidingView,
+  PermissionsAndroid,
   Platform,
   StatusBar,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,7 +16,7 @@ import WifiIcon from '@assets/svg/wifi-vector.svg';
 import LanIcon from '@assets/svg/ethernet-port.svg';
 import SimIcon from '@assets/svg/signal.svg';
 import CheckIcon from '@assets/svg/icon-check.svg';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { styles } from './NetworkSetup.styles';
 import HomeBackgroundImage from '@assets/png/home-background.png';
 import BackIcon from '@assets/svg/icon-back.svg';
@@ -27,22 +25,14 @@ import NetInfo from '@react-native-community/netinfo';
 import { LockIconComponent } from '@components/IconCustom/IconCustom';
 import { COLORS } from '@constants/theme';
 import { NetworkSetupNavigationProp, NetworkSetupRouteProp } from '@navigation/types';
+import NetworkMonitor from '@utils/networkMonitor';
 import TextInput from '@components/TextInput/TextInput';
 import { useInput } from '@hooks/useInput';
 import { isPasswordWifi } from '@utils/validate';
-import { useAppSelector, useAppDispatch } from '@redux/store';
+import { useAppSelector } from '@redux/store';
+import WifiManager from 'react-native-wifi-reborn';
 import DeviceInfo from 'react-native-device-info';
 import { useJetsonBLE } from '@hooks/useJetsonBLE';
-import { resetWifiState, resetConnectionState } from '@redux/slices/bleSlice';
-
-interface WifiItem {
-  id: string;
-  name: string;
-  signal: 'excellent' | 'good' | 'weak';
-  secure: boolean;
-  capabilities: string;
-  isWep: boolean;
-}
 
 const getSignalStyle = (signal: string) => {
   const signalStyles = {
@@ -72,23 +62,18 @@ const NetworkSetup: React.FC = () => {
   const navigation = useNavigation<NetworkSetupNavigationProp>();
   const route = useRoute<NetworkSetupRouteProp>();
   const [activeTab, setActiveTab] = useState<'wifi' | 'lan' | 'lte'>('wifi');
-  const [wifiList] = useState<WifiItem[]>([]);
-  const [selectedWifi, setSelectedWifi] = useState<WifiItem | null>(null);
+  const [wifiList, setWifiList] = useState<any[]>([]);
+  const [selectedWifi, setSelectedWifi] = useState<any>(null);
   const [scanning, setScanning] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [currentSSID, setCurrentSSID] = useState<string | null>(null);
   const [progress, setProgress] = useState(0.33);
   const { t } = useTranslation();
   const { isLoading } = useAppSelector((state) => state.auth);
-  const dispatch = useAppDispatch();
   const [lteCarrier, setLteCarrier] = useState<string | null>(null);
   const [lteInfo, setLteInfo] = useState<any>(null);
   const [networkInfo, setNetworkInfo] = useState<any>(null);
   const [connectingLte, setConnectingLte] = useState(false);
-
-  // Track timeout IDs for cleanup
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const finalTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isConnectingRef = useRef<boolean>(false);
 
   const ltePasswordInput = useInput({
     validateFn: isPasswordWifi,
@@ -98,6 +83,7 @@ const NetworkSetup: React.FC = () => {
     validateFn: isPasswordWifi,
   });
 
+  // BLE hook for WiFi scanning via BLE connection
   const {
     wifiNetworks,
     wifiScanStatus,
@@ -105,10 +91,11 @@ const NetworkSetup: React.FC = () => {
     requestWiFiScan,
     sendWiFiCredentials,
     wifiStatus,
-    isStillConnected,
   } = useJetsonBLE();
 
-  const currentWifiList = useMemo((): WifiItem[] => {
+  // Get the appropriate Wi-Fi list based on connection method
+  const getCurrentWifiList = () => {
+
     if (bleConnected && wifiNetworks.length > 0) {
       return wifiNetworks.map((network, idx) => ({
         id: '' + idx,
@@ -116,25 +103,11 @@ const NetworkSetup: React.FC = () => {
         signal: network.signal >= -55 ? 'excellent' : network.signal >= -70 ? 'good' : 'weak',
         secure: network.security !== 'open',
         capabilities: network.security,
-        isWep: false,
       }));
     }
+    // Use native Wi-Fi list
     return wifiList;
-  }, [bleConnected, wifiNetworks, wifiList]);
-
-  // Check if currently scanning (BLE or native)
-  const isScanning = useMemo(() => {
-    return scanning || (bleConnected && wifiScanStatus === 1);
-  }, [scanning, bleConnected, wifiScanStatus]);
-
-  // Reset local scanning state when BLE scan completes
-  useEffect(() => {
-    // wifiScanStatus: 0 = IDLE, 1 = SCANNING, 2 = COMPLETED, 3 = ERROR
-    if (wifiScanStatus === 2 || wifiScanStatus === 3) {
-      console.log('📡 WiFi scan finished, status:', wifiScanStatus);
-      setScanning(false);
-    }
-  }, [wifiScanStatus]);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -144,6 +117,7 @@ const NetworkSetup: React.FC = () => {
         // Fetch SIM card information
         let carrierName = null;
         let hasSimCard = false;
+        let simDetectionMethod = 'unknown';
 
         try {
           carrierName = await DeviceInfo.getCarrier();
@@ -183,6 +157,8 @@ const NetworkSetup: React.FC = () => {
                 lowerCarrier.includes(indicator)
               );
             }
+
+            simDetectionMethod = hasSimCard ? 'ios_carrier_name' : 'ios_assumed_no_sim';
           } else {
             // Android logic (keep existing)
             hasSimCard = Boolean(
@@ -203,10 +179,13 @@ const NetworkSetup: React.FC = () => {
             ) {
               hasSimCard = false;
             }
+
+            simDetectionMethod = hasSimCard ? 'android_carrier_name' : 'android_no_sim';
           }
         } catch (carrierError) {
           console.warn('Failed to get carrier name:', carrierError);
           hasSimCard = false;
+          simDetectionMethod = 'error';
         }
 
         const simInfo = {
@@ -226,6 +205,7 @@ const NetworkSetup: React.FC = () => {
           console.warn('Failed to get network info:', netError);
         }
 
+        // Check if device has cellular capability (even when WiFi is active)
         // Multiple ways to detect cellular:
         const hasCellularFromNetInfo =
           (netInfo?.type === 'cellular' && (netInfo?.details as any)?.cellularGeneration) ||
@@ -236,14 +216,21 @@ const NetworkSetup: React.FC = () => {
 
         // Additional cellular capability checks
         let hasCellularByDeviceType = false;
+        let deviceInfo = {};
         try {
           // Most mobile devices have cellular capability
           // Check if it's a phone/tablet (not just WiFi-only device)
           const deviceType = DeviceInfo.getDeviceType();
           const isTablet = DeviceInfo.isTablet();
           const isEmulator = await DeviceInfo.isEmulator();
+          const brand = DeviceInfo.getBrand();
+          const model = DeviceInfo.getModel();
+
+          deviceInfo = { deviceType, isTablet, isEmulator, brand, model };
+
           // Phones and tablets typically have cellular, but WiFi-only devices don't
           hasCellularByDeviceType = (deviceType === 'Handset' || isTablet) && !isEmulator;
+
         } catch (deviceError) {
           console.warn('Failed to get device info:', deviceError);
         }
@@ -283,17 +270,6 @@ const NetworkSetup: React.FC = () => {
     return () => {
       isMounted = false;
       unsubscribe();
-
-      // Cancel any pending timeouts on unmount
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      if (finalTimeoutRef.current) {
-        clearTimeout(finalTimeoutRef.current);
-        finalTimeoutRef.current = null;
-      }
-      isConnectingRef.current = false;
     };
   }, []); // Fetch on mount and cleanup listener on unmount
 
@@ -320,97 +296,106 @@ const NetworkSetup: React.FC = () => {
     }, 1600);
   };
 
-  const scanWifi = useCallback(async () => {
-    console.log('🔄 scanWifi called - bleConnected:', bleConnected);
+  const scanWifi = async () => {
 
-    // Check BLE connection first
-    if (!bleConnected) {
-      console.log('❌ BLE not connected - cannot scan WiFi');
-      Alert.alert(
-        t('networkSetup.connectionError'),
-        t('networkSetup.bLEConnectionLostPleaseGoBackAndReconnect')
-      );
-      return;
-    }
-
-    // If currently connecting, cancel the connection process to allow rescan
-    if (isConnectingRef.current) {
-      console.log('⚠️ Cancelling ongoing WiFi connection to allow rescan');
-      // Cancel pending timeouts
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      if (finalTimeoutRef.current) {
-        clearTimeout(finalTimeoutRef.current);
-        finalTimeoutRef.current = null;
-      }
-      isConnectingRef.current = false;
-      setConnecting(false);
-      setProgress(0.33);
-    }
-
-    // Reset selection
-    setSelectedWifi(null);
-    passwordInput.setValue('');
-
-    // Set local scanning state (will be combined with wifiScanStatus in isScanning memo)
     setScanning(true);
+    setWifiList([]);
+    setSelectedWifi(null);
+    setCurrentSSID(null);
 
-    try {
-      console.log('📡 Requesting WiFi scan via BLE...');
-      const success = await requestWiFiScan();
-      console.log('📡 requestWiFiScan result:', success);
-
-      if (!success) {
-        Alert.alert(
-          t('networkSetup.wifiScanError'),
-          t('networkSetup.failedToRequestWiFiScanFromDevice')
-        );
+    // If BLE is connected, use BLE WiFi scanning
+    if (bleConnected) {
+      try {
+        const success = await requestWiFiScan();
+        if (!success) {
+          Alert.alert(t('networkSetup.wifiScanError'), 'Failed to request WiFi scan from device');
+        }
         setScanning(false);
+        return;
+      } catch (e) {
+        console.warn('BLE WiFi scan failed, falling back to native scan:', e);
+        // Fall through to native scanning
       }
-      // If success is true, keep scanning=true and let useEffect handle reset
-      // when wifiScanStatus changes to COMPLETED or ERROR
-    } catch (e) {
-      console.warn('❌ BLE WiFi scan failed:', e);
-      Alert.alert(t('networkSetup.wifiScanError'), String(e));
+    }
+
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert(
+            t('networkSetup.permissionRequired'),
+            t('networkSetup.pleaseAllowLocationForWiFiScan')
+          );
+          setScanning(false);
+          return;
+        }
+        const networks = await WifiManager.loadWifiList();
+        const list = networks
+          .map((n: any, idx: number) => {
+            const capabilities = n.capabilities || '';
+            return {
+              id: '' + idx,
+              name: n.SSID,
+              signal: n.level >= -55 ? 'excellent' : n.level >= -70 ? 'good' : 'weak',
+              secure: capabilities.includes('WPA') || capabilities.includes('WEP'),
+              isWep: capabilities.includes('WEP'),
+              capabilities: capabilities,
+            };
+          })
+          .filter((n: any) => !!n.name);
+        setWifiList(list);
+        if (list.length > 0) {
+          setSelectedWifi(list[0]);
+        } else {
+          setSelectedWifi(null);
+        }
+      } catch (e) {
+        Alert.alert(t('networkSetup.wifiScanError'), String(e));
+        setWifiList([]);
+        setSelectedWifi(null);
+      }
+      setScanning(false);
+    } else {
+      try {
+        let netInfo = await NetInfo.fetch();
+
+        if (!(netInfo.type === 'wifi' && netInfo.isConnected)) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          // Second check after delay
+          netInfo = await NetInfo.fetch();
+        }
+
+        if (netInfo.type === 'wifi' && netInfo.isConnected) {
+          setCurrentSSID('WiFi Network');
+
+          NetworkMonitor.refresh().catch(console.warn);
+        } else {
+          setCurrentSSID(null);
+        }
+      } catch (e) {
+        console.warn('Failed to get iOS network status:', e);
+        setCurrentSSID(null);
+      }
       setScanning(false);
     }
-  }, [bleConnected, requestWiFiScan, passwordInput, t]);
+  };
 
   useEffect(() => {
-    if (activeTab === 'wifi' && bleConnected) {
+    if (activeTab === 'wifi') {
       void scanWifi();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  // Auto-trigger Wi-Fi scan when BLE connection is detected
   useEffect(() => {
     if (bleConnected && activeTab === 'wifi') {
       void scanWifi();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bleConnected, activeTab]);
-
-  // Verify BLE connection when screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      const checkConnection = async () => {
-        // If Redux shows disconnected, verify actual connection
-        if (!bleConnected) {
-          const stillConnected = await isStillConnected();
-          if (stillConnected) {
-            console.log('[NetworkSetup] BLE connection exists but Redux state shows disconnected');
-            // Connection exists - this is unexpected, but we can continue
-          } else {
-            console.log('[NetworkSetup] BLE connection lost');
-          }
-        }
-      };
-      checkConnection();
-    }, [bleConnected, isStillConnected])
-  );
 
   const onTabChange = (tab: 'wifi' | 'lan' | 'lte') => {
     setActiveTab(tab);
@@ -426,328 +411,262 @@ const NetworkSetup: React.FC = () => {
     }
   };
 
-  // Shared function to navigate to next screen
-  const proceedToNextScreen = useCallback(() => {
+  const proceedToNextScreen = () => {
     const cameraName = route.params?.cameraAp || 'Camera';
-    const connectedSsid = selectedWifi?.name || 'WiFi Network';
+    const connectedSsid = Platform.OS === 'android' ? selectedWifi?.name : currentSSID;
 
     navigation.replace('SetupComplete', {
       cameraName,
-      ssid: connectedSsid,
+      ssid: connectedSsid || 'WiFi Network',
     });
-  }, [route.params?.cameraAp, selectedWifi?.name, navigation]);
+  };
 
-  // Reset UI state helper (local state only, not Redux)
-  const resetUIState = useCallback(() => {
-    // Cancel any pending timeouts
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (finalTimeoutRef.current) {
-      clearTimeout(finalTimeoutRef.current);
-      finalTimeoutRef.current = null;
-    }
+  const handleConnect = async () => {
 
-    // Reset connecting ref
-    isConnectingRef.current = false;
-
-    // Reset UI state
-    setConnecting(false);
-    setProgress(0.33);
-
-    // Clear selected Wi-Fi and password to allow retry
-    setSelectedWifi(null);
-    passwordInput.setValue('');
-  }, [passwordInput]);
-
-  const canConnect = useMemo(() => {
-    return selectedWifi && passwordInput.value && !passwordInput.error;
-  }, [selectedWifi, passwordInput.value, passwordInput.error]);
-
-  const handleConnect = useCallback(async () => {
-    if (!selectedWifi || !passwordInput.value) {
+    if (Platform.OS === 'android' && !selectedWifi) return;
+    if (Platform.OS === 'ios' && !currentSSID && !bleConnected) {
       Alert.alert(
-        t('networkSetup.connectionFailed'),
-        t('networkSetup.pleaseSelectAWiFiNetworkAndEnterPassword')
+        'WiFi Required',
+        'Please connect to Wi-Fi in Settings first, then return to the app.',
+        [{ text: 'OK' }]
       );
       return;
     }
 
-    // Check BLE connection before attempting WiFi connection
-    if (!bleConnected) {
-      Alert.alert(
-        t('networkSetup.connectionError'),
-        t('networkSetup.bLEConnectionLostPleaseGoBackAndReconnect')
-      );
-      return;
-    }
-
-    // Cancel any pending timeouts before starting new connection
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (finalTimeoutRef.current) {
-      clearTimeout(finalTimeoutRef.current);
-      finalTimeoutRef.current = null;
-    }
-
-    isConnectingRef.current = true;
     setConnecting(true);
     setProgress(0.5);
 
     try {
-      const success = await sendWiFiCredentials(selectedWifi.name, passwordInput.value);
-
-      if (!success) {
-        // Check if BLE is still connected after Wi-Fi credential send failure
-        const stillConnected = await isStillConnected();
-
-        if (!stillConnected) {
-          Alert.alert(
-            t('networkSetup.connectionError'),
-            t('networkSetup.bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect')
-          );
-          dispatch(resetConnectionState());
+      if (bleConnected && selectedWifi) {
+        const success = await sendWiFiCredentials(selectedWifi.name, passwordInput.value);
+        if (success) {
+          // Wait for device to connect and report success
+          setTimeout(() => {
+            if (wifiStatus === 2) {
+              proceedToNextScreen();
+            } else if (wifiStatus === 3) {
+              Alert.alert(t('networkSetup.connectionFailed'), 'Device failed to connect to WiFi');
+              setConnecting(false);
+              setProgress(0.33);
+            } else {
+              setTimeout(() => {
+                if (wifiStatus === 2) {
+                  proceedToNextScreen();
+                } else {
+                  Alert.alert(t('networkSetup.connectionFailed'), 'WiFi connection timeout');
+                  setConnecting(false);
+                  setProgress(0.33);
+                }
+              }, 5000);
+            }
+          }, 3000);
         } else {
           Alert.alert(
             t('networkSetup.connectionFailed'),
-            t('networkSetup.failedToSendWiFiCredentialsToDevice')
+            'Failed to send WiFi credentials to device'
           );
-          dispatch(resetWifiState());
+          setConnecting(false);
+          setProgress(0.33);
         }
-        resetUIState();
         return;
       }
 
-      // Wait for device to connect and report success
-      timeoutRef.current = setTimeout(async () => {
-        // Check if we're still connecting (might have been cancelled)
-        if (!isConnectingRef.current) {
-          return;
-        }
+      // iOS native WiFi connection (just verify current connection)
+      if (Platform.OS === 'ios' && currentSSID) {
+        proceedToNextScreen();
+        return;
+      }
 
-        // Check BLE connection status before checking WiFi status
-        const stillConnected = await isStillConnected();
-
-        if (!stillConnected) {
-          Alert.alert(
-            t('networkSetup.connectionError'),
-            t('networkSetup.bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect')
+      // Android native WiFi connection
+      if (Platform.OS === 'android') {
+        if (selectedWifi) {
+          await WifiManager.connectToProtectedSSID(
+            selectedWifi.name,
+            passwordInput.value,
+            selectedWifi.secure,
+            selectedWifi.isWep || false
           );
-          dispatch(resetConnectionState());
-          resetUIState();
-          return;
-        }
 
-        if (wifiStatus === 2) {
-          // Clear timeouts before proceeding
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
-          if (finalTimeoutRef.current) {
-            clearTimeout(finalTimeoutRef.current);
-            finalTimeoutRef.current = null;
-          }
-          proceedToNextScreen();
-        } else if (wifiStatus === 3) {
-          Alert.alert(
-            t('networkSetup.connectionFailed'),
-            t('networkSetup.deviceFailedToConnectToWiFi')
-          );
-          // Check if BLE is still connected - if yes, only reset WiFi state
-          const stillConnectedOnError = await isStillConnected();
-          if (stillConnectedOnError) {
-            dispatch(resetWifiState());
-          } else {
-            dispatch(resetConnectionState());
-          }
-          resetUIState();
-        } else {
-          finalTimeoutRef.current = setTimeout(async () => {
-            // Check if we're still connecting (might have been cancelled)
-            if (!isConnectingRef.current) {
-              return;
-            }
+          await NetworkMonitor.refresh();
 
-            // Check BLE connection again before final status check
-            const stillConnectedFinal = await isStillConnected();
+          setTimeout(async () => {
+            try {
+              const currentConnection = await WifiManager.getCurrentWifiSSID();
 
-            if (!stillConnectedFinal) {
-              Alert.alert(
-                t('networkSetup.connectionError'),
-                t('networkSetup.bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect')
-              );
-              dispatch(resetConnectionState());
-              resetUIState();
-              return;
-            }
-
-            if (wifiStatus === 2) {
-              // Clear timeouts before proceeding
-              if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-                timeoutRef.current = null;
+              if (currentConnection !== selectedWifi.name) {
+                throw new Error('WiFi connection lost');
               }
-              if (finalTimeoutRef.current) {
-                clearTimeout(finalTimeoutRef.current);
-                finalTimeoutRef.current = null;
+
+              const netInfo = await NetInfo.fetch();
+
+              if (netInfo.type !== 'wifi' || !netInfo.isConnected) {
+                throw new Error('No WiFi internet access');
               }
-              proceedToNextScreen();
-            } else {
-              Alert.alert(
-                t('networkSetup.connectionFailed'),
-                t('networkSetup.wiFiConnectionTimeout')
-              );
-              // BLE is still connected (checked above), only reset WiFi state
-              dispatch(resetWifiState());
-              resetUIState();
+
+              try {
+                proceedToNextScreen();
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              } catch (internetError) {
+                Alert.alert(
+                  'Network Access Limited',
+                  'WiFi connected but internet access may be restricted. You might need to complete additional authentication or accept terms.',
+                  [
+                    { text: 'Continue Anyway', onPress: () => proceedToNextScreen() },
+                    { text: 'Try Again', style: 'cancel' },
+                  ]
+                );
+                return;
+              }
+
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            } catch (verifyError) {
+              if (connecting) {
+                Alert.alert(
+                  'Connection Issue',
+                  'WiFi connected but having connectivity issues. Please check your network settings or try again.',
+                  [{ text: 'OK' }]
+                );
+                setConnecting(false);
+                setProgress(0.33);
+              }
             }
-          }, 5000);
+          }, 4000);
         }
-      }, 3000);
+      }
+
+      setProgress(0.8);
+      setTimeout(() => {
+        setProgress(1);
+      }, 2000);
     } catch (error) {
-      // Check BLE connection after error
-      const stillConnected = await isStillConnected();
-
-      if (!stillConnected) {
-        Alert.alert(
-          t('networkSetup.connectionError'),
-          t('networkSetup.bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect')
-        );
-        dispatch(resetConnectionState());
-      } else {
-        Alert.alert(t('networkSetup.connectionFailed'), String(error));
-        dispatch(resetWifiState());
-      }
-      resetUIState();
+      Alert.alert(t('networkSetup.connectionFailed'), String(error));
+      setProgress(0.33);
     } finally {
-      // Note: setConnecting(false) is handled in resetUIState
-      // But we need to ensure it's set here too in case resetUIState wasn't called
-      if (isConnectingRef.current) {
-        isConnectingRef.current = false;
-        setConnecting(false);
-      }
+      setConnecting(false);
     }
-  }, [
-    bleConnected,
-    selectedWifi,
-    passwordInput.value,
-    sendWiFiCredentials,
-    proceedToNextScreen,
-    resetUIState,
-    wifiStatus,
-    isStillConnected,
-    t,
-  ]);
+  };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={styles.container}>
-        <StatusBar translucent backgroundColor="transparent" />
-        <ImageBackground
-          source={HomeBackgroundImage}
-          style={styles.backgroundImage}
-          resizeMode="stretch"
-          imageStyle={styles.imageStyle}
-        >
-          <KeyboardAvoidingView
-            style={styles.keyboardAvoidingView}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-          >
-            <SafeAreaView style={styles.safeAreaContainer} edges={['top']}>
-              {/* Header */}
-              <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                  <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>{t('networkSetup.networkSetup')}</Text>
-              </View>
+    <View style={styles.container}>
+      <StatusBar translucent backgroundColor="transparent" />
+      <ImageBackground
+        source={HomeBackgroundImage}
+        style={styles.backgroundImage}
+        resizeMode="stretch"
+        imageStyle={styles.imageStyle}
+      >
+        <SafeAreaView style={styles.safeAreaContainer} edges={['top']}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{t('networkSetup.networkSetup')}</Text>
+          </View>
 
-              <View style={styles.tabsRow}>
-                {TABS.map((tab) => (
-                  <TouchableOpacity
-                    key={tab.key}
-                    style={[styles.tabBtn, activeTab === tab.key && styles.tabBtnActive]}
-                    onPress={() => onTabChange(tab.key as any)}
-                  >
-                    {tab.icon}
-                    <Text style={activeTab === tab.key ? styles.tabTextActive : styles.tabText}>
-                      {tab.title}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+          <View style={styles.tabsRow}>
+            {TABS.map((tab) => (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tabBtn, activeTab === tab.key && styles.tabBtnActive]}
+                onPress={() => onTabChange(tab.key as any)}
+              >
+                {tab.icon}
+                <Text style={activeTab === tab.key ? styles.tabTextActive : styles.tabText}>
+                  {tab.title}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-              {/* Main Content Area */}
-              <View style={styles.contentContainer}>
-                {/* Wi-Fi Tab Content - Unified UI for all platforms */}
-                {activeTab === 'wifi' && (
+          {/* Main Content Area */}
+          <View style={styles.contentContainer}>
+            {/* WiFi Tab Content */}
+            {activeTab === 'wifi' && (
+              <>
+                <Text style={styles.availableTitle}>{t('networkSetup.availableNetworks')}</Text>
+                {Platform.OS !== 'android' ? (
                   <>
-                    <Text style={styles.availableTitle}>{t('networkSetup.availableNetworks')}</Text>
                     <TouchableOpacity
                       style={styles.rescanButton}
                       onPress={scanWifi}
-                      disabled={isScanning || !bleConnected}
+                      disabled={scanning || (bleConnected && wifiScanStatus === 1)}
                     >
                       <Text
                         style={[
                           styles.rescanText,
-                          isScanning ? styles.rescanTextScanning : styles.rescanTextActive,
+                          scanning || (bleConnected && wifiScanStatus === 1)
+                            ? styles.rescanTextScanning
+                            : styles.rescanTextActive,
                         ]}
                       >
-                        {isScanning ? t('networkSetup.scanning') : t('networkSetup.rescan')}
+                        {scanning || (bleConnected && wifiScanStatus === 1)
+                          ? t('networkSetup.scanning')
+                          : t('networkSetup.rescan')}
                       </Text>
                     </TouchableOpacity>
-                    {isScanning ? (
-                      <ActivityIndicator style={styles.scanningIndicator} size="large" />
-                    ) : (
-                      <FlatList
-                        data={currentWifiList}
-                        keyExtractor={(item) => item.id}
-                        contentContainerStyle={styles.paddingBottomFlatList}
-                        style={styles.listStyle}
-                        renderItem={({ item }) => (
-                          <TouchableOpacity
-                            style={[
-                              styles.networkItem,
-                              item.id === selectedWifi?.id && styles.networkItemActive,
-                            ]}
-                            onPress={() => {
-                              setSelectedWifi(item);
-                              passwordInput.setValue('');
-                            }}
-                          >
-                            <View style={styles.networkLeftContent}>
-                              <WifiIcon width={24} height={24} />
-                              <View>
-                                <Text style={styles.networkName}>{item.name}</Text>
-                                <Text style={[styles.networkSignal, getSignalStyle(item.signal)]}>
-                                  {item.secure ? t('networkSetup.secure') : t('networkSetup.open')}
-                                  {' • '}
-                                  {getSignalText(item.signal, t)}
-                                </Text>
-                              </View>
-                            </View>
-                            {item.id === selectedWifi?.id && <CheckIcon height={22} width={22} />}
-                          </TouchableOpacity>
-                        )}
-                        ListEmptyComponent={
-                          !isScanning ? (
-                            <Text style={styles.emptyWifiText}>
-                              {t('networkSetup.noAvailableWifi')}
-                            </Text>
-                          ) : null
-                        }
-                      />
-                    )}
+                    {(() => {
+                      const isScanningNow = scanning || (bleConnected && wifiScanStatus === 1);
+                      return isScanningNow ? (
+                        <ActivityIndicator style={styles.scanningIndicator} size="large" />
+                      ) : (
+                        (() => {
+                          const wifiList = getCurrentWifiList();
+                          return (
+                            <FlatList
+                              data={wifiList}
+                              keyExtractor={(item) => item.id}
+                              contentContainerStyle={styles.paddingBottomFlatList}
+                              style={styles.listStyle}
+                              renderItem={({ item }) => (
+                                <TouchableOpacity
+                                  style={[
+                                    styles.networkItem,
+                                    item.id === selectedWifi?.id && styles.networkItemActive,
+                                  ]}
+                                  onPress={() => {
+                                    setSelectedWifi(item);
+                                    passwordInput.setValue('');
+                                  }}
+                                >
+                                  <View style={styles.networkLeftContent}>
+                                    <WifiIcon width={24} height={24} />
+                                    <View>
+                                      <Text style={styles.networkName}>{item.name}</Text>
+                                      <Text
+                                        style={[styles.networkSignal, getSignalStyle(item.signal)]}
+                                      >
+                                        {item.secure
+                                          ? t('networkSetup.secure')
+                                          : t('networkSetup.open')}
+                                        {' • '}
+                                        {getSignalText(item.signal, t)}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  {item.id === selectedWifi?.id && (
+                                    <CheckIcon height={22} width={22} />
+                                  )}
+                                </TouchableOpacity>
+                              )}
+                              ListEmptyComponent={
+                                !scanning && wifiScanStatus !== 1 ? (
+                                  <Text style={styles.emptyWifiText}>
+                                    {bleConnected
+                                      ? 'No WiFi networks found from device'
+                                      : t('networkSetup.noAvailableWifi')}
+                                  </Text>
+                                ) : null
+                              }
+                            />
+                          );
+                        })()
+                      );
+                    })()}
                     {selectedWifi && (
                       <View style={styles.passwordSection}>
                         <Text style={styles.passLabel}>
-                          {t('networkSetup.passwordFor')} "{selectedWifi.name}"
+                          {t('networkSetup.passwordFor')} "{selectedWifi?.name}"
                         </Text>
                         <TextInput
                           value={passwordInput.value}
@@ -766,193 +685,224 @@ const NetworkSetup: React.FC = () => {
                       </View>
                     )}
                   </>
-                )}
-
-                {activeTab === 'lan' && (
-                  <View style={styles.tabContentCenter}>
-                    <Text style={styles.lanText}>{t('networkSetup.plugCameraEthernet')}</Text>
+                ) : (
+                  <View style={styles.iosWifiContainer}>
+                    <Text style={styles.iosWifiInstruction}>
+                      Please go to Settings {'>'} Wi-Fi to connect or change Wi-Fi networks.
+                      {'\n'}iOS privacy restrictions prevent apps from showing the exact Wi-Fi name
+                      (SSID).
+                    </Text>
+                    <Text style={styles.iosCurrentWifiText}>
+                      {networkInfo?.isConnected && networkInfo.type === 'wifi'
+                        ? 'Connected to Wi-Fi'
+                        : 'No WiFi connected'}
+                    </Text>
                   </View>
                 )}
+              </>
+            )}
 
-                {activeTab === 'lte' && (
-                  <>
-                    <Text style={styles.availableTitle}>{t('networkSetup.availableLte')}</Text>
-                    <View style={styles.networkItem}>
-                      <View style={styles.networkLeftContent}>
-                        <SimIcon width={24} height={24} />
-                        <View>
-                          <Text style={styles.networkName}>
-                            {lteInfo?.hasSimCard && lteCarrier
-                              ? lteCarrier
-                              : lteInfo?.hasSimCard
-                                ? 'SIM Card Detected'
-                                : lteInfo?.hasCellularCapability
-                                  ? 'No SIM Card (Device supports LTE)'
-                                  : 'No SIM Card'}
-                          </Text>
-                          <Text style={styles.networkSignal}>
-                            {networkInfo?.isConnected && networkInfo?.type === 'cellular'
-                              ? 'LTE Connected'
-                              : networkInfo?.isConnected && networkInfo?.type === 'wifi'
-                                ? lteInfo?.hasCellularCapability
-                                  ? 'WiFi Active (LTE available)'
-                                  : 'WiFi Active'
-                                : lteInfo?.hasCellularCapability
-                                  ? 'LTE Module Available'
-                                  : 'SIM Card / LTE module'}
-                          </Text>
-                          {networkInfo && (
-                            <Text style={styles.networkSignal}>
-                              Status:{' '}
-                              {networkInfo.isConnected
-                                ? networkInfo.type === 'cellular'
-                                  ? 'Cellular'
-                                  : networkInfo.type
-                                : 'Disconnected'}
-                              {lteInfo?.hasCellularCapability ? ' • LTE Available' : ''}
-                            </Text>
-                          )}
-                        </View>
-                      </View>
-                      {!!lteInfo?.hasSimCard &&
-                        networkInfo?.isConnected &&
-                        networkInfo?.type === 'cellular' && <CheckIcon height={22} width={22} />}
-                    </View>
-                    {lteInfo?.hasSimCard &&
-                      networkInfo?.isConnected &&
-                      networkInfo?.type === 'cellular' && (
-                        <View style={styles.passwordSection}>
-                          <Text style={styles.passLabel}>{t('networkSetup.ltePassword')}</Text>
-                          <TextInput
-                            value={ltePasswordInput.value}
-                            onChangeText={ltePasswordInput.handleChange}
-                            icon={LockIconComponent}
-                            secureTextEntry
-                            placeholder={t('networkSetup.ltePasswordPlaceholder')}
-                            autoCapitalize="none"
-                            autoComplete="password"
-                            disabled={connectingLte}
-                            error={!!ltePasswordInput.error}
-                            style={styles.input}
-                            testID="lte-pass-input"
-                            placeholderTextColor={COLORS.BBBBBB}
-                          />
-                        </View>
-                      )}
-                  </>
-                )}
+            {activeTab === 'lan' && (
+              <View style={styles.tabContentCenter}>
+                <Text style={styles.lanText}>{t('networkSetup.plugCameraEthernet')}</Text>
               </View>
+            )}
 
-              {/* Bottom Section - Progress and Connect Button */}
-              {activeTab === 'wifi' && (
-                <View style={styles.bottomContainer}>
-                  <View style={styles.divider} />
-                  <View style={styles.systemCheck}>
-                    <Text style={styles.progressLabel}>
-                      {t('networkSetup.systemCheck')}{' '}
-                      <Text style={styles.inProgress}>{t('networkSetup.inProgress')}</Text>
-                    </Text>
-                    <View style={styles.progressBarBg}>
-                      <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
-                    </View>
-                    <Text style={styles.checkDescription}>
-                      {t('networkSetup.checkingInternetConnection')}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.connectBtn,
-                      (isScanning || connecting || !canConnect) && styles.connectBtnDisabled,
-                    ]}
-                    onPress={handleConnect}
-                    disabled={isScanning || connecting || !canConnect}
-                  >
-                    {isScanning || connecting ? (
-                      <ActivityIndicator color="#0A2540" />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.connectBtnText,
-                          (isScanning || connecting || !canConnect) &&
-                            styles.connectBtnTextDisabled,
-                        ]}
-                      >
-                        {t('bluetoothScreen.connect')}
+            {activeTab === 'lte' && (
+              <>
+                <Text style={styles.availableTitle}>{t('networkSetup.availableLte')}</Text>
+                <View style={styles.networkItem}>
+                  <View style={styles.networkLeftContent}>
+                    <SimIcon width={24} height={24} />
+                    <View>
+                      <Text style={styles.networkName}>
+                        {lteInfo?.hasSimCard && lteCarrier
+                          ? lteCarrier
+                          : lteInfo?.hasSimCard
+                            ? 'SIM Card Detected'
+                            : lteInfo?.hasCellularCapability
+                              ? 'No SIM Card (Device supports LTE)'
+                              : 'No SIM Card'}
                       </Text>
-                    )}
-                  </TouchableOpacity>
+                      <Text style={styles.networkSignal}>
+                        {networkInfo?.isConnected && networkInfo?.type === 'cellular'
+                          ? 'LTE Connected'
+                          : networkInfo?.isConnected && networkInfo?.type === 'wifi'
+                            ? lteInfo?.hasCellularCapability
+                              ? 'WiFi Active (LTE available)'
+                              : 'WiFi Active'
+                            : lteInfo?.hasCellularCapability
+                              ? 'LTE Module Available'
+                              : 'SIM Card / LTE module'}
+                      </Text>
+                      {networkInfo && (
+                        <Text style={styles.networkSignal}>
+                          Status:{' '}
+                          {networkInfo.isConnected
+                            ? networkInfo.type === 'cellular'
+                              ? 'Cellular'
+                              : networkInfo.type
+                            : 'Disconnected'}
+                          {lteInfo?.hasCellularCapability ? ' • LTE Available' : ''}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  {!!lteInfo?.hasSimCard &&
+                    networkInfo?.isConnected &&
+                    networkInfo?.type === 'cellular' && <CheckIcon height={22} width={22} />}
                 </View>
-              )}
-
-              {activeTab === 'lte' && (
-                <View style={styles.bottomContainer}>
-                  <View style={styles.systemCheck}>
-                    <Text style={styles.progressLabel}>
-                      SYSTEM CHECK{' '}
-                      <Text style={styles.inProgress}>
-                        {connectingLte
-                          ? t('bluetoothScreen.connecting')
-                          : progress === 1
-                            ? 'Done'
-                            : 'Idle'}
-                      </Text>
-                    </Text>
-                    <View style={styles.progressBarBg}>
-                      <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
+                {lteInfo?.hasSimCard &&
+                  networkInfo?.isConnected &&
+                  networkInfo?.type === 'cellular' && (
+                    <View style={styles.passwordSection}>
+                      <Text style={styles.passLabel}>{t('networkSetup.ltePassword')}</Text>
+                      <TextInput
+                        value={ltePasswordInput.value}
+                        onChangeText={ltePasswordInput.handleChange}
+                        icon={LockIconComponent}
+                        secureTextEntry
+                        placeholder={t('networkSetup.ltePasswordPlaceholder')}
+                        autoCapitalize="none"
+                        autoComplete="password"
+                        disabled={connectingLte}
+                        error={!!ltePasswordInput.error}
+                        style={styles.input}
+                        testID="lte-pass-input"
+                        placeholderTextColor={COLORS.BBBBBB}
+                      />
                     </View>
-                    <Text style={styles.checkDescription}>
-                      {connectingLte
-                        ? t('bluetoothScreen.connecting') + (lteCarrier ? ' ' + lteCarrier : '')
-                        : progress === 1
-                          ? t('networkSetup.lteConnected')
-                          : lteCarrier
-                            ? networkInfo?.isConnected && networkInfo?.type === 'cellular'
-                              ? t('networkSetup.lteReady')
-                              : t('networkSetup.waitingForCellularConnection')
-                            : t('networkSetup.insertLTESim')}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
+                  )}
+              </>
+            )}
+          </View>
+
+          {/* Bottom Section - Progress and Connect Button */}
+          {activeTab === 'wifi' && (
+            <View style={styles.bottomContainer}>
+              <View style={styles.divider} />
+              <View style={styles.systemCheck}>
+                <Text style={styles.progressLabel}>
+                  {t('networkSetup.systemCheck')}{' '}
+                  <Text style={styles.inProgress}>{t('networkSetup.inProgress')}</Text>
+                </Text>
+                <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
+                </View>
+                <Text style={styles.checkDescription}>
+                  {t('networkSetup.checkingInternetConnection')}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.connectBtn,
+                  (scanning ||
+                    connecting ||
+                    (bleConnected && wifiScanStatus === 1) ||
+                    (Platform.OS === 'android'
+                      ? !passwordInput.value || !!passwordInput.error || !selectedWifi
+                      : !passwordInput.value || !!passwordInput.error || (!currentSSID && !bleConnected))) &&
+                    styles.connectBtnDisabled,
+                ]}
+                onPress={handleConnect}
+                disabled={
+                  scanning ||
+                  connecting ||
+                  (bleConnected && wifiScanStatus === 1) ||
+                  (Platform.OS === 'android'
+                    ? !passwordInput.value || !!passwordInput.error || !selectedWifi
+                    : !passwordInput.value || !!passwordInput.error || (!currentSSID && !bleConnected))
+                }
+              >
+                {scanning || connecting || (bleConnected && wifiScanStatus === 1) ? (
+                  <ActivityIndicator color="#0A2540" />
+                ) : (
+                  <Text
                     style={[
-                      styles.connectBtn,
+                      styles.connectBtnText,
+                      (scanning ||
+                        connecting ||
+                        (bleConnected && wifiScanStatus === 1) ||
+                        (Platform.OS === 'android'
+                          ? !passwordInput.value || !!passwordInput.error || !selectedWifi
+                          : !passwordInput.value || !!passwordInput.error || (!currentSSID && !bleConnected))) &&
+                        styles.connectBtnTextDisabled,
+                    ]}
+                  >
+                    {t('bluetoothScreen.connect')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {activeTab === 'lte' && (
+            <View style={styles.bottomContainer}>
+              <View style={styles.systemCheck}>
+                <Text style={styles.progressLabel}>
+                  SYSTEM CHECK{' '}
+                  <Text style={styles.inProgress}>
+                    {connectingLte
+                      ? t('bluetoothScreen.connecting')
+                      : progress === 1
+                        ? 'Done'
+                        : 'Idle'}
+                  </Text>
+                </Text>
+                <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
+                </View>
+                <Text style={styles.checkDescription}>
+                  {connectingLte
+                    ? t('bluetoothScreen.connecting') + (lteCarrier ? ' ' + lteCarrier : '')
+                    : progress === 1
+                      ? t('networkSetup.lteConnected')
+                      : lteCarrier
+                        ? networkInfo?.isConnected && networkInfo?.type === 'cellular'
+                          ? t('networkSetup.lteReady')
+                          : 'Waiting for cellular connection...'
+                        : t('networkSetup.insertLTESim')}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.connectBtn,
+                  (connectingLte ||
+                    !lteCarrier ||
+                    !ltePasswordInput.value ||
+                    !!ltePasswordInput.error) &&
+                    styles.connectBtnDisabled,
+                ]}
+                onPress={handleConnectLte}
+                disabled={
+                  connectingLte ||
+                  !lteInfo?.hasSimCard || // Must have SIM card
+                  !ltePasswordInput.value ||
+                  !!ltePasswordInput.error
+                }
+              >
+                {connectingLte ? (
+                  <ActivityIndicator color="#0A2540" />
+                ) : (
+                  <Text
+                    style={[
+                      styles.connectBtnText,
                       (connectingLte ||
                         !lteCarrier ||
                         !ltePasswordInput.value ||
                         !!ltePasswordInput.error) &&
-                        styles.connectBtnDisabled,
+                        styles.connectBtnTextDisabled,
                     ]}
-                    onPress={handleConnectLte}
-                    disabled={
-                      connectingLte ||
-                      !lteInfo?.hasSimCard || // Must have SIM card
-                      !ltePasswordInput.value ||
-                      !!ltePasswordInput.error
-                    }
                   >
-                    {connectingLte ? (
-                      <ActivityIndicator color="#0A2540" />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.connectBtnText,
-                          (connectingLte ||
-                            !lteCarrier ||
-                            !ltePasswordInput.value ||
-                            !!ltePasswordInput.error) &&
-                            styles.connectBtnTextDisabled,
-                        ]}
-                      >
-                        {t('bluetoothScreen.connect')}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
-            </SafeAreaView>
-          </KeyboardAvoidingView>
-        </ImageBackground>
-      </View>
-    </TouchableWithoutFeedback>
+                    {t('bluetoothScreen.connect')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 };
 
