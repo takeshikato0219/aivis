@@ -28,6 +28,9 @@ import { useUserSync } from '@hooks/useUserSync';
 import CleanShotIcon from '@assets/svg/clean-shot.svg';
 import PlusIcon from '@assets/svg/plus-icon.svg';
 import IconBlue from '@assets/svg/icon-blue.svg';
+import cameraService from '@api/cameraService';
+import { Camera } from '@api/types/cameraTypes';
+import { useErrorHandler } from '@hooks/useErrorHandler';
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -40,14 +43,16 @@ const Home = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const avatarUrl = user?.avatar_url;
   const [avatarError, setAvatarError] = useState(false);
-  const [cameraList, setCameraList] = useState<any[]>([]);
+  const [cameraList, setCameraList] = useState<Camera[]>([]);
+  const { handleError } = useErrorHandler();
 
   // USING COMMON HOOKS
   const { syncUserData } = useUserSync();
   useAppSetup({ screenName: 'Home' });
 
   useEffect(() => {
-    fetchCameraList().then((data) => setCameraList(data));
+    fetchCameraList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -57,15 +62,26 @@ const Home = () => {
   }, [isDrawerOpen, syncUserData]);
 
   const fetchCameraList = async () => {
-    // const response = await fetch('https://your-api/cameras');
-    return [];
+    try {
+      const response = await cameraService.getCameras({
+        sort_by: 'created_at',
+        sort_order: 'desc',
+        page: 1,
+        per_page: 20,
+      });
+      setCameraList(response.data || []);
+    } catch (error: any) {
+      console.error('Error fetching camera list:', error);
+      handleError(error, false);
+      setCameraList([]);
+    }
   };
 
-  const goToDetail = () => {
+  const goToDetail = (camera: Camera) => {
     navigation.navigate('Detail', {
-      name: '石上１丁目家のカメラ',
-      id: 'camera-001',
-      cameraId: 'cam-123',
+      name: camera.name,
+      id: camera.id,
+      cameraId: camera.id,
     });
   };
 
@@ -148,9 +164,9 @@ const Home = () => {
                     </View>
                     <View style={styles.cardBadge}>
                       <View style={styles.badgeDot} />
-                      <Text style={styles.badgeText}>{camera.status}</Text>
+                      <Text style={styles.badgeText}>{String(camera.status ?? '')}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => goToDetail()}>
+                    <TouchableOpacity onPress={() => goToDetail(camera)}>
                       <View style={styles.rowCenter}>
                         <Text style={styles.cardText}>{camera.name}</Text>
                         <View style={styles.iconCircle}>

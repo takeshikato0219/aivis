@@ -57,13 +57,17 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
     void CrashReporter.sendPendingReports();
 
+    // Note: We don't disconnect BLE when app goes to background
+    // Only disconnect when app is killed (in cleanup function below)
+    // This allows BLE connection to persist when app is in background
+
     // Cleanup when app is terminated (killed/cleared from background)
     return () => {
       themeSubscription.remove();
       unsubscribeNetwork();
       // Disconnect BLE when app component unmounts (app is killed/cleared)
-      console.log('[App] App terminating, cleaning up BLE connection...');
-      jetsonBLEService.cleanupAll();
+      console.log('[App] App terminating, disconnecting BLE connection...');
+      void jetsonBLEService.disconnect();
     };
   }, []);
 
@@ -76,6 +80,9 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   return (
     <ErrorBoundary
       onError={(error, errorInfo) => {
+        console.error('[App] Error caught by ErrorBoundary, cleaning up BLE...');
+        // Cleanup BLE subscriptions on app crash
+        void jetsonBLEService.disconnect();
         void CrashReporter.reportCrash(error, {
           componentStack: errorInfo.componentStack,
         });

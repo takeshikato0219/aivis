@@ -16,6 +16,7 @@ import {
   WiFiScanStatus,
   SerializableDevice,
 } from '@redux/slices/bleSlice';
+import { Platform, PermissionsAndroid } from 'react-native';
 
 // =============================================================================
 // UUIDs — must match config.py on Jetson
@@ -64,6 +65,7 @@ class JetsonBLEService {
   private connectedDevice: Device | null = null;
   private subscriptions: Subscription[] = [];
   private scanTimeout: ReturnType<typeof setTimeout> | null = null;
+  private wifiScanTimeout: ReturnType<typeof setTimeout> | null = null;
   private initialized: boolean = false;
 
   // ---------------------------------------------------------------------------
@@ -132,8 +134,17 @@ class JetsonBLEService {
       (monitorError, characteristic) => {
         if (monitorError) {
           if (!monitorError.message?.includes('cancelled')) {
+            console.error('[BLE] Status subscription error:', monitorError);
             store.dispatch(setError(monitorError.message));
             store.dispatch(setConnected({ isConnected: false, deviceId: null }));
+            // Cleanup subscriptions on critical error
+            if (
+              monitorError.message?.includes('disconnected') ||
+              monitorError.message?.includes('connection lost')
+            ) {
+              this.cleanupSubscriptions();
+              this.connectedDevice = null;
+            }
           }
           return;
         }
@@ -149,10 +160,17 @@ class JetsonBLEService {
       SERVICE_UUID,
       WIFI_LIST_CHAR_UUID,
       (monitorError, characteristic) => {
-
         if (monitorError) {
           if (!monitorError.message?.includes('cancelled')) {
+            console.error('[BLE] WiFi list subscription error:', monitorError);
             store.dispatch(setError(monitorError.message));
+            // Cleanup subscriptions on critical error
+            if (
+              monitorError.message?.includes('disconnected') ||
+              monitorError.message?.includes('connection lost')
+            ) {
+              this.cleanupSubscriptions();
+            }
           }
           return;
         }
@@ -162,9 +180,20 @@ class JetsonBLEService {
             const data = JSON.parse(jsonStr);
             store.dispatch(setWifiScanStatus(data.status));
             store.dispatch(setWifiNetworks(data.networks || []));
+
+            // Clear timeout since we received response
+            if (this.wifiScanTimeout) {
+              clearTimeout(this.wifiScanTimeout);
+              this.wifiScanTimeout = null;
+            }
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (parseError) {
-            store.dispatch(setError('Lỗi parse WiFi list'));
+            store.dispatch(setError('WiFi list parsing error'));
+            // Clear timeout on error too
+            if (this.wifiScanTimeout) {
+              clearTimeout(this.wifiScanTimeout);
+              this.wifiScanTimeout = null;
+            }
           }
         }
       }
@@ -173,6 +202,9 @@ class JetsonBLEService {
 
     // Set up disconnect listener
     const disconnectSub = bleManager.onDeviceDisconnected(device.id, () => {
+      console.log('[BLE] Device disconnected unexpectedly, cleaning up subscriptions...');
+      // Cleanup subscriptions when device disconnects unexpectedly
+      this.cleanupSubscriptions();
       store.dispatch(resetConnectionState());
       this.connectedDevice = null;
     });
@@ -195,9 +227,17 @@ class JetsonBLEService {
     }
   }
 
+  private cleanupWifiScanTimeout(): void {
+    if (this.wifiScanTimeout) {
+      clearTimeout(this.wifiScanTimeout);
+      this.wifiScanTimeout = null;
+    }
+  }
+
   cleanupAll(): void {
     this.cleanupSubscriptions();
     this.cleanupScanTimeout();
+    this.cleanupWifiScanTimeout();
     bleManager.stopDeviceScan();
 
     if (this.connectedDevice) {
@@ -206,11 +246,50 @@ class JetsonBLEService {
     }
   }
 
+  private async requestAndroidPermissions(): Promise<boolean> {
+    if (Platform.OS !== 'android') return true;
+
+    try {
+      const apiLevel = Platform.Version;
+
+      if (apiLevel >= 31) {
+        // Android 12+
+        const result = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        ]);
+
+        return (
+          result['android.permission.BLUETOOTH_SCAN'] === 'granted' &&
+          result['android.permission.BLUETOOTH_CONNECT'] === 'granted' &&
+          result['android.permission.ACCESS_FINE_LOCATION'] === 'granted'
+        );
+      } else {
+        // Android 11 and below
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        return result === 'granted';
+      }
+    } catch (error) {
+      console.error('[BLE] Permission request error:', error);
+      return false;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // SCAN
   // ---------------------------------------------------------------------------
 
-  startScan = (): void => {
+  startScan = async (): Promise<void> => {
+    const hasPermission = await this.requestAndroidPermissions();
+    if (!hasPermission) {
+      store.dispatch(setError('Bluetooth permissions not granted'));
+      store.dispatch(setScanning(false));
+      return;
+    }
+
     store.dispatch(clearDevices());
     store.dispatch(clearError());
     store.dispatch(setScanning(true));
@@ -273,7 +352,9 @@ class JetsonBLEService {
       // 5. Update connected state
       store.dispatch(setConnected({ isConnected: true, deviceId: connectedDevice.id }));
     } catch (err: any) {
-      store.dispatch(setError(err?.message || 'Lỗi kết nối'));
+      // Cleanup subscriptions on connection error
+      this.cleanupSubscriptions();
+      store.dispatch(setError(err?.message || 'Connection error'));
       store.dispatch(setConnected({ isConnected: false, deviceId: null }));
       throw err;
     }
@@ -292,7 +373,7 @@ class JetsonBLEService {
       await bleManager.cancelDeviceConnection(this.connectedDevice.id);
       this.connectedDevice = null;
     }
-
+    this.connectedDevice = null;
     // Reset state
     store.dispatch(resetConnectionState());
   };
@@ -303,7 +384,7 @@ class JetsonBLEService {
 
   sendWiFiCredentials = async (ssid: string, password: string): Promise<boolean> => {
     if (!this.connectedDevice) {
-      store.dispatch(setError('Chưa kết nối đến thiết bị'));
+      store.dispatch(setError('Not connected to the device'));
       return false;
     }
 
@@ -317,7 +398,7 @@ class JetsonBLEService {
         stringToBase64(ssid)
       );
 
-      // Write Password → Jetson receives SSID + Password → auto connects to WiFi
+      // Write Password → Jetson receives SSID + Password → auto connects to Wi-Fi
       await this.connectedDevice.writeCharacteristicWithResponseForService(
         SERVICE_UUID,
         PWD_CHAR_UUID,
@@ -326,7 +407,7 @@ class JetsonBLEService {
 
       return true;
     } catch (err: any) {
-      store.dispatch(setError(err?.message || 'Lỗi gửi thông tin WiFi'));
+      store.dispatch(setError(err?.message || 'WiFi information transmission error'));
       return false;
     }
   };
@@ -336,13 +417,15 @@ class JetsonBLEService {
   // ---------------------------------------------------------------------------
 
   requestWiFiScan = async (): Promise<boolean> => {
-
     if (!this.connectedDevice) {
-      store.dispatch(setError('Chưa kết nối đến thiết bị'));
+      store.dispatch(setError('Not connected to the device'));
       return false;
     }
 
     try {
+      // Clear any existing timeout
+      this.cleanupWifiScanTimeout();
+
       store.dispatch(clearError());
       store.dispatch(setWifiScanStatus(WiFiScanStatus.SCANNING));
 
@@ -352,9 +435,21 @@ class JetsonBLEService {
         byteToBase64(1)
       );
 
+      // Set timeout to reset status if no response after 30 seconds
+      this.wifiScanTimeout = setTimeout(() => {
+        const currentStatus = store.getState().ble.wifiScanStatus;
+        // Only reset if still scanning (device didn't respond)
+        if (currentStatus === WiFiScanStatus.SCANNING) {
+          store.dispatch(setWifiScanStatus(WiFiScanStatus.ERROR));
+          store.dispatch(setError('WiFi scan timeout - no response from device'));
+        }
+        this.wifiScanTimeout = null;
+      }, 30000); // 30 seconds timeout
+
       return true;
     } catch (err: any) {
-      store.dispatch(setError(err?.message || 'Lỗi yêu cầu scan WiFi'));
+      this.cleanupWifiScanTimeout();
+      store.dispatch(setError(err?.message || 'WiFi scan required error'));
       store.dispatch(setWifiScanStatus(WiFiScanStatus.ERROR));
       return false;
     }

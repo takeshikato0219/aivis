@@ -6,6 +6,12 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0A0E1A',
   },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 20,
+  },
   logoContainer: {
     alignItems: 'center',
   },
@@ -80,11 +86,28 @@ export const styles = StyleSheet.create({
     backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   loadingText: {
     color: '#fff',
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  loadingRetryButton: {
+    marginTop: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  loadingRetryButtonText: {
+    color: '#fff',
     fontSize: 14,
-    marginTop: 12,
+    fontWeight: '600',
   },
   errorOverlay: {
     ...StyleSheet.absoluteFill,
@@ -98,6 +121,27 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 20,
     textAlign: 'center',
+  },
+  reconnectingOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  reconnectingText: {
+    color: '#FFA500',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  reconnectingSubtext: {
+    color: '#fff',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+    opacity: 0.8,
   },
   retryButton: {
     paddingHorizontal: 30,
@@ -189,6 +233,13 @@ export const styles = StyleSheet.create({
     fontSize: 18,
     marginRight: 10,
   },
+  editNameInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#fff',
+    padding: 0,
+    marginLeft: 10,
+  },
   editNameText: {
     flex: 1,
     fontSize: 15,
@@ -201,10 +252,10 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
   },
   bottomSection: {
-    flex: 1,
-    justifyContent: 'flex-end',
     paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 20,
+    backgroundColor: '#0A0E1A',
   },
   primaryButton: {
     flexDirection: 'row',

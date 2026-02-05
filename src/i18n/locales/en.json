@@ -286,7 +286,9 @@
     "searchingForDevices": "Searching for devices...",
     "bluetoothConnected": "Bluetooth connected",
     "enterManualCode": "Enter manual code",
-    "agentCode": "Agent Code"
+    "agentCode": "Agent Code",
+    "cameraRegisteredSuccessfully": "Camera registered successfully",
+    "authenticationRequired": "Please login to register camera"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Enter the default password for the Jetson Orin's local hotspot:",
@@ -372,7 +374,14 @@
     "wiFiConnectionTimeout": "WiFi connection timeout",
     "waitingForCellularConnection": "Waiting for cellular connection...",
     "bLEConnectionLostPleaseGoBackAndReconnect": "BLE connection lost. Please go back and reconnect.",
-    "bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect": "BLE connection was lost during WiFi setup. Please go back and reconnect to the device, then try again."
+    "bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect": "BLE connection was lost during WiFi setup. Please go back and reconnect to the device, then try again.",
+    "bleRequired": "Bluetooth Required",
+    "pleaseConnectToDeviceViaBluetoothFirstToScanWiFiNetworks": "Please connect to device via Bluetooth first to scan WiFi networks.",
+    "pleaseConnectToDeviceViaBluetoothFirst": "Please connect to device via Bluetooth first.",
+    "pleaseSelectAWiFiNetworkFirst": "Please select a WiFi network first.",
+    "pleaseConnectToDeviceViaBluetoothFirstToScanAndConfigureWiFiNetworks": "Please connect to device via Bluetooth first to scan and configure WiFi networks.",
+    "bluetoothConnectionRequired": "Bluetooth connection required",
+    "wiFiScanFailed": "WiFi scan failed"
   },
   "faceUpload": {
     "title": "Face Registration",
@@ -411,6 +420,10 @@
     "faceSetup": "Face Setup",
     "thisNameWillAppearInYourDashboardAlerts": "This name will appear in your dashboard alerts.",
     "cameraName": "Camera name",
-    "exampleLivingRoomCamera": "Example: Living room camera"
+    "exampleLivingRoomCamera": "Example: Living room camera",
+    "reconnecting": "Reconnecting...",
+    "connectionLost": "Connection lost",
+    "reconnectFailed": "Failed to reconnect. Please try again.",
+    "loadingStream": "Loading live stream..."
   }
 }

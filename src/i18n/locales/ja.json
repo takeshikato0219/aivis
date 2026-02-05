@@ -327,7 +327,9 @@
     "searchingForDevices": "デバイスを検索中...",
     "bluetoothConnected": "Bluetooth接続中",
     "enterManualCode": "手動でコードを入力",
-    "agentCode": "代理店コード"
+    "agentCode": "代理店コード",
+    "cameraRegisteredSuccessfully": "カメラの登録が完了しました",
+    "authenticationRequired": "カメラを登録するにはログインしてください"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Jetson Orinのローカルホットスポットのデフォルトパスワードを入力してください：",
@@ -413,7 +415,14 @@
     "wiFiConnectionTimeout": "Wi-Fi接続がタイムアウトしました。",
     "waitingForCellularConnection": "セルラー接続を待機しています…",
     "bLEConnectionLostPleaseGoBackAndReconnect": "BLE の接続が失われました。前の画面に戻って、再度接続してください。",
-    "bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect": "Wi-Fi設定中にBLE接続が失われました。前の画面に戻ってデバイスに再接続してから、再度お試しください。"
+    "bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect": "Wi-Fi設定中にBLE接続が失われました。前の画面に戻ってデバイスに再接続してから、再度お試しください。",
+    "bleRequired": "Bluetoothが必要です",
+    "pleaseConnectToDeviceViaBluetoothFirstToScanWiFiNetworks": "Wi-Fiネットワークをスキャンするには、まずBluetoothでデバイスに接続してください。",
+    "pleaseConnectToDeviceViaBluetoothFirst": "まずBluetoothでデバイスに接続してください。",
+    "pleaseSelectAWiFiNetworkFirst": "まずWi-Fiネットワークを選択してください。",
+    "pleaseConnectToDeviceViaBluetoothFirstToScanAndConfigureWiFiNetworks": "Wi-Fiネットワークをスキャンして設定するには、まずBluetoothでデバイスに接続してください。",
+    "bluetoothConnectionRequired": "Bluetooth接続が必要です",
+    "wiFiScanFailed": "Wi-Fiスキャンに失敗しました"
   },
   "faceUpload": {
     "title": "顔登録",
@@ -452,6 +461,10 @@
     "faceSetup": "顔の設定",
     "thisNameWillAppearInYourDashboardAlerts": "この名前はダッシュボードのアラートに表示されます。",
     "cameraName": "カメラ名",
-    "exampleLivingRoomCamera": "例：リビングカメラ"
+    "exampleLivingRoomCamera": "例：リビングカメラ",
+    "reconnecting": "再接続中...",
+    "connectionLost": "接続が失われました",
+    "reconnectFailed": "再接続に失敗しました。もう一度お試しください。",
+    "loadingStream": "ライブストリームを読み込み中..."
   }
 }

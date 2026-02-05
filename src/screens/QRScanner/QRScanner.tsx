@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,9 @@ import { COLORS } from '@constants/theme';
 import TextInput from '@components/TextInput/TextInput';
 import { useInput } from '@hooks/useInput';
 import { isPassword } from '@utils/validate';
+import { useAppSelector } from '@redux/store';
+import cameraService from '@api/cameraService';
+import { jetsonBLEService } from '@/services/jetsonBLEService';
 
 const CAMERA_PERMISSION_KEY = '@camera_permission_status';
 
@@ -53,6 +56,8 @@ const QRScanner: React.FC = () => {
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('checking');
   const [shouldMountCamera, setShouldMountCamera] = useState<boolean>(false);
   const { t } = useTranslation();
+  const { accessToken, isAuthenticated } = useAppSelector((state) => state.auth);
+  const isProcessingRef = useRef<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -119,16 +124,92 @@ const QRScanner: React.FC = () => {
     }
   };
 
+  const registerCamera = async (qrData: string) => {
+    navigation.navigate('ConnectionSuccessful');
+    void jetsonBLEService.disconnect();
+    if (isProcessingRef.current) {
+      return;
+    }
+
+    // Check authentication
+    if (!isAuthenticated || !accessToken) {
+      setIsSearching(false);
+      setScannedData(null);
+      Alert.alert(
+        t('common.error') || 'Error',
+        t('QRScan.authenticationRequired') || 'Please login to register camera',
+        [
+          {
+            text: t('common.ok'),
+          },
+        ]
+      );
+      return;
+    }
+
+    isProcessingRef.current = true;
+
+    try {
+      // Parse QR data
+      const parsedData = JSON.parse(qrData);
+      const { id } = parsedData;
+
+      // Call camera service to register
+      await cameraService.registerCamera({
+        id,
+      });
+
+      // Success - show alert and navigate
+      Alert.alert(
+        t('common.success'),
+        t('QRScan.cameraRegisteredSuccessfully') || 'Camera registered successfully',
+        [
+          {
+            text: t('common.ok'),
+            onPress: () => {
+              setIsSearching(false);
+              setScannedData(null);
+              isProcessingRef.current = false;
+              navigation.navigate('ConnectionSuccessful');
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.error('Error registering camera:', error);
+      setIsSearching(false);
+      setScannedData(null);
+      isProcessingRef.current = false;
+
+      // Extract error message from processed error
+      let errorMessage = t('common.error') || 'An error occurred';
+
+      if (error?.apiResponse?.message) {
+        errorMessage = error.apiResponse.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      Alert.alert(t('common.error') || 'Error', errorMessage, [
+        {
+          text: t('common.ok'),
+        },
+      ]);
+    }
+  };
+
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: (codes) => {
-      if (codes.length > 0 && !scannedData && !isSearching) {
+      if (codes.length > 0 && !scannedData && !isSearching && !isProcessingRef.current) {
         const qrData = codes[0].value;
-        setScannedData(qrData || '');
-        setIsSearching(true);
-        setTimeout(() => {
-          navigation.navigate('ConnectionSuccessful');
-        }, 2000);
+        if (qrData) {
+          setScannedData(qrData);
+          setIsSearching(true);
+          registerCamera(qrData);
+        }
       }
     },
   });

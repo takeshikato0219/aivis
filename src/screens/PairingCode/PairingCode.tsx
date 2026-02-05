@@ -107,7 +107,6 @@ const PairingCode: React.FC = () => {
                     value={value}
                     maxLength={1}
                     style={styles.codeInput}
-                    keyboardType="phone-pad"
                     autoCapitalize="characters"
                     placeholder="-"
                     placeholderTextColor="#384150"
