@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import { useLiveStream } from '../../src/hooks/useLiveStream';
+import { useLiveStream } from '@hooks/useLiveStream';
 
 // Mock timers
 jest.useFakeTimers();
@@ -10,10 +10,6 @@ const mockWebViewRef = {
     reload: jest.fn(),
   },
 };
-
-// Mock console methods
-const mockConsoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
 
 describe('useLiveStream', () => {
   beforeEach(() => {
@@ -182,6 +178,7 @@ describe('useLiveStream', () => {
         const { result } = renderHook(() => useLiveStream());
 
         // Mock the webViewRef after render
+        // @ts-ignore
         result.current.webViewRef.current = mockWebViewRef.current;
 
         // Set some state first - simulate that we had some retries
@@ -318,12 +315,15 @@ describe('useLiveStream', () => {
 
   describe('retry logic', () => {
     it('should retry with exponential backoff', () => {
-      const { result } = renderHook(() => useLiveStream({
-        maxRetries: 3,
-        retryBaseDelay: 1000,
-      }));
+      const { result } = renderHook(() =>
+        useLiveStream({
+          maxRetries: 3,
+          retryBaseDelay: 1000,
+        })
+      );
 
       // Mock the webViewRef after render
+      // @ts-ignore
       result.current.webViewRef.current = mockWebViewRef.current;
 
       // Trigger first error
@@ -343,10 +343,12 @@ describe('useLiveStream', () => {
     });
 
     it('should respect max retries limit', () => {
-      const { result } = renderHook(() => useLiveStream({
-        maxRetries: 2,
-        retryBaseDelay: 100,
-      }));
+      const { result } = renderHook(() =>
+        useLiveStream({
+          maxRetries: 2,
+          retryBaseDelay: 100,
+        })
+      );
 
       // Trigger errors multiple times
       act(() => {
@@ -372,13 +374,16 @@ describe('useLiveStream', () => {
     });
 
     it('should respect retry max delay', () => {
-      const { result } = renderHook(() => useLiveStream({
-        maxRetries: 10,
-        retryBaseDelay: 1000,
-        retryMaxDelay: 5000,
-      }));
+      const { result } = renderHook(() =>
+        useLiveStream({
+          maxRetries: 10,
+          retryBaseDelay: 1000,
+          retryMaxDelay: 5000,
+        })
+      );
 
       // Mock the webViewRef after render
+      // @ts-ignore
       result.current.webViewRef.current = mockWebViewRef.current;
 
       // Trigger multiple retries to reach max delay
@@ -401,10 +406,12 @@ describe('useLiveStream', () => {
 
   describe('heartbeat monitoring', () => {
     it('should detect heartbeat timeout', () => {
-      const { result } = renderHook(() => useLiveStream({
-        heartbeatInterval: 1000,
-        heartbeatTimeout: 3000,
-      }));
+      const { result } = renderHook(() =>
+        useLiveStream({
+          heartbeatInterval: 1000,
+          heartbeatTimeout: 3000,
+        })
+      );
 
       // Load WebView to start heartbeat monitoring
       act(() => {
@@ -420,10 +427,12 @@ describe('useLiveStream', () => {
     });
 
     it('should reset heartbeat on WebView messages', () => {
-      const { result } = renderHook(() => useLiveStream({
-        heartbeatInterval: 1000,
-        heartbeatTimeout: 3000,
-      }));
+      const { result } = renderHook(() =>
+        useLiveStream({
+          heartbeatInterval: 1000,
+          heartbeatTimeout: 3000,
+        })
+      );
 
       // Load WebView
       act(() => {
@@ -449,7 +458,7 @@ describe('useLiveStream', () => {
         result.current.handleWebViewMessage(mockEvent);
       });
 
-      // Advance time again - should not timeout now
+      // Advance time again - should not time out now
       act(() => {
         jest.advanceTimersByTime(2000);
       });
@@ -460,9 +469,11 @@ describe('useLiveStream', () => {
 
   describe('injected JavaScript', () => {
     it('should generate JavaScript with correct heartbeat interval', () => {
-      const { result } = renderHook(() => useLiveStream({
-        heartbeatInterval: 5000,
-      }));
+      const { result } = renderHook(() =>
+        useLiveStream({
+          heartbeatInterval: 5000,
+        })
+      );
 
       const injectedJS = result.current.getInjectedJavaScript();
 
@@ -479,9 +490,9 @@ describe('useLiveStream', () => {
       const injectedJS = result.current.getInjectedJavaScript();
 
       expect(injectedJS).toContain('window.onerror = function(msg, url, line, col, error)');
-      expect(injectedJS).toContain('console.error(\'Iframe error detected\')');
-      expect(injectedJS).toContain('window.addEventListener(\'online\'');
-      expect(injectedJS).toContain('window.addEventListener(\'offline\'');
+      expect(injectedJS).toContain("console.error('Iframe error detected')");
+      expect(injectedJS).toContain("window.addEventListener('online'");
+      expect(injectedJS).toContain("window.addEventListener('offline'");
     });
 
     it('should include heartbeat monitoring in injected JavaScript', () => {
@@ -490,7 +501,7 @@ describe('useLiveStream', () => {
       const injectedJS = result.current.getInjectedJavaScript();
 
       expect(injectedJS).toContain('function sendHeartbeat()');
-      expect(injectedJS).toContain('type: \'heartbeat\'');
+      expect(injectedJS).toContain("type: 'heartbeat'");
       expect(injectedJS).toContain('lastHeartbeatTime = Date.now()');
     });
   });
@@ -554,6 +565,7 @@ describe('useLiveStream', () => {
       const { result } = renderHook(() => useLiveStream());
 
       // Mock the webViewRef after render
+      // @ts-ignore
       result.current.webViewRef.current = mockWebViewRef.current;
 
       // Test that hook initializes without errors
@@ -573,10 +585,12 @@ describe('useLiveStream', () => {
     });
 
     it('should merge custom config with defaults', () => {
-      const { result } = renderHook(() => useLiveStream({
-        maxRetries: 3,
-        heartbeatInterval: 5000,
-      }));
+      const { result } = renderHook(() =>
+        useLiveStream({
+          maxRetries: 3,
+          heartbeatInterval: 5000,
+        })
+      );
 
       expect(result.current).toBeDefined();
 
@@ -601,12 +615,15 @@ describe('useLiveStream', () => {
 
   describe('edge cases', () => {
     it('should handle rapid consecutive errors', () => {
-      const { result } = renderHook(() => useLiveStream({
-        maxRetries: 2, // Set to 2 so it fails after 3 errors
-        retryBaseDelay: 100,
-      }));
+      const { result } = renderHook(() =>
+        useLiveStream({
+          maxRetries: 2, // Set to 2 so it fails after 3 errors
+          retryBaseDelay: 100,
+        })
+      );
 
       // Mock the webViewRef after render
+      // @ts-ignore
       result.current.webViewRef.current = mockWebViewRef.current;
 
       // Trigger first error and wait for retry

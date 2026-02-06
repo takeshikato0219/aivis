@@ -1,22 +1,17 @@
 import { Device, Subscription } from 'react-native-ble-plx';
-import { Platform, PermissionsAndroid } from 'react-native';
-import { jetsonBLEService } from '../../src/services/jetsonBLEService';
+import { Platform } from 'react-native';
+import { jetsonBLEService } from '@/services/jetsonBLEService';
 import bleManager from '../../src/utils/bleManagerSingleton';
-import { store } from '../../src/redux/store';
+import { store } from '@redux/store';
 import {
   addDevice,
-  clearDevices,
   setScanning,
   setConnected,
   setError,
   clearError,
-  setWifiStatus,
-  setWifiNetworks,
-  setWifiScanStatus,
   resetConnectionState,
-  WiFiScanStatus,
   SerializableDevice,
-} from '../../src/redux/slices/bleSlice';
+} from '@redux/slices/bleSlice';
 
 // Mock react-native-ble-plx
 jest.mock('react-native-ble-plx', () => ({
@@ -125,7 +120,7 @@ jest.mock('buffer', () => ({
           length: realBuffer.length,
         };
       }
-      if (typeof data === 'string' && encoding === 'utf-8') {
+      if (encoding === 'utf-8') {
         // For utf-8 string input
         const realBuffer = Buffer.from(data, 'utf-8');
         return {
@@ -225,15 +220,22 @@ describe('JetsonBLEService', () => {
       });
 
       // Mock the setupSubscriptions method to avoid complex mocking
-      const setupSubscriptionsSpy = jest.spyOn(jetsonBLEService as any, 'setupSubscriptions').mockResolvedValue();
+      const setupSubscriptionsSpy = jest
+        .spyOn(jetsonBLEService as any, 'setupSubscriptions')
+        // @ts-ignore
+        .mockResolvedValue();
 
       jetsonBLEService.init();
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-      expect(bleManager.connectedDevices).toHaveBeenCalledWith(['12345678-1234-5678-1234-56789abcdef0']);
-      expect(store.dispatch).toHaveBeenCalledWith(setConnected({ isConnected: true, deviceId: mockDevice.id }));
+      expect(bleManager.connectedDevices).toHaveBeenCalledWith([
+        '12345678-1234-5678-1234-56789abcdef0',
+      ]);
+      expect(store.dispatch).toHaveBeenCalledWith(
+        setConnected({ isConnected: true, deviceId: mockDevice.id })
+      );
 
       setupSubscriptionsSpy.mockRestore();
     });
@@ -244,7 +246,7 @@ describe('JetsonBLEService', () => {
       jetsonBLEService.init();
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Should not crash, just log warning
       expect(jetsonBLEService.isInitialized()).toBe(true);
@@ -260,36 +262,11 @@ describe('JetsonBLEService', () => {
       expect(result).toBe(true);
       expect(mockPermissionsAndroid.requestMultiple).not.toHaveBeenCalled();
     });
-
-    // Skip complex permission tests due to singleton mocking issues
-    it.skip('should request Android 12+ permissions correctly', async () => {
-      // This test is skipped due to singleton mocking complexity
-    });
-
-    it.skip('should request Android 11 and below permissions correctly', async () => {
-      // This test is skipped due to singleton mocking complexity
-    });
-
-    it.skip('should return false when permissions are denied', async () => {
-      // This test is skipped due to singleton mocking complexity
-    });
-
-    it.skip('should handle permission request errors', async () => {
-      // This test is skipped due to singleton mocking complexity
-    });
   });
 
   describe('Scanning', () => {
     beforeEach(() => {
       jetsonBLEService.init();
-    });
-
-    it.skip('should start scanning successfully with permissions granted', async () => {
-      // Skip due to permission mocking complexity with singleton
-    });
-
-    it.skip('should dispatch error when permissions are not granted', async () => {
-      // Skip due to permission mocking complexity with singleton
     });
 
     it('should handle scan errors', async () => {
@@ -299,9 +276,11 @@ describe('JetsonBLEService', () => {
         'android.permission.ACCESS_FINE_LOCATION': 'granted',
       });
 
-      (bleManager.startDeviceScan as jest.Mock).mockImplementation((services, options, callback) => {
-        callback(new Error('Scan failed'), null);
-      });
+      (bleManager.startDeviceScan as jest.Mock).mockImplementation(
+        (services, options, callback) => {
+          callback(new Error('Scan failed'), null);
+        }
+      );
 
       await jetsonBLEService.startScan();
 
@@ -319,7 +298,7 @@ describe('JetsonBLEService', () => {
       await jetsonBLEService.startScan();
 
       // Wait for device discovery callback
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       expect(store.dispatch).toHaveBeenCalledWith(addDevice(mockSerializableDevice));
     });
@@ -330,19 +309,11 @@ describe('JetsonBLEService', () => {
       expect(bleManager.stopDeviceScan).toHaveBeenCalled();
       expect(store.dispatch).toHaveBeenCalledWith(setScanning(false));
     });
-
-    it.skip('should auto-stop scanning after timeout', async () => {
-      // Skip due to timeout causing Jest to hang
-    });
   });
 
   describe('Connection', () => {
     beforeEach(() => {
       jetsonBLEService.init();
-    });
-
-    it.skip('should connect to device successfully', async () => {
-      // Skip due to complex mocking of device characteristics
     });
 
     it('should handle connection errors', async () => {
@@ -352,11 +323,9 @@ describe('JetsonBLEService', () => {
       await expect(jetsonBLEService.connect(mockDevice)).rejects.toThrow('Connection failed');
 
       expect(store.dispatch).toHaveBeenCalledWith(setError('Connection failed'));
-      expect(store.dispatch).toHaveBeenCalledWith(setConnected({ isConnected: false, deviceId: null }));
-    });
-
-    it.skip('should disconnect from device', async () => {
-      // Skip due to complex device connection mocking
+      expect(store.dispatch).toHaveBeenCalledWith(
+        setConnected({ isConnected: false, deviceId: null })
+      );
     });
 
     it('should handle disconnect when not connected', async () => {
@@ -368,23 +337,11 @@ describe('JetsonBLEService', () => {
   });
 
   describe('WiFi Operations', () => {
-    it.skip('should send WiFi credentials successfully', async () => {
-      // Skip due to complex device connection requirements
-    });
-
     it('should return false when not connected', async () => {
       const result = await jetsonBLEService.sendWiFiCredentials('MyWiFi', 'password123');
 
       expect(result).toBe(false);
       expect(store.dispatch).toHaveBeenCalledWith(setError('Not connected to the device'));
-    });
-
-    it.skip('should handle WiFi credential write errors', async () => {
-      // Skip due to complex device connection requirements
-    });
-
-    it.skip('should request WiFi scan successfully', async () => {
-      // Skip due to complex device connection requirements
     });
 
     it('should return false when requesting scan while not connected', async () => {
@@ -393,14 +350,6 @@ describe('JetsonBLEService', () => {
       expect(result).toBe(false);
       expect(store.dispatch).toHaveBeenCalledWith(setError('Not connected to the device'));
     });
-
-    it.skip('should handle WiFi scan request errors', async () => {
-      // Skip due to complex device connection requirements
-    });
-
-    it.skip('should timeout WiFi scan after 30 seconds', async () => {
-      // Skip due to complex device connection requirements
-    });
   });
 
   describe('Utility Methods', () => {
@@ -408,10 +357,6 @@ describe('JetsonBLEService', () => {
       jetsonBLEService.clearError();
 
       expect(store.dispatch).toHaveBeenCalledWith(clearError());
-    });
-
-    it.skip('should return connected device', async () => {
-      // Skip due to complex device connection requirements
     });
 
     it('should return null when no device connected', () => {

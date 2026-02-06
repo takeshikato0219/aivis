@@ -63,10 +63,12 @@ describe('bleSlice', () => {
 
   describe('initial state', () => {
     it('should return the initial state', () => {
+      // @ts-ignore
       expect(bleReducer(undefined, { type: undefined })).toEqual(initialState);
     });
 
     it('should have correct initial values', () => {
+      // @ts-ignore
       const state = bleReducer(undefined, { type: undefined });
 
       expect(state.devices).toEqual([]);

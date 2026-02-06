@@ -110,7 +110,7 @@ describe('streamUtils', () => {
       expect(result).toContain("window.addEventListener('error'");
       expect(result).toContain('e.preventDefault()');
       expect(result).toContain("window.addEventListener('load'");
-      expect(result).toContain('console.log(\'Stream iframe loaded\')');
+      expect(result).toContain("console.log('Stream iframe loaded')");
     });
 
     it('should handle URLs with special characters', () => {

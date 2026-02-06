@@ -295,7 +295,9 @@ describe('CameraService (API)', () => {
       const apiError = new Error('Failed to fetch workflow statuses');
       mockAxiosInstance.get.mockRejectedValue(apiError);
 
-      await expect(cameraService.getWorkflowStatuses()).rejects.toThrow('Failed to fetch workflow statuses');
+      await expect(cameraService.getWorkflowStatuses()).rejects.toThrow(
+        'Failed to fetch workflow statuses'
+      );
     });
 
     it('should handle empty workflow statuses', async () => {

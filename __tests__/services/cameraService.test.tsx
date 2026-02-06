@@ -1,10 +1,4 @@
-import cameraService, {
-  CameraConfig,
-  StreamQuality,
-  CameraStatus,
-  Preset,
-  Recording,
-} from '../../src/services/cameraService';
+import cameraService, { CameraConfig } from '../../src/services/cameraService';
 
 describe('CameraService', () => {
   const mockConfig: CameraConfig = {
@@ -71,8 +65,9 @@ describe('CameraService', () => {
     });
 
     it('should handle API errors', async () => {
-      const mockGet = jest.fn().mockRejectedValue(new Error('API Error'));
-      (cameraService as any).axiosInstance.get = mockGet;
+      (cameraService as any).axiosInstance.get = jest
+        .fn()
+        .mockRejectedValue(new Error('API Error'));
 
       await expect(cameraService.getStreamUrl()).rejects.toThrow('API Error');
     });
@@ -84,7 +79,9 @@ describe('CameraService', () => {
     });
 
     it('should call getCameraStatus method when initialized', async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: { isOnline: true, bitrate: 1024, fps: 30, resolution: '1920x1080' } });
+      const mockGet = jest.fn().mockResolvedValue({
+        data: { isOnline: true, bitrate: 1024, fps: 30, resolution: '1920x1080' },
+      });
       (cameraService as any).axiosInstance.get = mockGet;
 
       await cameraService.getCameraStatus();
@@ -101,7 +98,9 @@ describe('CameraService', () => {
     });
 
     it('should call getCameraStatus', async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: { isOnline: true, bitrate: 1024, fps: 30, resolution: '1920x1080' } });
+      const mockGet = jest.fn().mockResolvedValue({
+        data: { isOnline: true, bitrate: 1024, fps: 30, resolution: '1920x1080' },
+      });
       (cameraService as any).axiosInstance.get = mockGet;
 
       await cameraService.getStatus();
