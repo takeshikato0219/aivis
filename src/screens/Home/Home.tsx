@@ -124,12 +124,9 @@ const Home = () => {
       setIsLoadingStatuses(true);
       const response = await cameraService.getWorkflowStatuses();
       setWorkflowStatuses(response.data || []);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error: any) {
-      if (error.statusCode === 404 || error.response?.status === 404) {
-        setWorkflowStatuses([]);
-      } else {
-        setWorkflowStatuses([]);
-      }
+      setWorkflowStatuses([]);
     } finally {
       setIsLoadingStatuses(false);
     }
@@ -180,6 +177,99 @@ const Home = () => {
 
   const goToBluetoothScan = () => {
     navigation.navigate('ConnectDevice' as never);
+  };
+
+  const renderCameraContent = () => {
+    if (isLoadingCameras) {
+      return (
+        <View style={styles.styleEmptyList}>
+          <ActivityIndicator size="large" color="#00ADD4" />
+        </View>
+      );
+    }
+
+    if (cameraList.length > 0) {
+      return (
+        <ScrollView
+          style={styles.cameraListScroll}
+          contentContainerStyle={styles.paddingScrollView}
+          showsVerticalScrollIndicator={true}
+          onScroll={({ nativeEvent }) => {
+            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+            const paddingToBottom = 20;
+            const isCloseToBottom =
+              layoutMeasurement.height + contentOffset.y >=
+              contentSize.height - paddingToBottom;
+            if (isCloseToBottom && hasMore && !isLoadingMore) {
+              loadMore();
+            }
+          }}
+          scrollEventThrottle={400}
+        >
+          {cameraList.map((camera) => {
+            const statusText =
+              camera.status == null
+                ? 'Unknown'
+                : typeof camera.status === 'object'
+                  ? camera.status.name_trans
+                  : camera.status || 'Online';
+
+            const isOnline =
+              statusText.toLowerCase().includes('online') ||
+              statusText.toLowerCase().includes('オンライン');
+
+            return (
+              <View style={styles.card} key={camera.id}>
+                <View style={styles.videoWrapper}>
+                  <Image source={RetangleImage} style={styles.cardImage} />
+                </View>
+                <View style={styles.cardBadge}>
+                  <View
+                    style={[
+                      styles.badgeDot,
+                      { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
+                    ]}
+                  />
+                  <Text style={styles.badgeText}>{statusText}</Text>
+                </View>
+                <TouchableOpacity onPress={() => goToDetail(camera)}>
+                  <View style={styles.rowCenter}>
+                    <Text style={styles.cardText}>{camera.name}</Text>
+                    <View style={styles.iconCircle}>
+                      <MoveRightIconCircle />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+          {isLoadingMore && (
+            <View style={styles.loadingMore}>
+              <ActivityIndicator size="small" color="#00ADD4" />
+            </View>
+          )}
+        </ScrollView>
+      );
+    }
+
+    if (activeIndex === 0) {
+      return (
+        <View style={styles.styleEmptyList}>
+          <CleanShotIcon />
+          <Text style={styles.textStyleReady}>{t('home.readyToPair')}</Text>
+          <View style={styles.styleViewCameraAndEnsure}>
+            <IconBlue />
+            <Text style={styles.textCameraAndEnsure}>{t('home.cameraAndEnsure')}</Text>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.styleEmptyList}>
+        <Text style={styles.textStyleReady}>{t('home.noData')}</Text>
+      </View>
+    );
   };
 
   return (
@@ -264,84 +354,7 @@ const Home = () => {
               </>
             )}
 
-            {isLoadingCameras ? (
-              <View style={styles.styleEmptyList}>
-                <ActivityIndicator size="large" color="#00ADD4" />
-              </View>
-            ) : cameraList.length > 0 ? (
-              <ScrollView
-                style={styles.cameraListScroll}
-                contentContainerStyle={styles.paddingScrollView}
-                showsVerticalScrollIndicator={true}
-                onScroll={({ nativeEvent }) => {
-                  const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-                  const paddingToBottom = 20;
-                  const isCloseToBottom =
-                    layoutMeasurement.height + contentOffset.y >=
-                    contentSize.height - paddingToBottom;
-                  if (isCloseToBottom && hasMore && !isLoadingMore) {
-                    loadMore();
-                  }
-                }}
-                scrollEventThrottle={400}
-              >
-                {cameraList.map((camera) => {
-                  const statusText =
-                    camera.status == null
-                      ? 'Unknown'
-                      : typeof camera.status === 'object'
-                        ? camera.status.name_trans
-                        : camera.status || 'Online';
-
-                  const isOnline =
-                    statusText.toLowerCase().includes('online') ||
-                    statusText.toLowerCase().includes('オンライン');
-
-                  return (
-                    <View style={styles.card} key={camera.id}>
-                      <View style={styles.videoWrapper}>
-                        <Image source={RetangleImage} style={styles.cardImage} />
-                      </View>
-                      <View style={styles.cardBadge}>
-                        <View
-                          style={[
-                            styles.badgeDot,
-                            { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
-                          ]}
-                        />
-                        <Text style={styles.badgeText}>{statusText}</Text>
-                      </View>
-                      <TouchableOpacity onPress={() => goToDetail(camera)}>
-                        <View style={styles.rowCenter}>
-                          <Text style={styles.cardText}>{camera.name}</Text>
-                          <View style={styles.iconCircle}>
-                            <MoveRightIconCircle />
-                          </View>
-                        </View>
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
-                {isLoadingMore && (
-                  <View style={styles.loadingMore}>
-                    <ActivityIndicator size="small" color="#00ADD4" />
-                  </View>
-                )}
-              </ScrollView>
-            ) : activeIndex === 0 ? (
-              <View style={styles.styleEmptyList}>
-                <CleanShotIcon />
-                <Text style={styles.textStyleReady}>{t('home.readyToPair')}</Text>
-                <View style={styles.styleViewCameraAndEnsure}>
-                  <IconBlue />
-                  <Text style={styles.textCameraAndEnsure}>{t('home.cameraAndEnsure')}</Text>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.styleEmptyList}>
-                <Text style={styles.textStyleReady}>{t('home.noData')}</Text>
-              </View>
-            )}
+            {renderCameraContent()}
             <TouchableOpacity style={styles.manualButton} onPress={goToBluetoothScan}>
               <View style={styles.viewAddCamera}>
                 <Image source={CameraIcon} />

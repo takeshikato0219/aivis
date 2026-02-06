@@ -76,7 +76,7 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     const httpStatusCode = error.response?.status;
-    const apiStatusCode = (error.response?.data as any)?.status_code;
+    const apiStatusCode = (error.response?.data as { status_code?: number })?.status_code;
     const isUnauthorized = httpStatusCode === 401 || apiStatusCode === 401;
 
     if (!isUnauthorized || originalRequest._retry) {
