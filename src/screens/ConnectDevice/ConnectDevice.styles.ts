@@ -58,7 +58,6 @@ export const styles = StyleSheet.create({
     width: '45%',
   },
   switchBtnActive: {
-    backgroundColor: COLORS.main,
     height: 45,
     textAlign: 'center',
     justifyContent: 'center',

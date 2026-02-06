@@ -102,7 +102,9 @@
     "readyToPair": "ペアリングの準備はできましたか？",
     "cameraAndEnsure": "カメラの電源を入れ、信号ランプが青く点滅していることを確認してください。",
     "lightNotFlashing": "ランプが点滅していませんか？",
-    "getHelp": "ヘルプを見る"
+    "getHelp": "ヘルプを見る",
+    "all": "すべて",
+    "noData": "データなし"
   },
   "profile": {
     "settings": "設定",
@@ -465,6 +467,7 @@
     "reconnecting": "再接続中...",
     "connectionLost": "接続が失われました",
     "reconnectFailed": "再接続に失敗しました。もう一度お試しください。",
-    "loadingStream": "ライブストリームを読み込み中..."
+    "loadingStream": "ライブストリームを読み込み中...",
+    "onlineAndReady": "オンライン・準備完了"
   }
 }

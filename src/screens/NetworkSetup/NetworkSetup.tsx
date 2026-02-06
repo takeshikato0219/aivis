@@ -296,9 +296,6 @@ const NetworkSetup: React.FC = () => {
           t('networkSetup.failedToRequestWiFiScanFromDevice')
         );
       }
-      // wifiScanStatus will be managed by Redux
-      // Status will be set to SCANNING (1) by requestWiFiScan()
-      // Then updated to COMPLETED (2) or ERROR (3) when device responds
     } catch (e) {
       Alert.alert(
         t('networkSetup.wifiScanError'),

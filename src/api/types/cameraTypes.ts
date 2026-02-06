@@ -34,6 +34,7 @@ export interface GetCamerasParams {
   sort_order?: 'asc' | 'desc';
   page?: number;
   per_page?: number;
+  facility_id?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -47,4 +48,20 @@ export interface PaginatedResponse<T> {
 export interface GetCamerasResponse extends PaginatedResponse<Camera> {
   success?: boolean;
   message?: string;
+}
+
+export interface WorkflowStatus {
+  id: string;
+  name: string;
+  name_ja: string;
+  description: string;
+  description_ja: string;
+  name_trans: string;
+  desc_trans: string;
+}
+
+export interface GetWorkflowStatusesResponse {
+  success: boolean;
+  message: string;
+  data: WorkflowStatus[];
 }

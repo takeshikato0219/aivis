@@ -157,11 +157,17 @@ export const styles = StyleSheet.create({
   cameraInfoFooter: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     marginHorizontal: 20,
     borderRadius: 22,
     marginTop: -30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
   },
   cameraIconContainer: {
     marginRight: 12,
@@ -276,6 +282,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     marginRight: 8,
+    textAlign: 'center',
   },
   arrowIcon: {
     fontSize: 20,
@@ -313,5 +320,14 @@ export const styles = StyleSheet.create({
   },
   marginStyle: {
     paddingRight: 20,
+  },
+  viewButtonBottom: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
+  },
+  positionButtonBottom: {
+    position: 'absolute',
+    right: 20,
   },
 });

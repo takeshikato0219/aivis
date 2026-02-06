@@ -14,7 +14,7 @@ import {
   Animated,
   Keyboard,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,6 +44,7 @@ type PermissionStatus = 'checking' | 'denied' | 'granted' | 'blocked';
 
 const QRScanner: React.FC = () => {
   const navigation = useNavigation<CameraSetupScreenNavigationProp>();
+  const isFocused = useIsFocused();
   const device = useCameraDevice('back');
   const window = useWindowDimensions();
   const isLandscape = window.width > window.height;
@@ -125,7 +126,6 @@ const QRScanner: React.FC = () => {
   };
 
   const registerCamera = async (qrData: string) => {
-    navigation.navigate('ConnectionSuccessful');
     void jetsonBLEService.disconnect();
     if (isProcessingRef.current) {
       return;
@@ -155,7 +155,7 @@ const QRScanner: React.FC = () => {
       const { id } = parsedData;
 
       // Call camera service to register
-      await cameraService.registerCamera({
+      const response = await cameraService.registerCamera({
         id,
       });
 
@@ -170,7 +170,20 @@ const QRScanner: React.FC = () => {
               setIsSearching(false);
               setScannedData(null);
               isProcessingRef.current = false;
-              navigation.navigate('ConnectionSuccessful');
+              if (response.data) {
+                navigation.navigate('ConnectionSuccessful', {
+                  cameraData: response.data,
+                });
+              } else {
+                navigation.navigate('ConnectionSuccessful', {
+                  cameraData: {
+                    id: id,
+                    name: '',
+                    serial: '',
+                    rtsp_url: '',
+                  },
+                });
+              }
             },
           },
         ]
@@ -291,7 +304,7 @@ const QRScanner: React.FC = () => {
             <Camera
               style={StyleSheet.absoluteFill}
               device={device}
-              isActive={true}
+              isActive={isFocused && shouldMountCamera}
               codeScanner={codeScanner}
               torch={isFlashOn ? 'on' : 'off'}
             />

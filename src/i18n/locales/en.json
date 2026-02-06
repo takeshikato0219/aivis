@@ -102,7 +102,9 @@
     "readyToPair": "Ready to Pair?",
     "cameraAndEnsure": "Please power on the Camera and ensure the signal light is flashing blue.",
     "lightNotFlashing": "Light not flashing?",
-    "getHelp": "Get help."
+    "getHelp": "Get help.",
+    "all": "All",
+    "noData": "No Data"
   },
   "profile": {
     "settings": "Settings",
@@ -424,6 +426,7 @@
     "reconnecting": "Reconnecting...",
     "connectionLost": "Connection lost",
     "reconnectFailed": "Failed to reconnect. Please try again.",
-    "loadingStream": "Loading live stream..."
+    "loadingStream": "Loading live stream...",
+    "onlineAndReady": "Online and ready"
   }
 }
