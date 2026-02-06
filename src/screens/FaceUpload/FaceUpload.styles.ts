@@ -288,7 +288,7 @@ export const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   successOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(76, 175, 80, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
