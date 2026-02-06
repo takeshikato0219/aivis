@@ -81,7 +81,7 @@ export const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     marginBottom: 25,
-    maxHeight: 40,
+    maxHeight: 37,
   },
   filterBtn: {
     backgroundColor: 'rgba(24, 54, 86, 0.6)',
@@ -91,7 +91,7 @@ export const styles = StyleSheet.create({
     marginRight: 6,
     borderWidth: 1,
     borderColor: '#B5D2FE',
-    height: 40,
+    height: 37,
   },
   filterText: {
     color: COLORS.background,

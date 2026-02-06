@@ -42,10 +42,16 @@ const ConnectDevice: React.FC = () => {
   const { t } = useTranslation();
 
   useEffect(() => {
+    // Auto-scan when component mounts (only if not already scanning)
+    if (!scanning) {
+      void startScan();
+    }
+
     return () => {
       stopScan();
     };
-  }, [stopScan]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array to run only on mount
 
   const goToPairCode = async (device: SerializableDevice) => {
     try {

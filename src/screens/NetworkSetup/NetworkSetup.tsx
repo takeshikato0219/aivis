@@ -31,7 +31,7 @@ import { useInput } from '@hooks/useInput';
 import { isPasswordWifi } from '@utils/validate';
 import { useAppSelector } from '@redux/store';
 import DeviceInfo from 'react-native-device-info';
-import { useJetsonBLE } from '@hooks/useJetsonBLE';
+import { useJetsonBLE, WiFiScanStatus } from '@hooks/useJetsonBLE';
 
 const getSignalStyle = (signal: string) => {
   const signalStyles = {
@@ -276,7 +276,7 @@ const NetworkSetup: React.FC = () => {
     }, 1600);
   };
 
-  const scanWifi = async () => {
+  const scanWifi = async (isManualRescan: boolean = false) => {
     if (!bleConnected) {
       Alert.alert(
         t('networkSetup.bleRequired'),
@@ -285,8 +285,10 @@ const NetworkSetup: React.FC = () => {
       return;
     }
 
-    // Reset selection and allow rescan even if previous scan is stuck
-    setSelectedWifi(null);
+    // Only reset selection when user manually rescan
+    if (isManualRescan) {
+      setSelectedWifi(null);
+    }
 
     try {
       const success = await requestWiFiScan();
@@ -305,20 +307,20 @@ const NetworkSetup: React.FC = () => {
   };
 
   useEffect(() => {
-    if (activeTab === 'wifi' && bleConnected) {
-      void scanWifi();
+    if (
+      activeTab === 'wifi' &&
+      bleConnected &&
+      wifiNetworks.length === 0 &&
+      wifiScanStatus === WiFiScanStatus.IDLE
+    ) {
+      void scanWifi(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, bleConnected]);
 
   const onTabChange = (tab: 'wifi' | 'lan' | 'lte') => {
     setActiveTab(tab);
-    if (tab === 'wifi') {
-      void scanWifi();
-      setProgress(0.33);
-      passwordInput.setValue('');
-      setConnecting(false);
-    } else if (tab === 'lte') {
+    if (tab === 'lte') {
       ltePasswordInput.setValue('');
       setConnectingLte(false);
       setProgress(0.33);
@@ -421,7 +423,7 @@ const NetworkSetup: React.FC = () => {
                     <>
                       <TouchableOpacity
                         style={styles.rescanButton}
-                        onPress={scanWifi}
+                        onPress={() => scanWifi(true)}
                         disabled={wifiScanStatus === 1}
                       >
                         <Text
