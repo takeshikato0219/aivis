@@ -107,17 +107,14 @@ const bleSlice = createSlice({
       state.error = null;
     },
 
-    // WiFi status actions
     setWifiStatus: (state, action: PayloadAction<number>) => {
       state.wifiStatus = action.payload;
     },
 
-    // WiFi networks actions
     setWifiNetworks: (state, action: PayloadAction<WiFiNetwork[]>) => {
       state.wifiNetworks = action.payload;
     },
 
-    // WiFi scan status actions
     setWifiScanStatus: (state, action: PayloadAction<number>) => {
       state.wifiScanStatus = action.payload;
     },

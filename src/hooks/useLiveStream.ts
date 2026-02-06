@@ -12,7 +12,7 @@ export interface UseLiveStreamConfig {
 }
 
 export interface UseLiveStreamReturn {
-  webViewRef: RefObject<WebView>;
+  webViewRef: RefObject<WebView | null>;
   isLoading: boolean;
   connectionStatus: 'connecting' | 'connected' | 'failed';
   isReconnecting: boolean;

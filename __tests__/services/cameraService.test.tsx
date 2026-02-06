@@ -1,176 +1,422 @@
-import cameraService from '../../src/services/cameraService';
-
-// Mock axios
-jest.mock('axios', () => {
-  const mockAxiosInstance = {
-    defaults: {
-      baseURL: '',
-      headers: { common: {} },
-    },
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-  };
-  return {
-    create: jest.fn(() => mockAxiosInstance),
-  };
-});
+import cameraService, {
+  CameraConfig,
+  StreamQuality,
+  CameraStatus,
+  Preset,
+  Recording,
+} from '../../src/services/cameraService';
 
 describe('CameraService', () => {
+  const mockConfig: CameraConfig = {
+    baseUrl: 'http://192.168.1.100:8080',
+    cameraId: 'cam001',
+    username: 'admin',
+    password: 'password123',
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset the service config before each test
+    (cameraService as any).config = null;
   });
 
-  it('should be defined', () => {
-    expect(cameraService).toBeDefined();
+  describe('initialize', () => {
+    it('should initialize with basic config', () => {
+      const basicConfig: CameraConfig = {
+        baseUrl: 'http://192.168.1.100',
+        cameraId: 'cam1',
+      };
+
+      cameraService.initialize(basicConfig);
+
+      expect((cameraService as any).config).toEqual(basicConfig);
+    });
+
+    it('should initialize with auth config', () => {
+      cameraService.initialize(mockConfig);
+
+      expect((cameraService as any).config).toEqual(mockConfig);
+    });
+
+    it('should initialize without auth when username/password not provided', () => {
+      const configWithoutAuth: CameraConfig = {
+        baseUrl: 'http://192.168.1.100',
+        cameraId: 'cam1',
+      };
+
+      cameraService.initialize(configWithoutAuth);
+
+      expect((cameraService as any).config).toEqual(configWithoutAuth);
+    });
   });
 
-  it('should have initialize method', () => {
-    expect(typeof cameraService.initialize).toBe('function');
+  describe('getStreamUrl', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call getStreamUrl method when initialized', async () => {
+      // Mock the axios get method
+      const mockGet = jest.fn().mockResolvedValue({ data: { streamUrl: 'rtsp://test' } });
+      (cameraService as any).axiosInstance.get = mockGet;
+
+      await cameraService.getStreamUrl();
+
+      expect(mockGet).toHaveBeenCalledWith('/api/stream', {
+        params: {
+          cameraId: mockConfig.cameraId,
+          quality: 'medium',
+        },
+      });
+    });
+
+    it('should handle API errors', async () => {
+      const mockGet = jest.fn().mockRejectedValue(new Error('API Error'));
+      (cameraService as any).axiosInstance.get = mockGet;
+
+      await expect(cameraService.getStreamUrl()).rejects.toThrow('API Error');
+    });
   });
 
-  it('should initialize with basic config', () => {
-    const config = {
-      baseUrl: 'http://192.168.1.100',
-      cameraId: 'cam1',
-    };
+  describe('getCameraStatus', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
 
-    cameraService.initialize(config);
-    expect(cameraService).toBeDefined();
+    it('should call getCameraStatus method when initialized', async () => {
+      const mockGet = jest.fn().mockResolvedValue({ data: { isOnline: true, bitrate: 1024, fps: 30, resolution: '1920x1080' } });
+      (cameraService as any).axiosInstance.get = mockGet;
+
+      await cameraService.getCameraStatus();
+
+      expect(mockGet).toHaveBeenCalledWith('/api/camera/status', {
+        params: { cameraId: mockConfig.cameraId },
+      });
+    });
   });
 
-  it('should initialize with auth config', () => {
-    const config = {
-      baseUrl: 'http://192.168.1.100',
-      cameraId: 'cam1',
-      username: 'admin',
-      password: 'password123',
-    };
+  describe('getStatus (alias)', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
 
-    cameraService.initialize(config);
-    expect(cameraService).toBeDefined();
+    it('should call getCameraStatus', async () => {
+      const mockGet = jest.fn().mockResolvedValue({ data: { isOnline: true, bitrate: 1024, fps: 30, resolution: '1920x1080' } });
+      (cameraService as any).axiosInstance.get = mockGet;
+
+      await cameraService.getStatus();
+
+      expect(mockGet).toHaveBeenCalledWith('/api/camera/status', {
+        params: { cameraId: mockConfig.cameraId },
+      });
+    });
   });
 
-  it('should have getStatus method', () => {
-    expect(typeof cameraService.getStatus).toBe('function');
+  describe('changeResolution', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call changeResolution method when initialized', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { success: true } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.changeResolution('high');
+
+      expect(mockPost).toHaveBeenCalledWith('/api/camera/resolution', {
+        cameraId: mockConfig.cameraId,
+        quality: 'high',
+      });
+    });
   });
 
-  it('should have startStream method', () => {
-    expect(typeof cameraService.startStream).toBe('function');
+  describe('startStream', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call startStream method when initialized', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { success: true } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.startStream();
+
+      expect(mockPost).toHaveBeenCalledWith('/api/stream/start', {
+        cameraId: mockConfig.cameraId,
+      });
+    });
   });
 
-  it('should have stopStream method', () => {
-    expect(typeof cameraService.stopStream).toBe('function');
+  describe('stopStream', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call stopStream method when initialized', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { success: true } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.stopStream();
+
+      expect(mockPost).toHaveBeenCalledWith('/api/stream/stop', {
+        cameraId: mockConfig.cameraId,
+      });
+    });
   });
 
-  it('should have getStreamUrl method', () => {
-    expect(typeof cameraService.getStreamUrl).toBe('function');
+  describe('takeSnapshot', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call takeSnapshot method when initialized', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { imageUrl: 'test.jpg' } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.takeSnapshot();
+
+      expect(mockPost).toHaveBeenCalledWith('/api/snapshot/take', {
+        cameraId: mockConfig.cameraId,
+      });
+    });
   });
 
-  it('should have takeSnapshot method', () => {
-    expect(typeof cameraService.takeSnapshot).toBe('function');
+  describe('saveSnapshot', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call saveSnapshot method when initialized', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { imageUrl: 'saved.jpg' } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.saveSnapshot('base64data');
+
+      expect(mockPost).toHaveBeenCalledWith('/api/snapshot/save', {
+        cameraId: mockConfig.cameraId,
+        image: 'base64data',
+        timestamp: expect.any(String),
+      });
+    });
   });
 
-  it('should have getSupportedQualities method', () => {
-    expect(typeof cameraService.getSupportedQualities).toBe('function');
+  describe('setQuality', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call setQuality method when initialized', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { success: true } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.setQuality('hd');
+
+      expect(mockPost).toHaveBeenCalledWith('/api/camera/quality', {
+        cameraId: mockConfig.cameraId,
+        quality: 'hd',
+      });
+    });
   });
 
-  it('should have setQuality method', () => {
-    expect(typeof cameraService.setQuality).toBe('function');
+  describe('move', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call move method when initialized', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { success: true } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.move('up', 2);
+
+      expect(mockPost).toHaveBeenCalledWith('/api/camera/move', {
+        cameraId: mockConfig.cameraId,
+        direction: 'up',
+        speed: 2,
+      });
+    });
+
+    it('should move with default speed', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { success: true } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.move('left');
+
+      expect(mockPost).toHaveBeenCalledWith('/api/camera/move', {
+        cameraId: mockConfig.cameraId,
+        direction: 'left',
+        speed: 1,
+      });
+    });
   });
 
-  it('should have move method', () => {
-    expect(typeof cameraService.move).toBe('function');
+  describe('zoom', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call zoom method when initialized', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { success: true } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.zoom('in', 3);
+
+      expect(mockPost).toHaveBeenCalledWith('/api/camera/zoom', {
+        cameraId: mockConfig.cameraId,
+        action: 'in',
+        speed: 3,
+      });
+    });
+
+    it('should zoom with default speed', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { success: true } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.zoom('out');
+
+      expect(mockPost).toHaveBeenCalledWith('/api/camera/zoom', {
+        cameraId: mockConfig.cameraId,
+        action: 'out',
+        speed: 1,
+      });
+    });
   });
 
-  it('should have zoom method', () => {
-    expect(typeof cameraService.zoom).toBe('function');
+  describe('getSupportedQualities', () => {
+    it('should return predefined quality options', () => {
+      const qualities = cameraService.getSupportedQualities();
+
+      expect(Array.isArray(qualities)).toBe(true);
+      expect(qualities).toHaveLength(4);
+
+      expect(qualities[0]).toEqual({
+        label: 'Low',
+        value: 'low',
+        resolution: '640x480',
+        bitrate: 512,
+      });
+
+      expect(qualities[1]).toEqual({
+        label: 'Medium',
+        value: 'medium',
+        resolution: '1280x720',
+        bitrate: 1024,
+      });
+
+      expect(qualities[2]).toEqual({
+        label: 'High',
+        value: 'high',
+        resolution: '1920x1080',
+        bitrate: 2048,
+      });
+
+      expect(qualities[3]).toEqual({
+        label: 'HD',
+        value: 'hd',
+        resolution: '3840x2160',
+        bitrate: 4096,
+      });
+    });
   });
 
-  it('should have getPresets method', () => {
-    expect(typeof cameraService.getPresets).toBe('function');
+  describe('getPresets', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call getPresets method when initialized', async () => {
+      const mockGet = jest.fn().mockResolvedValue({ data: { presets: [] } });
+      (cameraService as any).axiosInstance.get = mockGet;
+
+      await cameraService.getPresets();
+
+      expect(mockGet).toHaveBeenCalledWith('/api/camera/presets', {
+        params: { cameraId: mockConfig.cameraId },
+      });
+    });
   });
 
-  it('should have goToPreset method', () => {
-    expect(typeof cameraService.goToPreset).toBe('function');
+  describe('goToPreset', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call goToPreset method when initialized', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { success: true } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.goToPreset('preset1');
+
+      expect(mockPost).toHaveBeenCalledWith('/api/camera/preset/go', {
+        cameraId: mockConfig.cameraId,
+        presetId: 'preset1',
+      });
+    });
   });
 
-  it('should have setPreset method', () => {
-    expect(typeof cameraService.setPreset).toBe('function');
+  describe('setPreset', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call setPreset method when initialized', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: { presetId: 'preset123' } });
+      (cameraService as any).axiosInstance.post = mockPost;
+
+      await cameraService.setPreset('New Preset');
+
+      expect(mockPost).toHaveBeenCalledWith('/api/camera/preset/set', {
+        cameraId: mockConfig.cameraId,
+        name: 'New Preset',
+      });
+    });
   });
 
-  it('should have deletePreset method', () => {
-    expect(typeof cameraService.deletePreset).toBe('function');
+  describe('deletePreset', () => {
+    beforeEach(() => {
+      cameraService.initialize(mockConfig);
+    });
+
+    it('should call deletePreset method when initialized', async () => {
+      const mockDelete = jest.fn().mockResolvedValue({ data: { success: true } });
+      (cameraService as any).axiosInstance.delete = mockDelete;
+
+      await cameraService.deletePreset('preset1');
+
+      expect(mockDelete).toHaveBeenCalledWith('/api/camera/preset', {
+        data: {
+          cameraId: mockConfig.cameraId,
+          presetId: 'preset1',
+        },
+      });
+    });
   });
 
-  it('should have enableMotionDetection method', () => {
-    expect(typeof cameraService.enableMotionDetection).toBe('function');
-  });
+  // Basic method existence and functionality tests
+  describe('Service methods', () => {
+    it('should have all expected methods', () => {
+      expect(typeof cameraService.initialize).toBe('function');
+      expect(typeof cameraService.getStreamUrl).toBe('function');
+      expect(typeof cameraService.getCameraStatus).toBe('function');
+      expect(typeof cameraService.getStatus).toBe('function');
+      expect(typeof cameraService.startStream).toBe('function');
+      expect(typeof cameraService.stopStream).toBe('function');
+      expect(typeof cameraService.takeSnapshot).toBe('function');
+      expect(typeof cameraService.getSupportedQualities).toBe('function');
+      expect(typeof cameraService.move).toBe('function');
+      expect(typeof cameraService.zoom).toBe('function');
+      expect(typeof cameraService.getPresets).toBe('function');
+      expect(typeof cameraService.enableMotionDetection).toBe('function');
+      expect(typeof cameraService.disableMotionDetection).toBe('function');
+      expect(typeof cameraService.startRecording).toBe('function');
+      expect(typeof cameraService.stopRecording).toBe('function');
+      expect(typeof cameraService.getRecordings).toBe('function');
+    });
 
-  it('should have disableMotionDetection method', () => {
-    expect(typeof cameraService.disableMotionDetection).toBe('function');
-  });
-
-  it('should have getMotionDetectionStatus method', () => {
-    expect(typeof cameraService.getMotionDetectionStatus).toBe('function');
-  });
-
-  it('should have setMotionDetectionSensitivity method', () => {
-    expect(typeof cameraService.setMotionDetectionSensitivity).toBe('function');
-  });
-
-  it('should have getRecordingStatus method', () => {
-    expect(typeof cameraService.getRecordingStatus).toBe('function');
-  });
-
-  it('should have startRecording method', () => {
-    expect(typeof cameraService.startRecording).toBe('function');
-  });
-
-  it('should have stopRecording method', () => {
-    expect(typeof cameraService.stopRecording).toBe('function');
-  });
-
-  it('should have getRecordings method', () => {
-    expect(typeof cameraService.getRecordings).toBe('function');
-  });
-
-  it('should have deleteRecording method', () => {
-    expect(typeof cameraService.deleteRecording).toBe('function');
-  });
-
-  it('should initialize with baseUrl', () => {
-    const config = {
-      baseUrl: 'http://192.168.1.100:8080',
-      cameraId: 'cam001',
-    };
-
-    cameraService.initialize(config);
-
-    expect(cameraService).toBeDefined();
-  });
-
-  it('should set basic auth when username and password provided', () => {
-    const config = {
-      baseUrl: 'http://192.168.1.100:8080',
-      cameraId: 'cam001',
-      username: 'admin',
-      password: 'password123',
-    };
-
-    cameraService.initialize(config);
-
-    expect(cameraService).toBeDefined();
-  });
-
-  it('should get supported qualities', () => {
-    const qualities = cameraService.getSupportedQualities();
-    expect(Array.isArray(qualities)).toBe(true);
-    expect(qualities.length).toBeGreaterThan(0);
-    expect(qualities[0]).toHaveProperty('label');
-    expect(qualities[0]).toHaveProperty('value');
-    expect(qualities[0]).toHaveProperty('resolution');
-    expect(qualities[0]).toHaveProperty('bitrate');
+    it('should initialize and be ready to use', () => {
+      cameraService.initialize(mockConfig);
+      expect((cameraService as any).config).toBeDefined();
+      expect((cameraService as any).config.cameraId).toBe(mockConfig.cameraId);
+    });
   });
 });

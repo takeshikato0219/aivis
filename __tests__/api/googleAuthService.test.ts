@@ -171,12 +171,12 @@ describe('GoogleAuthService', () => {
       expect(result).toEqual(expectedResponse);
     });
 
-    it('should return null when sign in is cancelled', async () => {
+    it('should throw error when sign in is cancelled', async () => {
       const error = { code: statusCodes.SIGN_IN_CANCELLED };
       mockGoogleSignin.signIn.mockRejectedValue(error);
 
-      const result = await service.signIn();
-      expect(result).toBeNull();
+      await expect(service.signIn()).rejects.toThrow('User cancelled login');
+      expect(mockI18n.t).toHaveBeenCalledWith('auth.userCancelledLogin');
     });
 
     it('should throw error when sign in is in progress', async () => {
