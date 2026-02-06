@@ -102,7 +102,9 @@
     "readyToPair": "ペアリングの準備はできましたか？",
     "cameraAndEnsure": "カメラの電源を入れ、信号ランプが青く点滅していることを確認してください。",
     "lightNotFlashing": "ランプが点滅していませんか？",
-    "getHelp": "ヘルプを見る"
+    "getHelp": "ヘルプを見る",
+    "all": "すべて",
+    "noData": "データなし"
   },
   "profile": {
     "settings": "設定",
@@ -284,7 +286,7 @@
     "scanningForDevices": "デバイスをスキャン中...",
     "scanFinished": "スキャンが完了しました！",
     "connectDevice": "デバイスを接続",
-    "makeSureYourCameraIsPoweredOn": "カメラの電源が入っていることを確認してください。",
+    "makeSureYourCameraIsPoweredOn": "Jetson Orin デバイスの電源が入っていることを確認してください。",
     "makeSureYourCameraWiFiAPIsPoweredOn": "カメラのWi-Fi APが有効になっていることを確認してください。",
     "devicesFound": "検出されたデバイス",
     "accessPointsFound": "検出されたアクセスポイント",
@@ -295,7 +297,8 @@
     "troubleConnecting": "接続でお困りですか？",
     "signal": "Signal",
     "unknownDevice": "不明なデバイス",
-    "noWiFiAccessPointFound": "Wi-Fiアクセスポイントが見つかりませんでした。"
+    "noWiFiAccessPointFound": "Wi-Fiアクセスポイントが見つかりませんでした。",
+    "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Jetson Orin カメラをセットアップするための接続方法を選択してください。"
   },
   "pairingCode": {
     "pairingCode": "ペアリングコード",
@@ -326,7 +329,9 @@
     "searchingForDevices": "デバイスを検索中...",
     "bluetoothConnected": "Bluetooth接続中",
     "enterManualCode": "手動でコードを入力",
-    "agentCode": "代理店コード"
+    "agentCode": "代理店コード",
+    "cameraRegisteredSuccessfully": "カメラの登録が完了しました",
+    "authenticationRequired": "カメラを登録するにはログインしてください"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Jetson Orinのローカルホットスポットのデフォルトパスワードを入力してください：",
@@ -383,7 +388,7 @@
     "excellentSignal": "非常に良い",
     "goodSignal": "良い",
     "weakSignal": "弱い",
-    "noAvailableWifi": "利用可能なWi-Fiが見つかりません。下に引っ張って更新してください。",
+    "noAvailableWifi": "利用可能なWi-Fiが見つかりません。",
     "currentConnected": "現在接続中: ",
     "noWifiConnected": "WiFiに接続されていません",
     "connectionError": "接続エラー",
@@ -396,7 +401,30 @@
     "noSimDetected": "SIMカードが検出されません",
     "ltePassword": "SIM／ネットワークのパスワード",
     "ltePasswordPlaceholder": "Password",
-    "lteReady": "準備完了"
+    "lteReady": "準備完了",
+    "failedToRequestWiFiScanFromDevice": "デバイスからWi-Fiスキャンの要求に失敗しました。",
+    "wiFiRequired": "Wi-Fiが必要です",
+    "pleaseConnectToWiFiInSettingsFirstThenReturnToTheApp.": "先に設定でWi-Fiに接続してから、アプリに戻ってください。",
+    "failedToSendWiFiCredentialsToDevice": "Wi-Fi情報の送信に失敗しました。",
+    "networkAccessLimited": "ネットワークアクセスが制限されています",
+    "wiFiConnectedButInternetAccessMayBeRestrictedYouMightNeedToCompleteAdditionalAuthenticationOrAcceptTerms": "Wi-Fiには接続されていますが、インターネットアクセスが制限されている可能性があります。追加の認証を行うか、利用規約に同意する必要があります。",
+    "tryAgain": "再試行",
+    "continueAnyway": "このまま続行",
+    "connectionIssue": "接続の問題が発生しています",
+    "wiFiConnectedButHavingConnectivityIssuesPleaseCheckYourNetworkSettingsOrTryAgain": "Wi-Fiには接続されていますが、通信に問題があります。ネットワーク設定を確認するか、再試行してください。",
+    "pleaseSelectAWiFiNetworkAndEnterPassword": "Wi-Fiネットワークを選択して、パスワードを入力してください。",
+    "deviceFailedToConnectToWiFi": "デバイスのWi-Fi接続に失敗しました。",
+    "wiFiConnectionTimeout": "Wi-Fi接続がタイムアウトしました。",
+    "waitingForCellularConnection": "セルラー接続を待機しています…",
+    "bLEConnectionLostPleaseGoBackAndReconnect": "BLE の接続が失われました。前の画面に戻って、再度接続してください。",
+    "bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect": "Wi-Fi設定中にBLE接続が失われました。前の画面に戻ってデバイスに再接続してから、再度お試しください。",
+    "bleRequired": "Bluetoothが必要です",
+    "pleaseConnectToDeviceViaBluetoothFirstToScanWiFiNetworks": "Wi-Fiネットワークをスキャンするには、まずBluetoothでデバイスに接続してください。",
+    "pleaseConnectToDeviceViaBluetoothFirst": "まずBluetoothでデバイスに接続してください。",
+    "pleaseSelectAWiFiNetworkFirst": "まずWi-Fiネットワークを選択してください。",
+    "pleaseConnectToDeviceViaBluetoothFirstToScanAndConfigureWiFiNetworks": "Wi-Fiネットワークをスキャンして設定するには、まずBluetoothでデバイスに接続してください。",
+    "bluetoothConnectionRequired": "Bluetooth接続が必要です",
+    "wiFiScanFailed": "Wi-Fiスキャンに失敗しました"
   },
   "faceUpload": {
     "title": "顔登録",
@@ -417,6 +445,29 @@
     "retakeConfirm": "この角度を再撮影しますか？",
     "cancelConfirm": "本当にキャンセルしますか？",
     "scanning": "スキャン中",
-    "qualityScore": "スキャン品質"
+    "qualityScore": "スキャン品質",
+    "faceDetectionError": "顔検出エラー",
+    "noFaceDetected": "キャプチャした画像に顔が検出されませんでした。もう一度お試しください。",
+    "multipleFacesDetected": "複数の顔が検出されました。1人の顔だけが見えるようにして、もう一度お試しください。",
+    "getReady": "準備してください...",
+    "pleaseFaceTheCameraStraightAhead": "カメラをまっすぐ見てください。",
+    "pleaseTurnYourFaceToTheLEFT": "顔を左に向けてください。",
+    "pleaseTurnYourFaceToTheRIGHT": "顔を右に向けてください。",
+    "pleaseTiltYourHeadUP": "頭を上に傾けてください。",
+    "pleaseTiltYourHeadDOWN": "頭を下に傾けてください。",
+    "pleasePositionYourFaceCorrectly": "顔の位置を正しくしてください。"
+  },
+  "liveStream": {
+    "connectionSuccessful": "接続に成功しました",
+    "startMonitoring": "監視を開始",
+    "faceSetup": "顔の設定",
+    "thisNameWillAppearInYourDashboardAlerts": "この名前はダッシュボードのアラートに表示されます。",
+    "cameraName": "カメラ名",
+    "exampleLivingRoomCamera": "例：リビングカメラ",
+    "reconnecting": "再接続中...",
+    "connectionLost": "接続が失われました",
+    "reconnectFailed": "再接続に失敗しました。もう一度お試しください。",
+    "loadingStream": "ライブストリームを読み込み中...",
+    "onlineAndReady": "オンライン・準備完了"
   }
 }

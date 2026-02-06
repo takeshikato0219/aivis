@@ -19,9 +19,17 @@ export const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   scrollContent: {
+    flexGrow: 1,
+    padding: 16,
+    paddingHorizontal: 24,
+  },
+  mainContainer: {
     flex: 1,
     padding: 16,
     paddingHorizontal: 24,
+  },
+  cameraListScroll: {
+    flex: 1,
   },
   headerRow: {
     flexDirection: 'row',
@@ -62,26 +70,28 @@ export const styles = StyleSheet.create({
   },
   title: {
     marginTop: 23,
-    marginBottom: 31,
+    marginBottom: 8,
   },
   titleText: {
     color: COLORS.background,
     fontWeight: FONTS.weights.bold,
     fontSize: 28,
-    marginBottom: 14,
+    marginBottom: 4,
   },
   filterRow: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 25,
+    maxHeight: 40,
   },
   filterBtn: {
     backgroundColor: 'rgba(24, 54, 86, 0.6)',
-    borderRadius: 18,
-    paddingVertical: 5,
-    paddingHorizontal: 14,
-    marginRight: 8,
+    borderRadius: 40,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 6,
     borderWidth: 1,
     borderColor: '#B5D2FE',
+    height: 40,
   },
   filterText: {
     color: COLORS.background,
@@ -89,19 +99,19 @@ export const styles = StyleSheet.create({
     fontSize: 16,
   },
   card: {
-    backgroundColor: '#223E5C',
-    borderRadius: 50,
+    backgroundColor: '#1A202C',
+    borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    position: 'relative',
+    height: 340,
   },
   videoWrapper: {
-    borderRadius: 50,
+    borderRadius: 8,
     overflow: 'hidden',
   },
   cardImage: {
     width: '100%',
-    height: 250,
+    height: 260,
     borderRadius: 12,
   },
   cardBadge: {
@@ -129,11 +139,11 @@ export const styles = StyleSheet.create({
   },
   cardText: {
     color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
-    marginTop: 29,
-    marginBottom: 34,
-    marginLeft: 28,
+    fontWeight: FONTS.weights.medium,
+    fontSize: 20,
+    marginTop: 20,
+    marginBottom: 20,
+    marginLeft: 12,
     flex: 1,
   },
   addCameraBtn: {
@@ -174,14 +184,22 @@ export const styles = StyleSheet.create({
   },
   manualButton: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    borderRadius: 40,
-    padding: 16,
-    height: 56,
-    borderWidth: 1,
-    backgroundColor: COLORS.main,
+    borderRadius: 32,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    height: 64,
+    borderWidth: 1.5,
+    borderColor: '#39FFF9',
+    backgroundColor: 'rgba(20,24,32,0.25)',
+    marginTop: 18,
+    marginBottom: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 6,
   },
   manualButtonText: {
     fontSize: 18,
@@ -224,5 +242,22 @@ export const styles = StyleSheet.create({
   },
   styleViewCameraAndEnsure: {
     flexDirection: 'row',
+  },
+  paddingScrollView: {
+    paddingBottom: 16,
+  },
+  loadingMore: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  positionButtonBottom: {
+    position: 'absolute',
+    right: 20,
+  },
+  viewAddCamera: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    position: 'relative',
   },
 });

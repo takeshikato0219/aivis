@@ -6,6 +6,9 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   safeAreaContainer: {
     flex: 1,
   },
@@ -69,6 +72,9 @@ export const styles = StyleSheet.create({
     marginBottom: 6,
   },
   listStyle: {
+    maxHeight: 260,
+  },
+  wifiListContainer: {
     maxHeight: 260,
   },
   networkItem: {
@@ -240,15 +246,14 @@ export const styles = StyleSheet.create({
   paddingBottomFlatList: {
     paddingBottom: 0,
   },
+  scrollView: {
+    flex: 1,
+  },
   contentContainer: {
     flex: 1,
-    paddingBottom: 120, // Space for bottom container
+    minHeight: 300,
   },
   bottomContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     paddingBottom: Platform.OS === 'ios' ? 40 : 26,
     paddingTop: 10,
   },

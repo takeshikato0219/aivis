@@ -233,6 +233,21 @@ export const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
     borderRadius: 2,
   },
+  positionFeedbackText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  faceDetectionStatus: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  faceDetectionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   positionsIndicator: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -273,7 +288,7 @@ export const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   successOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(76, 175, 80, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',

@@ -58,7 +58,6 @@ export const styles = StyleSheet.create({
     width: '45%',
   },
   switchBtnActive: {
-    backgroundColor: COLORS.main,
     height: 45,
     textAlign: 'center',
     justifyContent: 'center',
@@ -233,5 +232,13 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 15,
     textAlign: 'center',
+  },
+  textHeader: {
+    color: '#C3C3C3',
+    textAlign: 'center',
+    paddingHorizontal: 50,
+    fontSize: 16,
+    fontWeight: FONTS.weights.regular,
+    paddingVertical: 15,
   },
 });

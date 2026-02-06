@@ -1,192 +1,63 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
   ActivityIndicator,
-  Platform,
-  PermissionsAndroid,
   Alert,
-  StatusBar,
+  FlatList,
   ImageBackground,
   ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ConnectDeviceScreenNavigationProp } from '@navigation/types';
-import { Device } from 'react-native-ble-plx';
+import { SerializableDevice } from '@redux/slices/bleSlice';
 import HomeBackgroundImage from '@assets/png/home-background.png';
 import BackIcon from '@assets/svg/icon-back.svg';
 import BluetoothIcon from '@assets/svg/bluetooth-icon.svg';
-import WifiIcon from '@assets/svg/wifi-vector.svg';
 import { styles } from './ConnectDevice.styles';
 import RadarScan from '@screens/ConnectDevice/RadarScan';
-import bleManager from '@utils/bleManagerSingleton';
 import { useTranslation } from 'react-i18next';
 import RotateCcwIcon from '@assets/svg/rotate-ccw.svg';
 import CctvIcon from '@assets/svg/cctv-icon.svg';
+import { useJetsonBLE } from '@hooks/useJetsonBLE';
 
-const getScanningText = (activeTab: string, scanning: boolean, scanningWifi: boolean, t: any) => {
-  const isScanning = activeTab === 'bluetooth' ? scanning : scanningWifi;
-  return isScanning ? t('bluetoothScreen.scanningForDevices') : t('bluetoothScreen.scanFinished');
+const getScanningText = (scanning: boolean, t: any) => {
+  return scanning ? t('bluetoothScreen.scanningForDevices') : t('bluetoothScreen.scanFinished');
 };
 
-const getHintText = (activeTab: string, t: any) => {
-  return activeTab === 'bluetooth'
-    ? t('bluetoothScreen.makeSureYourCameraIsPoweredOn')
-    : t('bluetoothScreen.makeSureYourCameraWiFiAPIsPoweredOn');
+const getHintText = (t: any) => {
+  return t('bluetoothScreen.makeSureYourCameraIsPoweredOn');
 };
 
 const ConnectDevice: React.FC = () => {
   const navigation = useNavigation<ConnectDeviceScreenNavigationProp>();
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [scanning, setScanning] = useState(false);
   const [isConnect, setConnect] = useState(false);
   const [alertShown, setAlertShown] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'bluetooth' | 'wifi'>('bluetooth');
-  const [wifiList, setWifiList] = useState<
-    { ssid: string; signal: 'strong' | 'weak'; id: string }[]
-  >([]);
-  const [scanningWifi, setScanningWifi] = useState(false);
+  const { devices, isScanning: scanning, startScan, stopScan, connect } = useJetsonBLE();
 
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (activeTab === 'bluetooth') void startBluetoothScan();
-    else void startWifiScan();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
-
-  useEffect(() => {
     return () => {
-      bleManager.stopDeviceScan();
+      stopScan();
     };
-  }, []);
+  }, [stopScan]);
 
-  useEffect(() => {
-    let subscription: any;
-    try {
-      subscription = bleManager.onStateChange((state) => {
-        if (state === 'PoweredOn') {
-          setAlertShown(false);
-        }
-      }, true);
-    } catch (error) {
-      console.log('Could not subscribe to Bluetooth state changes:', error);
-    }
-    return () => {
-      if (subscription && subscription.remove) {
-        subscription.remove();
-      }
-    };
-  }, []);
-
-  // --- BLE PERMISSION & SCAN ---
-  const requestPermission = async () => {
-    if (Platform.OS === 'android') {
-      const permissions = [
-        'android.permission.BLUETOOTH_SCAN',
-        'android.permission.BLUETOOTH_CONNECT',
-        'android.permission.ACCESS_FINE_LOCATION',
-      ].filter(Boolean);
-      const results = await PermissionsAndroid.requestMultiple(permissions as any);
-      for (const key in results) {
-        if (results[key as keyof typeof results] !== PermissionsAndroid.RESULTS.GRANTED) {
-          if (!alertShown) {
-            setAlertShown(true);
-            Alert.alert(
-              t('bluetoothScreen.permissionDenied'),
-              t('bluetoothScreen.bluetoothPermissionRequiredToScan'),
-              [
-                {
-                  text: 'OK',
-                  onPress: () => setAlertShown(false),
-                },
-              ]
-            );
-          }
-          return false;
-        }
-      }
-    }
-    return true;
-  };
-
-  const startBluetoothScan = async () => {
-    const permissionGranted = await requestPermission();
-    if (!permissionGranted) return;
-
-    setDevices([]);
-    setScanning(true);
-    bleManager.stopDeviceScan();
-
-    let scanTimeout: NodeJS.Timeout;
-
-    bleManager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
-      if (error) {
-        setScanning(false);
-        if (scanTimeout) clearTimeout(scanTimeout);
-        if (error.message?.includes('powered off') || error.message?.includes('disabled')) {
-          if (!alertShown) {
-            setAlertShown(true);
-            Alert.alert(
-              t('bluetoothScreen.bluetoothDisabled'),
-              t('bluetoothScreen.pleaseEnableBluetoothToScanForDevices'),
-              [{ text: 'OK', onPress: () => setAlertShown(false) }]
-            );
-          }
-        } else if (!error.message?.includes('Operation was cancelled') && !alertShown) {
-          setAlertShown(true);
-          Alert.alert('Scan Error', error.message, [
-            { text: 'OK', onPress: () => setAlertShown(false) },
-          ]);
-        }
-        return;
-      }
-      if (device && (device.name || device.isConnectable === true)) {
-        console.log(JSON.stringify(device, null, 2));
-        setDevices((prev) => {
-          if (prev.find((d) => d.id === device.id)) return prev;
-          return [...prev, device];
-        });
-      }
-    });
-
-    scanTimeout = setTimeout(() => {
-      bleManager.stopDeviceScan();
-      setScanning(false);
-    }, 5000);
-  };
-
-  // --- MOCK WiFi scan ---
-  const startWifiScan = async () => {
-    setScanningWifi(true);
-    setWifiList([]);
-    setTimeout(() => {
-      setWifiList([
-        { ssid: 'CAMERA_AP_1', signal: 'strong', id: 'CAMERA_AP_1' },
-        { ssid: 'CAMERA_AP_2', signal: 'weak', id: 'CAMERA_AP_2' },
-      ]);
-      setScanningWifi(false);
-    }, 2000);
-  };
-
-  const goToPairCode = async (device: Device) => {
+  const goToPairCode = async (device: SerializableDevice) => {
     try {
       setConnect(true);
-
-      const connectionPromise = device.connect();
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Connection timeout')), 10000);
-      });
-      await Promise.race([connectionPromise, timeoutPromise]);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setConnect(false);
       setAlertShown(false);
 
+      // Use the hook's connect method instead of manual BLE connection
+      await connect(device);
+
+      setConnect(false);
+
+      // Navigate to PairingCode with device info
       navigation.navigate('PairingCode', {
         device: {
           id: device.id,
@@ -199,7 +70,6 @@ const ConnectDevice: React.FC = () => {
         pairingCode: '',
       });
     } catch (err) {
-      console.error('Device connection failed:', err);
       setConnect(false);
       if (!alertShown) {
         setAlertShown(true);
@@ -210,13 +80,11 @@ const ConnectDevice: React.FC = () => {
     }
   };
 
-  const scanningText = getScanningText(activeTab, scanning, scanningWifi, t);
-  const hintText = getHintText(activeTab, t);
+  const scanningText = getScanningText(scanning, t);
+  const hintText = getHintText(t);
 
   const devicesFoundText =
-    activeTab === 'bluetooth'
-      ? t('bluetoothScreen.devicesFound') + (scanning ? '' : ` (${devices.length})`)
-      : t('bluetoothScreen.accessPointsFound') + (scanningWifi ? '' : ` (${wifiList.length})`);
+    t('bluetoothScreen.devicesFound') + (scanning ? '' : ` (${devices.length})`);
 
   return (
     <View style={styles.container}>
@@ -235,27 +103,16 @@ const ConnectDevice: React.FC = () => {
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{t('bluetoothScreen.connectDevice')}</Text>
           </View>
+          <Text style={styles.textHeader}>
+            {t('bluetoothScreen.selectAConnectionMethodToSetupYourJetsonOrinCamera')}
+          </Text>
 
           {/* Tabs */}
           <View style={styles.modeSwitcher}>
-            <TouchableOpacity
-              style={[styles.switchBtn, activeTab === 'bluetooth' && styles.switchBtnActive]}
-              onPress={() => setActiveTab('bluetooth')}
-            >
+            <View style={[styles.switchBtn, styles.switchBtnActive]}>
               <BluetoothIcon />
-              <Text style={activeTab === 'bluetooth' ? styles.switchTextActive : styles.switchText}>
-                Bluetooth
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.switchBtn, activeTab === 'wifi' && styles.switchBtnActive]}
-              onPress={() => setActiveTab('wifi')}
-            >
-              <WifiIcon />
-              <Text style={activeTab === 'wifi' ? styles.switchTextActive : styles.switchText}>
-                Access Point
-              </Text>
-            </TouchableOpacity>
+              <Text style={styles.switchTextActive}>Bluetooth</Text>
+            </View>
           </View>
 
           {/* Radar graphic */}
@@ -273,6 +130,23 @@ const ConnectDevice: React.FC = () => {
             </View>
           )}
 
+          <Text style={styles.scanningText}>{scanningText}</Text>
+          <Text style={styles.hintText}>{hintText}</Text>
+          <View style={styles.devicesHeader}>
+            <Text style={styles.devicesTitle}>{devicesFoundText}</Text>
+            <TouchableOpacity
+              onPress={startScan}
+              disabled={scanning}
+              style={styles.styleRotate}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <RotateCcwIcon />
+              <Text style={[styles.scanAgain, scanning ? styles.scanAgainOpacity : null]}>
+                {t('bluetoothScreen.scanAgain')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Scrollable section */}
           <ScrollView
             style={styles.scrollView}
@@ -280,161 +154,71 @@ const ConnectDevice: React.FC = () => {
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            <Text style={styles.scanningText}>{scanningText}</Text>
-            <Text style={styles.hintText}>{hintText}</Text>
-            <View style={styles.devicesHeader}>
-              <Text style={styles.devicesTitle}>{devicesFoundText}</Text>
-              <TouchableOpacity
-                onPress={activeTab === 'bluetooth' ? startBluetoothScan : startWifiScan}
-                disabled={activeTab === 'bluetooth' ? scanning : scanningWifi}
-                style={styles.styleRotate}
-              >
-                <RotateCcwIcon />
-                <Text
-                  style={[
-                    styles.scanAgain,
-                    (activeTab === 'bluetooth' ? scanning : scanningWifi)
-                      ? styles.scanAgainOpacity
-                      : null,
-                  ]}
-                >
-                  {t('bluetoothScreen.scanAgain')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
             <View style={styles.contentContainer}>
-              {activeTab === 'bluetooth'
-                ? scanning && (
-                    <View style={styles.viewScanning}>
-                      <ActivityIndicator size="large" color="#38E9FF" />
-                    </View>
-                  )
-                : scanningWifi && (
-                    <View style={styles.viewScanning}>
-                      <ActivityIndicator size="large" color="#38E9FF" />
-                    </View>
-                  )}
+              {scanning && (
+                <View style={styles.viewScanning}>
+                  <ActivityIndicator size="large" color="#38E9FF" />
+                </View>
+              )}
 
               {/* Bluetooth List */}
-              {activeTab === 'bluetooth' ? (
-                <FlatList
-                  data={devices}
-                  keyExtractor={(item) => item.id}
-                  style={styles.flatList}
-                  contentContainerStyle={styles.flatListContainerStyle}
-                  scrollEnabled={false}
-                  renderItem={({ item }) => (
-                    <View style={styles.deviceItem}>
-                      <View style={styles.deviceLeft}>
-                        <View style={styles.cameraImageContainer}>
-                          <CctvIcon />
-                        </View>
-                        <View style={styles.deviceInfo}>
-                          <Text style={styles.deviceName} numberOfLines={2} ellipsizeMode="tail">
-                            {item.name || t('bluetoothScreen.unknownDevice')} - {item.id.slice(-4)}
-                          </Text>
-                          <View style={styles.signalRow}>
-                            <View style={styles.signalDot} />
-                            <Text style={styles.signalLabel}>{t('bluetoothScreen.signal')}</Text>
-                          </View>
+              <FlatList
+                data={devices}
+                keyExtractor={(item) => item.id}
+                style={styles.flatList}
+                contentContainerStyle={styles.flatListContainerStyle}
+                scrollEnabled={false}
+                renderItem={({ item }) => (
+                  <View style={styles.deviceItem}>
+                    <View style={styles.deviceLeft}>
+                      <View style={styles.cameraImageContainer}>
+                        <CctvIcon />
+                      </View>
+                      <View style={styles.deviceInfo}>
+                        <Text style={styles.deviceName} numberOfLines={2} ellipsizeMode="tail">
+                          {item.name || t('bluetoothScreen.unknownDevice')} - {item.id.slice(-4)}
+                        </Text>
+                        <View style={styles.signalRow}>
+                          <View style={styles.signalDot} />
+                          <Text style={styles.signalLabel}>{t('bluetoothScreen.signal')}</Text>
                         </View>
                       </View>
-                      <TouchableOpacity
-                        style={styles.connectBtn}
-                        onPress={() => {
-                          if (item && item.id) {
-                            void goToPairCode(item);
-                          } else {
-                            console.error('Invalid device selected for connection');
-                            if (!alertShown) {
-                              setAlertShown(true);
-                              Alert.alert(
-                                t('bluetoothScreen.error'),
-                                t('bluetoothScreen.invalidDevice'),
-                                [{ text: 'OK', onPress: () => setAlertShown(false) }]
-                              );
-                            }
+                    </View>
+                    <TouchableOpacity
+                      style={styles.connectBtn}
+                      onPress={() => {
+                        if (item && item.id) {
+                          void goToPairCode(item);
+                        } else {
+                          console.error('Invalid device selected for connection');
+                          if (!alertShown) {
+                            setAlertShown(true);
+                            Alert.alert(
+                              t('bluetoothScreen.error'),
+                              t('bluetoothScreen.invalidDevice'),
+                              [{ text: 'OK', onPress: () => setAlertShown(false) }]
+                            );
                           }
-                        }}
-                        disabled={scanning}
-                      >
-                        <Text style={styles.connectBtnText} numberOfLines={1}>
-                          {t('bluetoothScreen.connect')}
-                        </Text>
-                      </TouchableOpacity>
+                        }
+                      }}
+                      disabled={scanning}
+                    >
+                      <Text style={styles.connectBtnText} numberOfLines={1}>
+                        {t('bluetoothScreen.connect')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                ListEmptyComponent={
+                  !scanning ? (
+                    <View style={styles.listEmptyComponentStyle}>
+                      <Text style={styles.listEmptyComponentTextStyle}>
+                        {t('bluetoothScreen.noBluetoothDeviceFound')}
+                      </Text>
                     </View>
-                  )}
-                  ListEmptyComponent={
-                    !scanning ? (
-                      <View style={styles.listEmptyComponentStyle}>
-                        <Text style={styles.listEmptyComponentTextStyle}>
-                          {t('bluetoothScreen.noBluetoothDeviceFound')}
-                        </Text>
-                      </View>
-                    ) : null
-                  }
-                />
-              ) : (
-                // Wi-Fi List
-                <FlatList
-                  data={wifiList}
-                  keyExtractor={(item) => item.id}
-                  style={styles.flatList}
-                  contentContainerStyle={styles.flatListContainerStyle}
-                  scrollEnabled={false}
-                  renderItem={({ item }) => (
-                    <View style={styles.deviceItem}>
-                      <View style={styles.deviceLeft}>
-                        <View style={styles.cameraImageContainer}>
-                          <WifiIcon width={28} height={28} />
-                        </View>
-                        <View style={styles.deviceInfo}>
-                          <Text style={styles.deviceName} numberOfLines={2} ellipsizeMode="tail">
-                            {item.ssid}
-                          </Text>
-                          <View style={styles.signalRow}>
-                            <View
-                              style={[
-                                styles.signalDot,
-                                // eslint-disable-next-line react-native/no-inline-styles
-                                {
-                                  backgroundColor: item.signal === 'strong' ? '#00FFAA' : '#FFE433',
-                                },
-                              ]}
-                            />
-                            <Text style={styles.signalLabel}>
-                              {item.signal === 'strong' ? 'Strong' : 'Weak'}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.connectBtn}
-                        onPress={() => {
-                          navigation.navigate('ConnectWifiHotspot', {
-                            wifi: item,
-                          });
-                        }}
-                        disabled={scanningWifi}
-                      >
-                        <Text style={styles.connectBtnText} numberOfLines={1}>
-                          {t('bluetoothScreen.connect')}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                  ListEmptyComponent={
-                    !scanningWifi ? (
-                      <View style={styles.listEmptyComponentStyle}>
-                        <Text style={styles.listEmptyComponentTextStyle}>
-                          {t('bluetoothScreen.noWiFiAccessPointFound')}
-                        </Text>
-                      </View>
-                    ) : null
-                  }
-                />
-              )}
+                  ) : null
+                }
+              />
             </View>
           </ScrollView>
         </SafeAreaView>

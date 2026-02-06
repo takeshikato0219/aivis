@@ -46,3 +46,15 @@ export const getAuthData = async () => {
     return { accessToken: null, refreshToken: null, user: null };
   }
 };
+
+export const updateTokens = async (accessToken: string, refreshToken?: string) => {
+  try {
+    const updates: [string, string][] = [[ACCESS_TOKEN_KEY, accessToken]];
+    if (refreshToken) {
+      updates.push([REFRESH_TOKEN_KEY, refreshToken]);
+    }
+    await AsyncStorage.multiSet(updates);
+  } catch (e) {
+    console.log('Error updating tokens:', e);
+  }
+};

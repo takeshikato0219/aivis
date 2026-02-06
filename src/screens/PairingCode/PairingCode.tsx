@@ -24,12 +24,9 @@ const PairingCode: React.FC = () => {
   const navigation = useNavigation<PairingCodeScreenNavigationProp>();
   const { params } = useRoute<PairingCodeScreenRouteProp>();
   const device = params?.device;
-  const wifi = params?.wifi;
   const isWifi = params?.isWifi;
   const defaultCode = params?.pairingCode || '';
   const { t } = useTranslation();
-  console.log('PairingCode received device:', device?.id, device?.name);
-  console.log('PairingCode received wifi:', wifi);
   const [codes, setCodes] = useState(() =>
     Array(6)
       .fill('')
@@ -56,13 +53,12 @@ const PairingCode: React.FC = () => {
 
   const handleSubmit = () => {
     if (codes.some((val) => !val)) {
-      setError('Please fill all boxes.');
       return;
     }
     setError('');
-    navigation.navigate('SetupComplete', {
-      cameraName: 'test',
-      ssid: '123',
+    // Navigate to NetworkSetup with camera info
+    navigation.navigate('NetworkSetup', {
+      cameraAp: device?.name || device?.localName || 'BLE Camera',
     });
   };
 
@@ -111,7 +107,6 @@ const PairingCode: React.FC = () => {
                     value={value}
                     maxLength={1}
                     style={styles.codeInput}
-                    keyboardType="default"
                     autoCapitalize="characters"
                     placeholder="-"
                     placeholderTextColor="#384150"
@@ -143,8 +138,19 @@ const PairingCode: React.FC = () => {
                   <Text style={styles.helpText}>{t('pairingCode.uniqueToEachDevice')}</Text>
                 </View>
 
-                <TouchableOpacity style={styles.pairBtn} onPress={handleSubmit}>
-                  <Text style={styles.pairBtnText}>{t('pairingCode.pairDevice')}</Text>
+                <TouchableOpacity
+                  style={[styles.pairBtn, codes.some((val) => !val) && styles.pairBtnDisabled]}
+                  onPress={handleSubmit}
+                  disabled={codes.some((val) => !val)}
+                >
+                  <Text
+                    style={[
+                      styles.pairBtnText,
+                      codes.some((val) => !val) && styles.pairBtnTextDisabled,
+                    ]}
+                  >
+                    {t('pairingCode.pairDevice')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>

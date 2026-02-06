@@ -16,6 +16,9 @@ export const API_ENDPOINTS = {
     GOOGLE_LOGIN: '/oauth/google/login',
     LINE_LOGIN: '/oauth/line/login',
   },
+  // Cameras
+  CAMERAS: '/cameras',
+  FACILITIES: '/facilities',
 };
 
 export type ApiEndpoints = typeof API_ENDPOINTS;

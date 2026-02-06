@@ -1,5 +1,6 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
+import { Camera } from '@api/types/cameraTypes';
 
 // ===== ROOT STACK =====
 export type RootStackParamList = {
@@ -59,6 +60,7 @@ export type AppStackParamList = {
   NetworkSetup: { cameraAp: string };
   Setting: undefined;
   FaceUpload: undefined;
+  ConnectionSuccessful: { cameraData: Camera };
 };
 
 // ===== NAVIGATION PROPS =====
@@ -108,6 +110,15 @@ export type ConnectWifiHotspotRouteProp = RouteProp<AppStackParamList, 'ConnectW
 
 export type NetworkSetupNavigationProp = StackNavigationProp<AppStackParamList, 'NetworkSetup'>;
 export type NetworkSetupRouteProp = RouteProp<AppStackParamList, 'NetworkSetup'>;
+
+export type ConnectionSuccessfulScreenNavigationProp = StackNavigationProp<
+  AppStackParamList,
+  'ConnectionSuccessful'
+>;
+export type ConnectionSuccessfulScreenRouteProp = RouteProp<
+  AppStackParamList,
+  'ConnectionSuccessful'
+>;
 
 // ===== DECLARE GLOBAL =====
 declare global {

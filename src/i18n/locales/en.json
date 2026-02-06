@@ -102,7 +102,9 @@
     "readyToPair": "Ready to Pair?",
     "cameraAndEnsure": "Please power on the Camera and ensure the signal light is flashing blue.",
     "lightNotFlashing": "Light not flashing?",
-    "getHelp": "Get help."
+    "getHelp": "Get help.",
+    "all": "All",
+    "noData": "No Data"
   },
   "profile": {
     "settings": "Settings",
@@ -243,7 +245,7 @@
     "scanningForDevices": "Scanning for devices...",
     "scanFinished": "Scan finished!",
     "connectDevice": "Connect Device",
-    "makeSureYourCameraIsPoweredOn": "Make sure your camera is powered on.",
+    "makeSureYourCameraIsPoweredOn": "Make sure your Jetson Orin device is powered on.",
     "makeSureYourCameraWiFiAPIsPoweredOn": "Make sure your camera Wi-Fi AP is powered on.",
     "devicesFound": "DEVICES FOUND",
     "accessPointsFound": "ACCESS POINTS FOUND",
@@ -254,7 +256,8 @@
     "troubleConnecting": "Trouble connecting?",
     "signal": "Signal",
     "unknownDevice": "Unknown Device",
-    "noWiFiAccessPointFound": "No WiFi access point found."
+    "noWiFiAccessPointFound": "No WiFi access point found.",
+    "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Select a connection method to setup your Jetson Orin camera."
   },
   "pairingCode": {
     "pairingCode": "Pairing Code",
@@ -285,7 +288,9 @@
     "searchingForDevices": "Searching for devices...",
     "bluetoothConnected": "Bluetooth connected",
     "enterManualCode": "Enter manual code",
-    "agentCode": "Agent Code"
+    "agentCode": "Agent Code",
+    "cameraRegisteredSuccessfully": "Camera registered successfully",
+    "authenticationRequired": "Please login to register camera"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Enter the default password for the Jetson Orin's local hotspot:",
@@ -342,7 +347,7 @@
     "excellentSignal": "Excellent",
     "goodSignal": "Good",
     "weakSignal": "Weak",
-    "noAvailableWifi": "No available Wi-Fi found. Pull to refresh.",
+    "noAvailableWifi": "No available Wi-Fi found.",
     "currentConnected": "Currently connected: ",
     "noWifiConnected": "No WiFi connected",
     "connectionError": "Connection Error",
@@ -355,7 +360,30 @@
     "noSimDetected": "No SIM detected",
     "ltePassword": "Password for SIM/Network",
     "ltePasswordPlaceholder": "Password",
-    "lteReady": "Ready."
+    "lteReady": "Ready.",
+    "failedToRequestWiFiScanFromDevice": "Failed to request WiFi scan from device",
+    "wiFiRequired": "WiFi Required",
+    "pleaseConnectToWiFiInSettingsFirstThenReturnToTheApp": "Please connect to Wi-Fi in Settings first, then return to the app.",
+    "failedToSendWiFiCredentialsToDevice": "Failed to send WiFi credentials to device",
+    "networkAccessLimited": "Network Access Limited",
+    "wiFiConnectedButInternetAccessMayBeRestrictedYouMightNeedToCompleteAdditionalAuthenticationOrAcceptTerms": "WiFi connected but internet access may be restricted. You might need to complete additional authentication or accept terms.",
+    "tryAgain": "Try Again",
+    "continueAnyway": "Continue Anyway",
+    "connectionIssue": "Connection Issue",
+    "wiFiConnectedButHavingConnectivityIssuesPleaseCheckYourNetworkSettingsOrTryAgain": "WiFi connected but having connectivity issues. Please check your network settings or try again.",
+    "pleaseSelectAWiFiNetworkAndEnterPassword": "Please select a WiFi network and enter password",
+    "deviceFailedToConnectToWiFi": "Device failed to connect to WiFi",
+    "wiFiConnectionTimeout": "WiFi connection timeout",
+    "waitingForCellularConnection": "Waiting for cellular connection...",
+    "bLEConnectionLostPleaseGoBackAndReconnect": "BLE connection lost. Please go back and reconnect.",
+    "bLEConnectionLostDuringWiFiSetupPleaseGoBackAndReconnect": "BLE connection was lost during WiFi setup. Please go back and reconnect to the device, then try again.",
+    "bleRequired": "Bluetooth Required",
+    "pleaseConnectToDeviceViaBluetoothFirstToScanWiFiNetworks": "Please connect to device via Bluetooth first to scan WiFi networks.",
+    "pleaseConnectToDeviceViaBluetoothFirst": "Please connect to device via Bluetooth first.",
+    "pleaseSelectAWiFiNetworkFirst": "Please select a WiFi network first.",
+    "pleaseConnectToDeviceViaBluetoothFirstToScanAndConfigureWiFiNetworks": "Please connect to device via Bluetooth first to scan and configure WiFi networks.",
+    "bluetoothConnectionRequired": "Bluetooth connection required",
+    "wiFiScanFailed": "WiFi scan failed"
   },
   "faceUpload": {
     "title": "Face Registration",
@@ -376,6 +404,29 @@
     "retakeConfirm": "Do you want to retake this position?",
     "cancelConfirm": "Are you sure you want to cancel?",
     "scanning": "Scanning",
-    "qualityScore": "Scan Quality"
+    "qualityScore": "Scan Quality",
+    "faceDetectionError": "Face Detection Error",
+    "noFaceDetected": "No face detected in the captured image. Please try again.",
+    "multipleFacesDetected": "Multiple faces detected. Please ensure only one face is visible and try again.",
+    "getReady": "Get ready...",
+    "pleaseFaceTheCameraStraightAhead": "Please face the camera straight ahead.",
+    "pleaseTurnYourFaceToTheLEFT": "Please turn your face to the LEFT.",
+    "pleaseTurnYourFaceToTheRIGHT": "Please turn your face to the RIGHT.",
+    "pleaseTiltYourHeadUP": "Please tilt your head UP.",
+    "pleaseTiltYourHeadDOWN": "Please tilt your head DOWN.",
+    "pleasePositionYourFaceCorrectly": "Please position your face correctly."
+  },
+  "liveStream": {
+    "connectionSuccessful": "Connection Successful",
+    "startMonitoring": "Start Monitoring",
+    "faceSetup": "Face Setup",
+    "thisNameWillAppearInYourDashboardAlerts": "This name will appear in your dashboard alerts.",
+    "cameraName": "Camera name",
+    "exampleLivingRoomCamera": "Example: Living room camera",
+    "reconnecting": "Reconnecting...",
+    "connectionLost": "Connection lost",
+    "reconnectFailed": "Failed to reconnect. Please try again.",
+    "loadingStream": "Loading live stream...",
+    "onlineAndReady": "Online and ready"
   }
 }

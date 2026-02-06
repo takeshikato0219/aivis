@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert, Animated, StatusBar, Image } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Image, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { useNavigation } from '@react-navigation/native';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import FaceDetection, { Face, FaceDetectionOptions } from '@react-native-ml-kit/face-detection';
 import { styles } from './FaceUpload.styles';
 
 const FACE_POSITIONS = [
@@ -68,6 +69,75 @@ const FaceUpload: React.FC = () => {
   const [scanProgress, setScanProgress] = useState(0);
   const [prepareProgress, setPrepareProgress] = useState(0);
   const [isPreparing, setIsPreparing] = useState(false);
+
+  // Face detection options for static images
+  const faceDetectionOptions: FaceDetectionOptions = {
+    performanceMode: 'accurate',
+    landmarkMode: 'none',
+    contourMode: 'none',
+    classificationMode: 'none',
+    minFaceSize: 0.15,
+    trackingEnabled: false,
+  };
+
+  // Validate face position based on rotation angles
+  const validateFacePosition = (face: Face, position: FacePosition): boolean => {
+    // ML Kit returns angles in degrees, not radians
+    // Normalize to -180 to 180 range
+    const normalizeAngle = (angle: number) => {
+      let normalized = angle % 360;
+      if (normalized > 180) normalized -= 360;
+      if (normalized < -180) normalized += 360;
+      return normalized;
+    };
+
+    const rotationX = normalizeAngle(face.rotationX);
+    const rotationY = normalizeAngle(face.rotationY);
+    const rotationThreshold = 15; // degrees
+
+    switch (position) {
+      case 'center':
+        // Face should be relatively straight
+        return Math.abs(rotationX) < rotationThreshold && Math.abs(rotationY) < rotationThreshold;
+
+      case 'left':
+        // Face should be turned left (negative Y rotation for front camera)
+        return rotationY < -rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
+
+      case 'right':
+        // Face should be turned right (positive Y rotation for front camera)
+        return rotationY > rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
+
+      case 'up':
+        // Face should be tilted up (positive X rotation for front camera)
+        return rotationX > rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
+
+      case 'down':
+        // Face should be tilted down (negative X rotation for front camera)
+        return rotationX < -rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
+
+      default:
+        return false;
+    }
+  };
+
+  // Get error message for incorrect face position
+  const getPositionErrorMessage = (position: FacePosition): string => {
+    switch (position) {
+      case 'center':
+        return t('faceUpload.pleaseFaceTheCameraStraightAhead');
+      case 'left':
+        return t('faceUpload.pleaseTurnYourFaceToTheLEFT');
+      case 'right':
+        return t('faceUpload.pleaseTurnYourFaceToTheRIGHT');
+      case 'up':
+        return t('faceUpload.pleaseTiltYourHeadUP');
+      case 'down':
+        return t('faceUpload.pleaseTiltYourHeadDOWN');
+      default:
+        return t('faceUpload.pleasePositionYourFaceCorrectly');
+    }
+  };
 
   const device = useCameraDevice('front');
   const camera = useRef<Camera>(null);
@@ -276,52 +346,81 @@ const FaceUpload: React.FC = () => {
 
       const imageUri = `file://${photo.path}`;
 
-      const faceData: FaceData = {
-        position: currentPosition.key,
-        imageUri,
-        timestamp: Date.now(),
-        scanProgress: scanProgress,
-      };
+      // Detect faces in the captured image
+      const faces = await FaceDetection.detect(imageUri, faceDetectionOptions);
 
-      setCapturedFaces((prev) => [...prev, faceData]);
-      setLastCapturedImage(imageUri);
-      setShowPreview(true);
+      console.log(`Face detection result: ${faces.length} faces found`);
 
-      // Success animation
-      Animated.sequence([
-        Animated.timing(successAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.delay(600),
-        Animated.timing(successAnim, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      // Check if exactly one face is detected and in correct position
+      if (faces.length === 1 && validateFacePosition(faces[0], currentPosition.key)) {
+        const faceData: FaceData = {
+          position: currentPosition.key,
+          imageUri,
+          timestamp: Date.now(),
+          scanProgress: scanProgress,
+        };
 
-      // Progress bar animation
-      const progress = ((currentPositionIndex + 1) / FACE_POSITIONS.length) * 100;
-      Animated.timing(progressAnim, {
-        toValue: progress,
-        duration: 500,
-        useNativeDriver: false,
-      }).start();
+        setCapturedFaces((prev) => [...prev, faceData]);
+        setLastCapturedImage(imageUri);
+        setShowPreview(true);
 
-      // Move to next position or complete
-      setTimeout(() => {
-        setShowPreview(false);
-        if (currentPositionIndex < FACE_POSITIONS.length - 1) {
-          setCurrentPositionIndex(currentPositionIndex + 1);
-          setIsProcessing(false);
-        } else {
-          handleComplete([...capturedFaces, faceData]);
+        // Success animation
+        Animated.sequence([
+          Animated.timing(successAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.delay(600),
+          Animated.timing(successAnim, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]).start();
+
+        // Progress bar animation
+        const progress = ((currentPositionIndex + 1) / FACE_POSITIONS.length) * 100;
+        Animated.timing(progressAnim, {
+          toValue: progress,
+          duration: 500,
+          useNativeDriver: false,
+        }).start();
+
+        // Move to next position or complete
+        setTimeout(() => {
+          setShowPreview(false);
+          if (currentPositionIndex < FACE_POSITIONS.length - 1) {
+            setCurrentPositionIndex(currentPositionIndex + 1);
+            setIsProcessing(false);
+          } else {
+            handleComplete([...capturedFaces, faceData]);
+          }
+        }, 1400);
+      } else {
+        // Show error based on detection result
+        let errorMessage = '';
+
+        if (faces.length === 0) {
+          errorMessage = t('faceUpload.noFaceDetected');
+        } else if (faces.length > 1) {
+          errorMessage = t('faceUpload.multipleFacesDetected');
+        } else if (faces.length === 1) {
+          // Face detected but not in correct position
+          errorMessage = getPositionErrorMessage(currentPosition.key);
         }
-      }, 1400);
+
+        Alert.alert(t('faceUpload.faceDetectionError'), errorMessage, [
+          {
+            text: t('common.retry') || 'Retry',
+            onPress: () => {
+              setIsProcessing(false);
+            },
+          },
+        ]);
+      }
     } catch (error) {
-      console.error('Capture error:', error);
+      console.error('Capture/Face detection error:', error);
       Alert.alert(
         t('faceUpload.captureError') || 'Capture Error',
         t('faceUpload.tryAgain') || 'Please try again'
@@ -604,7 +703,7 @@ const FaceUpload: React.FC = () => {
             <View style={styles.feedbackContainer}>
               {/* eslint-disable-next-line react-native/no-inline-styles */}
               <Text style={[styles.feedbackText, { color: '#FFFFFF' }]}>
-                {t('faceUpload.preparing') || 'Get ready...'}
+                {t('faceUpload.getReady') || 'Get ready...'}
               </Text>
             </View>
           )}

@@ -134,7 +134,11 @@ export const styles = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
   },
+  pairBtnDisabled: {
+    backgroundColor: '#817d7d',
+  },
   pairBtnText: { color: '#112837', fontSize: 17, fontWeight: '800' },
+  pairBtnTextDisabled: { color: '#666666' },
   cannotRow: {
     flexDirection: 'row',
     alignItems: 'center',
