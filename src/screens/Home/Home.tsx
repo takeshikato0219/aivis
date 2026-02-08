@@ -198,8 +198,7 @@ const Home = () => {
             const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
             const paddingToBottom = 20;
             const isCloseToBottom =
-              layoutMeasurement.height + contentOffset.y >=
-              contentSize.height - paddingToBottom;
+              layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
             if (isCloseToBottom && hasMore && !isLoadingMore) {
               loadMore();
             }

@@ -1,11 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Animated,
+  Image,
+  Platform,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FaceDetection, { Face, FaceDetectionOptions } from '@react-native-ml-kit/face-detection';
+import ImageResizer from '@bam.tech/react-native-image-resizer';
 import { styles } from './FaceUpload.styles';
 
 const FACE_POSITIONS = [
@@ -76,7 +86,7 @@ const FaceUpload: React.FC = () => {
     landmarkMode: 'none',
     contourMode: 'none',
     classificationMode: 'none',
-    minFaceSize: 0.15,
+    minFaceSize: Platform.OS === 'ios' ? 0.1 : 0.15,
     trackingEnabled: false,
   };
 
@@ -344,12 +354,32 @@ const FaceUpload: React.FC = () => {
         flash: 'off',
       });
 
-      const imageUri = `file://${photo.path}`;
+      // Ensure file:// prefix is present (required for ML Kit to load the image)
+      // react-native-vision-camera v4.x returns path with file:// prefix on both platforms
+      let imageUri = photo.path.startsWith('file://') ? photo.path : `file://${photo.path}`;
+
+      // iOS: Normalize image orientation using ImageResizer
+      // This fixes EXIF rotation issues that cause ML Kit to fail face detection
+      if (Platform.OS === 'ios') {
+        try {
+          const resizedImage = await ImageResizer.createResizedImage(
+            imageUri,
+            1920,
+            1920,
+            'JPEG',
+            100,
+            0,
+            undefined,
+            false
+          );
+          imageUri = resizedImage.uri;
+        } catch (resizeError) {
+          console.error('Image resize/normalize error:', resizeError);
+        }
+      }
 
       // Detect faces in the captured image
       const faces = await FaceDetection.detect(imageUri, faceDetectionOptions);
-
-      console.log(`Face detection result: ${faces.length} faces found`);
 
       // Check if exactly one face is detected and in correct position
       if (faces.length === 1 && validateFacePosition(faces[0], currentPosition.key)) {
@@ -406,7 +436,6 @@ const FaceUpload: React.FC = () => {
         } else if (faces.length > 1) {
           errorMessage = t('faceUpload.multipleFacesDetected');
         } else if (faces.length === 1) {
-          // Face detected but not in correct position
           errorMessage = getPositionErrorMessage(currentPosition.key);
         }
 
