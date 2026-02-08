@@ -23,9 +23,7 @@ export type AppStackParamList = {
   Home: undefined;
   Notifications: undefined;
   Detail: {
-    name?: string;
-    id?: string;
-    cameraId?: string;
+    camera: Camera;
   };
   CameraLive: {
     cameraId: string;

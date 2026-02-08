@@ -1,6 +1,6 @@
 import { StyleSheet, Platform, StatusBar } from 'react-native';
 import { COLORS, FONTS } from '@constants/theme';
-import { isTablet } from '@utils/responsive';
+import { isTablet, scale } from '@utils/responsive';
 
 export const styles = StyleSheet.create({
   container: {
@@ -114,20 +114,25 @@ export const styles = StyleSheet.create({
   },
 
   filterRow: {
+    marginHorizontal: scale(24),
+    marginBottom: scale(32),
+    maxHeight: isTablet() ? scale(150) : scale(117),
+  },
+
+  filterContent: {
     flexDirection: 'row',
-    marginHorizontal: 24,
-    marginBottom: 32,
+    alignItems: 'center',
   },
 
   filterBtn: {
     backgroundColor: 'rgba(24, 54, 86, 0.6)',
     borderRadius: 18,
-    padding: 10,
-    marginRight: 8,
+    padding: scale(10),
+    marginRight: scale(8),
     borderWidth: 1,
     borderColor: '#B5D2FE',
-    width: isTablet() ? 200 : 125,
-    height: isTablet() ? 150 : 117,
+    width: isTablet() ? scale(200) : scale(125),
+    height: isTablet() ? scale(150) : scale(117),
     justifyContent: 'space-between',
   },
 

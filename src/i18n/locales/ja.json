@@ -424,7 +424,17 @@
     "pleaseSelectAWiFiNetworkFirst": "まずWi-Fiネットワークを選択してください。",
     "pleaseConnectToDeviceViaBluetoothFirstToScanAndConfigureWiFiNetworks": "Wi-Fiネットワークをスキャンして設定するには、まずBluetoothでデバイスに接続してください。",
     "bluetoothConnectionRequired": "Bluetooth接続が必要です",
-    "wiFiScanFailed": "Wi-Fiスキャンに失敗しました"
+    "wiFiScanFailed": "Wi-Fiスキャンに失敗しました",
+    "simCardDetected": "SIMカードを検出しました",
+    "noSimCardDeviceSupportsLTE": "SIMカードなし（LTE対応デバイス）",
+    "noSimCard": "SIMカードなし",
+    "simReady": "SIM準備完了",
+    "simReadyOnWiFi": "SIM準備完了（WiFi使用中）",
+    "noSimCardDetected": "SIMカードが検出されません",
+    "cellularNetwork": "モバイルネットワーク",
+    "cellular": "モバイル ({{generation}})",
+    "done": "完了",
+    "idle": "待機中"
   },
   "faceUpload": {
     "title": "顔登録",

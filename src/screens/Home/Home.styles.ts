@@ -194,7 +194,7 @@ export const styles = StyleSheet.create({
     borderColor: '#39FFF9',
     backgroundColor: 'rgba(20,24,32,0.25)',
     marginTop: 18,
-    marginBottom: 6,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,

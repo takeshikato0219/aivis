@@ -383,7 +383,17 @@
     "pleaseSelectAWiFiNetworkFirst": "Please select a WiFi network first.",
     "pleaseConnectToDeviceViaBluetoothFirstToScanAndConfigureWiFiNetworks": "Please connect to device via Bluetooth first to scan and configure WiFi networks.",
     "bluetoothConnectionRequired": "Bluetooth connection required",
-    "wiFiScanFailed": "WiFi scan failed"
+    "wiFiScanFailed": "WiFi scan failed",
+    "simCardDetected": "SIM Card Detected",
+    "noSimCardDeviceSupportsLTE": "No SIM Card (Device supports LTE)",
+    "noSimCard": "No SIM Card",
+    "simReady": "SIM Ready",
+    "simReadyOnWiFi": "SIM Ready (Currently on WiFi)",
+    "noSimCardDetected": "No SIM Card detected",
+    "cellularNetwork": "Cellular Network",
+    "cellular": "Cellular ({{generation}})",
+    "done": "Done",
+    "idle": "Idle"
   },
   "faceUpload": {
     "title": "Face Registration",

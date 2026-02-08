@@ -34,6 +34,7 @@ import Frame30 from '@assets/png/frame-30.png';
 import Frame31 from '@assets/png/frame-31.png';
 
 import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/types';
+import { COLORS } from '@constants/theme';
 
 const frames = [Frame21, Frame27, Frame28, Frame29, Frame30, Frame31];
 
@@ -52,7 +53,8 @@ const ItemSeparator = () => <View style={styles.itemSeparator} />;
 const Detail = () => {
   const navigation = useNavigation<DetailScreenNavigationProp>();
   const route = useRoute<DetailScreenRouteProp>();
-  const title = route.params?.name || 'Detail';
+  const camera = route.params?.camera;
+  const title = camera?.name || 'Detail';
 
   const filters = [
     { name: '警戒モード', iconActive: IconWarningActive, iconUnActive: IconWarningUnActive },
@@ -70,6 +72,16 @@ const Detail = () => {
     styles.filterBtnActiveLock,
   ];
 
+  const statusText =
+    camera?.status == null
+      ? 'Offline'
+      : typeof camera.status === 'object'
+        ? camera.status.name_trans
+        : camera.status || 'Online';
+
+  const isOnline =
+    statusText.toLowerCase().includes('online') || statusText.toLowerCase().includes('オンライン');
+
   const handleCameraPress = (item: any) => {
     navigation.navigate('CameraLive', {
       cameraId: item.id,
@@ -80,7 +92,7 @@ const Detail = () => {
 
   const handleSetupDetectionZone = () => {
     navigation.navigate('DetectionZoneSetup', {
-      cameraId: '',
+      cameraId: camera?.id || '',
       cameraSnapshot: '',
     });
   };
@@ -120,8 +132,13 @@ const Detail = () => {
                   <Image source={RetangleImage} style={styles.cardImage} />
                 </View>
                 <View style={styles.cardBadge}>
-                  <View style={styles.badgeDot} />
-                  <Text style={styles.badgeText}>Online</Text>
+                  <View
+                    style={[
+                      styles.badgeDot,
+                      { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
+                    ]}
+                  />
+                  <Text style={styles.badgeText}>{statusText}</Text>
                 </View>
               </View>
 
@@ -130,7 +147,12 @@ const Detail = () => {
                 <LogoDetail />
               </View>
 
-              <View style={styles.filterRow}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filterRow}
+                contentContainerStyle={styles.filterContent}
+              >
                 {filters.map((filter, idx) => {
                   const Icon = activeIndex === idx ? filter.iconActive : filter.iconUnActive;
 
@@ -150,7 +172,7 @@ const Detail = () => {
                     </TouchableOpacity>
                   );
                 })}
-              </View>
+              </ScrollView>
             </View>
             {/* Camera List */}
             {INITIAL_LIST.map((item, idx) => (
