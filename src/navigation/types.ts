@@ -59,6 +59,8 @@ export type AppStackParamList = {
   Setting: undefined;
   FaceUpload: undefined;
   ConnectionSuccessful: { cameraData: Camera };
+  SettingAI: { cameraData: Camera };
+  ListFace: undefined;
 };
 
 // ===== NAVIGATION PROPS =====
@@ -117,6 +119,9 @@ export type ConnectionSuccessfulScreenRouteProp = RouteProp<
   AppStackParamList,
   'ConnectionSuccessful'
 >;
+
+export type SettingAIScreenNavigationProp = StackNavigationProp<AppStackParamList, 'SettingAI'>;
+export type SettingAIScreenRouteProp = RouteProp<AppStackParamList, 'SettingAI'>;
 
 // ===== DECLARE GLOBAL =====
 declare global {

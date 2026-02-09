@@ -7,6 +7,7 @@ import { COLORS } from '@constants/theme';
 import SplashScreen from '@screens/Splash/SplashScreen';
 import AuthNavigator from './AuthNavigator';
 import AppNavigator from './AppNavigator';
+import { navigationRef } from './navigationRef';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -21,6 +22,7 @@ const RootNavigator = () => {
 
   return (
     <NavigationContainer
+      ref={navigationRef}
       theme={{
         dark: false,
         colors: {

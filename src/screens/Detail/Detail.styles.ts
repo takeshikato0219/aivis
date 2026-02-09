@@ -116,7 +116,6 @@ export const styles = StyleSheet.create({
   filterRow: {
     marginHorizontal: scale(24),
     marginBottom: scale(32),
-    maxHeight: isTablet() ? scale(150) : scale(117),
   },
 
   filterContent: {
@@ -132,7 +131,6 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#B5D2FE',
     width: isTablet() ? scale(200) : scale(125),
-    height: isTablet() ? scale(150) : scale(117),
     justifyContent: 'space-between',
   },
 
@@ -157,16 +155,6 @@ export const styles = StyleSheet.create({
     borderColor: 'rgb(7,181,255)',
   },
 
-  filterBtnActiveSafe: {
-    borderWidth: 2,
-    borderColor: 'rgb(0,239,68)',
-  },
-
-  filterBtnActiveLock: {
-    borderWidth: 2,
-    borderColor: 'rgb(255,0,0)',
-  },
-
   rowFront: {
     borderRadius: 12,
     padding: 16,
@@ -176,6 +164,8 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
 
   rowBack: {

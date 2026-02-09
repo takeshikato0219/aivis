@@ -13,6 +13,7 @@ import {
   setWifiNetworks,
   setWifiScanStatus,
   resetConnectionState,
+  setCriticalDisconnection,
   WiFiScanStatus,
   SerializableDevice,
 } from '@redux/slices/bleSlice';
@@ -135,7 +136,6 @@ class JetsonBLEService {
         if (monitorError) {
           if (!monitorError.message?.includes('cancelled')) {
             console.error('[BLE] Status subscription error:', monitorError);
-            store.dispatch(setError(monitorError.message));
             store.dispatch(setConnected({ isConnected: false, deviceId: null }));
             // Cleanup subscriptions on critical error
             if (
@@ -144,6 +144,7 @@ class JetsonBLEService {
             ) {
               this.cleanupSubscriptions();
               this.connectedDevice = null;
+              store.dispatch(setCriticalDisconnection(true));
             }
           }
           return;
@@ -163,13 +164,14 @@ class JetsonBLEService {
         if (monitorError) {
           if (!monitorError.message?.includes('cancelled')) {
             console.error('[BLE] WiFi list subscription error:', monitorError);
-            store.dispatch(setError(monitorError.message));
             // Cleanup subscriptions on critical error
             if (
               monitorError.message?.includes('disconnected') ||
               monitorError.message?.includes('connection lost')
             ) {
               this.cleanupSubscriptions();
+              this.connectedDevice = null;
+              store.dispatch(setCriticalDisconnection(true));
             }
           }
           return;
@@ -177,6 +179,7 @@ class JetsonBLEService {
         if (characteristic?.value) {
           try {
             const jsonStr = base64ToString(characteristic.value);
+            console.log('jsonStr', jsonStr);
             const data = JSON.parse(jsonStr);
             store.dispatch(setWifiScanStatus(data.status));
             store.dispatch(setWifiNetworks(data.networks || []));
@@ -207,6 +210,8 @@ class JetsonBLEService {
       this.cleanupSubscriptions();
       store.dispatch(resetConnectionState());
       this.connectedDevice = null;
+      // Trigger critical disconnection alert
+      store.dispatch(setCriticalDisconnection(true));
     });
     this.subscriptions.push(disconnectSub);
   }

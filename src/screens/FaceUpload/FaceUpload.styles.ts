@@ -1,4 +1,6 @@
 import { StyleSheet } from 'react-native';
+import { isTablet } from '@utils/responsive';
+import { COLORS, FONTS } from '@constants/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -341,5 +343,29 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     textAlign: 'center',
+  },
+
+  // List face
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  backButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    width: isTablet() ? 50 : 46,
+    height: isTablet() ? 50 : 46,
+  },
+  viewTitle: {
+    flex: 1,
+    marginHorizontal: 14,
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: isTablet() ? 35 : 20,
+    fontWeight: FONTS.weights.medium,
+    color: COLORS.background,
   },
 });

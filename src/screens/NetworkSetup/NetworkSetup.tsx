@@ -298,7 +298,8 @@ const NetworkSetup: React.FC = () => {
       isMounted = false;
       unsubscribe();
     };
-  }, []); // Fetch on mount and cleanup listener on unmount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleConnectLte = async () => {
     if (

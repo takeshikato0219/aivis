@@ -407,7 +407,7 @@ const EditProfile: React.FC = () => {
           icon={ShopIconComponent}
           placeholder={t('register.agencyCodePlaceholder')}
           autoCapitalize="none"
-          disabled={isLoading}
+          disabled={true}
           style={styles.input}
           placeholderTextColor={COLORS.BBBBBB}
         />

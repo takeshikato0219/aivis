@@ -11,15 +11,19 @@ import {
   useWindowDimensions,
   Animated,
   TouchableWithoutFeedback,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Video, { VideoRef, OnLoadData, OnVideoErrorData } from 'react-native-video';
-import ViewShot from 'react-native-view-shot';
+import { captureRef } from 'react-native-view-shot';
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';
+import { check, request, RESULTS, PERMISSIONS } from 'react-native-permissions';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { CameraLiveScreenNavigationProp, CameraLiveScreenRouteProp } from '@navigation/types';
 import { CameraConfig, StreamQuality } from '@/services/cameraService';
 import cameraService from '../../services/cameraService';
 import webRTCManager from '../../services/webRTCManager';
+import recordingService from '../../services/recordingService';
 import { getStyles } from './CameraLiveView.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LogoDetail from '@assets/svg/logo-detail.svg';
@@ -40,6 +44,7 @@ const CameraLiveView: React.FC = () => {
   const navigation = useNavigation<CameraLiveScreenNavigationProp>();
   const route = useRoute<CameraLiveScreenRouteProp>();
   const videoRef = useRef<VideoRef>(null);
+  const videoContainerRef = useRef<View>(null);
   const { cameraId, baseUrl = 'https://your-camera-api.com' } = route.params;
   const { t } = useTranslation();
 
@@ -56,6 +61,7 @@ const CameraLiveView: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
   const [currentQuality, setCurrentQuality] = useState<StreamQuality>(STREAM_QUALITIES[2]);
   const [bitrate, setBitrate] = useState<number>(0);
   const [showQualityModal, setShowQualityModal] = useState(false);
@@ -63,7 +69,6 @@ const CameraLiveView: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoError, setVideoError] = useState<string>('');
   const [streamIndex, setStreamIndex] = useState(0);
-  const viewShotRef = useRef<ViewShot>(null);
 
   // Animation effect for quality modal
   useEffect(() => {
@@ -194,31 +199,66 @@ const CameraLiveView: React.FC = () => {
 
   const takeSnapshot = useCallback(async () => {
     try {
-      if (viewShotRef.current) {
-        const uri = await viewShotRef.current?.capture?.();
-        if (!uri) {
-          Alert.alert(t('common.error'), t('cameraLive.failedToCaptureSnapshot'));
-          return;
-        }
-
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        const reader = new FileReader();
-
-        reader.onloadend = async () => {
-          const base64data = reader.result as string;
-          await cameraService.saveSnapshot(base64data);
-          Alert.alert(t('cameraLive.success'), t('cameraLive.screenshotSaved'));
-        };
-
-        reader.readAsDataURL(blob);
+      // Check if videoContainerRef is available
+      if (!videoContainerRef.current) {
+        Alert.alert(t('common.error'), t('cameraLive.failedToCaptureSnapshot'));
+        return;
       }
+
+      // Use captureRef to capture the video container view
+      // This works better on Android with collapsable={false} set on the View
+      const uri = await captureRef(videoContainerRef, {
+        format: 'png',
+        quality: 1.0,
+        result: 'tmpfile',
+      });
+
+      if (!uri) {
+        Alert.alert(t('common.error'), t('cameraLive.failedToCaptureSnapshot'));
+        return;
+      }
+
+      // Request photo library permission
+      let permissionStatus;
+      if (Platform.OS === 'ios') {
+        // iOS: Use PHOTO_LIBRARY_ADD_ONLY for iOS 11+ (only write access)
+        permissionStatus = await check(PERMISSIONS.IOS.PHOTO_LIBRARY_ADD_ONLY);
+        if (permissionStatus !== RESULTS.GRANTED) {
+          permissionStatus = await request(PERMISSIONS.IOS.PHOTO_LIBRARY_ADD_ONLY);
+        }
+      } else {
+        const androidVersion =
+          typeof Platform.Version === 'number'
+            ? Platform.Version
+            : parseInt(String(Platform.Version), 10);
+        const permission =
+          androidVersion >= 33
+            ? PERMISSIONS.ANDROID.READ_MEDIA_IMAGES
+            : PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE;
+
+        permissionStatus = await check(permission);
+        if (permissionStatus !== RESULTS.GRANTED) {
+          permissionStatus = await request(permission);
+        }
+      }
+
+      if (permissionStatus !== RESULTS.GRANTED) {
+        Alert.alert(
+          t('common.error'),
+          Platform.OS === 'ios'
+            ? 'Photo library permission is required to save screenshots'
+            : 'Storage permission is required to save screenshots'
+        );
+        return;
+      }
+
+      await CameraRoll.saveToCameraRoll(uri, 'photo');
+      Alert.alert(t('cameraLive.success'), t('cameraLive.screenshotSaved'));
     } catch (error) {
       console.error('Error taking snapshot:', error);
       Alert.alert(t('common.error'), t('cameraLive.unableToTakeScreenshot'));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [t]);
 
   const toggleTalk = async () => {
     try {
@@ -285,14 +325,91 @@ const CameraLiveView: React.FC = () => {
     }
   };
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
+  const toggleRecording = useCallback(async () => {
     if (!isRecording) {
-      Alert.alert(t('home.notifications'), t('cameraLive.startRecording'));
+      // Start screen recording
+      try {
+        await recordingService.startRecording();
+        setIsRecording(true);
+        setRecordingStartTime(new Date());
+        Alert.alert(t('cameraLive.recording'), t('cameraLive.recordingStarted'));
+      } catch (error) {
+        console.error('Error starting recording:', error);
+        Alert.alert(
+          t('common.error'),
+          t('cameraLive.unableToStartRecording') || 'Unable to start recording'
+        );
+      }
     } else {
-      Alert.alert(t('home.notifications'), t('cameraLive.stopRecording'));
+      // Stop recording and save video
+      try {
+        const startTime = recordingStartTime;
+
+        // Stop the screen recording and get the file path
+        const videoFilePath = await recordingService.stopRecording();
+        setIsRecording(false);
+        setRecordingStartTime(null);
+
+        // Request photo library permission for saving video
+        let permissionStatus;
+        if (Platform.OS === 'ios') {
+          // iOS: Use PHOTO_LIBRARY_ADD_ONLY for iOS 11+ (only write access)
+          permissionStatus = await check(PERMISSIONS.IOS.PHOTO_LIBRARY_ADD_ONLY);
+          if (permissionStatus !== RESULTS.GRANTED) {
+            permissionStatus = await request(PERMISSIONS.IOS.PHOTO_LIBRARY_ADD_ONLY);
+          }
+        } else {
+          // Android: Use appropriate permission based on Android version
+          const androidVersion =
+            typeof Platform.Version === 'number'
+              ? Platform.Version
+              : parseInt(String(Platform.Version), 10);
+          const permission =
+            androidVersion >= 33
+              ? PERMISSIONS.ANDROID.READ_MEDIA_VIDEO
+              : PERMISSIONS.ANDROID.WRITE_EXTERNAL_STORAGE;
+
+          permissionStatus = await check(permission);
+          if (permissionStatus !== RESULTS.GRANTED) {
+            permissionStatus = await request(permission);
+          }
+        }
+
+        if (permissionStatus !== RESULTS.GRANTED) {
+          Alert.alert(
+            t('common.error'),
+            Platform.OS === 'ios'
+              ? 'Photo library permission is required to save videos'
+              : 'Storage permission is required to save videos'
+          );
+          return;
+        }
+
+        // Save the recorded video to gallery
+        await recordingService.saveToGallery(videoFilePath);
+
+        // Clean up temporary files
+        await recordingService.cleanSandbox();
+
+        const duration = startTime
+          ? Math.round((new Date().getTime() - startTime.getTime()) / 1000)
+          : recordingService.getRecordingDuration();
+        Alert.alert(t('cameraLive.success'), `${t('cameraLive.videoSaved')} (${duration}s)`);
+      } catch (error) {
+        console.error('Error saving video:', error);
+        Alert.alert(t('common.error'), t('cameraLive.unableToSaveVideo'));
+        setIsRecording(false);
+        setRecordingStartTime(null);
+
+        // Clean up any temporary files
+        try {
+          await recordingService.cleanSandbox();
+        } catch (cleanError) {
+          console.error('Error cleaning sandbox:', cleanError);
+        }
+      }
     }
-  };
+  }, [isRecording, recordingStartTime, t]);
 
   const handleClose = () => {
     navigation.goBack();
@@ -413,6 +530,7 @@ const CameraLiveView: React.FC = () => {
           muted={isMuted}
           playInBackground={false}
           playWhenInactive={false}
+          useTextureView={Platform.OS === 'android'}
           onLoad={handleVideoLoad}
           onError={handleVideoError}
           onLoadStart={() => {
@@ -447,7 +565,11 @@ const CameraLiveView: React.FC = () => {
           <StatusBar hidden />
           {/* Rotated Container to simulate landscape */}
           <View style={styles.landscapeWrapper}>
-            <ViewShot ref={viewShotRef} style={styles.fullscreenVideoContainer}>
+            <View
+              ref={videoContainerRef}
+              style={styles.fullscreenVideoContainer}
+              collapsable={false}
+            >
               {renderVideoPlayer()}
 
               {/* Fullscreen Top Overlay */}
@@ -505,7 +627,7 @@ const CameraLiveView: React.FC = () => {
               <View style={styles.watermark}>
                 <LogoDetail />
               </View>
-            </ViewShot>
+            </View>
           </View>
           {renderQualityModal()}
         </View>
@@ -519,7 +641,7 @@ const CameraLiveView: React.FC = () => {
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
       <View style={styles.videoWrapper}>
-        <ViewShot ref={viewShotRef} style={styles.videoContainer}>
+        <View ref={videoContainerRef} style={styles.videoContainer} collapsable={false}>
           {renderVideoPlayer()}
 
           <View style={styles.topOverlay}>
@@ -557,7 +679,7 @@ const CameraLiveView: React.FC = () => {
           <View style={styles.watermark}>
             <LogoDetail />
           </View>
-        </ViewShot>
+        </View>
       </View>
 
       <View style={styles.infoSection}>

@@ -1,6 +1,6 @@
 import Line from '@xmartlabs/react-native-line';
-import { Linking } from 'react-native';
 import { showCommonAlert } from '@components/Alert/Alert';
+import { BaseLineService } from './baseLineService';
 
 export interface LineLoginResult {
   accessToken: string;
@@ -11,58 +11,7 @@ export interface LineLoginResult {
   statusMessage?: string;
 }
 
-let isLineSdkConfigured = false;
-
-export class LineAuthService {
-  private channelId = '2008969814';
-
-  constructor() {
-    this.configure();
-  }
-
-  private async isLineAppInstalled(): Promise<boolean> {
-    try {
-      const lineUrl = 'line://';
-      return await Linking.canOpenURL(lineUrl);
-    } catch (error) {
-      console.log('[LINE] Error checking LINE app installation:', error);
-      return false;
-    }
-  }
-
-  private async configure() {
-    if (isLineSdkConfigured) {
-      return;
-    }
-
-    try {
-      const setupParams = { channelId: this.channelId };
-      await Line.setup(setupParams);
-      isLineSdkConfigured = true;
-    } catch (error: any) {
-      console.log('[LINE] Setup error caught:', error);
-    }
-  }
-
-  async getCurrentUser() {
-    try {
-      return await Line.getProfile();
-    } catch (error) {
-      console.log('[LINE] Failed to get current user:', error);
-      return null;
-    }
-  }
-
-  async isSignedIn(): Promise<boolean> {
-    try {
-      const token = await Line.getCurrentAccessToken();
-      return !!token?.accessToken;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      return false;
-    }
-  }
-
+export class LineAuthService extends BaseLineService {
   async signOut() {
     try {
       await Line.logout();

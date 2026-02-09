@@ -2,6 +2,7 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AppStackParamList } from './types';
 import { DARK_COLORS } from '@constants/theme';
+import BLEConnectionHandler from '@components/BLEConnectionHandler/BLEConnectionHandler';
 
 // Import Screens
 import Home from '@screens/Home/Home';
@@ -23,161 +24,180 @@ import NetworkSetup from '@screens/NetworkSetup/NetworkSetup';
 import Setting from '@screens/Setting/Setting';
 import FaceUpload from '@screens/FaceUpload/FaceUpload';
 import ConnectionSuccessful from '@screens/ConnectionSuccessful/ConnectionSuccessful';
+import SettingAI from '@screens/SettingAI/SettingAI';
+import ListFace from '@screens/FaceUpload/ListFace';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
 // ===== APP STACK NAVIGATOR (Wrap BottomTab + Modal Screens) =====
 const AppNavigator = () => {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: DARK_COLORS.background,
-        },
-        headerTintColor: DARK_COLORS.text,
-        headerTitleStyle: {
-          fontWeight: '600',
-          fontSize: 18,
-        },
-      }}
-    >
-      <Stack.Screen
-        name="Introduce"
-        component={Introduce}
-        options={{
-          headerShown: false,
+    <>
+      <BLEConnectionHandler />
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: DARK_COLORS.background,
+          },
+          headerTintColor: DARK_COLORS.text,
+          headerTitleStyle: {
+            fontWeight: '600',
+            fontSize: 18,
+          },
         }}
-      />
-      <Stack.Screen
-        name="Home"
-        component={Home}
-        options={{
-          headerShown: false,
-          gestureEnabled: false,
-        }}
-      />
-      <Stack.Screen
-        name="Detail"
-        component={Detail}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="CameraLive"
-        component={CameraLiveView}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="Notifications"
-        component={Notifications}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="QRScanner"
-        component={QRScanner}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="CameraSetup"
-        component={CameraSetup}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="SetupComplete"
-        component={SetupComplete}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="Profile"
-        component={Profile}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="EditProfile"
-        component={EditProfile}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="ChangePassword"
-        component={ChangePassword}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="DetectionZoneSetup"
-        component={DetectionZoneSetup}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="ConnectDevice"
-        component={ConnectDevice}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="PairingCode"
-        component={PairingCode}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="ConnectWifiHotspot"
-        component={ConnectWifiHotspot}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="NetworkSetup"
-        component={NetworkSetup}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="Setting"
-        component={Setting}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="FaceUpload"
-        component={FaceUpload}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="ConnectionSuccessful"
-        component={ConnectionSuccessful}
-        options={{
-          headerShown: false,
-          gestureEnabled: false,
-        }}
-      />
-    </Stack.Navigator>
+      >
+        <Stack.Screen
+          name="Introduce"
+          component={Introduce}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Home"
+          component={Home}
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="Detail"
+          component={Detail}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="CameraLive"
+          component={CameraLiveView}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Notifications"
+          component={Notifications}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="QRScanner"
+          component={QRScanner}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="CameraSetup"
+          component={CameraSetup}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="SetupComplete"
+          component={SetupComplete}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={Profile}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="EditProfile"
+          component={EditProfile}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ChangePassword"
+          component={ChangePassword}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="DetectionZoneSetup"
+          component={DetectionZoneSetup}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ConnectDevice"
+          component={ConnectDevice}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="PairingCode"
+          component={PairingCode}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ConnectWifiHotspot"
+          component={ConnectWifiHotspot}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="NetworkSetup"
+          component={NetworkSetup}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Setting"
+          component={Setting}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="FaceUpload"
+          component={FaceUpload}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ConnectionSuccessful"
+          component={ConnectionSuccessful}
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="SettingAI"
+          component={SettingAI}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ListFace"
+          component={ListFace}
+          options={{
+            headerShown: false,
+          }}
+        />
+      </Stack.Navigator>
+    </>
   );
 };
 

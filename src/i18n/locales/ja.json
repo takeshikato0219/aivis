@@ -193,6 +193,10 @@
     "setting": "設定"
   },
   "detail": {
+    "alertMode": "警戒モード",
+    "safeMode": "安心モード",
+    "releaseMode": "解除モード",
+    "securityMode": "セキュリティモード",
     "textNotification": "侵入 知 即時通知"
   },
   "validate": {
@@ -257,22 +261,28 @@
     "continue": "続行"
   },
   "cameraLive": {
-    "unableToEnableVoiceFunction": "无法启用语音功能",
-    "unableToTakeScreenshot": "无法截图",
+    "unableToEnableVoiceFunction": "音声機能を有効にできません",
+    "unableToTakeScreenshot": "スクリーンショットを撮れません",
     "success": "成功",
-    "screenshotSaved": "截图已保存",
+    "screenshotSaved": "スクリーンショットを保存しました",
     "failedToCaptureSnapshot": "スナップショットの取得に失敗しました。",
-    "startRecording": "开始录制",
-    "stopRecording": "停止录制",
-    "unableToChangeResolution": "无法更改分辨率",
-    "selectResolution": "选择清晰度",
-    "videoLoadingFailed": "视频加载失败",
-    "retry": "重试",
-    "cameraNotConnected": "摄像头未连接",
-    "thereIsNoRecordingData": "録音データはありません",
-    "video": "录像",
-    "call": "通话",
-    "photo": "照片"
+    "startRecording": "録画開始",
+    "stopRecording": "録画停止",
+    "recording": "録画中",
+    "recordingStarted": "録画を開始しました",
+    "videoSaved": "動画を保存しました",
+    "unableToSaveVideo": "動画の保存に失敗しました",
+    "unableToStartRecording": "録画を開始できません",
+    "noStreamAvailable": "ストリームがありません",
+    "unableToChangeResolution": "解像度を変更できません",
+    "selectResolution": "解像度を選択",
+    "videoLoadingFailed": "動画の読み込みに失敗しました",
+    "retry": "再試行",
+    "cameraNotConnected": "カメラが接続されていません",
+    "thereIsNoRecordingData": "録画データはありません",
+    "video": "録画",
+    "call": "通話",
+    "photo": "写真"
   },
   "changePassword": {
     "changePasswordSuccess": "パスワード変更完了",
@@ -298,7 +308,9 @@
     "signal": "Signal",
     "unknownDevice": "不明なデバイス",
     "noWiFiAccessPointFound": "Wi-Fiアクセスポイントが見つかりませんでした。",
-    "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Jetson Orin カメラをセットアップするための接続方法を選択してください。"
+    "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Jetson Orin カメラをセットアップするための接続方法を選択してください。",
+    "connectionLost": "接続が切断されました",
+    "deviceDisconnectedPleaseReconnect": "デバイスとの接続が切断されました。続行するには再接続してください。"
   },
   "pairingCode": {
     "pairingCode": "ペアリングコード",
@@ -479,5 +491,11 @@
     "reconnectFailed": "再接続に失敗しました。もう一度お試しください。",
     "loadingStream": "ライブストリームを読み込み中...",
     "onlineAndReady": "オンライン・準備完了"
+  },
+  "settingAI": {
+    "settingAI": "Al設定"
+  },
+  "listFace": {
+    "listFace": "顔リスト"
   }
 }

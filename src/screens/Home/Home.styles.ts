@@ -143,7 +143,6 @@ export const styles = StyleSheet.create({
     fontSize: 20,
     marginTop: 20,
     marginBottom: 20,
-    marginLeft: 12,
     flex: 1,
   },
   addCameraBtn: {
@@ -180,7 +179,6 @@ export const styles = StyleSheet.create({
   },
   iconCircle: {
     alignItems: FONTS.align.alignSelfEnd,
-    marginRight: 28,
   },
   manualButton: {
     flexDirection: 'row',

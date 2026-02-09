@@ -152,6 +152,10 @@
     "setting": "Setting"
   },
   "detail": {
+    "alertMode": "Alert Mode",
+    "safeMode": "Safe Mode",
+    "releaseMode": "Release Mode",
+    "securityMode": "Security Mode",
     "textNotification": "Intrusion detection, immediate notification"
   },
   "validate": {
@@ -223,6 +227,12 @@
     "failedToCaptureSnapshot": "Failed to capture snapshot",
     "startRecording": "Start recording",
     "stopRecording": "Stop recording",
+    "recording": "Recording",
+    "recordingStarted": "Recording started",
+    "videoSaved": "Video saved",
+    "unableToSaveVideo": "Unable to save video",
+    "unableToStartRecording": "Unable to start recording",
+    "noStreamAvailable": "No stream available",
     "unableToChangeResolution": "Unable to change resolution",
     "selectResolution": "Select resolution",
     "videoLoadingFailed": "Video loading failed",
@@ -257,7 +267,9 @@
     "signal": "Signal",
     "unknownDevice": "Unknown Device",
     "noWiFiAccessPointFound": "No WiFi access point found.",
-    "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Select a connection method to setup your Jetson Orin camera."
+    "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Select a connection method to setup your Jetson Orin camera.",
+    "connectionLost": "Connection Lost",
+    "deviceDisconnectedPleaseReconnect": "Device has been disconnected. Please reconnect to continue."
   },
   "pairingCode": {
     "pairingCode": "Pairing Code",
@@ -438,5 +450,11 @@
     "reconnectFailed": "Failed to reconnect. Please try again.",
     "loadingStream": "Loading live stream...",
     "onlineAndReady": "Online and ready"
+  },
+  "settingAI": {
+    "settingAI": "Setting AI"
+  },
+  "listFace": {
+    "listFace": "List Face"
   }
 }
