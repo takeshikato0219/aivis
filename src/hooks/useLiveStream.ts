@@ -146,6 +146,10 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
+      // Recovering from error - WebView loaded successfully
+      setConnectionStatus('connected');
+      setIsReconnecting(false);
+      setRetryCount(0);
     }
     lastHeartbeatRef.current = Date.now();
     startHeartbeatMonitoring();

@@ -5,8 +5,9 @@ import {
   RegisterCameraResponse,
   GetCamerasParams,
   GetCamerasResponse,
-  GetWorkflowStatusesResponse, StatusCamera
-} from "./types/cameraTypes";
+  GetWorkflowStatusesResponse,
+  StatusCamera,
+} from './types/cameraTypes';
 
 class CameraService {
   async registerCamera(data: RegisterCameraRequest): Promise<RegisterCameraResponse> {

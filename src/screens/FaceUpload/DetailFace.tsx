@@ -76,7 +76,6 @@ const DetailFace = () => {
   // Single face detect modal states
   const [showSingleDetectModal, setShowSingleDetectModal] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
-  const [selectedImageData, setSelectedImageData] = useState<MemberImage | null>(null);
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectProgress, setDetectProgress] = useState(0);
   const [isPreparing, setIsPreparing] = useState(false);
@@ -284,9 +283,8 @@ const DetailFace = () => {
     setIsCapturing(false);
     setPrepareProgress(0);
     setDetectProgress(0);
-
+    console.log(image);
     setSelectedImageIndex(index);
-    setSelectedImageData(image);
     setShowSingleDetectModal(true);
   };
 
@@ -307,7 +305,6 @@ const DetailFace = () => {
     // Close modal
     setShowSingleDetectModal(false);
     setSelectedImageIndex(-1);
-    setSelectedImageData(null);
     setIsPreparing(false);
     setIsDetecting(false);
     setIsCapturing(false);
@@ -906,10 +903,7 @@ const DetailFace = () => {
 
                 {/* Close Button */}
                 <View style={[styles.closeButton]}>
-                  <TouchableOpacity
-                    onPress={handleCloseDetectModal}
-                    disabled={isCapturing}
-                  >
+                  <TouchableOpacity onPress={handleCloseDetectModal} disabled={isCapturing}>
                     <Icon name="close" size={24} color={isCapturing ? '#666' : '#fff'} />
                   </TouchableOpacity>
                 </View>

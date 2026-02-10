@@ -59,6 +59,7 @@ describe('bleSlice', () => {
     wifiStatus: WiFiStatus.WAITING,
     wifiNetworks: [],
     wifiScanStatus: WiFiScanStatus.IDLE,
+    criticalDisconnection: false,
   };
 
   describe('initial state', () => {
@@ -407,6 +408,7 @@ describe('bleSlice', () => {
       wifiStatus: WiFiStatus.SUCCESS,
       wifiNetworks: [mockWifiNetwork1, mockWifiNetwork2],
       wifiScanStatus: WiFiScanStatus.COMPLETED,
+      criticalDisconnection: false,
     };
 
     describe('resetBleState', () => {
