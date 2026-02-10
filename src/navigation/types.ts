@@ -61,6 +61,7 @@ export type AppStackParamList = {
   ConnectionSuccessful: { cameraData: Camera };
   SettingAI: { cameraData: Camera };
   ListFace: undefined;
+  DetailFace: { memberId: string };
 };
 
 // ===== NAVIGATION PROPS =====
@@ -122,6 +123,9 @@ export type ConnectionSuccessfulScreenRouteProp = RouteProp<
 
 export type SettingAIScreenNavigationProp = StackNavigationProp<AppStackParamList, 'SettingAI'>;
 export type SettingAIScreenRouteProp = RouteProp<AppStackParamList, 'SettingAI'>;
+
+export type DetailFaceNavigationProp = StackNavigationProp<AppStackParamList, 'DetailFace'>;
+export type DetailFaceRouteProp = RouteProp<AppStackParamList, 'DetailFace'>;
 
 // ===== DECLARE GLOBAL =====
 declare global {

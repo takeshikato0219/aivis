@@ -158,10 +158,13 @@ const ConnectionSuccessful: React.FC = () => {
                 <ActivityIndicator size="large" color="#FFA500" />
                 <Text style={styles.reconnectingText}>{t('liveStream.reconnecting')}</Text>
                 <Text style={styles.reconnectingSubtext}>{t('liveStream.connectionLost')}</Text>
+                <TouchableOpacity style={styles.loadingRetryButton} onPress={handleManualRetry}>
+                  <Text style={styles.loadingRetryButtonText}>{t('common.retry')}</Text>
+                </TouchableOpacity>
               </View>
             )}
 
-            {connectionStatus === 'failed' && !isReconnecting && (
+            {connectionStatus === 'failed' && !isReconnecting && !isLoading && (
               <View style={styles.errorOverlay}>
                 <Text style={styles.errorText}>{t('liveStream.reconnectFailed')}</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={handleManualRetry}>

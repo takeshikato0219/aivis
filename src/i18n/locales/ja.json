@@ -220,12 +220,14 @@
     "passwordNoDigit": "パスワードに数字が含まれていません。",
     "passwordNoSpecialChar": "パスワードに記号が含まれていません。",
     "nameRequired": "名前を入力してください。",
+    "relationshipRequired": "続柄を入力してください。",
     "nameTooShort": "名前は2文字以上で入力してください",
     "nameTooLong": "名前は50文字以内で入力してください",
     "nameInvalidFormat": "名前は文字、スペース、ハイフン、アポストロフィのみ使用できます",
     "nameConsecutiveSpaces": "名前に連続したスペースは使用できません",
     "nameNoEmoji": "名前に絵文字は使用できません",
-    "nameNoSpecialChars": "名前に「,」「:」「?」などの記号は使用できません。"
+    "nameNoSpecialChars": "名前に「,」「:」「?」などの記号は使用できません。",
+    "required": "この項目は必須です"
   },
   "register": {
     "change": "変更",
@@ -458,6 +460,11 @@
     "turnRight": "顔を右に向けてください",
     "lookUp": "顔を上に向けてください",
     "lookDown": "顔を下に向けてください",
+    "frontView": "正面",
+    "leftSide": "左側面",
+    "rightSide": "右側面",
+    "lookingUp": "上向き",
+    "lookingDown": "下向き",
     "tapWhenReady": "顔を枠内に合わせ、ボタンをタップしてください",
     "complete": "完了",
     "allPositionsCaptured": "5つの角度の撮影が完了しました！",
@@ -477,7 +484,36 @@
     "pleaseTurnYourFaceToTheRIGHT": "顔を右に向けてください。",
     "pleaseTiltYourHeadUP": "頭を上に傾けてください。",
     "pleaseTiltYourHeadDOWN": "頭を下に傾けてください。",
-    "pleasePositionYourFaceCorrectly": "顔の位置を正しくしてください。"
+    "pleasePositionYourFaceCorrectly": "顔の位置を正しくしてください。",
+    "enterInformation": "情報を入力",
+    "fillFormBeforeScan": "顔スキャンを開始する前に、以下の情報を入力してください",
+    "memberRelationship": "メンバー関係",
+    "selectRelationship": "関係を選択",
+    "name": "名前",
+    "enterName": "名前を入力",
+    "startScan": "顔スキャンを開始",
+    "noRelationships": "利用可能な関係がありません",
+    "validationError": "入力エラー",
+    "pleaseSelectRelationship": "メンバー関係を選択してください",
+    "pleaseEnterName": "名前を入力してください",
+    "uploadSuccess": "成功",
+    "uploadSuccessMessage": "顔データのアップロードが完了しました！",
+    "uploadFailed": "アップロード失敗",
+    "uploadFailedMessage": "顔データのアップロードに失敗しました。もう一度お試しください。",
+    "uploading": "アップロード中...",
+    "mustHave5Images": "アップロード前に5つの顔の位置すべてを撮影する必要があります",
+    "images": "画像",
+    "tapToEditImage": "画像をタップして編集",
+    "selectImageSource": "画像ソースを選択",
+    "takePhoto": "写真を撮る",
+    "chooseFromGallery": "ギャラリーから選択",
+    "cameraPermission": "カメラの許可が必要です",
+    "cameraPermissionDesc": "顔を撮影するためにカメラアクセスが必要です",
+    "noCameraDesc": "カメラデバイスにアクセスできません",
+    "preparing": "準備中...",
+    "faceNotDetected": "顔が検出されません",
+    "adjustPosition": "位置を調整してもう一度お試しください",
+    "captureFailed": "顔の撮影に失敗しました"
   },
   "liveStream": {
     "connectionSuccessful": "接続に成功しました",
@@ -496,6 +532,11 @@
     "settingAI": "Al設定"
   },
   "listFace": {
-    "listFace": "顔リスト"
+    "listFace": "顔リスト",
+    "noMembers": "メンバーが見つかりません",
+    "addFirstMember": "最初のメンバーを追加してください"
+  },
+  "detailFace": {
+    "detailFace": "詳細顔"
   }
 }

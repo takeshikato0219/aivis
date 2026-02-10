@@ -26,6 +26,7 @@ import FaceUpload from '@screens/FaceUpload/FaceUpload';
 import ConnectionSuccessful from '@screens/ConnectionSuccessful/ConnectionSuccessful';
 import SettingAI from '@screens/SettingAI/SettingAI';
 import ListFace from '@screens/FaceUpload/ListFace';
+import DetailFace from '@screens/FaceUpload/DetailFace';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -192,6 +193,13 @@ const AppNavigator = () => {
         <Stack.Screen
           name="ListFace"
           component={ListFace}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="DetailFace"
+          component={DetailFace}
           options={{
             headerShown: false,
           }}

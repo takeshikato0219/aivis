@@ -5,8 +5,8 @@ import {
   RegisterCameraResponse,
   GetCamerasParams,
   GetCamerasResponse,
-  GetWorkflowStatusesResponse,
-} from './types/cameraTypes';
+  GetWorkflowStatusesResponse, StatusCamera
+} from "./types/cameraTypes";
 
 class CameraService {
   async registerCamera(data: RegisterCameraRequest): Promise<RegisterCameraResponse> {
@@ -60,6 +60,11 @@ class CameraService {
 
   async getWorkflowStatuses(): Promise<GetWorkflowStatusesResponse> {
     const response = await axiosInstance.get<GetWorkflowStatusesResponse>(API_ENDPOINTS.FACILITIES);
+    return response.data;
+  }
+
+  async updateStatus(): Promise<StatusCamera> {
+    const response = await axiosInstance.get<StatusCamera>(API_ENDPOINTS.STATUSES);
     return response.data;
   }
 }
