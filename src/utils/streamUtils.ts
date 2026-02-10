@@ -64,6 +64,23 @@ export const getStreamHTML = (streamUrl: string): string => {
           height: 100%;
           object-fit: cover;
         }
+        /* Hide zoom controls */
+        .zoom-control,
+        .zoom-controls,
+        [class*="zoom"],
+        [id*="zoom"],
+        button[title*="zoom"],
+        button[title*="Zoom"],
+        button[aria-label*="zoom"],
+        button[aria-label*="Zoom"],
+        .control-zoom,
+        .btn-zoom,
+        [data-control="zoom"] {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
       </style>
     </head>
     <body>
@@ -80,10 +97,69 @@ export const getStreamHTML = (streamUrl: string): string => {
           e.preventDefault();
         });
         
-        // Log readiness
+        // Hide zoom buttons function
+        function hideZoomButtons() {
+          // Try to hide zoom buttons in iframe (may fail due to CORS)
+          try {
+            const iframe = document.querySelector('iframe');
+            if (iframe && iframe.contentWindow && iframe.contentDocument) {
+              const iframeDoc = iframe.contentDocument;
+              const zoomButtons = iframeDoc.querySelectorAll(
+                '.zoom-control, .zoom-controls, [class*="zoom"], [id*="zoom"], ' +
+                'button[title*="zoom"], button[title*="Zoom"], ' +
+                'button[aria-label*="zoom"], button[aria-label*="Zoom"], ' +
+                '.control-zoom, .btn-zoom, [data-control="zoom"]'
+              );
+              zoomButtons.forEach(function(btn) {
+                btn.style.display = 'none';
+                btn.style.visibility = 'hidden';
+                btn.style.opacity = '0';
+                btn.style.pointerEvents = 'none';
+              });
+            }
+          } catch(e) {
+            // CORS error is expected, ignore
+            console.log('Cannot access iframe content to hide zoom buttons (CORS)');
+          }
+          
+          // Hide zoom buttons in current document
+          const zoomButtons = document.querySelectorAll(
+            '.zoom-control, .zoom-controls, [class*="zoom"], [id*="zoom"], ' +
+            'button[title*="zoom"], button[title*="Zoom"], ' +
+            'button[aria-label*="zoom"], button[aria-label*="Zoom"], ' +
+            '.control-zoom, .btn-zoom, [data-control="zoom"]'
+          );
+          zoomButtons.forEach(function(btn) {
+            btn.style.display = 'none';
+            btn.style.visibility = 'hidden';
+            btn.style.opacity = '0';
+            btn.style.pointerEvents = 'none';
+          });
+        }
+        
+        // Log readiness and hide zoom buttons
         window.addEventListener('load', function() {
           console.log('Stream iframe loaded');
+          hideZoomButtons();
+          
+          // Try to hide zoom buttons after iframe loads
+          const iframe = document.querySelector('iframe');
+          if (iframe) {
+            iframe.addEventListener('load', function() {
+              setTimeout(hideZoomButtons, 500);
+            });
+            
+            // Also try periodically in case buttons are added dynamically
+            setInterval(hideZoomButtons, 1000);
+          }
         });
+        
+        // Also try immediately
+        if (document.readyState === 'complete') {
+          hideZoomButtons();
+        } else {
+          document.addEventListener('DOMContentLoaded', hideZoomButtons);
+        }
       </script>
     </body>
     </html>

@@ -50,6 +50,7 @@ export interface BleState {
   wifiStatus: number;
   wifiNetworks: WiFiNetwork[];
   wifiScanStatus: number;
+  criticalDisconnection: boolean;
 }
 
 const initialState: BleState = {
@@ -61,6 +62,7 @@ const initialState: BleState = {
   wifiStatus: WiFiStatus.WAITING,
   wifiNetworks: [],
   wifiScanStatus: WiFiScanStatus.IDLE,
+  criticalDisconnection: false,
 };
 
 // =============================================================================
@@ -146,6 +148,11 @@ const bleSlice = createSlice({
       state.wifiNetworks = [];
       state.wifiScanStatus = WiFiScanStatus.IDLE;
     },
+
+    // Critical disconnection requiring user attention
+    setCriticalDisconnection: (state, action: PayloadAction<boolean>) => {
+      state.criticalDisconnection = action.payload;
+    },
   },
 });
 
@@ -163,6 +170,7 @@ export const {
   resetBleState,
   resetConnectionState,
   resetWifiState,
+  setCriticalDisconnection,
 } = bleSlice.actions;
 
 export default bleSlice.reducer;

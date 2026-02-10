@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, RefObject } from 'react';
 import { WebView } from 'react-native-webview';
+import NetInfo from '@react-native-community/netinfo';
 
 export interface UseLiveStreamConfig {
   maxRetries?: number;
@@ -51,6 +52,8 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastHeartbeatRef = useRef<number>(Date.now());
+  const retryCountRef = useRef<number>(0);
+  const handleConnectionLostRef = useRef<() => void>(() => {});
 
   const [isLoading, setIsLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'failed'>(
@@ -59,38 +62,10 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   const [retryCount, setRetryCount] = useState(0);
   const [isReconnecting, setIsReconnecting] = useState(false);
 
-  const handleConnectionLost = useCallback(() => {
-    // Clear heartbeat monitoring
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-    }
-
-    // Don't retry if already failed or max retries reached
-    if (retryCount >= maxRetries) {
-      setConnectionStatus('failed');
-      setIsReconnecting(false);
-      return;
-    }
-
-    // Start reconnecting
-    setIsReconnecting(true);
-    setConnectionStatus('connecting');
-
-    // Calculate delay with exponential backoff (max retryMaxDelay)
-    const delay = Math.min(retryBaseDelay * Math.pow(2, retryCount), retryMaxDelay);
-
-    // Clear existing retry timer
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-    }
-
-    // Schedule retry
-    retryTimerRef.current = setTimeout(() => {
-      setRetryCount((prev) => prev + 1);
-      webViewRef.current?.reload();
-    }, delay);
-  }, [retryCount, maxRetries, retryBaseDelay, retryMaxDelay]);
+  // Keep retryCountRef in sync with state
+  useEffect(() => {
+    retryCountRef.current = retryCount;
+  }, [retryCount]);
 
   const startHeartbeatMonitoring = useCallback(() => {
     // Clear existing interval
@@ -107,28 +82,116 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       // If no heartbeat for timeout period, consider connection lost
       if (timeSinceLastHeartbeat > heartbeatTimeout) {
         console.warn('Heartbeat timeout detected, connection may be lost');
-        handleConnectionLost();
+        handleConnectionLostRef.current();
       }
     }, heartbeatInterval);
-  }, [heartbeatInterval, heartbeatTimeout, handleConnectionLost]);
+  }, [heartbeatInterval, heartbeatTimeout]);
 
-  const handleWebViewLoad = useCallback(() => {
-    setIsLoading(false);
-    setConnectionStatus('connected');
-    setIsReconnecting(false);
-    setRetryCount(0);
-    // Clear any pending retry timers
+  const handleConnectionLost = useCallback(() => {
+    // Clear heartbeat monitoring
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+
+    // Clear existing retry timer
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
+
+    // Always set loading to false so overlays can show
+    setIsLoading(false);
+
+    const currentRetryCount = retryCountRef.current;
+    console.log(`Connection lost. Current retry count: ${currentRetryCount}/${maxRetries}`);
+
+    // Don't retry if max retries reached
+    if (currentRetryCount >= maxRetries) {
+      console.warn('Max retries reached, showing failed state');
+      setConnectionStatus('failed');
+      setIsReconnecting(false);
+      return;
+    }
+
+    // Set reconnecting state immediately so UI shows reconnecting overlay
+    setIsReconnecting(true);
+    setConnectionStatus('connecting');
+
+    // Calculate delay with exponential backoff (max retryMaxDelay)
+    const delay = Math.min(retryBaseDelay * Math.pow(2, currentRetryCount), retryMaxDelay);
+    console.log(`Scheduling retry in ${delay}ms`);
+
+    // Schedule retry
+    retryTimerRef.current = setTimeout(() => {
+      const newRetryCount = retryCountRef.current + 1;
+      console.log(`Executing retry ${newRetryCount}/${maxRetries}`);
+
+      // Update both ref and state
+      retryCountRef.current = newRetryCount;
+      setRetryCount(newRetryCount);
+
+      // Check if max retries reached after incrementing
+      if (newRetryCount >= maxRetries) {
+        console.warn('Max retries reached after increment, showing failed state');
+        setConnectionStatus('failed');
+        setIsReconnecting(false);
+        return;
+      }
+
+      // Reload and reset heartbeat
+      lastHeartbeatRef.current = Date.now();
+      webViewRef.current?.reload();
+
+      // Start monitoring again after reload
+      setTimeout(() => {
+        if (webViewRef.current) {
+          startHeartbeatMonitoring();
+        }
+      }, 1000);
+    }, delay);
+  }, [maxRetries, retryBaseDelay, retryMaxDelay, startHeartbeatMonitoring]);
+
+  // Keep ref updated with latest callback
+  useEffect(() => {
+    handleConnectionLostRef.current = handleConnectionLost;
+  }, [handleConnectionLost]);
+
+  const handleWebViewLoad = useCallback(() => {
+    // Don't immediately set loading to false - wait for stream confirmation via heartbeat
+    // Only clear retry timers and start heartbeat monitoring
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+      // Recovering from error - WebView loaded successfully
+      setConnectionStatus('connected');
+      setIsReconnecting(false);
+    }
+
+    // Reset retry count on successful load
+    retryCountRef.current = 0;
+    setRetryCount(0);
+
     lastHeartbeatRef.current = Date.now();
     startHeartbeatMonitoring();
-  }, [startHeartbeatMonitoring]);
+
+    // Set a timeout to confirm connection after receiving first heartbeat
+    // If no heartbeat received within 3 seconds, consider it connected anyway
+    setTimeout(() => {
+      setIsLoading((prev) => {
+        if (prev && connectionStatus !== 'failed') {
+          setConnectionStatus('connected');
+          setIsReconnecting(false);
+          return false;
+        }
+        return prev;
+      });
+    }, 3000);
+  }, [startHeartbeatMonitoring, connectionStatus]);
 
   const handleWebViewError = useCallback(() => {
-    setConnectionStatus('failed');
     setIsLoading(false);
+    setConnectionStatus('failed');
     handleConnectionLost();
   }, [handleConnectionLost]);
 
@@ -142,12 +205,32 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   );
 
   const handleManualRetry = useCallback(() => {
+    console.log('Manual retry triggered');
+
+    // Clear any existing timers
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+
+    // Reset retry count (both ref and state)
+    retryCountRef.current = 0;
     setRetryCount(0);
     setIsLoading(true);
     setConnectionStatus('connecting');
     setIsReconnecting(false);
+    lastHeartbeatRef.current = Date.now();
     webViewRef.current?.reload();
-  }, []);
+
+    // Start heartbeat monitoring after a brief delay
+    setTimeout(() => {
+      startHeartbeatMonitoring();
+    }, 1000);
+  }, [startHeartbeatMonitoring]);
 
   const handleWebViewMessage = useCallback(
     (event: any) => {
@@ -157,12 +240,39 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
         if (data.type === 'heartbeat') {
           // Update last heartbeat time
           lastHeartbeatRef.current = Date.now();
+          // If still loading, mark as connected after receiving heartbeat
+          setIsLoading((prev) => {
+            if (prev) {
+              setConnectionStatus('connected');
+              setIsReconnecting(false);
+              retryCountRef.current = 0;
+              setRetryCount(0);
+              return false;
+            }
+            return prev;
+          });
+        } else if (data.type === 'streamReady' || data.type === 'playing') {
+          // Stream is confirmed playing
+          setIsLoading(false);
+          setConnectionStatus('connected');
+          setIsReconnecting(false);
+          retryCountRef.current = 0;
+          setRetryCount(0);
+          lastHeartbeatRef.current = Date.now();
+        } else if (data.type === 'streamError') {
+          // Stream error - trigger retry
+          console.warn('Stream error detected');
+          setIsLoading(false);
+          handleConnectionLost();
         } else if (data.type === 'connection-lost') {
           console.warn('Connection lost detected from WebView');
+          setIsLoading(false);
           handleConnectionLost();
         } else if (data.type === 'connection-restored') {
           console.log('Connection restored');
+          setIsLoading(false);
           setIsReconnecting(false);
+          retryCountRef.current = 0;
           setRetryCount(0);
           setConnectionStatus('connected');
           lastHeartbeatRef.current = Date.now();
@@ -176,6 +286,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
               data.message.includes('failed') ||
               data.message.includes('timeout'))
           ) {
+            setIsLoading(false);
             handleConnectionLost();
           }
         }
@@ -215,6 +326,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
         // Heartbeat monitoring
         let heartbeatInterval = null;
         let lastHeartbeatTime = Date.now();
+        let streamConfirmed = false;
         
         function sendHeartbeat() {
           try {
@@ -228,11 +340,40 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
           }
         }
         
+        // Monitor video elements for stream status
+        function monitorVideoElements() {
+          const videos = document.querySelectorAll('video');
+          videos.forEach(function(video) {
+            video.addEventListener('playing', function() {
+              if (!streamConfirmed) {
+                streamConfirmed = true;
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'playing' }));
+              }
+            });
+            video.addEventListener('error', function() {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'streamError' }));
+            });
+            video.addEventListener('stalled', function() {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'stalled' }));
+            });
+            
+            // Check if video is already playing
+            if (!video.paused && video.readyState >= 2) {
+              if (!streamConfirmed) {
+                streamConfirmed = true;
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'playing' }));
+              }
+            }
+          });
+        }
+        
         // Monitor iframe connection
         function monitorIframe() {
           const iframe = document.querySelector('iframe');
           if (!iframe) {
             console.warn('Iframe not found');
+            // Still send heartbeat to indicate page loaded
+            sendHeartbeat();
             return;
           }
           
@@ -271,14 +412,33 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
         // Start monitoring when page loads
         if (document.readyState === 'complete') {
           monitorIframe();
+          monitorVideoElements();
           // Send heartbeat every ${heartbeatInterval}ms
           heartbeatInterval = setInterval(sendHeartbeat, ${heartbeatInterval});
         } else {
           window.addEventListener('load', function() {
             monitorIframe();
+            monitorVideoElements();
             heartbeatInterval = setInterval(sendHeartbeat, ${heartbeatInterval});
           });
         }
+        
+        // Timeout fallback - if no stream confirmed in 15 seconds, report error
+        setTimeout(function() {
+          if (!streamConfirmed) {
+            const videos = document.querySelectorAll('video');
+            let anyPlaying = false;
+            videos.forEach(function(video) {
+              if (!video.paused && video.readyState >= 2) {
+                anyPlaying = true;
+              }
+            });
+            
+            if (!anyPlaying && videos.length > 0) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'streamError', reason: 'timeout' }));
+            }
+          }
+        }, 15000);
         
         // Monitor network status
         window.addEventListener('online', function() {
@@ -324,24 +484,62 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     }
   }, []);
 
-  // Initial loading with random delay
+  // Initial loading timeout - if no connection after initialLoadingMax, show retry
   useEffect(() => {
-    const loadingTime =
-      Math.floor(Math.random() * (initialLoadingMax - initialLoadingMin)) + initialLoadingMin;
     const timer = setTimeout(() => {
-      // Only auto-hide loading if WebView hasn't loaded yet
-      // If WebView loads earlier, handleWebViewLoad will handle it
+      // If still loading after max time, trigger connection lost to show retry
       setIsLoading((prevLoading) => {
-        if (prevLoading) {
-          setConnectionStatus('connected');
+        if (prevLoading && connectionStatus === 'connecting') {
+          // No heartbeat received, consider it failed
+          console.warn('Initial loading timeout - no connection established');
+          setConnectionStatus('failed');
+          setIsReconnecting(false);
           return false;
         }
         return prevLoading;
       });
-    }, loadingTime);
+    }, initialLoadingMax);
 
     return () => clearTimeout(timer);
-  }, [initialLoadingMin, initialLoadingMax]);
+  }, [initialLoadingMin, initialLoadingMax, connectionStatus]);
+
+  // Network status monitoring - auto-retry when network is restored
+  useEffect(() => {
+    let wasConnected = true;
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const isConnected = state.isConnected && state.isInternetReachable;
+
+      // Network restored - auto retry if currently failed or reconnecting
+      if (isConnected && !wasConnected) {
+        console.log('Network restored, attempting auto-retry');
+        // Reset retry count (both ref and state) and attempt to reconnect
+        retryCountRef.current = 0;
+        setRetryCount(0);
+        setIsLoading(true);
+        setConnectionStatus('connecting');
+        setIsReconnecting(false);
+        // Small delay to ensure network is stable
+        setTimeout(() => {
+          webViewRef.current?.reload();
+          lastHeartbeatRef.current = Date.now();
+          startHeartbeatMonitoring();
+        }, 500);
+      }
+
+      // Network lost - trigger connection lost
+      if (!isConnected && wasConnected && connectionStatus === 'connected') {
+        console.warn('Network lost detected');
+        handleConnectionLostRef.current();
+      }
+
+      wasConnected = !!isConnected;
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [connectionStatus, startHeartbeatMonitoring]);
 
   // Cleanup timers on unmount
   useEffect(() => {

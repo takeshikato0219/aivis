@@ -19,6 +19,7 @@ import HomeBackgroundImage from '@assets/png/home-background.png';
 import { useTranslation } from 'react-i18next';
 import BackIcon from '@assets/svg/icon-back.svg';
 import ItemCodeBackground from '@assets/png/pairing-code.png';
+import { jetsonBLEService } from '@/services/jetsonBLEService';
 
 const PairingCode: React.FC = () => {
   const navigation = useNavigation<PairingCodeScreenNavigationProp>();
@@ -38,6 +39,11 @@ const PairingCode: React.FC = () => {
   ).current;
 
   const [error, setError] = useState('');
+
+  const handleGoBack = () => {
+    void jetsonBLEService.disconnect();
+    navigation.goBack();
+  };
 
   const handleChange = (i: number, v: string) => {
     v = v.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
@@ -73,7 +79,7 @@ const PairingCode: React.FC = () => {
         <SafeAreaView style={styles.container} edges={['top']}>
           {/* Fixed Header - outside ScrollView */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
               <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{t('pairingCode.enterPairingCode')}</Text>

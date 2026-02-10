@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { styles } from './Detail.styles';
 
 import BackIcon from '@assets/svg/icon-back.svg';
@@ -26,16 +27,9 @@ import RetangleImage from '@assets/png/rectangle-home.png';
 import CameraHomeDetailBgPng from '@assets/png/camera-home-detail-bg.png';
 import CameraFactoryDetailBgPng from '@assets/png/camera-factory-detail-bg.png';
 import CameraShopDetailBgPng from '@assets/png/camera-shop-detail-bg.png';
-import Frame21 from '@assets/png/frame-21.png';
-import Frame27 from '@assets/png/frame-27.png';
-import Frame28 from '@assets/png/frame-28.png';
-import Frame29 from '@assets/png/frame-29.png';
-import Frame30 from '@assets/png/frame-30.png';
-import Frame31 from '@assets/png/frame-31.png';
 
 import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/types';
-
-const frames = [Frame21, Frame27, Frame28, Frame29, Frame30, Frame31];
+import { COLORS } from '@constants/theme';
 
 const INITIAL_LIST = [
   { id: '1', name: 'Front Door', status: 'Online' },
@@ -44,7 +38,10 @@ const INITIAL_LIST = [
   { id: '4', name: 'Living Room', status: 'Online' },
 ].map((item) => ({
   ...item,
-  frame: frames[Math.floor(Math.random() * frames.length)],
+  frame: {
+    uri: '',
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
 }));
 
 const ItemSeparator = () => <View style={styles.itemSeparator} />;
@@ -52,36 +49,52 @@ const ItemSeparator = () => <View style={styles.itemSeparator} />;
 const Detail = () => {
   const navigation = useNavigation<DetailScreenNavigationProp>();
   const route = useRoute<DetailScreenRouteProp>();
-  const title = route.params?.name || 'Detail';
-
+  const { t } = useTranslation();
+  const camera = route.params?.camera;
+  const title = camera?.name || 'Detail';
   const filters = [
-    { name: '警戒モード', iconActive: IconWarningActive, iconUnActive: IconWarningUnActive },
-    { name: '安心モード', iconActive: IconSafeActive, iconUnActive: IconSafeUnActive },
-    { name: '解除モード', iconActive: IconUnlockActive, iconUnActive: IconUnlockUnActive },
+    {
+      name: t('detail.alertMode'),
+      iconActive: IconWarningActive,
+      iconUnActive: IconWarningUnActive,
+    },
+    {
+      name: t('detail.safeMode'),
+      iconActive: IconSafeActive,
+      iconUnActive: IconSafeUnActive,
+    },
+    {
+      name: t('detail.releaseMode'),
+      iconActive: IconUnlockActive,
+      iconUnActive: IconUnlockUnActive,
+    },
   ];
 
   const [activeIndex, setActiveIndex] = useState(0);
 
   const backgrounds = [CameraShopDetailBgPng, CameraHomeDetailBgPng, CameraFactoryDetailBgPng];
 
-  const activeBorderStyles = [
-    styles.filterBtnActiveWarning,
-    styles.filterBtnActiveSafe,
-    styles.filterBtnActiveLock,
-  ];
+  const statusText =
+    camera?.status == null
+      ? 'Offline'
+      : typeof camera.status === 'object'
+        ? camera.status.name_trans
+        : camera.status || 'Online';
+
+  const isOnline =
+    statusText.toLowerCase().includes('online') || statusText.toLowerCase().includes('オンライン');
 
   const handleCameraPress = (item: any) => {
     navigation.navigate('CameraLive', {
       cameraId: item.id,
       cameraName: item.name,
-      baseUrl: 'https://your-camera-api.com',
+      baseUrl: camera.rtsp_url,
     });
   };
 
   const handleSetupDetectionZone = () => {
-    navigation.navigate('DetectionZoneSetup', {
-      cameraId: '',
-      cameraSnapshot: '',
+    navigation.navigate('SettingAI', {
+      cameraData: camera,
     });
   };
 
@@ -120,17 +133,27 @@ const Detail = () => {
                   <Image source={RetangleImage} style={styles.cardImage} />
                 </View>
                 <View style={styles.cardBadge}>
-                  <View style={styles.badgeDot} />
-                  <Text style={styles.badgeText}>Online</Text>
+                  <View
+                    style={[
+                      styles.badgeDot,
+                      { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
+                    ]}
+                  />
+                  <Text style={styles.badgeText}>{statusText}</Text>
                 </View>
               </View>
 
               <View style={styles.cartSecurityMode}>
-                <Text style={styles.textSecurityMode}>セキュリティモード</Text>
+                <Text style={styles.textSecurityMode}>{t('detail.securityMode')}</Text>
                 <LogoDetail />
               </View>
 
-              <View style={styles.filterRow}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filterRow}
+                contentContainerStyle={styles.filterContent}
+              >
                 {filters.map((filter, idx) => {
                   const Icon = activeIndex === idx ? filter.iconActive : filter.iconUnActive;
 
@@ -140,17 +163,17 @@ const Detail = () => {
                       style={[
                         styles.filterBtn,
                         activeIndex === idx && styles.activeFilterBtn,
-                        activeIndex === idx && activeBorderStyles[idx],
+                        activeIndex === idx && styles.filterBtnActiveWarning,
                       ]}
                       onPress={() => setActiveIndex(idx)}
                     >
                       <Icon />
                       <Text style={styles.filterText}>{filter.name}</Text>
-                      <Text style={styles.filterSmall}>侵入 知 即時通知</Text>
+                      <Text style={styles.filterSmall}>{t('detail.textNotification')}</Text>
                     </TouchableOpacity>
                   );
                 })}
-              </View>
+              </ScrollView>
             </View>
             {/* Camera List */}
             {INITIAL_LIST.map((item, idx) => (

@@ -59,9 +59,11 @@ const QRScanner: React.FC = () => {
   const { t } = useTranslation();
   const { accessToken, isAuthenticated } = useAppSelector((state) => state.auth);
   const isProcessingRef = useRef<boolean>(false);
+  const [idStatusCamera, setIdStatusCamera] = useState<string>('');
 
   useEffect(() => {
     (async () => {
+      await updateStatusCamera();
       await checkPermissionStatus();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,6 +159,7 @@ const QRScanner: React.FC = () => {
       // Call camera service to register
       const response = await cameraService.registerCamera({
         id,
+        status_id: idStatusCamera,
       });
 
       // Success - show alert and navigate
@@ -173,15 +176,6 @@ const QRScanner: React.FC = () => {
               if (response.data) {
                 navigation.navigate('ConnectionSuccessful', {
                   cameraData: response.data,
-                });
-              } else {
-                navigation.navigate('ConnectionSuccessful', {
-                  cameraData: {
-                    id: id,
-                    name: '',
-                    serial: '',
-                    rtsp_url: '',
-                  },
                 });
               }
             },
@@ -211,6 +205,13 @@ const QRScanner: React.FC = () => {
         },
       ]);
     }
+  };
+
+  const updateStatusCamera = async () => {
+    const response = await cameraService.updateStatus();
+    const cameras: { id: string; name_trans: string } = response.data;
+    // @ts-ignore
+    setIdStatusCamera(cameras[2]?.id ?? '');
   };
 
   const codeScanner = useCodeScanner({

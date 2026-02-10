@@ -65,3 +65,12 @@ export interface GetWorkflowStatusesResponse {
   message: string;
   data: WorkflowStatus[];
 }
+
+export interface StatusCamera {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    name_trans: string;
+  };
+}

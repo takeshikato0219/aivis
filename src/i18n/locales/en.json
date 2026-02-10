@@ -152,6 +152,10 @@
     "setting": "Setting"
   },
   "detail": {
+    "alertMode": "Alert Mode",
+    "safeMode": "Safe Mode",
+    "releaseMode": "Release Mode",
+    "securityMode": "Security Mode",
     "textNotification": "Intrusion detection, immediate notification"
   },
   "validate": {
@@ -175,12 +179,14 @@
     "passwordNoDigit": "Password is missing digits.",
     "passwordNoSpecialChar": "Password is missing special characters.",
     "nameRequired": "The name field is required.",
+    "relationshipRequired": "The Relationship field is required.",
     "nameTooShort": "Name must be at least 2 characters",
     "nameTooLong": "Name must be less than 50 characters",
     "nameInvalidFormat": "Name can only contain letters, spaces, hyphens, and apostrophes",
     "nameConsecutiveSpaces": "Name cannot have consecutive spaces",
     "nameNoEmoji": "Name cannot contain emoji",
-    "nameNoSpecialChars": "Name cannot contain special characters like , : ?"
+    "nameNoSpecialChars": "Name cannot contain special characters like , : ?",
+    "required": "This field is required"
   },
   "register": {
     "change": "Change",
@@ -223,6 +229,12 @@
     "failedToCaptureSnapshot": "Failed to capture snapshot",
     "startRecording": "Start recording",
     "stopRecording": "Stop recording",
+    "recording": "Recording",
+    "recordingStarted": "Recording started",
+    "videoSaved": "Video saved",
+    "unableToSaveVideo": "Unable to save video",
+    "unableToStartRecording": "Unable to start recording",
+    "noStreamAvailable": "No stream available",
     "unableToChangeResolution": "Unable to change resolution",
     "selectResolution": "Select resolution",
     "videoLoadingFailed": "Video loading failed",
@@ -257,7 +269,9 @@
     "signal": "Signal",
     "unknownDevice": "Unknown Device",
     "noWiFiAccessPointFound": "No WiFi access point found.",
-    "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Select a connection method to setup your Jetson Orin camera."
+    "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Select a connection method to setup your Jetson Orin camera.",
+    "connectionLost": "Connection Lost",
+    "deviceDisconnectedPleaseReconnect": "Device has been disconnected. Please reconnect to continue."
   },
   "pairingCode": {
     "pairingCode": "Pairing Code",
@@ -383,7 +397,17 @@
     "pleaseSelectAWiFiNetworkFirst": "Please select a WiFi network first.",
     "pleaseConnectToDeviceViaBluetoothFirstToScanAndConfigureWiFiNetworks": "Please connect to device via Bluetooth first to scan and configure WiFi networks.",
     "bluetoothConnectionRequired": "Bluetooth connection required",
-    "wiFiScanFailed": "WiFi scan failed"
+    "wiFiScanFailed": "WiFi scan failed",
+    "simCardDetected": "SIM Card Detected",
+    "noSimCardDeviceSupportsLTE": "No SIM Card (Device supports LTE)",
+    "noSimCard": "No SIM Card",
+    "simReady": "SIM Ready",
+    "simReadyOnWiFi": "SIM Ready (Currently on WiFi)",
+    "noSimCardDetected": "No SIM Card detected",
+    "cellularNetwork": "Cellular Network",
+    "cellular": "Cellular ({{generation}})",
+    "done": "Done",
+    "idle": "Idle"
   },
   "faceUpload": {
     "title": "Face Registration",
@@ -395,6 +419,11 @@
     "turnRight": "Turn your face RIGHT",
     "lookUp": "Tilt your head UP",
     "lookDown": "Tilt your head DOWN",
+    "frontView": "Front View",
+    "leftSide": "Left Side",
+    "rightSide": "Right Side",
+    "lookingUp": "Looking Up",
+    "lookingDown": "Looking Down",
     "tapWhenReady": "Position your face and tap the button",
     "complete": "Complete",
     "allPositionsCaptured": "All 5 face positions captured successfully!",
@@ -414,7 +443,36 @@
     "pleaseTurnYourFaceToTheRIGHT": "Please turn your face to the RIGHT.",
     "pleaseTiltYourHeadUP": "Please tilt your head UP.",
     "pleaseTiltYourHeadDOWN": "Please tilt your head DOWN.",
-    "pleasePositionYourFaceCorrectly": "Please position your face correctly."
+    "pleasePositionYourFaceCorrectly": "Please position your face correctly.",
+    "enterInformation": "Enter Information",
+    "fillFormBeforeScan": "Please fill in the information below before starting face scan",
+    "memberRelationship": "Member Relationship",
+    "selectRelationship": "Select relationship",
+    "name": "Name",
+    "enterName": "Enter name",
+    "startScan": "Start Face Scan",
+    "noRelationships": "No relationships available",
+    "validationError": "Validation Error",
+    "pleaseSelectRelationship": "Please select a member relationship",
+    "pleaseEnterName": "Please enter a name",
+    "uploadSuccess": "Success",
+    "uploadSuccessMessage": "Face data uploaded successfully!",
+    "uploadFailed": "Upload Failed",
+    "uploadFailedMessage": "Failed to upload face data. Please try again.",
+    "uploading": "Uploading...",
+    "mustHave5Images": "Must capture all 5 face positions before uploading",
+    "images": "Images",
+    "tapToEditImage": "Tap on image to edit",
+    "selectImageSource": "Select Image Source",
+    "takePhoto": "Take Photo",
+    "chooseFromGallery": "Choose from Gallery",
+    "cameraPermission": "Camera Permission Required",
+    "cameraPermissionDesc": "We need camera access to capture your face",
+    "noCameraDesc": "Unable to access camera device",
+    "preparing": "Preparing...",
+    "faceNotDetected": "Face Not Detected",
+    "adjustPosition": "Please adjust your position and try again",
+    "captureFailed": "Failed to capture face"
   },
   "liveStream": {
     "connectionSuccessful": "Connection Successful",
@@ -428,5 +486,16 @@
     "reconnectFailed": "Failed to reconnect. Please try again.",
     "loadingStream": "Loading live stream...",
     "onlineAndReady": "Online and ready"
+  },
+  "settingAI": {
+    "settingAI": "Setting AI"
+  },
+  "listFace": {
+    "listFace": "List Face",
+    "noMembers": "No members found",
+    "addFirstMember": "Add your first member"
+  },
+  "detailFace": {
+    "detailFace": "Detail Face"
   }
 }

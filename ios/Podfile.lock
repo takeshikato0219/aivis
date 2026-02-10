@@ -118,6 +118,7 @@ PODS:
     - React-RCTText (= 0.82.1)
     - React-RCTVibration (= 0.82.1)
   - React-callinvoker (0.82.1)
+  - React-Codegen (0.1.0)
   - React-Core (0.82.1):
     - boost
     - DoubleConversion
@@ -1884,6 +1885,34 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - react-native-cameraroll (7.10.2):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - react-native-carrier-info (1.1.3):
     - React
   - react-native-image-picker (8.2.1):
@@ -1897,6 +1926,35 @@ PODS:
     - RCT-Folly/Fabric
     - RCTRequired
     - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
+  - react-native-image-resizer (3.0.11):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Codegen
     - React-Core
     - React-debug
     - React-Fabric
@@ -1945,6 +2003,34 @@ PODS:
     - Yoga
   - react-native-netinfo (11.4.1):
     - React-Core
+  - react-native-record-screen (0.6.2):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - react-native-safe-area-context (5.6.2):
     - boost
     - DoubleConversion
@@ -2118,8 +2204,34 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-view-shot (3.8.0):
+  - react-native-view-shot (4.0.3):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
     - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - react-native-webrtc (124.0.7):
     - JitsiWebRTC (~> 124.0.0)
     - React-Core
@@ -2720,6 +2832,8 @@ PODS:
     - Yoga
   - RNDeviceInfo (15.0.1):
     - React-Core
+  - RNFS (2.20.0):
+    - React-Core
   - RNGestureHandler (2.29.1):
     - boost
     - DoubleConversion
@@ -3064,10 +3178,13 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-biometrics (from `../node_modules/react-native-biometrics`)
   - react-native-ble-plx (from `../node_modules/react-native-ble-plx`)
+  - "react-native-cameraroll (from `../node_modules/@react-native-camera-roll/camera-roll`)"
   - react-native-carrier-info (from `../node_modules/react-native-carrier-info`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
+  - "react-native-image-resizer (from `../node_modules/@bam.tech/react-native-image-resizer`)"
   - "react-native-line (from `../node_modules/@xmartlabs/react-native-line`)"
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
+  - react-native-record-screen (from `../node_modules/react-native-record-screen`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-video (from `../node_modules/react-native-video`)
   - react-native-view-shot (from `../node_modules/react-native-view-shot`)
@@ -3107,6 +3224,7 @@ DEPENDENCIES:
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - RNDeviceInfo (from `../node_modules/react-native-device-info`)
+  - RNFS (from `../node_modules/react-native-fs`)
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
   - RNKeychain (from `../node_modules/react-native-keychain`)
@@ -3141,6 +3259,7 @@ SPEC REPOS:
     - MultiplatformBleAdapter
     - nanopb
     - PromisesObjC
+    - React-Codegen
     - SocketRocket
 
 EXTERNAL SOURCES:
@@ -3231,14 +3350,20 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-biometrics"
   react-native-ble-plx:
     :path: "../node_modules/react-native-ble-plx"
+  react-native-cameraroll:
+    :path: "../node_modules/@react-native-camera-roll/camera-roll"
   react-native-carrier-info:
     :path: "../node_modules/react-native-carrier-info"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
+  react-native-image-resizer:
+    :path: "../node_modules/@bam.tech/react-native-image-resizer"
   react-native-line:
     :path: "../node_modules/@xmartlabs/react-native-line"
   react-native-netinfo:
     :path: "../node_modules/@react-native-community/netinfo"
+  react-native-record-screen:
+    :path: "../node_modules/react-native-record-screen"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
   react-native-video:
@@ -3317,6 +3442,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   RNDeviceInfo:
     :path: "../node_modules/react-native-device-info"
+  RNFS:
+    :path: "../node_modules/react-native-fs"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
   RNGoogleSignin:
@@ -3375,6 +3502,7 @@ SPEC CHECKSUMS:
   RCTTypeSafety: c693294e3993056955c3010eb1ebc574f1fcded6
   React: aeece948ccf155182ea86a2395786ed31cf21c61
   React-callinvoker: 05ad789505922d68c06cde1c8060e734df9fe182
+  React-Codegen: 4b8b4817cea7a54b83851d4c1f91f79aa73de30a
   React-Core: 727a48090292599bda380e05c9f1318e21578837
   React-CoreModules: b26015efc6c222479e6939c0d7497cfac08a1a24
   React-cxxreact: 1e6640d1e9a36744c4ce861bf2a5c8cee4abe9cf
@@ -3404,13 +3532,16 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 885bebe5c5f25035e1fd0920776078840a0e3a76
   react-native-biometrics: 352e5a794bfffc46a0c86725ea7dc62deb085bdc
   react-native-ble-plx: 11f6fd40d1454c0bb4ccfce89645d2dea295b535
+  react-native-cameraroll: 977af3f03e7452652fac2904a6d107ab998e57ea
   react-native-carrier-info: 920b17042a1e8df5a63abe3ef87e878a1d7e6b10
   react-native-image-picker: 43e6cd4231e670030fe09b079d696fa5a634ccfc
+  react-native-image-resizer: d4d8ea0caafcb7dd2f0189cc13f8d384941a0521
   react-native-line: 3c2b49a6981909eb8a405b2df2bf2fe15ecee4c7
   react-native-netinfo: f0a9899081c185db1de5bb2fdc1c88c202a059ac
+  react-native-record-screen: 8df104bc775b8e687dadb0207e5820903d57d8b1
   react-native-safe-area-context: 54d812805f3c4e08a4580ad086cbde1d8780c2e4
   react-native-video: 7be878f72d62c9259f40e44c9318f45dc38fb58d
-  react-native-view-shot: 6b7ed61d77d88580fed10954d45fad0eb2d47688
+  react-native-view-shot: aac285cd08144be29c19ab659930172836f0067f
   react-native-webrtc: b5062b745a26c99835efdf0d6c027c9b2ee7ddbc
   react-native-webview: 8b9097e270a99ee8798449f191a7ea27c790fa1c
   React-NativeModulesApple: c4bee6aa736092cd347456488a4f97a8e7517604
@@ -3447,6 +3578,7 @@ SPEC CHECKSUMS:
   ReactCommon: c5803af00bd3737dc1631749b1f1da5beba5b049
   RNCAsyncStorage: 302f2fac014fd450046c120567ca364632da682b
   RNDeviceInfo: 53f9c84e28e854a308d3e548e25ef120b4615531
+  RNFS: 4ac0f0ea233904cb798630b3c077808c06931688
   RNGestureHandler: 927ba2c590c8973f24624f1c1279be08a22ec58d
   RNGoogleSignin: 545fbb4f7210aff29ff67f29f2be1c88f02c9a0f
   RNKeychain: 182d986f809280edd9444a557adc21845f7d1e6f

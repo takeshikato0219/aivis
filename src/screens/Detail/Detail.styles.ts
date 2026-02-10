@@ -1,6 +1,6 @@
 import { StyleSheet, Platform, StatusBar } from 'react-native';
 import { COLORS, FONTS } from '@constants/theme';
-import { isTablet } from '@utils/responsive';
+import { isTablet, scale } from '@utils/responsive';
 
 export const styles = StyleSheet.create({
   container: {
@@ -114,20 +114,23 @@ export const styles = StyleSheet.create({
   },
 
   filterRow: {
+    marginHorizontal: scale(24),
+    marginBottom: scale(32),
+  },
+
+  filterContent: {
     flexDirection: 'row',
-    marginHorizontal: 24,
-    marginBottom: 32,
+    alignItems: 'center',
   },
 
   filterBtn: {
     backgroundColor: 'rgba(24, 54, 86, 0.6)',
     borderRadius: 18,
-    padding: 10,
-    marginRight: 8,
+    padding: scale(10),
+    marginRight: scale(8),
     borderWidth: 1,
     borderColor: '#B5D2FE',
-    width: isTablet() ? 200 : 125,
-    height: isTablet() ? 150 : 117,
+    width: isTablet() ? scale(200) : scale(125),
     justifyContent: 'space-between',
   },
 
@@ -152,16 +155,6 @@ export const styles = StyleSheet.create({
     borderColor: 'rgb(7,181,255)',
   },
 
-  filterBtnActiveSafe: {
-    borderWidth: 2,
-    borderColor: 'rgb(0,239,68)',
-  },
-
-  filterBtnActiveLock: {
-    borderWidth: 2,
-    borderColor: 'rgb(255,0,0)',
-  },
-
   rowFront: {
     borderRadius: 12,
     padding: 16,
@@ -171,6 +164,8 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
 
   rowBack: {

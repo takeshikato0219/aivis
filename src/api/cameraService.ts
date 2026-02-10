@@ -6,6 +6,7 @@ import {
   GetCamerasParams,
   GetCamerasResponse,
   GetWorkflowStatusesResponse,
+  StatusCamera,
 } from './types/cameraTypes';
 
 class CameraService {
@@ -14,17 +15,10 @@ class CameraService {
       throw new Error('Missing required field: id');
     }
 
-    const requestBody: any = {};
-
-    if (data.name) {
-      requestBody.name = data.name;
-    }
-    if (data.status_id) {
-      requestBody.status_id = data.status_id;
-    }
-    if (data.description) {
-      requestBody.description = data.description;
-    }
+    const requestBody: Record<string, string> = {};
+    if (data.name !== undefined) requestBody.name = data.name;
+    if (data.status_id !== undefined) requestBody.status_id = data.status_id;
+    if (data.description !== undefined) requestBody.description = data.description;
 
     const response = await axiosInstance.patch<RegisterCameraResponse>(
       `${API_ENDPOINTS.CAMERAS}/${data.id}`,
@@ -60,6 +54,11 @@ class CameraService {
 
   async getWorkflowStatuses(): Promise<GetWorkflowStatusesResponse> {
     const response = await axiosInstance.get<GetWorkflowStatusesResponse>(API_ENDPOINTS.FACILITIES);
+    return response.data;
+  }
+
+  async updateStatus(): Promise<StatusCamera> {
+    const response = await axiosInstance.get<StatusCamera>(API_ENDPOINTS.STATUSES);
     return response.data;
   }
 }

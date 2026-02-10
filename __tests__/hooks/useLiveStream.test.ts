@@ -1,6 +1,19 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useLiveStream } from '@hooks/useLiveStream';
 
+// Mock NetInfo - must return a function for unsubscribe (jest.setup mock can be cleared)
+jest.mock('@react-native-community/netinfo', () => ({
+  addEventListener: () => () => {},
+  fetch: jest.fn(() =>
+    Promise.resolve({
+      isConnected: true,
+      isInternetReachable: true,
+      type: 'wifi',
+      details: { isConnectionExpensive: false },
+    })
+  ),
+}));
+
 // Mock timers
 jest.useFakeTimers();
 
@@ -49,35 +62,33 @@ describe('useLiveStream', () => {
   });
 
   describe('initial loading', () => {
-    it('should set loading to false after random initial loading time', async () => {
-      // Mock Math.random to return 0.5 for predictable testing
-      jest.spyOn(Math, 'random').mockReturnValue(0.5);
-
+    it('should set loading to false after initial loading timeout when no connection', async () => {
       const { result } = renderHook(() => useLiveStream());
 
-      // Initial loading time = Math.floor(0.5 * (10000 - 5000)) + 5000 = 7500ms
       expect(result.current.isLoading).toBe(true);
 
-      // Fast-forward time
+      // Fast-forward past initial loading max (10000ms) - no heartbeat, triggers failed
       act(() => {
-        jest.advanceTimersByTime(7500);
+        jest.advanceTimersByTime(10000);
       });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-        expect(result.current.connectionStatus).toBe('connected');
+        expect(result.current.connectionStatus).toBe('failed');
       });
-
-      // Restore Math.random
-      jest.spyOn(Math, 'random').mockRestore();
     });
 
     it('should not override loading state if WebView loads first', async () => {
       const { result } = renderHook(() => useLiveStream());
 
-      // Simulate WebView loading first
+      // Simulate WebView loading - uses 3000ms timeout before setting connected
       act(() => {
         result.current.handleWebViewLoad();
+      });
+
+      // Advance past 3000ms timeout in handleWebViewLoad
+      act(() => {
+        jest.advanceTimersByTime(3000);
       });
 
       expect(result.current.isLoading).toBe(false);
@@ -100,6 +111,11 @@ describe('useLiveStream', () => {
 
         act(() => {
           result.current.handleWebViewLoad();
+        });
+
+        // handleWebViewLoad uses 3000ms timeout before setting connected
+        act(() => {
+          jest.advanceTimersByTime(3000);
         });
 
         expect(result.current.isLoading).toBe(false);
@@ -148,6 +164,7 @@ describe('useLiveStream', () => {
           result.current.handleWebViewError();
         });
 
+        // handleWebViewError sets 'failed' then handleConnectionLost sets 'connecting' when retrying
         expect(result.current.isLoading).toBe(false);
         expect(result.current.isReconnecting).toBe(true);
         expect(result.current.connectionStatus).toBe('connecting');
@@ -181,11 +198,12 @@ describe('useLiveStream', () => {
         // @ts-ignore
         result.current.webViewRef.current = mockWebViewRef.current;
 
-        // Set some state first - simulate that we had some retries
+        // Trigger error and advance for retry to simulate retryCount > 0
         act(() => {
-          // Manually set retry count to simulate previous retries
-          (result.current as any).retryCount = 2;
           result.current.handleWebViewError();
+        });
+        act(() => {
+          jest.advanceTimersByTime(2000); // Default retryBaseDelay
         });
 
         act(() => {
@@ -217,8 +235,9 @@ describe('useLiveStream', () => {
         result.current.handleWebViewMessage(mockEvent);
       });
 
-      // Heartbeat should be processed without errors
-      expect(result.current.connectionStatus).toBe('connecting');
+      // Heartbeat confirms connection - sets connected when loading
+      expect(result.current.connectionStatus).toBe('connected');
+      expect(result.current.isLoading).toBe(false);
     });
 
     it('should handle connection-lost messages', () => {
@@ -254,6 +273,7 @@ describe('useLiveStream', () => {
         result.current.handleWebViewMessage(mockEvent);
       });
 
+      // connection-restored sets state synchronously
       expect(result.current.isReconnecting).toBe(false);
       expect(result.current.retryCount).toBe(0);
       expect(result.current.connectionStatus).toBe('connected');
@@ -304,12 +324,11 @@ describe('useLiveStream', () => {
         },
       };
 
-      // Should not crash
-      expect(() => {
-        act(() => {
-          result.current.handleWebViewMessage(mockEvent);
-        });
-      }).not.toThrow();
+      // Should not throw - handleWebViewMessage catches JSON parse errors
+      act(() => {
+        result.current.handleWebViewMessage(mockEvent);
+      });
+      expect(result.current.connectionStatus).toBeDefined();
     });
   });
 
@@ -510,6 +529,9 @@ describe('useLiveStream', () => {
     it('should clear all timers on cleanup', () => {
       const { result } = renderHook(() => useLiveStream());
 
+      // @ts-ignore - Mock webViewRef so we can verify reload wouldn't be called after cleanup
+      result.current.webViewRef.current = mockWebViewRef.current;
+
       // Load WebView to start timers
       act(() => {
         result.current.handleWebViewLoad();
@@ -525,17 +547,20 @@ describe('useLiveStream', () => {
         result.current.cleanup();
       });
 
-      // Advance time - timers should not trigger
+      // Advance time - timers should not trigger (retry callback would call reload)
       act(() => {
         jest.advanceTimersByTime(10000);
       });
 
-      // WebView reload should not be called (retry timer cleared)
+      // WebView reload should not be called (retry timer cleared by cleanup)
       expect(mockWebViewRef.current.reload).not.toHaveBeenCalled();
     });
 
     it('should cleanup timers on unmount', () => {
       const { result, unmount } = renderHook(() => useLiveStream());
+
+      // @ts-ignore - Mock webViewRef so we can verify reload wouldn't be called after unmount
+      result.current.webViewRef.current = mockWebViewRef.current;
 
       // Load WebView to start timers
       act(() => {
@@ -550,12 +575,12 @@ describe('useLiveStream', () => {
       // Unmount component
       unmount();
 
-      // Advance time - timers should not trigger
+      // Advance time - timers should not trigger (cleanup runs on unmount)
       act(() => {
         jest.advanceTimersByTime(10000);
       });
 
-      // WebView reload should not be called (timers cleared)
+      // WebView reload should not be called (timers cleared on unmount)
       expect(mockWebViewRef.current.reload).not.toHaveBeenCalled();
     });
   });
@@ -661,7 +686,7 @@ describe('useLiveStream', () => {
 
       expect(result.current.isReconnecting).toBe(true);
 
-      // Simulate successful reload
+      // Simulate successful reload - handleWebViewLoad clears retry timer and sets connected
       act(() => {
         result.current.handleWebViewLoad();
       });

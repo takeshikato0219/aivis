@@ -1,4 +1,6 @@
 import { StyleSheet } from 'react-native';
+import { isTablet } from '@utils/responsive';
+import { COLORS, FONTS } from '@constants/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -341,5 +343,382 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     textAlign: 'center',
+  },
+
+  // List face
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  backButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    width: isTablet() ? 50 : 46,
+    height: isTablet() ? 50 : 46,
+  },
+  viewTitle: {
+    flex: 1,
+    marginHorizontal: 14,
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: isTablet() ? 35 : 20,
+    fontWeight: FONTS.weights.medium,
+    color: COLORS.background,
+  },
+
+  // Form styles
+  formSafeArea: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  formContainer: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+  },
+  formTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  formSubtitle: {
+    fontSize: 14,
+    color: '#aaa',
+    marginBottom: 30,
+    lineHeight: 20,
+  },
+  inputContainer: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+  },
+  errorInputText: {
+    fontSize: 12,
+    color: '#FF5252',
+    marginTop: 4,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  dropdownButtonText: {
+    fontSize: 16,
+    color: '#fff',
+  },
+  dropdownPlaceholder: {
+    color: '#888',
+  },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.main,
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginTop: 20,
+    gap: 10,
+  },
+  startButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownModal: {
+    width: '85%',
+    maxHeight: '60%',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  dropdownTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  dropdownItemActive: {
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#fff',
+  },
+  dropdownItemTextActive: {
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  emptyList: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyListText: {
+    fontSize: 14,
+    color: '#888',
+  },
+
+  // List face styles
+  listContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#fff',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  membersList: {
+    padding: 16,
+  },
+  memberItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  memberContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginLeft: 12,
+    flex: 1,
+  },
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  uploadingText: {
+    fontSize: 16,
+    color: '#fff',
+    marginTop: 16,
+  },
+
+  // Detail face styles
+  detailContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  detailContent: {
+    padding: 16,
+  },
+  detailSection: {
+    marginBottom: 24,
+  },
+  detailSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  detailInput: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: '#ccc',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.main,
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginTop: 20,
+    marginBottom: 40,
+    gap: 8,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#333',
+  },
+  saveButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  imagesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  imageItem: {
+    width: '100%',
+    aspectRatio: 1,
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageIndex: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  imageNote: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  imageItemContainer: {
+    width: '48%',
+    marginBottom: 24,
+  },
+  imageTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  imageOptionsModal: {
+    width: '80%',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+  imageOptionsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 20,
+  },
+  imageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  imageOptionText: {
+    fontSize: 16,
+    color: '#4CAF50',
+    marginLeft: 12,
+    fontWeight: '500',
+  },
+  cancelOption: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  cancelOptionText: {
+    color: '#fff',
+    marginLeft: 0,
   },
 });

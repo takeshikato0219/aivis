@@ -23,9 +23,7 @@ export type AppStackParamList = {
   Home: undefined;
   Notifications: undefined;
   Detail: {
-    name?: string;
-    id?: string;
-    cameraId?: string;
+    camera: Camera;
   };
   CameraLive: {
     cameraId: string;
@@ -61,6 +59,9 @@ export type AppStackParamList = {
   Setting: undefined;
   FaceUpload: undefined;
   ConnectionSuccessful: { cameraData: Camera };
+  SettingAI: { cameraData: Camera };
+  ListFace: undefined;
+  DetailFace: { memberId: string };
 };
 
 // ===== NAVIGATION PROPS =====
@@ -119,6 +120,12 @@ export type ConnectionSuccessfulScreenRouteProp = RouteProp<
   AppStackParamList,
   'ConnectionSuccessful'
 >;
+
+export type SettingAIScreenNavigationProp = StackNavigationProp<AppStackParamList, 'SettingAI'>;
+export type SettingAIScreenRouteProp = RouteProp<AppStackParamList, 'SettingAI'>;
+
+export type DetailFaceNavigationProp = StackNavigationProp<AppStackParamList, 'DetailFace'>;
+export type DetailFaceRouteProp = RouteProp<AppStackParamList, 'DetailFace'>;
 
 // ===== DECLARE GLOBAL =====
 declare global {

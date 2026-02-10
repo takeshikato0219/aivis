@@ -250,7 +250,7 @@ const Setting = () => {
   };
 
   const goToFaceUpload = () => {
-    navigation.navigate('FaceUpload');
+    navigation.navigate('ListFace');
   };
 
   return (

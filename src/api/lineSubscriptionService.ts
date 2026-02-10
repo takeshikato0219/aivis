@@ -1,7 +1,7 @@
-import Line from '@xmartlabs/react-native-line';
 import { Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showCommonAlert } from '@components/Alert/Alert';
+import { BaseLineService } from './baseLineService';
 
 export interface LineSubscriptionStatus {
   isSubscribed: boolean;
@@ -10,33 +10,10 @@ export interface LineSubscriptionStatus {
   statusMessage?: string;
 }
 
-export class LineSubscriptionService {
-  private channelId = '2008969814'; // Same channel ID as auth service
+export class LineSubscriptionService extends BaseLineService {
   private baseUrl = 'https://api.line.me/v2/bot'; // LINE Official Account API base URL
   private channelAccessToken = ''; // This should be configured in your environment
   private storageKey = '@line_subscription_status';
-
-  constructor() {
-    this.configure();
-  }
-
-  async isSignedIn(): Promise<boolean> {
-    try {
-      const token = await Line.getCurrentAccessToken();
-      return !!token?.accessToken;
-    } catch {
-      return false;
-    }
-  }
-
-  private async configure() {
-    try {
-      const setupParams = { channelId: this.channelId };
-      await Line.setup(setupParams);
-    } catch (error: any) {
-      console.log('[LINE Subscription] Setup error:', error);
-    }
-  }
 
   /**
    * Check if user is subscribed to the LINE Official Account
@@ -44,7 +21,7 @@ export class LineSubscriptionService {
   async checkSubscriptionStatus(): Promise<LineSubscriptionStatus> {
     try {
       // Get current LINE user profile
-      const profile = await Line.getProfile();
+      const profile = await this.getCurrentUser();
 
       if (!profile?.userId) {
         return { isSubscribed: false };
@@ -77,7 +54,7 @@ export class LineSubscriptionService {
    */
   async subscribeToOfficialAccount(): Promise<boolean> {
     try {
-      const profile = await Line.getProfile();
+      const profile = await this.getCurrentUser();
 
       if (!profile?.userId) {
         throw new Error('Unable to get LINE user profile');
@@ -118,7 +95,7 @@ export class LineSubscriptionService {
    */
   async unsubscribeFromOfficialAccount(): Promise<boolean> {
     try {
-      const profile = await Line.getProfile();
+      const profile = await this.getCurrentUser();
 
       if (!profile?.userId) {
         throw new Error('Unable to get LINE user profile');
@@ -288,7 +265,7 @@ export class LineSubscriptionService {
       const lineUrl = `line://ti/p/@${this.channelId}`;
       const webUrl = `https://line.me/R/ti/p/${this.channelId}`;
 
-      const canOpenLine = await Linking.canOpenURL(lineUrl);
+      const canOpenLine = await this.isLineAppInstalled();
 
       if (canOpenLine) {
         await Linking.openURL(lineUrl);

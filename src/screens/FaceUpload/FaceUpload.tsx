@@ -1,12 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  FlatList,
+  Image,
+  Keyboard,
+  Modal,
+  Platform,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FaceDetection, { Face, FaceDetectionOptions } from '@react-native-ml-kit/face-detection';
+import ImageResizer from '@bam.tech/react-native-image-resizer';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { styles } from './FaceUpload.styles';
+import { useInput } from '@hooks/useInput';
+import TextInput from '@components/TextInput/TextInput';
+import faceService, { MemberRelationship } from '@api/faceService';
+import { COLORS } from '@constants/theme';
+import BackIcon from '@assets/svg/icon-back.svg';
+import { isName } from '@utils/validate';
 
 const FACE_POSITIONS = [
   {
@@ -70,13 +92,25 @@ const FaceUpload: React.FC = () => {
   const [prepareProgress, setPrepareProgress] = useState(0);
   const [isPreparing, setIsPreparing] = useState(false);
 
+  // Form state
+  const [showForm, setShowForm] = useState(true);
+  const [memberRelationships, setMemberRelationships] = useState<MemberRelationship[]>([]);
+  const [selectedRelationship, setSelectedRelationship] = useState<MemberRelationship | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isLoadingRelationships, setIsLoadingRelationships] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [relationshipError, setRelationshipError] = useState<string | undefined>(undefined);
+  const nameInput = useInput({
+    validateFn: isName,
+  });
+
   // Face detection options for static images
   const faceDetectionOptions: FaceDetectionOptions = {
     performanceMode: 'accurate',
     landmarkMode: 'none',
     contourMode: 'none',
     classificationMode: 'none',
-    minFaceSize: 0.15,
+    minFaceSize: Platform.OS === 'ios' ? 0.1 : 0.15,
     trackingEnabled: false,
   };
 
@@ -162,6 +196,22 @@ const FaceUpload: React.FC = () => {
     }
   }, [hasPermission, requestPermission]);
 
+  // Fetch member relationships on mount
+  useEffect(() => {
+    const fetchRelationships = async () => {
+      setIsLoadingRelationships(true);
+      try {
+        const data = await faceService.getMemberRelationships();
+        setMemberRelationships(data);
+      } catch (error) {
+        console.error('Failed to fetch member relationships:', error);
+      } finally {
+        setIsLoadingRelationships(false);
+      }
+    };
+    fetchRelationships();
+  }, []);
+
   // Breathing animation
   useEffect(() => {
     Animated.loop(
@@ -191,7 +241,7 @@ const FaceUpload: React.FC = () => {
 
   // Auto start prepare phase when position changes
   useEffect(() => {
-    if (isProcessing || showPreview) return;
+    if (isProcessing || showPreview || showForm) return;
 
     // Wait 1 second before starting prepare
     const initTimer = setTimeout(() => {
@@ -204,7 +254,7 @@ const FaceUpload: React.FC = () => {
       stopScanning();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPositionIndex, isProcessing, showPreview]);
+  }, [currentPositionIndex, isProcessing, showPreview, showForm]);
 
   const startPrepare = () => {
     setIsPreparing(true);
@@ -344,12 +394,32 @@ const FaceUpload: React.FC = () => {
         flash: 'off',
       });
 
-      const imageUri = `file://${photo.path}`;
+      // Ensure file:// prefix is present (required for ML Kit to load the image)
+      // react-native-vision-camera v4.x returns path with file:// prefix on both platforms
+      let imageUri = photo.path.startsWith('file://') ? photo.path : `file://${photo.path}`;
+
+      // iOS: Normalize image orientation using ImageResizer
+      // This fixes EXIF rotation issues that cause ML Kit to fail face detection
+      if (Platform.OS === 'ios') {
+        try {
+          const resizedImage = await ImageResizer.createResizedImage(
+            imageUri,
+            1920,
+            1920,
+            'JPEG',
+            100,
+            0,
+            undefined,
+            false
+          );
+          imageUri = resizedImage.uri;
+        } catch (resizeError) {
+          console.error('Image resize/normalize error:', resizeError);
+        }
+      }
 
       // Detect faces in the captured image
       const faces = await FaceDetection.detect(imageUri, faceDetectionOptions);
-
-      console.log(`Face detection result: ${faces.length} faces found`);
 
       // Check if exactly one face is detected and in correct position
       if (faces.length === 1 && validateFacePosition(faces[0], currentPosition.key)) {
@@ -406,7 +476,6 @@ const FaceUpload: React.FC = () => {
         } else if (faces.length > 1) {
           errorMessage = t('faceUpload.multipleFacesDetected');
         } else if (faces.length === 1) {
-          // Face detected but not in correct position
           errorMessage = getPositionErrorMessage(currentPosition.key);
         }
 
@@ -429,25 +498,64 @@ const FaceUpload: React.FC = () => {
     }
   };
 
-  const handleComplete = (allFaces: FaceData[]) => {
-    const avgProgress =
-      allFaces.reduce((sum, face) => sum + face.scanProgress, 0) / allFaces.length;
-    const qualityScore = Math.round(avgProgress);
+  const handleComplete = async (allFaces: FaceData[]) => {
+    // Validate that we have exactly 5 face images
+    if (allFaces.length !== 5) {
+      Alert.alert(
+        t('faceUpload.validationError') || 'Validation Error',
+        t('faceUpload.mustHave5Images') || 'Must capture all 5 face positions before uploading'
+      );
+      return;
+    }
 
-    Alert.alert(
-      '✓ ' + (t('faceUpload.complete') || 'Face ID Enrolled'),
-      (t('faceUpload.allPositionsCaptured') || 'All face positions scanned successfully!') +
-        `\n\n${t('faceUpload.qualityScore') || 'Scan Quality'}: ${qualityScore}%`,
-      [
-        {
-          text: t('common.ok') || 'OK',
-          onPress: () => {
-            console.log('Captured faces:', allFaces);
-            navigation.goBack();
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('name', nameInput.value);
+      if (selectedRelationship) {
+        formData.append('relationship_type_id', selectedRelationship.id);
+      }
+      // Append each image as separate 'images' form field
+      allFaces.forEach((face) => {
+        formData.append('images', {
+          uri: face.imageUri,
+          type: 'image/jpeg',
+          name: `${face.position}.jpg`,
+        } as any);
+      });
+
+      await faceService.uploadFaces(formData);
+
+      Alert.alert(
+        t('faceUpload.uploadSuccess') || 'Success',
+        t('faceUpload.uploadSuccessMessage') || 'Face data uploaded successfully!',
+        [
+          {
+            text: t('common.ok') || 'OK',
+            onPress: () => {
+              navigation.goBack();
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert(
+        t('faceUpload.uploadFailed') || 'Upload Failed',
+        t('faceUpload.uploadFailedMessage') || 'Failed to upload face data. Please try again.',
+        [
+          {
+            text: t('common.ok') || 'OK',
+            onPress: () => {
+              navigation.goBack();
+            },
+          },
+        ]
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleRetake = () => {
@@ -466,6 +574,30 @@ const FaceUpload: React.FC = () => {
         },
       ]
     );
+  };
+
+  const validateForm = (): boolean => {
+    const isNameValid = nameInput.validate();
+    const isRelationshipValid = selectedRelationship !== null;
+
+    // Set relationship error
+    if (!isRelationshipValid) {
+      setRelationshipError(t('validate.relationshipRequired'));
+    } else {
+      setRelationshipError(undefined);
+    }
+
+    if (!isNameValid) {
+      return false;
+    }
+
+    return isRelationshipValid;
+  };
+
+  const handleStartScan = () => {
+    if (validateForm()) {
+      setShowForm(false);
+    }
   };
 
   const progressPercentage = progressAnim.interpolate({
@@ -510,6 +642,165 @@ const FaceUpload: React.FC = () => {
     );
   }
 
+  // Form UI - Show before scanning
+  if (showForm) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
+            </TouchableOpacity>
+            <View style={styles.viewTitle}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {t('faceUpload.title') || 'Face Registration'}
+              </Text>
+            </View>
+            <View style={styles.styleWidth} />
+          </View>
+
+          {/* Form Content */}
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.formContainer}>
+              <Text style={styles.formTitle}>
+                {t('faceUpload.enterInformation') || 'Enter Information'}
+              </Text>
+              <Text style={styles.formSubtitle}>
+                {t('faceUpload.fillFormBeforeScan') ||
+                  'Please fill in the information below before starting face scan'}
+              </Text>
+
+              {/* Member Relationship Dropdown */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>
+                  {t('faceUpload.memberRelationship') || 'Member Relationship'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => setShowDropdown(true)}
+                  disabled={isLoadingRelationships}
+                >
+                  {isLoadingRelationships ? (
+                    <ActivityIndicator size="small" color="#4CAF50" />
+                  ) : (
+                    <>
+                      <Text
+                        style={[
+                          styles.dropdownButtonText,
+                          !selectedRelationship && styles.dropdownPlaceholder,
+                        ]}
+                      >
+                        {selectedRelationship?.name_trans ||
+                          t('faceUpload.selectRelationship') ||
+                          'Select relationship'}
+                      </Text>
+                      <Icon name="chevron-down" size={24} color="#fff" />
+                    </>
+                  )}
+                </TouchableOpacity>
+                {relationshipError && (
+                  <Text style={styles.errorInputText}>{relationshipError}</Text>
+                )}
+              </View>
+
+              {/* Name Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>{t('faceUpload.name') || 'Name'}</Text>
+                <TextInput
+                  value={nameInput.value}
+                  onChangeText={nameInput.handleChange}
+                  placeholder={t('faceUpload.enterName') || 'Enter name'}
+                  autoCapitalize="words"
+                  error={!!nameInput.error}
+                  style={styles.textInput}
+                  placeholderTextColor={COLORS.BBBBBB}
+                />
+                {nameInput.error && (
+                  <Text style={styles.errorInputText}>{t('validate.' + nameInput.error)}</Text>
+                )}
+              </View>
+
+              {/* Start Scan Button */}
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={handleStartScan}
+                disabled={isLoadingRelationships}
+              >
+                <Icon name="face-recognition" size={24} color="#fff" />
+                <Text style={styles.startButtonText}>
+                  {t('faceUpload.startScan') || 'Start Face Scan'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+
+          {/* Dropdown Modal */}
+          <Modal
+            visible={showDropdown}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowDropdown(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setShowDropdown(false)}
+            >
+              <View style={styles.dropdownModal}>
+                <View style={styles.dropdownHeader}>
+                  <Text style={styles.dropdownTitle}>
+                    {t('faceUpload.selectRelationship') || 'Select Relationship'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setShowDropdown(false)}>
+                    <Icon name="close" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+                <FlatList
+                  data={memberRelationships}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.dropdownItem,
+                        selectedRelationship?.id === item.id && styles.dropdownItemActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedRelationship(item);
+                        setRelationshipError(undefined); // Clear error when user selects relationship
+                        setShowDropdown(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          selectedRelationship?.id === item.id && styles.dropdownItemTextActive,
+                        ]}
+                      >
+                        {item.name_trans}
+                      </Text>
+                      {selectedRelationship?.id === item.id && (
+                        <Icon name="check" size={20} color="#4CAF50" />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  ListEmptyComponent={
+                    <View style={styles.emptyList}>
+                      <Text style={styles.emptyListText}>
+                        {t('faceUpload.noRelationships') || 'No relationships available'}
+                      </Text>
+                    </View>
+                  }
+                />
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -519,7 +810,7 @@ const FaceUpload: React.FC = () => {
         ref={camera}
         style={styles.absoluteFill}
         device={device}
-        isActive={!showPreview}
+        isActive={!showPreview && !showForm}
         photo={true}
       />
 
@@ -743,6 +1034,14 @@ const FaceUpload: React.FC = () => {
           </SafeAreaView>
         )}
       </View>
+
+      {/* Uploading Overlay */}
+      {isUploading && (
+        <View style={styles.uploadingOverlay}>
+          <ActivityIndicator size="large" color="#4CAF50" />
+          <Text style={styles.uploadingText}>{t('faceUpload.uploading') || 'Uploading...'}</Text>
+        </View>
+      )}
     </View>
   );
 };

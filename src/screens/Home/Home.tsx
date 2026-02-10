@@ -169,9 +169,7 @@ const Home = () => {
 
   const goToDetail = (camera: Camera) => {
     navigation.navigate('Detail', {
-      name: camera.name,
-      id: camera.id,
-      cameraId: camera.id,
+      camera: camera,
     });
   };
 
@@ -198,8 +196,7 @@ const Home = () => {
             const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
             const paddingToBottom = 20;
             const isCloseToBottom =
-              layoutMeasurement.height + contentOffset.y >=
-              contentSize.height - paddingToBottom;
+              layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
             if (isCloseToBottom && hasMore && !isLoadingMore) {
               loadMore();
             }
@@ -209,7 +206,7 @@ const Home = () => {
           {cameraList.map((camera) => {
             const statusText =
               camera.status == null
-                ? 'Unknown'
+                ? 'Offline'
                 : typeof camera.status === 'object'
                   ? camera.status.name_trans
                   : camera.status || 'Online';

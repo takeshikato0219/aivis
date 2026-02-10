@@ -81,7 +81,7 @@ export const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     marginBottom: 25,
-    maxHeight: 40,
+    maxHeight: 37,
   },
   filterBtn: {
     backgroundColor: 'rgba(24, 54, 86, 0.6)',
@@ -91,7 +91,7 @@ export const styles = StyleSheet.create({
     marginRight: 6,
     borderWidth: 1,
     borderColor: '#B5D2FE',
-    height: 40,
+    height: 37,
   },
   filterText: {
     color: COLORS.background,
@@ -143,7 +143,6 @@ export const styles = StyleSheet.create({
     fontSize: 20,
     marginTop: 20,
     marginBottom: 20,
-    marginLeft: 12,
     flex: 1,
   },
   addCameraBtn: {
@@ -180,7 +179,6 @@ export const styles = StyleSheet.create({
   },
   iconCircle: {
     alignItems: FONTS.align.alignSelfEnd,
-    marginRight: 28,
   },
   manualButton: {
     flexDirection: 'row',
@@ -194,7 +192,7 @@ export const styles = StyleSheet.create({
     borderColor: '#39FFF9',
     backgroundColor: 'rgba(20,24,32,0.25)',
     marginTop: 18,
-    marginBottom: 6,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,

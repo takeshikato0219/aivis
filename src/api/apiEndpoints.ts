@@ -19,6 +19,12 @@ export const API_ENDPOINTS = {
   // Cameras
   CAMERAS: '/cameras',
   FACILITIES: '/facilities',
+  // Face
+  MEMBER_RELATIONSHIPS: '/member-relationships',
+  MEMBERS: '/members',
+
+  // Status Camera
+  STATUSES: '/statuses',
 };
 
 export type ApiEndpoints = typeof API_ENDPOINTS;
