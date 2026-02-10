@@ -10,13 +10,12 @@ import {
   FlatList,
   Image,
   Animated,
+  Platform,
 } from 'react-native';
-import { Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useInput } from '@hooks/useInput';
-import { useFocusEffect } from '@react-navigation/native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import FaceDetection, { Face, FaceDetectionOptions } from '@react-native-ml-kit/face-detection';
 import ImageResizer from '@bam.tech/react-native-image-resizer';

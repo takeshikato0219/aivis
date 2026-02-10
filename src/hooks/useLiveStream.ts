@@ -52,6 +52,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastHeartbeatRef = useRef<number>(Date.now());
+  const retryCountRef = useRef<number>(0);
   const handleConnectionLostRef = useRef<() => void>(() => {});
 
   const [isLoading, setIsLoading] = useState(true);
@@ -60,6 +61,11 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   );
   const [retryCount, setRetryCount] = useState(0);
   const [isReconnecting, setIsReconnecting] = useState(false);
+
+  // Keep retryCountRef in sync with state
+  useEffect(() => {
+    retryCountRef.current = retryCount;
+  }, [retryCount]);
 
   const startHeartbeatMonitoring = useCallback(() => {
     // Clear existing interval
@@ -88,11 +94,21 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       heartbeatIntervalRef.current = null;
     }
 
+    // Clear existing retry timer
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
     // Always set loading to false so overlays can show
     setIsLoading(false);
 
-    // Don't retry if already failed or max retries reached
-    if (retryCount >= maxRetries) {
+    const currentRetryCount = retryCountRef.current;
+    console.log(`Connection lost. Current retry count: ${currentRetryCount}/${maxRetries}`);
+
+    // Don't retry if max retries reached
+    if (currentRetryCount >= maxRetries) {
+      console.warn('Max retries reached, showing failed state');
       setConnectionStatus('failed');
       setIsReconnecting(false);
       return;
@@ -103,20 +119,21 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     setConnectionStatus('connecting');
 
     // Calculate delay with exponential backoff (max retryMaxDelay)
-    const delay = Math.min(retryBaseDelay * Math.pow(2, retryCount), retryMaxDelay);
-
-    // Clear existing retry timer
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-    }
+    const delay = Math.min(retryBaseDelay * Math.pow(2, currentRetryCount), retryMaxDelay);
+    console.log(`Scheduling retry in ${delay}ms`);
 
     // Schedule retry
     retryTimerRef.current = setTimeout(() => {
-      const newRetryCount = retryCount + 1;
+      const newRetryCount = retryCountRef.current + 1;
+      console.log(`Executing retry ${newRetryCount}/${maxRetries}`);
+
+      // Update both ref and state
+      retryCountRef.current = newRetryCount;
       setRetryCount(newRetryCount);
 
       // Check if max retries reached after incrementing
       if (newRetryCount >= maxRetries) {
+        console.warn('Max retries reached after increment, showing failed state');
         setConnectionStatus('failed');
         setIsReconnecting(false);
         return;
@@ -126,14 +143,14 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       lastHeartbeatRef.current = Date.now();
       webViewRef.current?.reload();
 
-      // If still reconnecting after reload, start monitoring again
+      // Start monitoring again after reload
       setTimeout(() => {
         if (webViewRef.current) {
           startHeartbeatMonitoring();
         }
       }, 1000);
     }, delay);
-  }, [retryCount, maxRetries, retryBaseDelay, retryMaxDelay, startHeartbeatMonitoring]);
+  }, [maxRetries, retryBaseDelay, retryMaxDelay, startHeartbeatMonitoring]);
 
   // Keep ref updated with latest callback
   useEffect(() => {
@@ -146,22 +163,22 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
-      // Recovering from error - WebView loaded successfully
-      setConnectionStatus('connected');
-      setIsReconnecting(false);
-      setRetryCount(0);
     }
+
+    // Reset retry count on successful load
+    retryCountRef.current = 0;
+    setRetryCount(0);
+
     lastHeartbeatRef.current = Date.now();
     startHeartbeatMonitoring();
 
     // Set a timeout to confirm connection after receiving first heartbeat
-    // If no heartbeat received within 5 seconds, consider it connected anyway
+    // If no heartbeat received within 3 seconds, consider it connected anyway
     setTimeout(() => {
       setIsLoading((prev) => {
         if (prev && connectionStatus !== 'failed') {
           setConnectionStatus('connected');
           setIsReconnecting(false);
-          setRetryCount(0);
           return false;
         }
         return prev;
@@ -185,12 +202,20 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   );
 
   const handleManualRetry = useCallback(() => {
+    console.log('Manual retry triggered');
+
     // Clear any existing timers
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
 
+    // Reset retry count (both ref and state)
+    retryCountRef.current = 0;
     setRetryCount(0);
     setIsLoading(true);
     setConnectionStatus('connecting');
@@ -217,6 +242,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
             if (prev) {
               setConnectionStatus('connected');
               setIsReconnecting(false);
+              retryCountRef.current = 0;
               setRetryCount(0);
               return false;
             }
@@ -227,6 +253,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
           setIsLoading(false);
           setConnectionStatus('connected');
           setIsReconnecting(false);
+          retryCountRef.current = 0;
           setRetryCount(0);
           lastHeartbeatRef.current = Date.now();
         } else if (data.type === 'streamError') {
@@ -242,6 +269,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
           console.log('Connection restored');
           setIsLoading(false);
           setIsReconnecting(false);
+          retryCountRef.current = 0;
           setRetryCount(0);
           setConnectionStatus('connected');
           lastHeartbeatRef.current = Date.now();
@@ -482,7 +510,8 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       // Network restored - auto retry if currently failed or reconnecting
       if (isConnected && !wasConnected) {
         console.log('Network restored, attempting auto-retry');
-        // Reset retry count and attempt to reconnect
+        // Reset retry count (both ref and state) and attempt to reconnect
+        retryCountRef.current = 0;
         setRetryCount(0);
         setIsLoading(true);
         setConnectionStatus('connecting');

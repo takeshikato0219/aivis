@@ -16,17 +16,9 @@ class CameraService {
     }
 
     const requestBody: any = {};
-
-    if (data.name) {
-      requestBody.name = data.name;
-    }
     if (data.status_id) {
       requestBody.status_id = data.status_id;
     }
-    if (data.description) {
-      requestBody.description = data.description;
-    }
-
     const response = await axiosInstance.patch<RegisterCameraResponse>(
       `${API_ENDPOINTS.CAMERAS}/${data.id}`,
       requestBody,
