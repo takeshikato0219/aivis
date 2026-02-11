@@ -29,12 +29,12 @@ export interface UseLiveStreamReturn {
 
 const DEFAULT_CONFIG: Required<UseLiveStreamConfig> = {
   maxRetries: 5,
-  heartbeatInterval: 3000,
-  heartbeatTimeout: 10000,
+  heartbeatInterval: 10000,
+  heartbeatTimeout: 30000,
   retryBaseDelay: 2000,
   retryMaxDelay: 30000,
-  initialLoadingMin: 5000,
-  initialLoadingMax: 10000,
+  initialLoadingMin: 3000,
+  initialLoadingMax: 8000,
 };
 
 export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamReturn => {
@@ -88,16 +88,16 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   }, [heartbeatInterval, heartbeatTimeout]);
 
   const handleConnectionLost = useCallback(() => {
+    // Prevent multiple simultaneous calls
+    if (retryTimerRef.current) {
+      console.log('Retry already scheduled, skipping duplicate handleConnectionLost call');
+      return;
+    }
+
     // Clear heartbeat monitoring
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
-    }
-
-    // Clear existing retry timer
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
     }
 
     // Always set loading to false so overlays can show
@@ -124,6 +124,9 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
 
     // Schedule retry
     retryTimerRef.current = setTimeout(() => {
+      // Clear the timer ref so future handleConnectionLost calls can work
+      retryTimerRef.current = null;
+
       const newRetryCount = retryCountRef.current + 1;
       console.log(`Executing retry ${newRetryCount}/${maxRetries}`);
 
@@ -158,19 +161,18 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   }, [handleConnectionLost]);
 
   const handleWebViewLoad = useCallback(() => {
-    // Don't immediately set loading to false - wait for stream confirmation via heartbeat
-    // Only clear retry timers and start heartbeat monitoring
+    // Clear any pending retry timer on successful load
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
-      // Recovering from error - WebView loaded successfully
-      setConnectionStatus('connected');
-      setIsReconnecting(false);
     }
 
     // Reset retry count on successful load
     retryCountRef.current = 0;
     setRetryCount(0);
+
+    // Clear reconnecting state
+    setIsReconnecting(false);
 
     lastHeartbeatRef.current = Date.now();
     startHeartbeatMonitoring();
@@ -181,7 +183,6 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       setIsLoading((prev) => {
         if (prev && connectionStatus !== 'failed') {
           setConnectionStatus('connected');
-          setIsReconnecting(false);
           return false;
         }
         return prev;

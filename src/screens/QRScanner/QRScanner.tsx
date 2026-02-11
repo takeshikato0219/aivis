@@ -34,7 +34,7 @@ import { COLORS } from '@constants/theme';
 import TextInput from '@components/TextInput/TextInput';
 import { useInput } from '@hooks/useInput';
 import { isPassword } from '@utils/validate';
-import { useAppSelector } from '@redux/store';
+import { useAppSelector, store } from '@redux/store';
 import cameraService from '@api/cameraService';
 import { jetsonBLEService } from '@/services/jetsonBLEService';
 
@@ -56,10 +56,12 @@ const QRScanner: React.FC = () => {
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('checking');
   const [shouldMountCamera, setShouldMountCamera] = useState<boolean>(false);
+  const [scanningEnabled, setScanningEnabled] = useState<boolean>(true); // New state to control scanning
   const { t } = useTranslation();
   const { accessToken, isAuthenticated } = useAppSelector((state) => state.auth);
   const isProcessingRef = useRef<boolean>(false);
   const [idStatusCamera, setIdStatusCamera] = useState<string>('');
+  const state = store.getState();
 
   useEffect(() => {
     (async () => {
@@ -68,6 +70,16 @@ const QRScanner: React.FC = () => {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reset scanning state when screen is focused
+  useEffect(() => {
+    if (isFocused) {
+      setScanningEnabled(true);
+      setIsSearching(false);
+      setScannedData(null);
+      isProcessingRef.current = false;
+    }
+  }, [isFocused]);
 
   const agentCodeInput = useInput({
     validateFn: isPassword,
@@ -127,8 +139,18 @@ const QRScanner: React.FC = () => {
     }
   };
 
+  const resetScanningState = () => {
+    setIsSearching(false);
+    setScannedData(null);
+    setScanningEnabled(true);
+    isProcessingRef.current = false;
+  };
+
   const registerCamera = async (qrData: string) => {
     void jetsonBLEService.disconnect();
+
+    setScanningEnabled(false);
+
     if (isProcessingRef.current) {
       return;
     }
@@ -143,6 +165,9 @@ const QRScanner: React.FC = () => {
         [
           {
             text: t('common.ok'),
+            onPress: () => {
+              resetScanningState();
+            },
           },
         ]
       );
@@ -160,6 +185,7 @@ const QRScanner: React.FC = () => {
       const response = await cameraService.registerCamera({
         id,
         status_id: idStatusCamera,
+        user_id: state.auth.user?.id,
       });
 
       // Success - show alert and navigate
@@ -170,8 +196,6 @@ const QRScanner: React.FC = () => {
           {
             text: t('common.ok'),
             onPress: () => {
-              setIsSearching(false);
-              setScannedData(null);
               isProcessingRef.current = false;
               if (response.data) {
                 navigation.navigate('ConnectionSuccessful', {
@@ -184,24 +208,15 @@ const QRScanner: React.FC = () => {
       );
     } catch (error: any) {
       console.error('Error registering camera:', error);
-      setIsSearching(false);
-      setScannedData(null);
       isProcessingRef.current = false;
 
-      // Extract error message from processed error
-      let errorMessage = t('common.error') || 'An error occurred';
-
-      if (error?.apiResponse?.message) {
-        errorMessage = error.apiResponse.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-
-      Alert.alert(t('common.error') || 'Error', errorMessage, [
+      Alert.alert('', t('QRScan.theCameraHasBeenRegistered'), [
         {
           text: t('common.ok'),
+          onPress: () => {
+            // Reset scanning state to allow scanning again
+            resetScanningState();
+          },
         },
       ]);
     }
@@ -217,7 +232,14 @@ const QRScanner: React.FC = () => {
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: (codes) => {
-      if (codes.length > 0 && !scannedData && !isSearching && !isProcessingRef.current) {
+      // Only process QR codes if scanning is enabled and not already processing
+      if (
+        codes.length > 0 &&
+        !scannedData &&
+        !isSearching &&
+        !isProcessingRef.current &&
+        scanningEnabled
+      ) {
         const qrData = codes[0].value;
         if (qrData) {
           setScannedData(qrData);
@@ -305,8 +327,8 @@ const QRScanner: React.FC = () => {
             <Camera
               style={StyleSheet.absoluteFill}
               device={device}
-              isActive={isFocused && shouldMountCamera}
-              codeScanner={codeScanner}
+              isActive={isFocused && shouldMountCamera && scanningEnabled}
+              codeScanner={scanningEnabled ? codeScanner : undefined}
               torch={isFlashOn ? 'on' : 'off'}
             />
           )}
@@ -314,9 +336,14 @@ const QRScanner: React.FC = () => {
           <RectangleIcon5 style={[styles.corner, styles.topRight]} />
           <RectangleIcon6 style={[styles.corner, styles.bottomLeft]} />
           <RectangleIcon7 style={[styles.corner, styles.bottomRight]} />
-          {!scannedData && !isSearching && (
+          {!scannedData && !isSearching && scanningEnabled && (
             <View style={styles.scanIndicator}>
               <Icon name="qrcode-scan" size={80} color="#00ADD4" />
+            </View>
+          )}
+          {!scanningEnabled && !isSearching && (
+            <View style={styles.scanIndicator}>
+              <Icon name="pause" size={80} color="#FFA500" />
             </View>
           )}
         </Animated.View>
@@ -324,7 +351,7 @@ const QRScanner: React.FC = () => {
         <TouchableOpacity
           style={[styles.flashButton, isFlashOn && styles.flashButtonActive]}
           onPress={() => setIsFlashOn(!isFlashOn)}
-          disabled={isSearching}
+          disabled={isSearching || !scanningEnabled}
         >
           <Icon name="flash" size={18} color="#FFF" />
           <Text style={styles.flashText}>Flash {isFlashOn ? 'on' : 'off'}</Text>

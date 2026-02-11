@@ -8,7 +8,7 @@ import { styles } from './DetectionZoneSetup.styles';
 import { buildStreamUrl, getStreamHTML } from '@utils/streamUtils';
 import { WebView } from 'react-native-webview';
 import { useLiveStream } from '@hooks/useLiveStream';
-import {useTranslation} from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 
 const getScreenDims = () => {
   const { width, height } = Dimensions.get('window');
@@ -20,7 +20,7 @@ const getScreenDims = () => {
 const { SCREEN_WIDTH, SCREEN_HEIGHT } = getScreenDims();
 
 const PREVIEW_WIDTH = SCREEN_WIDTH;
-const PREVIEW_HEIGHT = SCREEN_HEIGHT; // full height phía dưới header
+const PREVIEW_HEIGHT = SCREEN_HEIGHT;
 
 interface Corner {
   x: number;
@@ -43,7 +43,7 @@ type DetectionZoneSetupParamList = {
 const DetectionZoneSetup: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<DetectionZoneSetupParamList, 'DetectionZoneSetup'>>();
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const camera = route.params.camera;
 
   const centerX = PREVIEW_WIDTH / 2;
@@ -186,7 +186,8 @@ const DetectionZoneSetup: React.FC = () => {
   };
 
   useEffect(() => {
-    Orientation.lockToLandscape();
+    // Force landscape orientation for both iOS and Android when entering the screen
+    Orientation.lockToLandscapeLeft(); // More reliable for iOS
     return () => {
       Orientation.lockToPortrait();
     };
@@ -238,6 +239,10 @@ const DetectionZoneSetup: React.FC = () => {
             })}
             onMessage={handleWebViewMessage}
             injectedJavaScript={getInjectedJavaScript()}
+            setSupportMultipleWindows={false}
+            allowsLinkPreview={false}
+            cacheEnabled={false}
+            incognito
           />
 
           <View

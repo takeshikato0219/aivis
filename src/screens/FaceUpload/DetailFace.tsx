@@ -419,7 +419,6 @@ const DetailFace = () => {
       const formData = new FormData();
       formData.append('name', nameInput.value.trim());
       formData.append('relationship_type_id', selectedRelationship.id);
-      // Chỉ gửi ảnh đã thay đổi
       member.images.forEach((image, index) => {
         if (image && image.id && changedImageIds.has(image.id)) {
           const positionKey = FACE_POSITION_TITLES[index]?.key || 'center';

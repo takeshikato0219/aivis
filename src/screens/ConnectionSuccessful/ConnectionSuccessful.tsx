@@ -127,17 +127,22 @@ const ConnectionSuccessful: React.FC = () => {
               originWhitelist={['*']}
               allowFileAccess={true}
               allowUniversalAccessFromFileURLs={true}
-              scalesPageToFit={true}
+              scalesPageToFit={false}
+              renderToHardwareTextureAndroid={true}
+              androidLayerType="hardware"
+              cacheEnabled={false}
               {...(Platform.OS === 'ios' && {
                 allowsBackForwardNavigationGestures: false,
                 decelerationRate: 'normal',
                 bounces: false,
                 scrollEnabled: false,
+                suppressesIncrementalRendering: true,
               })}
               {...(Platform.OS === 'android' && {
                 mixedContentMode: 'always',
                 thirdPartyCookiesEnabled: true,
                 allowFileAccessFromFileURLs: true,
+                textZoom: 100,
               })}
               onMessage={handleWebViewMessage}
               injectedJavaScript={getInjectedJavaScript()}

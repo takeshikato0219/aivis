@@ -18,9 +18,9 @@ import {
   setAuthStatus,
   setIsAuthenticated,
   SerializableDevice,
+  AuthStatus,
 } from '@redux/slices/bleSlice';
 import { Platform, PermissionsAndroid } from 'react-native';
-import { AuthStatus } from '@hooks/useJetsonBLE 1';
 
 // =============================================================================
 // UUIDs — must match config.py on Jetson

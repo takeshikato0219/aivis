@@ -304,7 +304,8 @@
     "enterManualCode": "Enter manual code",
     "agentCode": "Agent Code",
     "cameraRegisteredSuccessfully": "Camera registered successfully",
-    "authenticationRequired": "Please login to register camera"
+    "authenticationRequired": "Please login to register camera",
+    "theCameraHasBeenRegistered": "The camera has been registered"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Enter the default password for the Jetson Orin's local hotspot:",

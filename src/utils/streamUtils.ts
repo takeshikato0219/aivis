@@ -15,19 +15,20 @@ export const buildStreamUrl = (
   if (rtspUrl.startsWith('http://') || rtspUrl.startsWith('https://')) {
     return rtspUrl;
   }
-  // Wrap RTSP URL in stream wrapper
-  return `${baseUrl}/stream.html?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse,hls,mjpeg`;
+  // Use go2rtc embed player with autoplay enabled
+  // This bypasses the settings/mode selection screen
+  return `${baseUrl}/stream.html?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse,hls,mjpeg&autoplay=true`;
 };
 
 /**
  * Generate HTML template for WebView stream display
- * @param streamUrl - Stream URL to display in iframe
- * @returns HTML string for WebView
+ * @param streamUrl - Stream URL to display in iframe with auto-start
+ * @returns HTML string for WebView with auto-playing stream
  */
 export const getStreamHTML = (streamUrl: string): string => {
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -59,107 +60,171 @@ export const getStreamHTML = (streamUrl: string): string => {
           border: none;
           display: block;
         }
-        video {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+        #loading {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          color: #fff;
+          font-size: 16px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          z-index: 1000;
+          pointer-events: none;
         }
-        /* Hide zoom controls */
-        .zoom-control,
-        .zoom-controls,
-        [class*="zoom"],
-        [id*="zoom"],
-        button[title*="zoom"],
-        button[title*="Zoom"],
-        button[aria-label*="zoom"],
-        button[aria-label*="Zoom"],
-        .control-zoom,
-        .btn-zoom,
-        [data-control="zoom"] {
-          display: none !important;
-          visibility: hidden !important;
-          opacity: 0 !important;
-          pointer-events: none !important;
+        .spinner {
+          border: 3px solid rgba(255,255,255,0.3);
+          border-top: 3px solid #fff;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          animation: spin 1s linear infinite;
+          margin: 0 auto 10px;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
       </style>
     </head>
     <body>
       <div id="stream-container">
+        <div id="loading">
+          <div class="spinner"></div>
+          <div>Loading stream...</div>
+        </div>
         <iframe 
+          id="stream-iframe"
           src="${streamUrl}" 
           allow="camera; microphone; autoplay; fullscreen"
           allowfullscreen
-          frameborder="0"
         ></iframe>
       </div>
       <script>
-        window.addEventListener('error', function(e) {
-          e.preventDefault();
-        });
-        
-        // Hide zoom buttons function
-        function hideZoomButtons() {
-          // Try to hide zoom buttons in iframe (may fail due to CORS)
-          try {
-            const iframe = document.querySelector('iframe');
-            if (iframe && iframe.contentWindow && iframe.contentDocument) {
-              const iframeDoc = iframe.contentDocument;
-              const zoomButtons = iframeDoc.querySelectorAll(
-                '.zoom-control, .zoom-controls, [class*="zoom"], [id*="zoom"], ' +
-                'button[title*="zoom"], button[title*="Zoom"], ' +
-                'button[aria-label*="zoom"], button[aria-label*="Zoom"], ' +
-                '.control-zoom, .btn-zoom, [data-control="zoom"]'
-              );
-              zoomButtons.forEach(function(btn) {
-                btn.style.display = 'none';
-                btn.style.visibility = 'hidden';
-                btn.style.opacity = '0';
-                btn.style.pointerEvents = 'none';
-              });
-            }
-          } catch(e) {
-            // CORS error is expected, ignore
-            console.log('Cannot access iframe content to hide zoom buttons (CORS)');
-          }
+        (function() {
+          const iframe = document.getElementById('stream-iframe');
+          const loading = document.getElementById('loading');
+          let streamStarted = false;
+          let hideLoadingTimeout = null;
           
-          // Hide zoom buttons in current document
-          const zoomButtons = document.querySelectorAll(
-            '.zoom-control, .zoom-controls, [class*="zoom"], [id*="zoom"], ' +
-            'button[title*="zoom"], button[title*="Zoom"], ' +
-            'button[aria-label*="zoom"], button[aria-label*="Zoom"], ' +
-            '.control-zoom, .btn-zoom, [data-control="zoom"]'
-          );
-          zoomButtons.forEach(function(btn) {
-            btn.style.display = 'none';
-            btn.style.visibility = 'hidden';
-            btn.style.opacity = '0';
-            btn.style.pointerEvents = 'none';
+          // Error handling
+          window.addEventListener('error', function(e) {
+            console.error('Window error:', e.message);
+            window.ReactNativeWebView?.postMessage(JSON.stringify({
+              type: 'error',
+              message: e.message
+            }));
           });
-        }
-        
-        // Log readiness and hide zoom buttons
-        window.addEventListener('load', function() {
-          console.log('Stream iframe loaded');
-          hideZoomButtons();
           
-          // Try to hide zoom buttons after iframe loads
-          const iframe = document.querySelector('iframe');
-          if (iframe) {
-            iframe.addEventListener('load', function() {
-              setTimeout(hideZoomButtons, 500);
-            });
+          // Hide loading after iframe loads
+          iframe.addEventListener('load', function() {
+            console.log('Iframe loaded');
             
-            // Also try periodically in case buttons are added dynamically
-            setInterval(hideZoomButtons, 1000);
-          }
-        });
-        
-        // Also try immediately
-        if (document.readyState === 'complete') {
-          hideZoomButtons();
-        } else {
-          document.addEventListener('DOMContentLoaded', hideZoomButtons);
-        }
+            // Try to auto-click play button or mode selector in iframe (may fail due to CORS)
+            setTimeout(function() {
+              try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                if (iframeDoc) {
+                  // Try to find and click play/start button
+                  const playButtons = iframeDoc.querySelectorAll('button, [role="button"], .play-button, #play-button');
+                  playButtons.forEach(function(btn) {
+                    if (btn.textContent && (
+                      btn.textContent.toLowerCase().includes('play') ||
+                      btn.textContent.toLowerCase().includes('start') ||
+                      btn.textContent.toLowerCase().includes('webrtc') ||
+                      btn.textContent.toLowerCase().includes('mse')
+                    )) {
+                      console.log('Auto-clicking button:', btn.textContent);
+                      btn.click();
+                    }
+                  });
+                  
+                  // Try to find video element and check if playing
+                  const videos = iframeDoc.querySelectorAll('video');
+                  if (videos.length > 0) {
+                    videos.forEach(function(video) {
+                      video.addEventListener('playing', function() {
+                        console.log('Video playing detected');
+                        if (!streamStarted) {
+                          streamStarted = true;
+                          loading.style.display = 'none';
+                          window.ReactNativeWebView?.postMessage(JSON.stringify({
+                            type: 'playing'
+                          }));
+                        }
+                      });
+                      
+                      // Try to play if paused
+                      if (video.paused) {
+                        video.play().catch(function(err) {
+                          console.log('Auto-play failed:', err);
+                        });
+                      }
+                    });
+                  }
+                }
+              } catch(e) {
+                // CORS error expected for cross-origin iframe
+                console.log('Cannot access iframe content (CORS)');
+              }
+              
+              // Hide loading after 3 seconds regardless (assume stream started)
+              hideLoadingTimeout = setTimeout(function() {
+                loading.style.display = 'none';
+                if (!streamStarted) {
+                  streamStarted = true;
+                  window.ReactNativeWebView?.postMessage(JSON.stringify({
+                    type: 'streamReady'
+                  }));
+                }
+              }, 3000);
+            }, 1000);
+          });
+          
+          // Handle iframe errors
+          iframe.addEventListener('error', function() {
+            console.error('Iframe error');
+            loading.style.display = 'none';
+            window.ReactNativeWebView?.postMessage(JSON.stringify({
+              type: 'streamError',
+              error: 'Failed to load stream'
+            }));
+          });
+          
+          // Heartbeat monitoring
+          setInterval(function() {
+            if (streamStarted) {
+              window.ReactNativeWebView?.postMessage(JSON.stringify({
+                type: 'heartbeat',
+                timestamp: Date.now()
+              }));
+            }
+          }, 10000);
+          
+          // Network status monitoring
+          window.addEventListener('online', function() {
+            console.log('Network online');
+            window.ReactNativeWebView?.postMessage(JSON.stringify({
+              type: 'connection-restored',
+              reason: 'network-online'
+            }));
+            // Reload iframe on network restore
+            const currentSrc = iframe.src;
+            iframe.src = '';
+            setTimeout(function() {
+              iframe.src = currentSrc;
+            }, 100);
+          });
+          
+          window.addEventListener('offline', function() {
+            console.warn('Network offline');
+            window.ReactNativeWebView?.postMessage(JSON.stringify({
+              type: 'connection-lost',
+              reason: 'network-offline'
+            }));
+          });
+          
+          console.log('Stream player initialized with URL:', '${streamUrl}');
+        })();
       </script>
     </body>
     </html>

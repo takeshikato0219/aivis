@@ -2,6 +2,7 @@ export interface RegisterCameraRequest {
   id: string;
   name?: string;
   status_id?: string;
+  user_id?: string;
   description?: string;
 }
 
