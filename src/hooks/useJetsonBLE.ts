@@ -34,8 +34,8 @@ export function useJetsonBLE() {
   }, []);
 
   // Wrapper for connect that accepts both Device and SerializableDevice
-  const connect = useCallback(async (device: Device | SerializableDevice) => {
-    await jetsonBLEService.connect(device);
+  const connect = useCallback(async (device: Device | SerializableDevice, pinCode: string) => {
+    await jetsonBLEService.connect(device, pinCode);
   }, []);
 
   // Return the same API as before for backward compatibility

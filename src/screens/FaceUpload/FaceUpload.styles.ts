@@ -203,6 +203,7 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+    color: '#FFFFFF',
   },
   holdProgressContainer: {
     marginTop: 8,
@@ -562,6 +563,11 @@ export const styles = StyleSheet.create({
     color: '#fff',
     marginLeft: 12,
     flex: 1,
+  },
+  memberRelationship: {
+    color: '#888',
+    fontSize: 12,
+    marginLeft: 12,
   },
   uploadingOverlay: {
     ...StyleSheet.absoluteFill,

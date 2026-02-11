@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { styles } from './FaceUpload.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,7 +6,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import faceService, { Member } from '@api/faceService';
+import faceService, { Member, MemberRelationship } from '@api/faceService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AppStackParamList } from '@navigation/types';
 
@@ -16,18 +16,30 @@ const ListFace = () => {
 
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [relationships, setRelationships] = useState<MemberRelationship[]>([]);
 
   const fetchMembers = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await faceService.getMembers();
-      console.log(response);
       setMembers(response.data);
     } catch (error) {
       console.error('Failed to fetch members:', error);
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const fetchRelationships = async () => {
+      try {
+        const response = await faceService.getMemberRelationships();
+        setRelationships(response);
+      } catch (error) {
+        console.error('Failed to fetch relationships:', error);
+      }
+    };
+    fetchRelationships();
   }, []);
 
   useFocusEffect(
@@ -40,17 +52,28 @@ const ListFace = () => {
     navigation.navigate('FaceUpload' as never);
   };
 
-  const renderMemberItem = ({ item }: { item: Member }) => (
-    <TouchableOpacity
-      style={styles.memberItem}
-      onPress={() => navigation.navigate('DetailFace', { memberId: item.id })}
-    >
-      <View style={styles.memberContent}>
-        <Icon name="face-recognition" size={24} color="#00ADD4" />
-        <Text style={styles.memberName}>{item.name}</Text>
-      </View>
-      <Icon name="chevron-right" size={24} color="#888" />
-    </TouchableOpacity>
+  const renderMemberItem = useCallback(
+    ({ item }: { item: Member }) => {
+      const relationship = relationships.find((rel) => rel.id === item.relationship_type_id);
+      return (
+        <TouchableOpacity
+          style={styles.memberItem}
+          onPress={() => navigation.navigate('DetailFace', { memberId: item.id, relationships })}
+        >
+          <View style={styles.memberContent}>
+            <Icon name="face-recognition" size={24} color="#00ADD4" />
+            <View>
+              <Text style={styles.memberName}>{item.name}</Text>
+              {relationship && (
+                <Text style={styles.memberRelationship}>{relationship.name_trans}</Text>
+              )}
+            </View>
+          </View>
+          <Icon name="chevron-right" size={24} color="#888" />
+        </TouchableOpacity>
+      );
+    },
+    [navigation, relationships]
   );
 
   return (

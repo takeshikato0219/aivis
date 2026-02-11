@@ -2003,6 +2003,8 @@ PODS:
     - Yoga
   - react-native-netinfo (11.4.1):
     - React-Core
+  - react-native-orientation-locker (1.7.0):
+    - React-Core
   - react-native-record-screen (0.6.2):
     - boost
     - DoubleConversion
@@ -3184,6 +3186,7 @@ DEPENDENCIES:
   - "react-native-image-resizer (from `../node_modules/@bam.tech/react-native-image-resizer`)"
   - "react-native-line (from `../node_modules/@xmartlabs/react-native-line`)"
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
+  - react-native-orientation-locker (from `../node_modules/react-native-orientation-locker`)
   - react-native-record-screen (from `../node_modules/react-native-record-screen`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-video (from `../node_modules/react-native-video`)
@@ -3362,6 +3365,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@xmartlabs/react-native-line"
   react-native-netinfo:
     :path: "../node_modules/@react-native-community/netinfo"
+  react-native-orientation-locker:
+    :path: "../node_modules/react-native-orientation-locker"
   react-native-record-screen:
     :path: "../node_modules/react-native-record-screen"
   react-native-safe-area-context:
@@ -3538,6 +3543,7 @@ SPEC CHECKSUMS:
   react-native-image-resizer: d4d8ea0caafcb7dd2f0189cc13f8d384941a0521
   react-native-line: 3c2b49a6981909eb8a405b2df2bf2fe15ecee4c7
   react-native-netinfo: f0a9899081c185db1de5bb2fdc1c88c202a059ac
+  react-native-orientation-locker: 5819fd23ca89cbac0d736fb4314745f62716d517
   react-native-record-screen: 8df104bc775b8e687dadb0207e5820903d57d8b1
   react-native-safe-area-context: 54d812805f3c4e08a4580ad086cbde1d8780c2e4
   react-native-video: 7be878f72d62c9259f40e44c9318f45dc38fb58d

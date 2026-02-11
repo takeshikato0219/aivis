@@ -488,7 +488,10 @@
     "onlineAndReady": "Online and ready"
   },
   "settingAI": {
-    "settingAI": "Setting AI"
+    "settingAI": "Setting AI",
+    "detectionAreaSetup": "Detection Area Setup",
+    "operationSchedule": "Operation Schedule",
+    "aIDetectionRules": "AI Detection Rules"
   },
   "listFace": {
     "listFace": "List Face",

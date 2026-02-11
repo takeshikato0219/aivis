@@ -15,9 +15,12 @@ import {
   resetConnectionState,
   setCriticalDisconnection,
   WiFiScanStatus,
+  setAuthStatus,
+  setIsAuthenticated,
   SerializableDevice,
 } from '@redux/slices/bleSlice';
 import { Platform, PermissionsAndroid } from 'react-native';
+import { AuthStatus } from '@hooks/useJetsonBLE 1';
 
 // =============================================================================
 // UUIDs — must match config.py on Jetson
@@ -29,6 +32,8 @@ const PWD_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef2';
 const STATUS_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef3';
 const WIFI_SCAN_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef4';
 const WIFI_LIST_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef5';
+const AUTH_STATUS_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef7';
+const PIN_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef6';
 
 // =============================================================================
 // BASE64 HELPERS
@@ -331,7 +336,7 @@ class JetsonBLEService {
   // CONNECT
   // ---------------------------------------------------------------------------
 
-  connect = async (device: Device | SerializableDevice): Promise<void> => {
+  connect = async (device: Device | SerializableDevice, pinCode: string): Promise<void> => {
     try {
       store.dispatch(clearError());
 
@@ -345,7 +350,84 @@ class JetsonBLEService {
       // 3. Setup subscriptions
       await this.setupSubscriptions(connectedDevice);
 
-      // 4. Read initial status
+      // 4. Authenticate with PIN (if supported)
+      try {
+        // Subscribe to auth status notifications
+        const authStatusSub = connectedDevice.monitorCharacteristicForService(
+          SERVICE_UUID,
+          AUTH_STATUS_CHAR_UUID,
+          (monitorError: any, characteristic: any) => {
+            if (monitorError) {
+              console.error('[BLE] Auth status monitor error:', monitorError.message);
+              return;
+            }
+            if (characteristic?.value) {
+              const status = base64ToByte(characteristic.value);
+              console.log(`[BLE] Auth status notification: ${status}`);
+              setAuthStatus(status);
+            }
+          }
+        );
+        this.subscriptions.push(authStatusSub);
+
+        // Send your PIN and wait for the results.
+        const authResult = await new Promise<number>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('PIN verification timeout has ended.'));
+          }, 5000);
+
+          // Subscribe temporarily to receive authentication results.
+          const tempSub = connectedDevice.monitorCharacteristicForService(
+            SERVICE_UUID,
+            AUTH_STATUS_CHAR_UUID,
+            (monitorError: any, characteristic: any) => {
+              if (monitorError) {
+                clearTimeout(timeout);
+                tempSub.remove();
+                reject(monitorError);
+                return;
+              }
+              if (characteristic?.value) {
+                const status = base64ToByte(characteristic.value);
+                clearTimeout(timeout);
+                tempSub.remove();
+                resolve(status);
+              }
+            }
+          );
+          pinCode = '123456';
+          // Send PIN
+          connectedDevice
+            .writeCharacteristicWithResponseForService(
+              SERVICE_UUID,
+              PIN_CHAR_UUID,
+              stringToBase64(pinCode)
+            )
+            .catch((err: any) => {
+              clearTimeout(timeout);
+              tempSub.remove();
+              reject(err);
+            });
+        });
+
+        if (authResult === AuthStatus.AUTHENTICATED) {
+          setAuthStatus(AuthStatus.AUTHENTICATED);
+          setIsAuthenticated(true);
+        } else {
+          // PIN sai → disconnect
+          setAuthStatus(AuthStatus.INVALID_PIN);
+          setIsAuthenticated(false);
+          await bleManager.cancelDeviceConnection(connectedDevice.id);
+          setError('Incorrect PIN');
+          return;
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (authErr: any) {
+        setIsAuthenticated(true);
+        setAuthStatus(AuthStatus.AUTHENTICATED);
+      }
+
+      // 5. Read initial status
       const statusChar = await connectedDevice.readCharacteristicForService(
         SERVICE_UUID,
         STATUS_CHAR_UUID
@@ -354,7 +436,7 @@ class JetsonBLEService {
         store.dispatch(setWifiStatus(base64ToByte(statusChar.value)));
       }
 
-      // 5. Update connected state
+      // 6. Update connected state
       store.dispatch(setConnected({ isConnected: true, deviceId: connectedDevice.id }));
     } catch (err: any) {
       // Cleanup subscriptions on connection error

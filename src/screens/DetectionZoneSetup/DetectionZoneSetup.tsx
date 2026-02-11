@@ -1,28 +1,26 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-  PanResponder,
-  Animated,
-  ImageBackground,
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Platform, Dimensions, PanResponder } from 'react-native';
+import Orientation from 'react-native-orientation-locker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Svg, { Polygon, Line } from 'react-native-svg';
-import DetectionZoneSetupBackground from '@assets/png/detect-zone-background.png';
-import BackIcon from '@assets/svg/icon-back.svg';
 import { styles } from './DetectionZoneSetup.styles';
+import { buildStreamUrl, getStreamHTML } from '@utils/streamUtils';
+import { WebView } from 'react-native-webview';
+import { useLiveStream } from '@hooks/useLiveStream';
+import {useTranslation} from 'react-i18next';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const getScreenDims = () => {
+  const { width, height } = Dimensions.get('window');
+  const w = Math.max(width, height);
+  const h = Math.min(width, height);
+  return { SCREEN_WIDTH: w, SCREEN_HEIGHT: h };
+};
 
-// Camera preview size
-const PREVIEW_WIDTH = SCREEN_WIDTH - 32;
-const PREVIEW_HEIGHT = (PREVIEW_WIDTH * 9) / 16; // 16:9 aspect ratio
+const { SCREEN_WIDTH, SCREEN_HEIGHT } = getScreenDims();
+
+const PREVIEW_WIDTH = SCREEN_WIDTH;
+const PREVIEW_HEIGHT = SCREEN_HEIGHT; // full height phía dưới header
 
 interface Corner {
   x: number;
@@ -36,44 +34,82 @@ interface DetectionZone {
   bottomRight: Corner;
 }
 
+const GRID_SIZE = 28;
+
+type DetectionZoneSetupParamList = {
+  DetectionZoneSetup: { camera: any };
+};
+
 const DetectionZoneSetup: React.FC = () => {
   const navigation = useNavigation();
-  const route = useRoute();
-  const { cameraId, cameraSnapshot } = route.params as any;
+  const route = useRoute<RouteProp<DetectionZoneSetupParamList, 'DetectionZoneSetup'>>();
+  const {t} = useTranslation();
+  const camera = route.params.camera;
 
-  // Initial zone (center rectangle)
-  const [zone, setZone] = useState<DetectionZone>({
-    topLeft: { x: PREVIEW_WIDTH * 0.2, y: PREVIEW_HEIGHT * 0.3 },
-    topRight: { x: PREVIEW_WIDTH * 0.8, y: PREVIEW_HEIGHT * 0.3 },
-    bottomLeft: { x: PREVIEW_WIDTH * 0.2, y: PREVIEW_HEIGHT * 0.7 },
-    bottomRight: { x: PREVIEW_WIDTH * 0.8, y: PREVIEW_HEIGHT * 0.7 },
-  });
+  const centerX = PREVIEW_WIDTH / 2;
+  const centerY = PREVIEW_HEIGHT / 2;
+  const offset = 80;
 
+  const INITIAL_ZONE: DetectionZone = {
+    topLeft: { x: centerX - offset, y: centerY - offset },
+    topRight: { x: centerX + offset, y: centerY - offset },
+    bottomLeft: { x: centerX - offset, y: centerY + offset },
+    bottomRight: { x: centerX + offset, y: centerY + offset },
+  };
+
+  const [zone, setZone] = useState<DetectionZone>(INITIAL_ZONE);
   const [activeCorner, setActiveCorner] = useState<keyof DetectionZone | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const streamUrl = buildStreamUrl(camera?.rtsp_url);
 
-  // Create pan responder for each corner
-  const createPanResponder = (corner: keyof DetectionZone) => {
-    return PanResponder.create({
+  const {
+    webViewRef,
+    handleWebViewLoad,
+    handleWebViewError,
+    handleWebViewHttpError,
+    handleWebViewMessage,
+    getInjectedJavaScript,
+  } = useLiveStream();
+
+  const createPanResponder = (corner: keyof DetectionZone) =>
+    PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
         setActiveCorner(corner);
       },
       onPanResponderMove: (_, gestureState) => {
-        const newX = Math.max(0, Math.min(PREVIEW_WIDTH, zone[corner].x + gestureState.dx));
-        const newY = Math.max(0, Math.min(PREVIEW_HEIGHT, zone[corner].y + gestureState.dy));
+        setZone((prev) => {
+          const prevCorner = prev[corner];
+          const newX = Math.max(0, Math.min(PREVIEW_WIDTH, prevCorner.x + gestureState.dx));
+          const newY = Math.max(0, Math.min(PREVIEW_HEIGHT, prevCorner.y + gestureState.dy));
 
-        setZone((prev) => ({
-          ...prev,
-          [corner]: { x: newX, y: newY },
-        }));
+          const updated: DetectionZone = { ...prev, [corner]: { x: newX, y: newY } };
+
+          switch (corner) {
+            case 'topLeft':
+              updated.topRight.y = newY;
+              updated.bottomLeft.x = newX;
+              break;
+            case 'topRight':
+              updated.topLeft.y = newY;
+              updated.bottomRight.x = newX;
+              break;
+            case 'bottomLeft':
+              updated.topLeft.x = newX;
+              updated.bottomRight.y = newY;
+              break;
+            case 'bottomRight':
+              updated.topRight.x = newX;
+              updated.bottomLeft.y = newY;
+              break;
+          }
+
+          return updated;
+        });
       },
-      onPanResponderRelease: () => {
-        setActiveCorner(null);
-      },
+      onPanResponderRelease: () => setActiveCorner(null),
     });
-  };
 
   const panResponders = {
     topLeft: createPanResponder('topLeft'),
@@ -82,231 +118,180 @@ const DetectionZoneSetup: React.FC = () => {
     bottomRight: createPanResponder('bottomRight'),
   };
 
-  // Convert coordinates to percentage (0-1) for server
-  const getZoneCoordinates = () => {
-    return {
-      topLeft: {
-        x: zone.topLeft.x / PREVIEW_WIDTH,
-        y: zone.topLeft.y / PREVIEW_HEIGHT,
-      },
-      topRight: {
-        x: zone.topRight.x / PREVIEW_WIDTH,
-        y: zone.topRight.y / PREVIEW_HEIGHT,
-      },
-      bottomLeft: {
-        x: zone.bottomLeft.x / PREVIEW_WIDTH,
-        y: zone.bottomLeft.y / PREVIEW_HEIGHT,
-      },
-      bottomRight: {
-        x: zone.bottomRight.x / PREVIEW_WIDTH,
-        y: zone.bottomRight.y / PREVIEW_HEIGHT,
-      },
-    };
-  };
+  const getZoneCoordinates = () => ({
+    topLeft: {
+      x: zone.topLeft.x / PREVIEW_WIDTH,
+      y: zone.topLeft.y / PREVIEW_HEIGHT,
+    },
+    topRight: {
+      x: zone.topRight.x / PREVIEW_WIDTH,
+      y: zone.topRight.y / PREVIEW_HEIGHT,
+    },
+    bottomLeft: {
+      x: zone.bottomLeft.x / PREVIEW_WIDTH,
+      y: zone.bottomLeft.y / PREVIEW_HEIGHT,
+    },
+    bottomRight: {
+      x: zone.bottomRight.x / PREVIEW_WIDTH,
+      y: zone.bottomRight.y / PREVIEW_HEIGHT,
+    },
+  });
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const coordinates = getZoneCoordinates();
-
       console.log('📍 Detection zone coordinates:', coordinates);
-
-      // API call to save detection zone
-      const response = await fetch(`https://your-api. com/cameras/${cameraId}/detection-zone`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cameraId,
-          zone: coordinates,
-        }),
-      });
-
-      if (response.ok) {
-        console.log('✅ Detection zone saved');
-        navigation.goBack();
-      } else {
-        console.error('❌ Failed to save detection zone');
-      }
-    } catch (error) {
-      console.error('❌ Error saving detection zone:', error);
+      // TODO: call API lưu detection zone ở đây
+      navigation.goBack();
+    } catch (e) {
+      console.error(e);
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleReset = () => {
-    setZone({
-      topLeft: { x: PREVIEW_WIDTH * 0.2, y: PREVIEW_HEIGHT * 0.3 },
-      topRight: { x: PREVIEW_WIDTH * 0.8, y: PREVIEW_HEIGHT * 0.3 },
-      bottomLeft: { x: PREVIEW_WIDTH * 0.2, y: PREVIEW_HEIGHT * 0.7 },
-      bottomRight: { x: PREVIEW_WIDTH * 0.8, y: PREVIEW_HEIGHT * 0.7 },
-    });
+    setZone(INITIAL_ZONE);
   };
 
   const handleDrawRectangle = () => {
-    // Auto draw rectangle mode
-    const centerX = PREVIEW_WIDTH / 2;
-    const centerY = PREVIEW_HEIGHT / 2;
-    const width = PREVIEW_WIDTH * 0.6;
-    const height = PREVIEW_HEIGHT * 0.4;
-
+    const top = PREVIEW_HEIGHT * 0.3;
+    const bottom = PREVIEW_HEIGHT * 0.7;
     setZone({
-      topLeft: { x: centerX - width / 2, y: centerY - height / 2 },
-      topRight: { x: centerX + width / 2, y: centerY - height / 2 },
-      bottomLeft: { x: centerX - width / 2, y: centerY + height / 2 },
-      bottomRight: { x: centerX + width / 2, y: centerY + height / 2 },
+      topLeft: { x: 0, y: top },
+      topRight: { x: PREVIEW_WIDTH, y: top },
+      bottomLeft: { x: 0, y: bottom },
+      bottomRight: { x: PREVIEW_WIDTH, y: bottom },
     });
   };
 
+  const renderGrid = () => {
+    const verticalLines = [];
+    const horizontalLines = [];
+
+    for (let x = 0; x <= PREVIEW_WIDTH; x += GRID_SIZE) {
+      verticalLines.push(<View key={`v-${x}`} style={[styles.gridLineVertical, { left: x }]} />);
+    }
+
+    for (let y = 0; y <= PREVIEW_HEIGHT; y += GRID_SIZE) {
+      horizontalLines.push(<View key={`h-${y}`} style={[styles.gridLineHorizontal, { top: y }]} />);
+    }
+    return (
+      <>
+        {verticalLines}
+        {horizontalLines}
+      </>
+    );
+  };
+
+  useEffect(() => {
+    Orientation.lockToLandscape();
+    return () => {
+      Orientation.lockToPortrait();
+    };
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <ImageBackground
-        source={DetectionZoneSetupBackground}
-        style={styles.backgroundImage}
-        resizeMode="stretch"
-        imageStyle={styles.imageStyle}
-      >
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>検知エリア設定</Text>
-            <TouchableOpacity
-              style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-              onPress={handleSave}
-              disabled={isSaving}
-            >
-              <Text style={styles.saveButtonText}>{isSaving ? '保存中...' : '保存'}</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backArea} onPress={() => navigation.goBack()}>
+            <Icon name="chevron-left" color="#FFFFFF" size={26} />
+          </TouchableOpacity>
+          <View style={styles.flex1} />
+          <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+            <Text style={styles.saveText}>{t('common.save')}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
 
-          {/* Camera Preview with Zone Overlay */}
-          <View style={styles.previewContainer}>
-            <View style={styles.previewWrapper}>
-              {/* Camera snapshot */}
-              <Image
-                source={{ uri: cameraSnapshot || 'https://via.placeholder.com/800x450' }}
-                style={styles.cameraPreview}
-                resizeMode="cover"
-              />
+      <View style={styles.body}>
+        <View style={styles.previewContainer}>
+          <WebView
+            ref={webViewRef}
+            source={{ html: getStreamHTML(streamUrl) }}
+            style={styles.cameraPreview}
+            onLoad={handleWebViewLoad}
+            onError={handleWebViewError}
+            onHttpError={handleWebViewHttpError}
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            javaScriptEnabled
+            domStorageEnabled
+            startInLoadingState={false}
+            originWhitelist={['*']}
+            allowFileAccess
+            allowUniversalAccessFromFileURLs
+            allowsFullscreenVideo
+            scalesPageToFit
+            {...(Platform.OS === 'ios' && {
+              allowsBackForwardNavigationGestures: false,
+              decelerationRate: 'normal',
+              bounces: false,
+              scrollEnabled: false,
+            })}
+            {...(Platform.OS === 'android' && {
+              mixedContentMode: 'always',
+              thirdPartyCookiesEnabled: true,
+              allowFileAccessFromFileURLs: true,
+            })}
+            onMessage={handleWebViewMessage}
+            injectedJavaScript={getInjectedJavaScript()}
+          />
 
-              {/* SVG Overlay for drawing zone */}
-              <Svg
-                width={PREVIEW_WIDTH}
-                height={PREVIEW_HEIGHT}
-                style={[StyleSheet.absoluteFill, styles.drawingZone]}
-              >
-                {/* Detection zone polygon */}
-                <Polygon
-                  points={`${zone.topLeft.x},${zone.topLeft.y} ${zone.topRight.x},${zone.topRight.y} ${zone.bottomRight.x},${zone.bottomRight.y} ${zone.bottomLeft.x},${zone.bottomLeft.y}`}
-                  fill="rgba(0,255,170,0.2)"
-                  stroke="#00FFAA"
-                  strokeWidth="2"
-                  strokeDasharray="8,4"
-                />
+          <View
+            style={[styles.overlayContainer, { width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT }]}
+            pointerEvents="box-none"
+          >
+            <View style={styles.gridOverlay} pointerEvents="none">
+              {renderGrid()}
+            </View>
 
-                {/* Grid lines */}
-                <Line
-                  x1={zone.topLeft.x}
-                  y1={zone.topLeft.y}
-                  x2={zone.topRight.x}
-                  y2={zone.topRight.y}
-                  stroke="#00FFAA"
-                  strokeWidth="2"
-                />
-                <Line
-                  x1={zone.topRight.x}
-                  y1={zone.topRight.y}
-                  x2={zone.bottomRight.x}
-                  y2={zone.bottomRight.y}
-                  stroke="#00FFAA"
-                  strokeWidth="2"
-                />
-                <Line
-                  x1={zone.bottomRight.x}
-                  y1={zone.bottomRight.y}
-                  x2={zone.bottomLeft.x}
-                  y2={zone.bottomLeft.y}
-                  stroke="#00FFAA"
-                  strokeWidth="2"
-                />
-                <Line
-                  x1={zone.bottomLeft.x}
-                  y1={zone.bottomLeft.y}
-                  x2={zone.topLeft.x}
-                  y2={zone.topLeft.y}
-                  stroke="#00FFAA"
-                  strokeWidth="2"
-                />
-              </Svg>
+            <View
+              pointerEvents="none"
+              style={[
+                styles.zoneOverlay,
+                {
+                  top: zone.topLeft.y,
+                  left: zone.topLeft.x,
+                  width: zone.topRight.x - zone.topLeft.x,
+                  height: zone.bottomLeft.y - zone.topLeft.y,
+                },
+              ]}
+            />
 
-              {/* Instruction */}
-              <View style={styles.instructionBanner}>
-                <View style={styles.instructionBox}>
-                  <Text style={styles.instructionText}>
-                    ポイントをドラッグしてエリアを設定してください
-                  </Text>
-                </View>
-              </View>
-
-              {/* Draggable corners */}
-              {(Object.keys(zone) as Array<keyof DetectionZone>).map((corner) => (
-                <Animated.View
+            {(Object.keys(zone) as (keyof DetectionZone)[]).map((corner) => {
+              const c = zone[corner];
+              return (
+                <View
                   key={corner}
                   style={[
                     styles.cornerHandle,
                     {
-                      left: zone[corner].x - 16,
-                      bottom: PREVIEW_HEIGHT - zone[corner].y - 16, // Tính từ bottom
+                      left: c.x - 14,
+                      top: c.y - 14,
                       transform: [{ scale: activeCorner === corner ? 1.3 : 1 }],
                     },
                   ]}
                   {...panResponders[corner].panHandlers}
                 >
-                  <View style={styles.cornerDot} />
-                  <View style={styles.cornerRing} />
-                </Animated.View>
-              ))}
+                  <View style={styles.cornerInner} />
+                </View>
+              );
+            })}
 
-              {/* Fullscreen button */}
-              <TouchableOpacity style={styles.fullscreenButton}>
-                <Icon name="fullscreen" size={20} color="#FFF" />
+            <View style={styles.rightButtons}>
+              <TouchableOpacity style={styles.roundButton} onPress={handleDrawRectangle}>
+                <Icon name="selection-drag" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.roundButton} onPress={handleReset}>
+                <Icon name="trash-can-outline" size={22} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
-        </SafeAreaView>
-
-        {/* Bottom Controls - OUTSIDE SafeAreaView để full width */}
-        <View style={styles.bottomControlsWrapper}>
-          <View style={styles.bottomControls}>
-            {/* 描画 - Draw */}
-            <TouchableOpacity style={styles.controlButton} onPress={handleDrawRectangle}>
-              <View style={styles.controlIconContainer}>
-                <Icon name="pencil" size={24} color="#00FFAA" />
-              </View>
-              <Text style={styles.controlLabel}>描画</Text>
-            </TouchableOpacity>
-
-            {/* 消去 - Clear */}
-            <TouchableOpacity style={styles.controlButton} onPress={handleReset}>
-              <View style={styles.controlIconContainer}>
-                <Icon name="broom" size={24} color="#00FFAA" />
-              </View>
-              <Text style={styles.controlLabel}>消去</Text>
-            </TouchableOpacity>
-
-            {/* エリア追加 - Add Area */}
-            <TouchableOpacity style={styles.controlButton} onPress={handleDrawRectangle}>
-              <View style={[styles.controlIconContainer, styles.primaryButton]}>
-                <Icon name="plus" size={28} color="#0A1A23" />
-              </View>
-              <Text style={styles.controlLabel}>エリア追加</Text>
-            </TouchableOpacity>
-          </View>
         </View>
-      </ImageBackground>
+      </View>
     </View>
   );
 };

@@ -529,7 +529,10 @@
     "onlineAndReady": "オンライン・準備完了"
   },
   "settingAI": {
-    "settingAI": "Al設定"
+    "settingAI": "Al設定",
+    "detectionAreaSetup": "検知エリア設定",
+    "operationSchedule": "稼働スケジュール",
+    "aIDetectionRules": "AI検知ルール"
   },
   "listFace": {
     "listFace": "顔リスト",

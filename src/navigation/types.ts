@@ -1,6 +1,7 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
 import { Camera } from '@api/types/cameraTypes';
+import { MemberRelationship } from '@api/faceService';
 
 // ===== ROOT STACK =====
 export type RootStackParamList = {
@@ -37,8 +38,7 @@ export type AppStackParamList = {
   EditProfile: undefined;
   ChangePassword: undefined;
   DetectionZoneSetup: {
-    cameraId: string;
-    cameraSnapshot?: string;
+    camera: Camera;
   };
   ConnectDevice: undefined;
   PairingCode: {
@@ -59,9 +59,9 @@ export type AppStackParamList = {
   Setting: undefined;
   FaceUpload: undefined;
   ConnectionSuccessful: { cameraData: Camera };
-  SettingAI: { cameraData: Camera };
+  SettingAI: { camera: Camera };
   ListFace: undefined;
-  DetailFace: { memberId: string };
+  DetailFace: { memberId: string; relationships?: MemberRelationship[] };
 };
 
 // ===== NAVIGATION PROPS =====

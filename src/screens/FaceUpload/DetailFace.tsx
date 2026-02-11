@@ -22,10 +22,11 @@ import ImageResizer from '@bam.tech/react-native-image-resizer';
 import BackIcon from '@assets/svg/icon-back.svg';
 import TextInput from '@components/TextInput/TextInput';
 import { styles } from './FaceUpload.styles';
-import faceService, { Member, MemberRelationship, MemberImage } from '@api/faceService';
+import faceService, { Member, MemberRelationship } from '@api/faceService';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS } from '@constants/theme';
 import { DetailFaceNavigationProp, DetailFaceRouteProp } from '@navigation/types';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
 // Face position titles for individual image editing
 const FACE_POSITION_TITLES = [
@@ -56,23 +57,62 @@ const FACE_POSITION_TITLES = [
   },
 ] as const;
 
+const FACE_POSITIONS = [
+  {
+    key: 'center',
+    label: 'Center',
+    instruction: 'Look straight at the camera',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'left',
+    label: 'Turn Left',
+    instruction: 'Slowly turn your head LEFT',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'right',
+    label: 'Turn Right',
+    instruction: 'Slowly turn your head RIGHT',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'up',
+    label: 'Look Up',
+    instruction: 'Slowly tilt your head UP',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'down',
+    label: 'Look Down',
+    instruction: 'Slowly tilt your head DOWN',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+] as const;
+
 const DetailFace = () => {
+  // All hooks must be called at the top level, before any conditional logic or returns
   const navigation = useNavigation<DetailFaceNavigationProp>();
   const route = useRoute<DetailFaceRouteProp>();
   const { t } = useTranslation();
-  const { memberId } = route.params;
+  const { memberId, relationships: routeRelationships } = route.params;
 
   const [member, setMember] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [memberRelationships, setMemberRelationships] = useState<MemberRelationship[]>([]);
+  const [memberRelationships, setMemberRelationships] = useState<MemberRelationship[]>(
+    routeRelationships || []
+  );
   const [selectedRelationship, setSelectedRelationship] = useState<MemberRelationship | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [relationshipError, setRelationshipError] = useState<string>('');
   const [hasChanges, setHasChanges] = useState(false);
   const [hasLoadedData, setHasLoadedData] = useState(false);
-
-  // Single face detect modal states
   const [showSingleDetectModal, setShowSingleDetectModal] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
   const [isDetecting, setIsDetecting] = useState(false);
@@ -80,6 +120,7 @@ const DetailFace = () => {
   const [isPreparing, setIsPreparing] = useState(false);
   const [prepareProgress, setPrepareProgress] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [changedImageIds, setChangedImageIds] = useState<Set<string>>(new Set());
 
   // Reset loaded data when memberId changes
   useEffect(() => {
@@ -100,6 +141,148 @@ const DetailFace = () => {
   const nameInput = useInput({
     validateFn: (v) => (v.trim() ? undefined : 'required'),
   });
+
+  const FaceFrameSVG: React.FC<{
+    isScanning: boolean;
+    scanProgress: number;
+    isPreparing: boolean;
+    // eslint-disable-next-line react/no-unstable-nested-components,@typescript-eslint/no-shadow
+  }> = ({ isScanning, scanProgress, isPreparing }) => {
+    const color = isScanning ? '#4CAF50' : isPreparing ? '#FFFFFF' : '#FFFFFF';
+    const size = 250;
+    const strokeWidth = 4;
+    const cornerLength = 50;
+
+    return (
+      <Svg width={size} height={size * 1.3} viewBox={`0 0 ${size} ${size * 1.3}`}>
+        <Defs>
+          <LinearGradient id="scanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <Stop offset="0%" stopColor={color} stopOpacity="0.3" />
+            <Stop offset={`${scanProgress}%`} stopColor={color} stopOpacity="1" />
+            <Stop offset="100%" stopColor={color} stopOpacity="0.3" />
+          </LinearGradient>
+          <LinearGradient id="cornerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={color} stopOpacity="1" />
+            <Stop offset="100%" stopColor={color} stopOpacity="0.6" />
+          </LinearGradient>
+        </Defs>
+
+        {/* Top-left corner */}
+        <Path
+          d={`M ${strokeWidth / 2} ${cornerLength} L ${strokeWidth / 2} ${strokeWidth / 2} L ${cornerLength} ${strokeWidth / 2}`}
+          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Top-right corner */}
+        <Path
+          d={`M ${size - cornerLength} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${cornerLength}`}
+          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Bottom-left corner */}
+        <Path
+          d={`M ${strokeWidth / 2} ${size * 1.3 - cornerLength} L ${strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${cornerLength} ${size * 1.3 - strokeWidth / 2}`}
+          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Bottom-right corner */}
+        <Path
+          d={`M ${size - cornerLength} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - cornerLength}`}
+          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Scanning grid lines */}
+        {isScanning && (
+          <>
+            {[...Array(5)].map((_, i) => (
+              <Line
+                key={`h-${i}`}
+                x1={strokeWidth}
+                y1={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
+                x2={size - strokeWidth}
+                y2={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
+                stroke={color}
+                strokeWidth={0.5}
+                opacity={0.3}
+              />
+            ))}
+            {[...Array(4)].map((_, i) => (
+              <Line
+                key={`v-${i}`}
+                x1={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
+                y1={strokeWidth}
+                x2={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
+                y2={size * 1.3 - strokeWidth}
+                stroke={color}
+                strokeWidth={0.5}
+                opacity={0.3}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Center dot */}
+        <Circle cx={size / 2} cy={size * 0.65} r={isScanning ? 6 : 8} fill={color} opacity={0.8} />
+      </Svg>
+    );
+  };
+
+  // Thêm PositionArrow component (copy từ FaceUpload)
+  // eslint-disable-next-line react/no-unstable-nested-components
+  const PositionArrow: React.FC<{ position: string }> = ({ position }) => {
+    const getArrowStyle = () => {
+      const base = { position: 'absolute' as const };
+      switch (position) {
+        case 'left':
+          return { ...base, left: 30, top: '50%', marginTop: -30 };
+        case 'right':
+          return { ...base, right: 30, top: '50%', marginTop: -30 };
+        case 'up':
+          return { ...base, top: 80, left: '50%', marginLeft: -30 };
+        case 'down':
+          return { ...base, bottom: 180, left: '50%', marginLeft: -30 };
+        default:
+          return base;
+      }
+    };
+
+    const getRotation = () => {
+      switch (position) {
+        case 'left':
+          return '180deg';
+        case 'right':
+          return '0deg';
+        case 'up':
+          return '270deg';
+        case 'down':
+          return '90deg';
+        default:
+          return '0deg';
+      }
+    };
+
+    return (
+      <View style={[styles.arrow, getArrowStyle()]}>
+        <Text style={[styles.arrowText, { transform: [{ rotate: getRotation() }] }]}>→</Text>
+      </View>
+    );
+  };
 
   // Camera and animation refs for single face detection
   const camera = useRef<Camera>(null);
@@ -145,12 +328,12 @@ const DetailFace = () => {
             memberData.relationship?.id ?? memberData.relationship_type_id ?? '',
         });
 
-        // Find and set selected relationship
-        const relationships = await faceService.getMemberRelationships();
-        setMemberRelationships(relationships);
+        // Use relationships from route params
+        setMemberRelationships(routeRelationships || []);
 
-        const currentRelationship = relationships.find(
-          (r) => r.id === (memberData.relationship?.id || memberData.relationship_type_id)
+        const currentRelationship = (routeRelationships || []).find(
+          (r: MemberRelationship) =>
+            r.id === (memberData.relationship?.id || memberData.relationship_type_id)
         );
         if (currentRelationship) {
           setSelectedRelationship(currentRelationship);
@@ -165,7 +348,7 @@ const DetailFace = () => {
       setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memberId, t, hasLoadedData]);
+  }, [memberId, t, hasLoadedData, routeRelationships]);
 
   useFocusEffect(
     useCallback(() => {
@@ -236,6 +419,25 @@ const DetailFace = () => {
       const formData = new FormData();
       formData.append('name', nameInput.value.trim());
       formData.append('relationship_type_id', selectedRelationship.id);
+      // Chỉ gửi ảnh đã thay đổi
+      member.images.forEach((image, index) => {
+        if (image && image.id && changedImageIds.has(image.id)) {
+          const positionKey = FACE_POSITION_TITLES[index]?.key || 'center';
+          formData.append(`images[${index}][id]`, image.id);
+          if (image.image_path) {
+            formData.append(`images[${index}][image_path]`, image.image_path);
+          }
+          if (image.image_url) {
+            formData.append(`images[${index}][image_url]`, image.image_url);
+            const imgObj = {
+              uri: image.image_url,
+              type: 'image/jpeg',
+              name: `${positionKey}.jpg`,
+            };
+            formData.append('images', imgObj as any);
+          }
+        }
+      });
 
       await faceService.updateMember(member.id, formData);
 
@@ -245,7 +447,10 @@ const DetailFace = () => {
         [
           {
             text: t('common.ok') || 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              fetchMemberDetail();
+              setChangedImageIds(new Set());
+            },
           },
         ]
       );
@@ -264,7 +469,7 @@ const DetailFace = () => {
   };
 
   // Handle image press to open single face detection modal
-  const handleImagePress = async (index: number, image: MemberImage) => {
+  const handleImagePress = async (index: number) => {
     if (!hasPermission) {
       const granted = await requestPermission();
       if (!granted) {
@@ -282,7 +487,7 @@ const DetailFace = () => {
     setIsCapturing(false);
     setPrepareProgress(0);
     setDetectProgress(0);
-    console.log(image);
+
     setSelectedImageIndex(index);
     setShowSingleDetectModal(true);
   };
@@ -551,6 +756,10 @@ const DetailFace = () => {
 
         setMember(updatedMember);
         setHasChanges(true);
+        // Đánh dấu ảnh đã thay đổi
+        if (updatedImages[selectedImageIndex]?.id) {
+          setChangedImageIds((prev) => new Set(prev).add(updatedImages[selectedImageIndex].id));
+        }
 
         // Success animation
         Animated.sequence([
@@ -746,7 +955,7 @@ const DetailFace = () => {
                             </Text>
                             <TouchableOpacity
                               style={styles.imageItem}
-                              onPress={() => handleImagePress(index, image)}
+                              onPress={() => handleImagePress(index)}
                             >
                               <Image
                                 source={{ uri: image.image_url }}
@@ -883,15 +1092,8 @@ const DetailFace = () => {
                 </Text>
               </View>
             ) : (
-              <Animated.View
-                style={[
-                  styles.absoluteFill,
-                  {
-                    opacity: fadeAnim,
-                    transform: [{ scale: scaleAnim }],
-                  },
-                ]}
-              >
+              <View style={styles.container}>
+                {/* Camera */}
                 <Camera
                   ref={camera}
                   style={styles.absoluteFill}
@@ -900,154 +1102,203 @@ const DetailFace = () => {
                   photo={true}
                 />
 
-                {/* Close Button */}
-                <View style={[styles.closeButton]}>
-                  <TouchableOpacity onPress={handleCloseDetectModal} disabled={isCapturing}>
-                    <Icon name="close" size={24} color={isCapturing ? '#666' : '#fff'} />
-                  </TouchableOpacity>
-                </View>
+                {/* UI Overlay - giống như FaceUpload */}
+                <View style={styles.overlay}>
+                  {/* Header */}
+                  <SafeAreaView edges={['top']}>
+                    <View style={styles.header}>
+                      <TouchableOpacity
+                        style={styles.closeButton}
+                        onPress={handleCloseDetectModal}
+                        disabled={isCapturing}
+                      >
+                        <Text style={styles.closeButtonText}>✕</Text>
+                      </TouchableOpacity>
 
-                {/* Face Frame */}
-                <View style={styles.faceFrameContainer}>
-                  <Animated.View
-                    style={[
-                      styles.faceFrame,
-                      // eslint-disable-next-line react-native/no-inline-styles
-                      {
-                        transform: [{ scale: pulseAnim }],
-                        borderColor: isDetecting ? '#4CAF50' : '#fff',
-                        borderWidth: isDetecting ? 3 : 2,
-                      },
-                    ]}
-                  >
-                    {/* Scan Line Animation */}
-                    {isDetecting && (
-                      <Animated.View
-                        style={[
-                          styles.scanLine,
-                          {
-                            transform: [
-                              {
-                                translateY: scanLineAnim.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [0, 325],
-                                }),
-                              },
-                            ],
-                          },
-                        ]}
-                      />
-                    )}
+                      <Text style={styles.title}>
+                        {selectedImageIndex >= 0 && FACE_POSITION_TITLES[selectedImageIndex]
+                          ? FACE_POSITION_TITLES[selectedImageIndex].getTitle(t)
+                          : t('faceUpload.editImage') || 'Edit Image'}
+                      </Text>
 
-                    {/* Particle Animation */}
-                    {isDetecting && (
-                      <View style={styles.scanParticles}>
-                        {Array.from({ length: 12 }).map((_, i) => (
-                          <Animated.View
-                            key={i}
-                            style={[
-                              styles.particle,
-                              {
-                                left: `${Math.random() * 100}%`,
-                                top: `${Math.random() * 100}%`,
-                                opacity: particleAnim.interpolate({
-                                  inputRange: [0, 0.5, 1],
-                                  outputRange: [0, 1, 0],
-                                }),
-                                transform: [
-                                  {
-                                    scale: particleAnim.interpolate({
-                                      inputRange: [0, 0.5, 1],
-                                      outputRange: [0.5, 1.5, 0.5],
-                                    }),
-                                  },
-                                ],
-                              },
-                            ]}
-                          />
-                        ))}
-                      </View>
-                    )}
-
-                    {/* Corner Indicators */}
-                    <View style={styles.cornerIndicators}>
-                      {/* eslint-disable-next-line react-native/no-inline-styles */}
-                      <View style={[styles.cornerDot, { top: -4, left: -4 }]} />
-                      {/* eslint-disable-next-line react-native/no-inline-styles */}
-                      <View style={[styles.cornerDot, { top: -4, right: -4 }]} />
-                      {/* eslint-disable-next-line react-native/no-inline-styles */}
-                      <View style={[styles.cornerDot, { bottom: -4, left: -4 }]} />
-                      {/* eslint-disable-next-line react-native/no-inline-styles */}
-                      <View style={[styles.cornerDot, { bottom: -4, right: -4 }]} />
+                      <View style={styles.styleWidth} />
                     </View>
+                  </SafeAreaView>
 
-                    {/* Success Badge */}
+                  {/* Face Frame Container - giống như FaceUpload */}
+                  <View style={styles.faceFrameContainer}>
                     <Animated.View
                       style={[
-                        styles.successOverlay,
+                        styles.faceFrame,
                         {
-                          opacity: successAnim,
+                          transform: [{ scale: scaleAnim }],
                         },
                       ]}
                     >
-                      <View style={styles.successBadge}>
-                        <Text style={styles.successText}>✓</Text>
-                      </View>
-                    </Animated.View>
-                  </Animated.View>
-                </View>
+                      {/* Prepare Progress Ring */}
+                      {isPreparing && (
+                        <View style={styles.holdProgressRing}>
+                          <Svg width={270} height={351} viewBox="0 0 270 351">
+                            <Circle
+                              cx={135}
+                              cy={175.5}
+                              r={130}
+                              stroke="rgba(255, 255, 255, 0.2)"
+                              strokeWidth={4}
+                              fill="none"
+                            />
+                            <Circle
+                              cx={135}
+                              cy={175.5}
+                              r={130}
+                              stroke="#FFFFFF"
+                              strokeWidth={4}
+                              fill="none"
+                              strokeDasharray={2 * Math.PI * 130}
+                              strokeDashoffset={2 * Math.PI * 130 * (1 - prepareProgress / 100)}
+                              strokeLinecap="round"
+                              transform="rotate(-90 135 175.5)"
+                            />
+                          </Svg>
+                        </View>
+                      )}
 
-                {/* Position Title and Instructions */}
-                {selectedImageIndex >= 0 && FACE_POSITION_TITLES[selectedImageIndex] && (
-                  <View style={styles.instructionsContainer}>
-                    <Text style={styles.positionLabel}>
-                      {FACE_POSITION_TITLES[selectedImageIndex].getTitle(t)}
-                    </Text>
-                    <Text style={styles.instruction}>
-                      {FACE_POSITION_TITLES[selectedImageIndex].getInstruction(t)}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Progress Indicators */}
-                {isPreparing && (
-                  <View style={styles.holdProgressContainer}>
-                    <Text style={styles.holdProgressText}>
-                      {t('faceUpload.preparing') || 'Preparing...'} {Math.round(prepareProgress)}%
-                    </Text>
-                    <View style={styles.progressContainer}>
-                      <View style={styles.progressBar}>
+                      {/* Scanning Line */}
+                      {isDetecting && (
                         <Animated.View
                           style={[
-                            styles.progressFill,
+                            styles.scanLine,
                             {
-                              width: `${prepareProgress}%`,
+                              transform: [
+                                {
+                                  translateY: scanLineAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-162.5, 162.5],
+                                  }),
+                                },
+                              ],
                             },
                           ]}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                )}
+                        >
+                          <View style={styles.scanLineGlow} />
+                        </Animated.View>
+                      )}
 
-                {isDetecting && (
-                  <View style={styles.scanProgressContainer}>
-                    <Text style={styles.scanProgressText}>
-                      {t('faceUpload.scanning') || 'Scanning...'} {Math.round(detectProgress)}%
-                    </Text>
-                    <View style={styles.miniProgressBar}>
+                      {/* Scanning Particles */}
+                      {isDetecting && (
+                        <Animated.View
+                          style={[
+                            styles.scanParticles,
+                            {
+                              opacity: particleAnim.interpolate({
+                                inputRange: [0, 0.5, 1],
+                                outputRange: [0.3, 1, 0.3],
+                              }),
+                            },
+                          ]}
+                        >
+                          {[...Array(8)].map((_, i) => (
+                            <View
+                              key={i}
+                              style={[
+                                styles.particle,
+                                {
+                                  left: `${i * 12.5 + 6}%`,
+                                  top: `${20 + Math.sin(i) * 30}%`,
+                                },
+                              ]}
+                            />
+                          ))}
+                        </Animated.View>
+                      )}
+
+                      <FaceFrameSVG
+                        isScanning={isDetecting}
+                        scanProgress={detectProgress}
+                        isPreparing={isPreparing}
+                      />
+
+                      {/* Corner Indicators with Pulse */}
+                      {isDetecting && (
+                        <Animated.View
+                          style={[
+                            styles.cornerIndicators,
+                            {
+                              transform: [{ scale: pulseAnim }],
+                            },
+                          ]}
+                        >
+                          {/* eslint-disable-next-line react-native/no-inline-styles */}
+                          <View style={[styles.cornerDot, { top: 10, left: 10 }]} />
+                          {/* eslint-disable-next-line react-native/no-inline-styles */}
+                          <View style={[styles.cornerDot, { top: 10, right: 10 }]} />
+                          {/* eslint-disable-next-line react-native/no-inline-styles */}
+                          <View style={[styles.cornerDot, { bottom: 10, left: 10 }]} />
+                          {/* eslint-disable-next-line react-native/no-inline-styles */}
+                          <View style={[styles.cornerDot, { bottom: 10, right: 10 }]} />
+                        </Animated.View>
+                      )}
+
+                      {/* Success Badge */}
                       <Animated.View
                         style={[
-                          styles.miniProgressFill,
+                          styles.successOverlay,
                           {
-                            width: `${detectProgress}%`,
+                            opacity: successAnim,
                           },
                         ]}
-                      />
-                    </View>
+                      >
+                        <View style={styles.successBadge}>
+                          <Text style={styles.successText}>✓</Text>
+                        </View>
+                      </Animated.View>
+                    </Animated.View>
+
+                    {/* Position Arrow */}
+                    {selectedImageIndex >= 0 &&
+                      FACE_POSITIONS[selectedImageIndex]?.key !== 'center' &&
+                      !isCapturing && (
+                        <PositionArrow position={FACE_POSITIONS[selectedImageIndex].key} />
+                      )}
                   </View>
-                )}
-              </Animated.View>
+
+                  {/* Instructions */}
+                  <Animated.View style={[styles.instructionsContainer, { opacity: fadeAnim }]}>
+                    {selectedImageIndex >= 0 && FACE_POSITIONS[selectedImageIndex] && (
+                      <>
+                        <Text style={styles.positionLabel}>
+                          {FACE_POSITIONS[selectedImageIndex].label.toUpperCase()}
+                        </Text>
+                        <Text style={styles.instruction}>
+                          {FACE_POSITIONS[selectedImageIndex].instruction}
+                        </Text>
+                      </>
+                    )}
+
+                    {/* Status */}
+                    {isPreparing && (
+                      <View style={styles.feedbackContainer}>
+                        <Text style={styles.feedbackText}>
+                          {t('faceUpload.getReady') || 'Get ready...'}
+                        </Text>
+                      </View>
+                    )}
+
+                    {isDetecting && (
+                      <View style={styles.scanProgressContainer}>
+                        <Text style={styles.scanProgressText}>
+                          {t('faceUpload.scanning') || 'Scanning'}: {Math.round(detectProgress)}%
+                        </Text>
+                        <View style={styles.miniProgressBar}>
+                          <View
+                            style={[styles.miniProgressFill, { width: `${detectProgress}%` }]}
+                          />
+                        </View>
+                      </View>
+                    )}
+                  </Animated.View>
+                </View>
+              </View>
             )}
           </View>
         </Modal>

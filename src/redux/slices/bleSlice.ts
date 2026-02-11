@@ -37,6 +37,12 @@ export const WiFiScanStatus = {
   ERROR: 3,
 } as const;
 
+export const AuthStatus = {
+  UNAUTHENTICATED: 0,
+  AUTHENTICATED: 1,
+  INVALID_PIN: 2,
+} as const;
+
 // =============================================================================
 // STATE
 // =============================================================================
@@ -51,6 +57,8 @@ export interface BleState {
   wifiNetworks: WiFiNetwork[];
   wifiScanStatus: number;
   criticalDisconnection: boolean;
+  authStatus: number;
+  isAuthenticated: boolean;
 }
 
 const initialState: BleState = {
@@ -63,6 +71,8 @@ const initialState: BleState = {
   wifiNetworks: [],
   wifiScanStatus: WiFiScanStatus.IDLE,
   criticalDisconnection: false,
+  authStatus: AuthStatus.UNAUTHENTICATED,
+  isAuthenticated: false,
 };
 
 // =============================================================================
@@ -121,6 +131,14 @@ const bleSlice = createSlice({
       state.wifiScanStatus = action.payload;
     },
 
+    setAuthStatus: (state, action: PayloadAction<number>) => {
+      state.authStatus = action.payload;
+    },
+
+    setIsAuthenticated: (state, action: PayloadAction<boolean>) => {
+      state.isAuthenticated = action.payload;
+    },
+
     // Reset all state
     resetBleState: (state) => {
       state.devices = initialState.devices;
@@ -171,6 +189,8 @@ export const {
   resetConnectionState,
   resetWifiState,
   setCriticalDisconnection,
+  setAuthStatus,
+  setIsAuthenticated,
 } = bleSlice.actions;
 
 export default bleSlice.reducer;

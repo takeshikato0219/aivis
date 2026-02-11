@@ -94,7 +94,7 @@ const Detail = () => {
 
   const handleSetupDetectionZone = () => {
     navigation.navigate('SettingAI', {
-      cameraData: camera,
+      camera: camera,
     });
   };
 

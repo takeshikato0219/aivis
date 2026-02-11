@@ -34,10 +34,9 @@ const getHintText = (t: any) => {
 
 const ConnectDevice: React.FC = () => {
   const navigation = useNavigation<ConnectDeviceScreenNavigationProp>();
-  const [isConnect, setConnect] = useState(false);
   const [alertShown, setAlertShown] = useState(false);
 
-  const { devices, isScanning: scanning, startScan, stopScan, connect } = useJetsonBLE();
+  const { devices, isScanning: scanning, startScan, stopScan } = useJetsonBLE();
 
   const { t } = useTranslation();
 
@@ -53,37 +52,18 @@ const ConnectDevice: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array to run only on mount
 
-  const goToPairCode = async (device: SerializableDevice) => {
-    try {
-      setConnect(true);
-      setAlertShown(false);
-
-      // Use the hook's connect method instead of manual BLE connection
-      await connect(device);
-
-      setConnect(false);
-
-      // Navigate to PairingCode with device info
-      navigation.navigate('PairingCode', {
-        device: {
-          id: device.id,
-          name: device.name,
-          isConnectable: device.isConnectable,
-          localName: device.localName,
-          manufacturerData: device.manufacturerData,
-          serviceUUIDs: device.serviceUUIDs,
-        },
-        pairingCode: '',
-      });
-    } catch (err) {
-      setConnect(false);
-      if (!alertShown) {
-        setAlertShown(true);
-        Alert.alert(t('bluetoothScreen.connectionFailed'), String(err), [
-          { text: 'OK', onPress: () => setAlertShown(false) },
-        ]);
-      }
-    }
+  const goToPairCode = (device: SerializableDevice) => {
+    navigation.navigate('PairingCode', {
+      device: {
+        id: device.id,
+        name: device.name,
+        isConnectable: device.isConnectable,
+        localName: device.localName,
+        manufacturerData: device.manufacturerData,
+        serviceUUIDs: device.serviceUUIDs,
+      },
+      pairingCode: '',
+    });
   };
 
   const scanningText = getScanningText(scanning, t);
@@ -125,16 +105,6 @@ const ConnectDevice: React.FC = () => {
           <View style={styles.radarContainer}>
             <RadarScan />
           </View>
-
-          {/* Loading Overlay */}
-          {isConnect && (
-            <View style={styles.loadingOverlay}>
-              <View style={styles.loadingContent}>
-                <ActivityIndicator size="large" color="#38E9FF" />
-                <Text style={styles.loadingText}>{t('bluetoothScreen.connecting')}</Text>
-              </View>
-            </View>
-          )}
 
           <Text style={styles.scanningText}>{scanningText}</Text>
           <Text style={styles.hintText}>{hintText}</Text>
