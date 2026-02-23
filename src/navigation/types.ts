@@ -62,6 +62,8 @@ export type AppStackParamList = {
   SettingAI: { camera: Camera };
   ListFace: undefined;
   DetailFace: { memberId: string; relationships?: MemberRelationship[] };
+  AiDetectionRules: undefined;
+  WorkSchedule: undefined;
 };
 
 // ===== NAVIGATION PROPS =====

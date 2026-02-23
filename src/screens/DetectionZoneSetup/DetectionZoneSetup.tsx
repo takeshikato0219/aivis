@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Platform, Dimensions, PanResponder } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Platform,
+  Dimensions,
+  PanResponder,
+  ActivityIndicator,
+} from 'react-native';
 import Orientation from 'react-native-orientation-locker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { styles } from './DetectionZoneSetup.styles';
-import { buildStreamUrl, getStreamHTML } from '@utils/streamUtils';
+import { buildStreamUrl } from '@utils/streamUtils';
 import { WebView } from 'react-native-webview';
 import { useLiveStream } from '@hooks/useLiveStream';
 import { useTranslation } from 'react-i18next';
@@ -45,7 +53,6 @@ const DetectionZoneSetup: React.FC = () => {
   const route = useRoute<RouteProp<DetectionZoneSetupParamList, 'DetectionZoneSetup'>>();
   const { t } = useTranslation();
   const camera = route.params.camera;
-
   const centerX = PREVIEW_WIDTH / 2;
   const centerY = PREVIEW_HEIGHT / 2;
   const offset = 80;
@@ -64,9 +71,13 @@ const DetectionZoneSetup: React.FC = () => {
 
   const {
     webViewRef,
+    isLoading,
+    connectionStatus,
+    isReconnecting,
     handleWebViewLoad,
     handleWebViewError,
     handleWebViewHttpError,
+    handleManualRetry,
     handleWebViewMessage,
     getInjectedJavaScript,
   } = useLiveStream();
@@ -156,13 +167,11 @@ const DetectionZoneSetup: React.FC = () => {
   };
 
   const handleDrawRectangle = () => {
-    const top = PREVIEW_HEIGHT * 0.3;
-    const bottom = PREVIEW_HEIGHT * 0.7;
     setZone({
-      topLeft: { x: 0, y: top },
-      topRight: { x: PREVIEW_WIDTH, y: top },
-      bottomLeft: { x: 0, y: bottom },
-      bottomRight: { x: PREVIEW_WIDTH, y: bottom },
+      topLeft: { x: 0, y: 0 },
+      topRight: { x: PREVIEW_WIDTH, y: 0 },
+      bottomLeft: { x: 0, y: PREVIEW_HEIGHT },
+      bottomRight: { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT },
     });
   };
 
@@ -186,8 +195,7 @@ const DetectionZoneSetup: React.FC = () => {
   };
 
   useEffect(() => {
-    // Force landscape orientation for both iOS and Android when entering the screen
-    Orientation.lockToLandscapeLeft(); // More reliable for iOS
+    Orientation.lockToLandscapeLeft();
     return () => {
       Orientation.lockToPortrait();
     };
@@ -211,39 +219,69 @@ const DetectionZoneSetup: React.FC = () => {
         <View style={styles.previewContainer}>
           <WebView
             ref={webViewRef}
-            source={{ html: getStreamHTML(streamUrl) }}
+            source={{ uri: streamUrl }}
             style={styles.cameraPreview}
             onLoad={handleWebViewLoad}
             onError={handleWebViewError}
             onHttpError={handleWebViewHttpError}
-            allowsInlineMediaPlayback
+            allowsInlineMediaPlayback={true}
             mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled
-            domStorageEnabled
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
             startInLoadingState={false}
             originWhitelist={['*']}
-            allowFileAccess
-            allowUniversalAccessFromFileURLs
-            allowsFullscreenVideo
-            scalesPageToFit
+            allowFileAccess={true}
+            allowUniversalAccessFromFileURLs={true}
+            scalesPageToFit={false}
+            renderToHardwareTextureAndroid={true}
+            androidLayerType="hardware"
+            cacheEnabled={false}
             {...(Platform.OS === 'ios' && {
               allowsBackForwardNavigationGestures: false,
               decelerationRate: 'normal',
               bounces: false,
               scrollEnabled: false,
+              suppressesIncrementalRendering: true,
             })}
             {...(Platform.OS === 'android' && {
               mixedContentMode: 'always',
               thirdPartyCookiesEnabled: true,
               allowFileAccessFromFileURLs: true,
+              textZoom: 100,
             })}
             onMessage={handleWebViewMessage}
             injectedJavaScript={getInjectedJavaScript()}
-            setSupportMultipleWindows={false}
-            allowsLinkPreview={false}
-            cacheEnabled={false}
-            incognito
           />
+
+          {isLoading && !isReconnecting && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#4CAF50" />
+              <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={handleManualRetry}>
+                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {isReconnecting && (
+            <View style={styles.reconnectingOverlay}>
+              <ActivityIndicator size="large" color="#FFA500" />
+              <Text style={styles.reconnectingText}>{t('liveStream.reconnecting')}</Text>
+              <Text style={styles.reconnectingSubtext}>{t('liveStream.connectionLost')}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={handleManualRetry}>
+                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {connectionStatus === 'failed' && !isReconnecting && !isLoading && (
+            <View style={styles.errorOverlay}>
+              <Text style={styles.errorText}>{t('liveStream.reconnectFailed')}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={handleManualRetry}>
+                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View
             style={[styles.overlayContainer, { width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT }]}

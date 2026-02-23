@@ -27,11 +27,11 @@ const SettingAI = () => {
   };
 
   const handleSetupClockSchedule = () => {
-    (navigation as any).navigate('ClockScheduleSetup');
+    (navigation as any).navigate('WorkSchedule');
   };
 
   const handleSetupAIRule = () => {
-    (navigation as any).navigate('AIRuleSetup');
+    (navigation as any).navigate('AiDetectionRules');
   };
 
   return (

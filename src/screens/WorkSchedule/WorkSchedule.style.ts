@@ -1,0 +1,231 @@
+import { StyleSheet } from 'react-native';
+import { COLORS, FONTS } from '@constants/theme';
+import { scale } from '@utils/responsive';
+
+export const CONTAINER_H_PADDING = scale(20);
+export const CARD_PADDING = scale(18);
+
+export const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: '#0B0F14',
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: CONTAINER_H_PADDING,
+    paddingTop: 8,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  backBtn: {
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(22),
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backText: {
+    color: '#EAF1F7',
+    fontSize: scale(18),
+    fontWeight: '600',
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'left',
+    marginLeft: scale(14),
+    color: '#EAF1F7',
+    fontSize: scale(20),
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    flexShrink: 1,
+  },
+  headerSpacer: { width: scale(44) },
+
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 24,
+  },
+
+  card: {
+    marginTop: 16,
+    borderRadius: scale(26),
+    padding: CARD_PADDING,
+    backgroundColor: 'rgba(28, 44, 60, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(120, 160, 190, 0.25)',
+  },
+
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardTitle: {
+    color: COLORS.card,
+    fontSize: scale(20),
+    fontWeight: FONTS.weights.medium,
+    flexShrink: 1,
+  },
+  blueLine: {
+    height: 1,
+    backgroundColor: '#5C5C5C',
+    marginTop: scale(14),
+    borderRadius: 2,
+    opacity: 0.9,
+  },
+
+  sectionLabel: {
+    marginTop: scale(16),
+    color: 'rgba(234,241,247,0.6)',
+    fontSize: scale(16),
+    fontWeight: FONTS.weights.medium,
+  },
+  daysRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: scale(12),
+    gap: scale(6),
+  },
+  dayChip: {
+    flex: 1,
+    aspectRatio: 1,
+    maxWidth: scale(46),
+    maxHeight: scale(46),
+    borderRadius: scale(23),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayChipActive: {
+    backgroundColor: '#2A9EC6',
+    shadowColor: '#2A9EC6',
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  dayChipInactive: {
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(160, 190, 210, 0.25)',
+  },
+  dayChipText: {
+    fontSize: scale(16),
+    fontWeight: FONTS.weights.semiBold,
+  },
+  dayChipTextActive: {
+    color: '#EAF1F7',
+  },
+  dayChipTextInactive: {
+    color: 'rgba(234,241,247,0.8)',
+  },
+  divider: {
+    height: 1,
+    marginTop: scale(16),
+    backgroundColor: 'rgba(234,241,247,0.16)',
+  },
+
+  timeHeaderRow: {
+    marginTop: scale(14),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: scale(8),
+  },
+  timeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
+    flexShrink: 1,
+  },
+  timeIcon: {
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(16),
+    backgroundColor: 'rgba(0, 170, 210, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeIconText: {
+    fontSize: scale(14),
+  },
+  timeLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: scale(16),
+    fontWeight: FONTS.weights.medium,
+    flexShrink: 1,
+  },
+  timePill: {
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(6),
+    borderRadius: scale(18),
+    borderWidth: 1,
+    borderColor: 'rgba(160, 190, 210, 0.22)',
+    backgroundColor: 'rgba(10, 14, 20, 0.18)',
+  },
+  timePillText: {
+    color: '#EAF1F7',
+    fontSize: scale(16),
+    fontWeight: FONTS.weights.medium,
+  },
+  sliderContainer: {
+    marginTop: scale(10),
+  },
+  sliderTrack: {
+    height: scale(8),
+    borderRadius: scale(8),
+  },
+  sliderSelected: {
+    backgroundColor: '#2A9EC6',
+  },
+  sliderUnselected: {
+    backgroundColor: 'rgba(234,241,247,0.25)',
+  },
+  sliderMarker: {
+    height: scale(28),
+    width: scale(28),
+    borderRadius: scale(14),
+    backgroundColor: '#F2F6FA',
+    borderWidth: 3,
+    borderColor: '#2A9EC6',
+  },
+  sliderAlignCenter: {
+    alignSelf: 'center',
+  },
+  timeTicks: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: scale(8),
+    paddingHorizontal: 4,
+  },
+  tickText: {
+    color: 'rgba(234,241,247,0.55)',
+    fontSize: scale(11),
+    fontWeight: '700',
+  },
+  saveBtn: {
+    marginTop: 24,
+    marginBottom: 24,
+    height: scale(56),
+    borderRadius: scale(35),
+    backgroundColor: '#2A9EC6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: scale(8),
+  },
+  saveIcon: {
+    color: COLORS.card,
+    fontSize: scale(21),
+    fontWeight: FONTS.weights.medium,
+  },
+  saveText: {
+    color: COLORS.card,
+    fontSize: scale(21),
+    fontWeight: FONTS.weights.medium,
+  },
+});

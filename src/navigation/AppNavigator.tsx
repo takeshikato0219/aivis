@@ -27,6 +27,8 @@ import ConnectionSuccessful from '@screens/ConnectionSuccessful/ConnectionSucces
 import SettingAI from '@screens/SettingAI/SettingAI';
 import ListFace from '@screens/FaceUpload/ListFace';
 import DetailFace from '@screens/FaceUpload/DetailFace';
+import AiDetectionRules from '@screens/AiDetectionRules/AiDetectionRules';
+import WorkSchedule from '@screens/WorkSchedule/WorkSchedule';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -200,6 +202,20 @@ const AppNavigator = () => {
         <Stack.Screen
           name="DetailFace"
           component={DetailFace}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="AiDetectionRules"
+          component={AiDetectionRules}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="WorkSchedule"
+          component={WorkSchedule}
           options={{
             headerShown: false,
           }}

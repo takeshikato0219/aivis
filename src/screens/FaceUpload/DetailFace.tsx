@@ -419,26 +419,30 @@ const DetailFace = () => {
       const formData = new FormData();
       formData.append('name', nameInput.value.trim());
       formData.append('relationship_type_id', selectedRelationship.id);
+      const changedIds: string[] = [];
+      const imageFiles: any[] = [];
       member.images.forEach((image, index) => {
-        if (image && image.id && changedImageIds.has(image.id)) {
+        if (
+          image &&
+          image.id &&
+          changedImageIds.has(image.id) &&
+          image.image_url &&
+          image.image_url.startsWith('file://')
+        ) {
+          changedIds.push(image.id);
           const positionKey = FACE_POSITION_TITLES[index]?.key || 'center';
-          formData.append(`images[${index}][id]`, image.id);
-          if (image.image_path) {
-            formData.append(`images[${index}][image_path]`, image.image_path);
-          }
-          if (image.image_url) {
-            formData.append(`images[${index}][image_url]`, image.image_url);
-            const imgObj = {
-              uri: image.image_url,
-              type: 'image/jpeg',
-              name: `${positionKey}.jpg`,
-            };
-            formData.append('images', imgObj as any);
-          }
+          imageFiles.push({
+            uri: image.image_url,
+            type: 'image/jpeg',
+            name: `${positionKey}.jpg`,
+          });
         }
       });
+      formData.append('image_ids', changedIds.join(','));
+      imageFiles.forEach((file) => formData.append('image_files', file));
 
       await faceService.updateMember(member.id, formData);
+      fetchMemberDetail();
 
       Alert.alert(
         t('common.success') || 'Success',
@@ -447,7 +451,6 @@ const DetailFace = () => {
           {
             text: t('common.ok') || 'OK',
             onPress: () => {
-              fetchMemberDetail();
               setChangedImageIds(new Set());
             },
           },
@@ -459,6 +462,23 @@ const DetailFace = () => {
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(t('faceUpload.deleteMember'), t('faceUpload.deleteMemberConfirmation'), [
+      {
+        text: 'OK',
+        onPress: async () => {
+          if (member) {
+            const response = await faceService.deleteMemberFace(member.id);
+            if (response) navigation.goBack();
+          }
+        },
+      },
+      {
+        text: t('common.cancel'),
+      },
+    ]);
   };
 
   const handleRelationshipSelect = (relationship: MemberRelationship) => {
@@ -962,7 +982,7 @@ const DetailFace = () => {
                                 resizeMode="cover"
                               />
                               <View style={styles.imageOverlay}>
-                                <Icon name="camera" size={20} color="#fff" />
+                                <Icon name="pencil" size={20} color="#fff" />
                                 <Text style={styles.imageIndex}>{index + 1}</Text>
                               </View>
                             </TouchableOpacity>
@@ -997,6 +1017,16 @@ const DetailFace = () => {
               <>
                 <Icon name="content-save" size={20} color="#fff" />
                 <Text style={styles.saveButtonText}>{t('common.save') || 'Save'}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            {isUpdating ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Icon name="delete-circle" size={20} color="#fff" />
+                <Text style={styles.saveButtonText}>{t('common.delete')}</Text>
               </>
             )}
           </TouchableOpacity>

@@ -37,14 +37,13 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  /** overlay bao trùm lên WebView (absolute) */
   overlayContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
   },
   gridOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   gridLineVertical: {
     position: 'absolute',
@@ -98,5 +97,58 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  loadingText: {
+    color: '#fff',
+    marginTop: 12,
+    fontSize: 14,
+  },
+  reconnectingOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  reconnectingText: {
+    color: '#FFA500',
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  reconnectingSubtext: {
+    color: '#fff',
+    marginTop: 4,
+    fontSize: 12,
+  },
+  errorOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  errorText: {
+    color: '#FF5252',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  retryButton: {
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: '#FFA500',
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });

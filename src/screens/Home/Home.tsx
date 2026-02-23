@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   StatusBar,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useAppSelector } from '@redux/store';
 import { useNavigation } from '@react-navigation/native';
@@ -34,6 +35,7 @@ import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
 import { useErrorHandler } from '@hooks/useErrorHandler';
 import CameraIcon from '@assets/png/camera.png';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
+import { useFocusEffect } from '@react-navigation/native';
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -55,6 +57,7 @@ const Home = () => {
   const [isLoadingCameras, setIsLoadingCameras] = useState(false);
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
   const [hasCamerasInAllTab, setHasCamerasInAllTab] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // USING COMMON HOOKS
   const { syncUserData } = useUserSync();
@@ -72,52 +75,55 @@ const Home = () => {
     }
   }, [isDrawerOpen, syncUserData]);
 
-  const fetchCameraList = async (append: boolean = false, facilityId: string | null = null) => {
-    if (!append) {
-      setIsLoadingCameras(true);
-    }
-
-    try {
-      const pageToFetch = append ? currentPageRef.current + 1 : 1;
-
-      const response = await cameraService.getCameras({
-        sort_by: 'created_at',
-        sort_order: 'desc',
-        page: pageToFetch,
-        per_page: 20,
-        facility_id: facilityId || undefined,
-      });
-      const newData = response.data || [];
-      if (facilityId === null) {
-        setHasCamerasInAllTab(newData.length > 0);
-      }
-
-      if (append) {
-        setCameraList((prev) => [...prev, ...newData]);
-        currentPageRef.current = pageToFetch;
-      } else {
-        setCameraList(newData);
-        currentPageRef.current = 1;
-        setHasMore(true);
-      }
-
-      if (response.total_pages !== undefined) {
-        setHasMore(pageToFetch < response.total_pages);
-      } else {
-        setHasMore(newData.length >= 20);
-      }
-    } catch (error: any) {
-      console.error('Error fetching camera list:', error);
-      handleError(error, false);
+  const fetchCameraList = useCallback(
+    async (append: boolean = false, facilityId: string | null = null) => {
       if (!append) {
-        setCameraList([]);
+        setIsLoadingCameras(true);
       }
-    } finally {
-      if (!append) {
-        setIsLoadingCameras(false);
+
+      try {
+        const pageToFetch = append ? currentPageRef.current + 1 : 1;
+
+        const response = await cameraService.getCameras({
+          sort_by: 'created_at',
+          sort_order: 'desc',
+          page: pageToFetch,
+          per_page: 20,
+          facility_id: facilityId || undefined,
+        });
+        const newData = response.data || [];
+        if (facilityId === null) {
+          setHasCamerasInAllTab(newData.length > 0);
+        }
+
+        if (append) {
+          setCameraList((prev) => [...prev, ...newData]);
+          currentPageRef.current = pageToFetch;
+        } else {
+          setCameraList(newData);
+          currentPageRef.current = 1;
+          setHasMore(true);
+        }
+
+        if (response.total_pages !== undefined) {
+          setHasMore(pageToFetch < response.total_pages);
+        } else {
+          setHasMore(newData.length >= 20);
+        }
+      } catch (error: any) {
+        console.error('Error fetching camera list:', error);
+        handleError(error, false);
+        if (!append) {
+          setCameraList([]);
+        }
+      } finally {
+        if (!append) {
+          setIsLoadingCameras(false);
+        }
       }
-    }
-  };
+    },
+    [handleError]
+  );
 
   const fetchWorkflowStatuses = async () => {
     try {
@@ -174,8 +180,15 @@ const Home = () => {
   };
 
   const goToBluetoothScan = () => {
-    navigation.navigate('ConnectDevice' as never);
+    // navigation.navigate('ConnectDevice' as never);
+    navigation.navigate('QRScanner' as never);
   };
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchCameraList(false, selectedFacilityId);
+    setIsRefreshing(false);
+  }, [fetchCameraList, selectedFacilityId]);
 
   const renderCameraContent = () => {
     if (isLoadingCameras) {
@@ -192,6 +205,7 @@ const Home = () => {
           style={styles.cameraListScroll}
           contentContainerStyle={styles.paddingScrollView}
           showsVerticalScrollIndicator={true}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
           onScroll={({ nativeEvent }) => {
             const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
             const paddingToBottom = 20;
@@ -268,6 +282,13 @@ const Home = () => {
       </View>
     );
   };
+
+  // Add useFocusEffect to reload camera list when Home regains focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchCameraList(false, selectedFacilityId);
+    }, [selectedFacilityId, fetchCameraList])
+  );
 
   return (
     <View style={styles.wrapper}>

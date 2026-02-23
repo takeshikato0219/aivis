@@ -25,7 +25,7 @@ import IconPencil from '@assets/svg/pencil-icon.svg';
 import SettingIcon from '@assets/svg/settings-icon-incisor.svg';
 import { ConnectionSuccessfulScreenRouteProp } from '@navigation/types';
 import { CameraStatus } from '@api/types/cameraTypes';
-import { buildStreamUrl, getStreamHTML } from '@utils/streamUtils';
+import { buildStreamUrl } from '@utils/streamUtils';
 import { useLiveStream } from '@hooks/useLiveStream';
 
 interface CameraInfo {
@@ -114,7 +114,7 @@ const ConnectionSuccessful: React.FC = () => {
           <View style={[styles.streamWrapper, { width: streamWidth }]}>
             <WebView
               ref={webViewRef}
-              source={{ html: getStreamHTML(streamUrl) }}
+              source={{ uri: streamUrl }}
               style={styles.webView}
               onLoad={handleWebViewLoad}
               onError={handleWebViewError}
@@ -213,33 +213,32 @@ const ConnectionSuccessful: React.FC = () => {
             {t('liveStream.thisNameWillAppearInYourDashboardAlerts')}
           </Text>
         </View>
+        <SafeAreaView edges={['bottom']} style={styles.bottomSection}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => {
+              navigation.navigate('Home' as any);
+            }}
+          >
+            <View style={styles.viewButtonBottom}>
+              <Text style={styles.primaryButtonText}>{t('liveStream.startMonitoring')}</Text>
+              <MoveRightIcon style={styles.positionButtonBottom} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => {
+              navigation.navigate('FaceUpload' as never);
+            }}
+          >
+            <View style={styles.viewButtonBottom}>
+              <Text style={styles.secondaryButtonText}>{t('liveStream.faceSetup')}</Text>
+            </View>
+            <SettingIcon width={20} height={20} color="#fff" style={styles.positionButtonBottom} />
+          </TouchableOpacity>
+        </SafeAreaView>
       </ScrollView>
-
-      <SafeAreaView edges={['bottom']} style={styles.bottomSection}>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => {
-            navigation.navigate('Home' as any);
-          }}
-        >
-          <View style={styles.viewButtonBottom}>
-            <Text style={styles.primaryButtonText}>{t('liveStream.startMonitoring')}</Text>
-            <MoveRightIcon style={styles.positionButtonBottom} />
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => {
-            navigation.navigate('FaceUpload' as never);
-          }}
-        >
-          <View style={styles.viewButtonBottom}>
-            <Text style={styles.secondaryButtonText}>{t('liveStream.faceSetup')}</Text>
-          </View>
-          <SettingIcon width={20} height={20} color="#fff" style={styles.positionButtonBottom} />
-        </TouchableOpacity>
-      </SafeAreaView>
     </View>
   );
 };

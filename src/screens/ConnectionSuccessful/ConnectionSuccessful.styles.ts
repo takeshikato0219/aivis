@@ -161,7 +161,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 20,
     borderRadius: 22,
-    marginTop: -30,
+    marginTop: 10,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.5)',
     shadowColor: '#000',

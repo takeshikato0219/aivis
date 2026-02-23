@@ -8,16 +8,12 @@ export const buildStreamUrl = (
   rtspUrl?: string,
   baseUrl: string = 'https://avisaitest-nginx001.wpstories.org'
 ): string => {
-  if (!rtspUrl) {
-    return `${baseUrl}/stream.html?src=camera&mode=webrtc,mse,hls,mjpeg`;
-  }
-  // If already a full URL, return as is
-  if (rtspUrl.startsWith('http://') || rtspUrl.startsWith('https://')) {
+  const src = rtspUrl || 'camera';
+
+  if (rtspUrl?.startsWith('http://') || rtspUrl?.startsWith('https://')) {
     return rtspUrl;
   }
-  // Use go2rtc embed player with autoplay enabled
-  // This bypasses the settings/mode selection screen
-  return `${baseUrl}/stream.html?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse,hls,mjpeg&autoplay=true`;
+  return `${baseUrl}/stream.html?src=${encodeURIComponent(src)}&mode=mse&autoplay=true`;
 };
 
 /**

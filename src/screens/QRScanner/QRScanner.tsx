@@ -110,8 +110,8 @@ const QRScanner: React.FC = () => {
         await AsyncStorage.setItem(CAMERA_PERMISSION_KEY, 'blocked');
         setPermissionStatus('blocked');
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      console.log(error);
       setPermissionStatus('denied');
       Alert.alert(t('QRScan.cameraAccess'), t('QRScan.cameraAccessIsRequiredToScanTheQRCode'), [
         {
@@ -189,23 +189,25 @@ const QRScanner: React.FC = () => {
       });
 
       // Success - show alert and navigate
-      Alert.alert(
-        t('common.success'),
-        t('QRScan.cameraRegisteredSuccessfully') || 'Camera registered successfully',
-        [
-          {
-            text: t('common.ok'),
-            onPress: () => {
-              isProcessingRef.current = false;
-              if (response.data) {
-                navigation.navigate('ConnectionSuccessful', {
-                  cameraData: response.data,
-                });
-              }
+      setTimeout(() => {
+        Alert.alert(
+          t('common.success'),
+          t('QRScan.cameraRegisteredSuccessfully') || 'Camera registered successfully',
+          [
+            {
+              text: t('common.ok'),
+              onPress: () => {
+                isProcessingRef.current = false;
+                if (response.data) {
+                  navigation.navigate('ConnectionSuccessful', {
+                    cameraData: response.data,
+                  });
+                }
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      }, 15000);
     } catch (error: any) {
       console.error('Error registering camera:', error);
       isProcessingRef.current = false;
@@ -364,7 +366,6 @@ const QRScanner: React.FC = () => {
               <Icon name="bluetooth" size={28} color="#00D9FF" />
             </View>
             <Text style={styles.searchingText}>{t('QRScan.searchingForDevices')}</Text>
-            <Text style={styles.searchingSubtext}>{t('QRScan.bluetoothConnected')}</Text>
             <ActivityIndicator size="small" color="#00D9FF" style={styles.btnSearch} />
           </View>
         ) : null}
