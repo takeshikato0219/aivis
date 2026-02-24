@@ -290,6 +290,32 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   const getInjectedJavaScript = useCallback((): string => {
     return `
   (function () {
+    // Inject CSS to hide all mute/unmute/volume buttons (common selectors)
+    var style = document.createElement('style');
+    style.textContent = [
+      '[id*="mute" i], [class*="mute" i], [id*="volume" i], [class*="volume" i], [aria-label*="mute" i], [aria-label*="volume" i], button[title*="mute" i], button[title*="volume" i], button[aria-label*="mute" i], button[aria-label*="volume" i] {',
+      '  display: none !important;',
+      '}',
+      // Hide custom mute button if injected previously
+      '#__rn_mute_btn { display: none !important; }',
+    ].join('\\n');
+    document.head.appendChild(style);
+
+    // Remove any mute/unmute/volume button elements on interval
+    function removeMuteButtons() {
+      var selectors = [
+        '[id*="mute" i]', '[class*="mute" i]', '[id*="volume" i]', '[class*="volume" i]',
+        '[aria-label*="mute" i]', '[aria-label*="volume" i]',
+        'button[title*="mute" i]', 'button[title*="volume" i]',
+        'button[aria-label*="mute" i]', 'button[aria-label*="volume" i]',
+        '#__rn_mute_btn'
+      ];
+      var nodes = document.querySelectorAll(selectors.join(','));
+      nodes.forEach(function(node) { node.remove(); });
+    }
+    removeMuteButtons();
+    setInterval(removeMuteButtons, 1000);
+
     // 1. CSS: universal hide + whitelist video/canvas/mute
     var s = document.createElement('style');
     s.textContent = [

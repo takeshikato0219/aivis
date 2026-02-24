@@ -8,12 +8,11 @@ export const buildStreamUrl = (
   rtspUrl?: string,
   baseUrl: string = 'https://avisaitest-nginx001.wpstories.org'
 ): string => {
-  const src = rtspUrl || 'camera';
-
-  if (rtspUrl?.startsWith('http://') || rtspUrl?.startsWith('https://')) {
+  if (!rtspUrl) return '';
+  if (rtspUrl.startsWith('http://') || rtspUrl.startsWith('https://')) {
     return rtspUrl;
   }
-  return `${baseUrl}/stream.html?src=${encodeURIComponent(src)}&mode=mse&autoplay=true`;
+  return `${baseUrl}/stream.html?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse,hls,mjpeg&autoplay=true`;
 };
 
 /**
@@ -113,18 +112,6 @@ export const getStreamHTML = (streamUrl: string): string => {
             '  object-fit:contain!important; z-index:1!important;',
             '  background:#000!important; pointer-events:auto!important;',
             '}',
-            '#__rn_mute_btn {',
-            '  display:flex!important; visibility:visible!important;',
-            '  align-items:center!important; justify-content:center!important;',
-            '  position:fixed!important; bottom:16px!important; right:16px!important;',
-            '  z-index:9999999!important; width:44px!important; height:44px!important;',
-            '  border-radius:50%!important; border:none!important;',
-            '  background:rgba(0,0,0,0.55)!important; color:#fff!important;',
-            '  font-size:22px!important; cursor:pointer!important;',
-            '  pointer-events:auto!important; opacity:0.9!important;',
-            '  -webkit-tap-highlight-color:transparent!important;',
-            '}',
-            '#__rn_mute_btn:active{opacity:1!important;transform:scale(0.92)!important;}'
           ].join('\\n');
 
           function injectHideCSS(doc) {
@@ -138,8 +125,6 @@ export const getStreamHTML = (streamUrl: string): string => {
           function hideIframeElements(doc) {
             try {
               var validSet = new Set();
-              var mb = doc.getElementById('__rn_mute_btn');
-              if (mb) validSet.add(mb);
               var mediaEls = doc.querySelectorAll('video, canvas, audio');
               mediaEls.forEach(function(m) {
                 var node = m;
@@ -153,7 +138,7 @@ export const getStreamHTML = (streamUrl: string): string => {
                 var tag = el.tagName.toLowerCase();
                 if (tag==='script'||tag==='style'||tag==='source') return;
                 if (validSet.has(el)) {
-                  if (tag!=='video'&&tag!=='canvas'&&tag!=='audio'&&el.id!=='__rn_mute_btn') {
+                  if (tag!=='video'&&tag!=='canvas'&&tag!=='audio') {
                     el.style.cssText='margin:0!important;padding:0!important;border:none!important;background:transparent!important;overflow:visible!important;';
                   }
                   return;
@@ -163,29 +148,6 @@ export const getStreamHTML = (streamUrl: string): string => {
             } catch(e) {}
           }
 
-          function createMuteBtn(doc) {
-            try {
-              if (doc.getElementById('__rn_mute_btn')) return;
-              var mb = doc.createElement('div');
-              mb.id = '__rn_mute_btn';
-              mb.textContent = '\\uD83D\\uDD07';
-              var muted = true;
-              function syncMute() {
-                doc.querySelectorAll('video').forEach(function(v){ v.muted = muted; });
-                mb.textContent = muted ? '\\uD83D\\uDD07' : '\\uD83D\\uDD0A';
-              }
-              function toggle(e) {
-                e.stopPropagation(); e.preventDefault();
-                muted = !muted;
-                syncMute();
-              }
-              mb.addEventListener('click', toggle);
-              mb.addEventListener('touchend', toggle);
-              doc.body.appendChild(mb);
-              setInterval(syncMute, 1000);
-            } catch(e) {}
-          }
-          
           // Error handling
           window.addEventListener('error', function(e) {
             console.error('Window error:', e.message);
@@ -206,7 +168,6 @@ export const getStreamHTML = (streamUrl: string): string => {
                   // Inject CSS to hide controls inside iframe
                   injectHideCSS(iframeDoc);
                   hideIframeElements(iframeDoc);
-                  createMuteBtn(iframeDoc);
                   // Keep hiding dynamically added elements
                   setInterval(function() { hideIframeElements(iframeDoc); }, 500);
 
