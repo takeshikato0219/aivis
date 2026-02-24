@@ -20,8 +20,8 @@ const SettingAI = () => {
   const { t } = useTranslation();
   const camera = route.params?.camera;
 
-  const handleSetupDetectionZone = () => {
-    (navigation as any).navigate('DetectionZoneSetup', {
+  const handleListDetectionZone = () => {
+    (navigation as any).navigate('UploadDetectZone', {
       camera: camera,
     });
   };
@@ -48,7 +48,7 @@ const SettingAI = () => {
           </View>
         </View>
         <View style={styles.styleViewButton}>
-          <TouchableOpacity style={styles.styleButton} onPress={handleSetupDetectionZone}>
+          <TouchableOpacity style={styles.styleButton} onPress={handleListDetectionZone}>
             <View style={styles.styleTextButton}>
               <IconSettingZone />
               <Text style={styles.styleText}>{t('settingAI.detectionAreaSetup')}</Text>

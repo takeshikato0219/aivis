@@ -75,3 +75,15 @@ export interface StatusCamera {
     name_trans: string;
   };
 }
+
+export type LiveStreamUrlResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    live_url: string;
+    mic: string;
+    start_time: string;
+    time_exp: string;
+    exp_minutes: number;
+  };
+};

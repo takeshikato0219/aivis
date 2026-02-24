@@ -34,6 +34,28 @@ const WIFI_SCAN_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef4';
 const WIFI_LIST_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef5';
 const AUTH_STATUS_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef7';
 const PIN_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef6';
+const NET_CHECK_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef8';
+const NET_STATUS_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef9';
+
+// =============================================================================
+// CONNECTION TYPE
+// =============================================================================
+
+export const ConnectionType = {
+  NONE: 'none',
+  WIFI: 'wifi',
+  ETHERNET: 'ethernet',
+  CELLULAR: 'cellular',
+} as const;
+
+export type ConnectionTypeValue = (typeof ConnectionType)[keyof typeof ConnectionType];
+
+export const ConnectionTypeText: Record<ConnectionTypeValue, string> = {
+  [ConnectionType.NONE]: 'Không có kết nối',
+  [ConnectionType.WIFI]: 'WiFi',
+  [ConnectionType.ETHERNET]: 'Ethernet (LAN)',
+  [ConnectionType.CELLULAR]: 'Di động (LTE/4G)',
+};
 
 // =============================================================================
 // BASE64 HELPERS
@@ -563,6 +585,97 @@ class JetsonBLEService {
   isInitialized(): boolean {
     return this.initialized;
   }
+
+  // ---------------------------------------------------------------------------
+  // CHECK NETWORK STATUS
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Request network connection status from Jetson device.
+   * Writes to NET_CHECK_CHAR_UUID and monitors NET_STATUS_CHAR_UUID for response.
+   * @returns Promise with ConnectionTypeValue or null if failed
+   */
+  checkNetworkStatus = async (): Promise<ConnectionTypeValue | null> => {
+    if (!this.connectedDevice) {
+      store.dispatch(setError('Not connected to the device'));
+      return null;
+    }
+
+    try {
+      store.dispatch(clearError());
+
+      // Create a promise that will resolve when we receive the status
+      const statusPromise = new Promise<ConnectionTypeValue>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Network status check timeout'));
+        }, 10000); // 10 seconds timeout
+
+        // Subscribe to NET_STATUS_CHAR_UUID to receive the response
+        const statusSub = this.connectedDevice!.monitorCharacteristicForService(
+          SERVICE_UUID,
+          NET_STATUS_CHAR_UUID,
+          (monitorError, characteristic) => {
+            if (monitorError) {
+              clearTimeout(timeout);
+              statusSub.remove();
+              reject(monitorError);
+              return;
+            }
+
+            if (characteristic?.value) {
+              clearTimeout(timeout);
+              statusSub.remove();
+
+              const statusStr = base64ToString(characteristic.value);
+              console.log('[BLE] Network status received:', statusStr);
+
+              // Parse the status and return ConnectionType
+              if (
+                statusStr === ConnectionType.WIFI ||
+                statusStr === ConnectionType.ETHERNET ||
+                statusStr === ConnectionType.CELLULAR ||
+                statusStr === ConnectionType.NONE
+              ) {
+                resolve(statusStr as ConnectionTypeValue);
+              } else {
+                // Try to parse as JSON if it's a more complex response
+                try {
+                  const data = JSON.parse(statusStr);
+                  resolve((data.type || ConnectionType.NONE) as ConnectionTypeValue);
+                } catch {
+                  resolve(ConnectionType.NONE);
+                }
+              }
+            }
+          }
+        );
+
+        // Add subscription to clean up list
+        this.subscriptions.push(statusSub);
+      });
+
+      // Write to NET_CHECK_CHAR_UUID to trigger the check (send 1 to request status)
+      await this.connectedDevice.writeCharacteristicWithResponseForService(
+        SERVICE_UUID,
+        NET_CHECK_CHAR_UUID,
+        byteToBase64(1)
+      );
+
+      // Wait for the status response and return
+      return await statusPromise;
+    } catch (err: any) {
+      console.error('[BLE] Network status check error:', err);
+      store.dispatch(setError(err?.message || 'Network status check error'));
+      return null;
+    }
+  };
+
+  /**
+   * Get connection type text for display
+   */
+  getConnectionTypeText = (type: ConnectionTypeValue): string => {
+    return ConnectionTypeText[type] || ConnectionTypeText[ConnectionType.NONE];
+  };
 }
 
 // =============================================================================

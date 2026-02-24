@@ -3,20 +3,20 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Platform,
   Dimensions,
   PanResponder,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import Orientation from 'react-native-orientation-locker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { styles } from './DetectionZoneSetup.styles';
-import { buildStreamUrl } from '@utils/streamUtils';
 import { WebView } from 'react-native-webview';
 import { useLiveStream } from '@hooks/useLiveStream';
 import { useTranslation } from 'react-i18next';
+import { buildStreamUrl } from '@utils/streamUtils';
 
 const getScreenDims = () => {
   const { width, height } = Dimensions.get('window');

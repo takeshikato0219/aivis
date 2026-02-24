@@ -29,6 +29,7 @@ import ListFace from '@screens/FaceUpload/ListFace';
 import DetailFace from '@screens/FaceUpload/DetailFace';
 import AiDetectionRules from '@screens/AiDetectionRules/AiDetectionRules';
 import WorkSchedule from '@screens/WorkSchedule/WorkSchedule';
+import UploadDetectZone from '@screens/DetectionZoneSetup/UploadDetectZone';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -216,6 +217,13 @@ const AppNavigator = () => {
         <Stack.Screen
           name="WorkSchedule"
           component={WorkSchedule}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="UploadDetectZone"
+          component={UploadDetectZone}
           options={{
             headerShown: false,
           }}

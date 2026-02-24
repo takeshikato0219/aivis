@@ -737,4 +737,25 @@ export const styles = StyleSheet.create({
     color: '#fff',
     marginLeft: 0,
   },
+  settingsSection: {
+    marginBottom: 24,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 62, 92, 0.6)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingText: {
+    color: '#FFF',
+    fontSize: 16,
+    marginLeft: 12,
+  },
 });

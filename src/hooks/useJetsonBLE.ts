@@ -59,5 +59,6 @@ export function useJetsonBLE() {
 
     // Utils
     clearError: jetsonBLEService.clearError,
+    checkNetworkStatus: jetsonBLEService.checkNetworkStatus,
   };
 }

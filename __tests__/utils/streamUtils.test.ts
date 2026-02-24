@@ -82,7 +82,7 @@ describe('streamUtils', () => {
     it('should include proper HTML structure', () => {
       const result = getStreamHTML(mockStreamUrl);
 
-      expect(result).toContain('<html>');
+      expect(result).toContain('<html lang="en">');
       expect(result).toContain('<head>');
       expect(result).toContain('<body>');
       expect(result).toContain('<meta charset="UTF-8">');

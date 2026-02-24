@@ -64,6 +64,9 @@ export type AppStackParamList = {
   DetailFace: { memberId: string; relationships?: MemberRelationship[] };
   AiDetectionRules: undefined;
   WorkSchedule: undefined;
+  UploadDetectZone: {
+    camera: Camera;
+  };
 };
 
 // ===== NAVIGATION PROPS =====

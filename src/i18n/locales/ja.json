@@ -563,5 +563,16 @@
       "sat": "土",
       "sun": "日"
     }
+  },
+  "listDetectZone": {
+    "noneItem": "監視エリアがまだ設定されていません",
+    "listDetectZone": "検出エリア一覧"
+  },
+  "uploadDetectZone": {
+    "setupDetectZone": "検知エリア設定",
+    "setupZone": "ゾーン設定",
+    "setupDetectionZone": "検知エリア設定",
+    "setupRestrictedZone": "制限エリア設定",
+    "setupEntryExit": "出入り追跡の設定 (でいりついせきのせってい)"
   }
 }

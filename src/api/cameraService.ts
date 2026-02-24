@@ -7,6 +7,7 @@ import {
   GetCamerasResponse,
   GetWorkflowStatusesResponse,
   StatusCamera,
+  LiveStreamUrlResponse,
 } from './types/cameraTypes';
 
 class CameraService {
@@ -60,6 +61,13 @@ class CameraService {
 
   async updateStatus(): Promise<StatusCamera> {
     const response = await axiosInstance.get<StatusCamera>(API_ENDPOINTS.STATUSES);
+    return response.data;
+  }
+
+  async getLiveStreamUrl(cameraId: string): Promise<LiveStreamUrlResponse> {
+    const response = await axiosInstance.get<LiveStreamUrlResponse>(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}/livestream`
+    );
     return response.data;
   }
 }

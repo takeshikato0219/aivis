@@ -241,7 +241,18 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       try {
         const data = JSON.parse(event.nativeEvent.data);
 
-        if (data.type === 'playing') {
+        if (data.type === 'heartbeat') {
+          lastHeartbeatRef.current = Date.now();
+          if (connectionStatus !== 'failed') {
+            setConnectionStatus('connected');
+            setIsLoading(false);
+            setIsReconnecting(false);
+          }
+          return;
+        }
+
+        if (data.type === 'playing' || data.type === 'connected') {
+          lastHeartbeatRef.current = Date.now();
           setIsLoading(false);
           setConnectionStatus('connected');
           setIsReconnecting(false);
@@ -250,58 +261,133 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
           return;
         }
 
+        if (data.type === 'failed' || data.type === 'wsClose' || data.type === 'wsError') {
+          setIsLoading(false);
+          handleConnectionLost();
+          return;
+        }
+
+        if (data.type === 'error') {
+          // Có thể log error detail để debug RTC/MSE
+          console.warn('Player error:', data.message, data.detail);
+          setIsLoading(false);
+          handleConnectionLost();
+          return;
+        }
+
         if (data.type === 'stalled') {
           setIsLoading(false);
           handleConnectionLost();
           return;
         }
-      } catch {}
+      } catch {
+        // ignore
+      }
     },
-    [handleConnectionLost]
+    [handleConnectionLost, connectionStatus]
   );
 
   const getInjectedJavaScript = useCallback((): string => {
     return `
   (function () {
-    function hideUnwantedElements() {
-      var zoomBtns = document.querySelectorAll('[class*="zoom"], .zoom-control, .zoom-in, .zoom-out');
-      zoomBtns.forEach(function(btn) { btn.style.display = 'none'; });
-      var logoEls = document.querySelectorAll('[class*="logo"], #logo, .player-logo, .stream-logo');
-      logoEls.forEach(function(el) { el.style.display = 'none'; });
-      var controls = document.querySelectorAll('.controls, .player-controls, .toolbar, .header, .footer, .menu, .settings, .sidebar');
-      controls.forEach(function(el) { el.style.display = 'none'; });
-      var imgs = document.querySelectorAll('img');
-      imgs.forEach(function(img) { img.style.display = 'none'; });
-    }
-    setInterval(hideUnwantedElements, 1000);
+    // 1. CSS: universal hide + whitelist video/canvas/mute
+    var s = document.createElement('style');
+    s.textContent = [
+      'html,body{background:#000!important;margin:0!important;padding:0!important;overflow:hidden!important;}',
+      'video, canvas {',
+      '  display:block!important; visibility:visible!important;',
+      '  opacity:1!important; position:fixed!important;',
+      '  top:0!important; left:0!important;',
+      '  width:100vw!important; height:100vh!important;',
+      '  object-fit:contain!important; z-index:1!important;',
+      '  background:#000!important; pointer-events:auto!important;',
+      '}',
+      '#__rn_mute_btn {',
+      '  display:flex!important; visibility:visible!important;',
+      '  align-items:center!important; justify-content:center!important;',
+      '  position:fixed!important; bottom:16px!important; right:16px!important;',
+      '  z-index:9999999!important; width:44px!important; height:44px!important;',
+      '  border-radius:50%!important; border:none!important;',
+      '  background:rgba(0,0,0,0.55)!important; color:#fff!important;',
+      '  font-size:22px!important; cursor:pointer!important;',
+      '  pointer-events:auto!important; opacity:0.9!important;',
+      '  -webkit-tap-highlight-color:transparent!important;',
+      '}',
+      '#__rn_mute_btn:active{opacity:1!important;transform:scale(0.92)!important;}'
+    ].join('\\n');
+    document.head.appendChild(s);
 
-    const send = (type,data={})=>{
-      window.ReactNativeWebView.postMessage(JSON.stringify({type,...data}));
+    // 2. DOM cleanup: walk up from media elements to mark parent chain, hide everything else
+    function hideUnwantedElements() {
+      var validSet = new Set();
+      // Mark the mute button
+      var mb = document.getElementById('__rn_mute_btn');
+      if (mb) validSet.add(mb);
+      // Find all media elements and mark their parent chain up to body
+      var mediaEls = document.querySelectorAll('video, canvas, audio');
+      mediaEls.forEach(function(m) {
+        var node = m;
+        while (node && node !== document.body) {
+          validSet.add(node);
+          node = node.parentElement;
+        }
+      });
+      // Now hide everything not in the valid set
+      var all = document.body.querySelectorAll('*');
+      all.forEach(function(el) {
+        var tag = el.tagName.toLowerCase();
+        if (tag==='script'||tag==='style'||tag==='source') return;
+        if (validSet.has(el)) {
+          // Parent of media: strip decoration but keep visible
+          if (tag!=='video'&&tag!=='canvas'&&tag!=='audio'&&el.id!=='__rn_mute_btn') {
+            el.style.cssText='margin:0!important;padding:0!important;border:none!important;background:transparent!important;overflow:visible!important;';
+          }
+          return;
+        }
+        // Hide everything else
+        el.style.cssText='display:none!important;visibility:hidden!important;width:0!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;position:absolute!important;pointer-events:none!important;';
+      });
+    }
+    hideUnwantedElements();
+    setInterval(hideUnwantedElements, 300);
+
+    // 3. Custom mute/unmute button
+    var muteBtn = document.createElement('div');
+    muteBtn.id = '__rn_mute_btn';
+    muteBtn.textContent = '\\uD83D\\uDD07';
+    var isMuted = true;
+    function syncMute() {
+      document.querySelectorAll('video').forEach(function(v){ v.muted = isMuted; });
+      muteBtn.textContent = isMuted ? '\\uD83D\\uDD07' : '\\uD83D\\uDD0A';
+    }
+    function toggleMute(e) {
+      e.stopPropagation(); e.preventDefault();
+      isMuted = !isMuted;
+      syncMute();
+    }
+    muteBtn.addEventListener('click', toggleMute);
+    muteBtn.addEventListener('touchend', toggleMute);
+    document.body.appendChild(muteBtn);
+    setInterval(syncMute, 1000);
+
+    // 4. Stream status detection
+    var send = function(type, data) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(Object.assign({type:type}, data||{})));
     };
-    let lastFrame = Date.now();
-    let playing = false;
+    var lastFrame = Date.now();
+    var playing = false;
     function waitCanvas(){
-      const canvas = document.querySelector("canvas");
-      if(!canvas){
-        requestAnimationFrame(waitCanvas);
-        return;
-      }
-      const ctx = canvas.getContext("2d");
+      var canvas = document.querySelector('canvas');
+      if(!canvas){ requestAnimationFrame(waitCanvas); return; }
+      var ctx = canvas.getContext('2d');
       function detect(){
         try{
-          const p = ctx.getImageData(0,0,1,1).data;
-          const hasFrame = p[0]||p[1]||p[2];
-          if(hasFrame){
+          var p = ctx.getImageData(0,0,1,1).data;
+          if(p[0]||p[1]||p[2]){
             lastFrame = Date.now();
-            if(!playing){
-              playing=true;
-              send("playing");
-            }
+            if(!playing){ playing=true; send('playing'); }
           }
-          if(Date.now()-lastFrame>4000){
-            playing=false;
-            send("stalled");
-          }
+          if(Date.now()-lastFrame>4000){ playing=false; send('stalled'); }
         }catch(e){}
         requestAnimationFrame(detect);
       }

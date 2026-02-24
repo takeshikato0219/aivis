@@ -522,5 +522,16 @@
       "sat": "Sat",
       "sun": "Sun"
     }
+  },
+  "listDetectZone": {
+    "noneItem": "No detection zones set up yet",
+    "listDetectZone": "List Detect Zone"
+  },
+  "uploadDetectZone": {
+    "setupDetectZone": "Setup Detect Zone",
+    "setupZone": "Setup Zone",
+    "setupDetectionZone": "Setup detection zone",
+    "setupRestrictedZone": "Setup restricted zone",
+    "setupEntryExit": "Setup Entry/Exit Tracking"
   }
 }

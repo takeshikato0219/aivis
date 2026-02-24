@@ -180,8 +180,7 @@ const Home = () => {
   };
 
   const goToBluetoothScan = () => {
-    // navigation.navigate('ConnectDevice' as never);
-    navigation.navigate('QRScanner' as never);
+    navigation.navigate('ConnectDevice' as never);
   };
 
   const handleRefresh = useCallback(async () => {

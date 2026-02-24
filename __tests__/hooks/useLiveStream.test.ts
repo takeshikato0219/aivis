@@ -487,7 +487,7 @@ describe('useLiveStream', () => {
   });
 
   describe('injected JavaScript', () => {
-    it('should generate JavaScript with correct heartbeat interval', () => {
+    it('should generate JavaScript with CSS injection and stream detection', () => {
       const { result } = renderHook(() =>
         useLiveStream({
           heartbeatInterval: 5000,
@@ -496,32 +496,53 @@ describe('useLiveStream', () => {
 
       const injectedJS = result.current.getInjectedJavaScript();
 
-      expect(injectedJS).toContain('heartbeatInterval = setInterval(sendHeartbeat, 5000)');
-      expect(injectedJS).toContain('window.onerror');
+      expect(injectedJS).toContain("document.createElement('style')");
       expect(injectedJS).toContain('window.ReactNativeWebView.postMessage');
-      expect(injectedJS).toContain('sendHeartbeat');
-      expect(injectedJS).toContain('monitorIframe');
+      expect(injectedJS).toContain('hideUnwantedElements');
+      expect(injectedJS).toContain('waitCanvas');
     });
 
-    it('should include error handling in injected JavaScript', () => {
+    it('should hide all elements and whitelist only video/canvas', () => {
       const { result } = renderHook(() => useLiveStream());
 
       const injectedJS = result.current.getInjectedJavaScript();
 
-      expect(injectedJS).toContain('window.onerror = function(msg, url, line, col, error)');
-      expect(injectedJS).toContain("console.error('Iframe error detected')");
-      expect(injectedJS).toContain("window.addEventListener('online'");
-      expect(injectedJS).toContain("window.addEventListener('offline'");
+      expect(injectedJS).toContain('visibility:hidden!important');
+      expect(injectedJS).toContain('display:none!important');
+      expect(injectedJS).toContain('video, canvas');
+      expect(injectedJS).toContain('position:fixed!important');
+      expect(injectedJS).toContain('width:100vw!important');
     });
 
-    it('should include heartbeat monitoring in injected JavaScript', () => {
+    it('should include stream status detection in injected JavaScript', () => {
       const { result } = renderHook(() => useLiveStream());
 
       const injectedJS = result.current.getInjectedJavaScript();
 
-      expect(injectedJS).toContain('function sendHeartbeat()');
-      expect(injectedJS).toContain("type: 'heartbeat'");
-      expect(injectedJS).toContain('lastHeartbeatTime = Date.now()');
+      expect(injectedJS).toContain('getImageData');
+      expect(injectedJS).toContain("send('playing')");
+      expect(injectedJS).toContain("send('stalled')");
+    });
+
+    it('should create a custom mute/unmute button', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      const injectedJS = result.current.getInjectedJavaScript();
+
+      expect(injectedJS).toContain('__rn_mute_btn');
+      expect(injectedJS).toContain('syncMute');
+      expect(injectedJS).toContain('v.muted');
+      expect(injectedJS).toContain('toggleMute');
+    });
+
+    it('should walk parent chain from media elements to whitelist ancestors', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      const injectedJS = result.current.getInjectedJavaScript();
+
+      expect(injectedJS).toContain('validSet');
+      expect(injectedJS).toContain('parentElement');
+      expect(injectedJS).toContain('video, canvas, audio');
     });
   });
 

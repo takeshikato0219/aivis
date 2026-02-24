@@ -97,10 +97,94 @@ export const getStreamHTML = (streamUrl: string): string => {
       </div>
       <script>
         (function() {
-          const iframe = document.getElementById('stream-iframe');
-          const loading = document.getElementById('loading');
-          let streamStarted = false;
-          let hideLoadingTimeout = null;
+          var iframe = document.getElementById('stream-iframe');
+          var loading = document.getElementById('loading');
+          var streamStarted = false;
+          var hideLoadingTimeout = null;
+
+          // CSS to inject into iframe
+          var hideCSS = [
+            'html,body{background:#000!important;margin:0!important;padding:0!important;overflow:hidden!important;}',
+            'video, canvas {',
+            '  display:block!important; visibility:visible!important;',
+            '  opacity:1!important; position:fixed!important;',
+            '  top:0!important; left:0!important;',
+            '  width:100vw!important; height:100vh!important;',
+            '  object-fit:contain!important; z-index:1!important;',
+            '  background:#000!important; pointer-events:auto!important;',
+            '}',
+            '#__rn_mute_btn {',
+            '  display:flex!important; visibility:visible!important;',
+            '  align-items:center!important; justify-content:center!important;',
+            '  position:fixed!important; bottom:16px!important; right:16px!important;',
+            '  z-index:9999999!important; width:44px!important; height:44px!important;',
+            '  border-radius:50%!important; border:none!important;',
+            '  background:rgba(0,0,0,0.55)!important; color:#fff!important;',
+            '  font-size:22px!important; cursor:pointer!important;',
+            '  pointer-events:auto!important; opacity:0.9!important;',
+            '  -webkit-tap-highlight-color:transparent!important;',
+            '}',
+            '#__rn_mute_btn:active{opacity:1!important;transform:scale(0.92)!important;}'
+          ].join('\\n');
+
+          function injectHideCSS(doc) {
+            try {
+              var s = doc.createElement('style');
+              s.textContent = hideCSS;
+              doc.head.appendChild(s);
+            } catch(e) {}
+          }
+
+          function hideIframeElements(doc) {
+            try {
+              var validSet = new Set();
+              var mb = doc.getElementById('__rn_mute_btn');
+              if (mb) validSet.add(mb);
+              var mediaEls = doc.querySelectorAll('video, canvas, audio');
+              mediaEls.forEach(function(m) {
+                var node = m;
+                while (node && node !== doc.body) {
+                  validSet.add(node);
+                  node = node.parentElement;
+                }
+              });
+              var all = doc.body.querySelectorAll('*');
+              all.forEach(function(el) {
+                var tag = el.tagName.toLowerCase();
+                if (tag==='script'||tag==='style'||tag==='source') return;
+                if (validSet.has(el)) {
+                  if (tag!=='video'&&tag!=='canvas'&&tag!=='audio'&&el.id!=='__rn_mute_btn') {
+                    el.style.cssText='margin:0!important;padding:0!important;border:none!important;background:transparent!important;overflow:visible!important;';
+                  }
+                  return;
+                }
+                el.style.cssText='display:none!important;visibility:hidden!important;width:0!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;position:absolute!important;pointer-events:none!important;';
+              });
+            } catch(e) {}
+          }
+
+          function createMuteBtn(doc) {
+            try {
+              if (doc.getElementById('__rn_mute_btn')) return;
+              var mb = doc.createElement('div');
+              mb.id = '__rn_mute_btn';
+              mb.textContent = '\\uD83D\\uDD07';
+              var muted = true;
+              function syncMute() {
+                doc.querySelectorAll('video').forEach(function(v){ v.muted = muted; });
+                mb.textContent = muted ? '\\uD83D\\uDD07' : '\\uD83D\\uDD0A';
+              }
+              function toggle(e) {
+                e.stopPropagation(); e.preventDefault();
+                muted = !muted;
+                syncMute();
+              }
+              mb.addEventListener('click', toggle);
+              mb.addEventListener('touchend', toggle);
+              doc.body.appendChild(mb);
+              setInterval(syncMute, 1000);
+            } catch(e) {}
+          }
           
           // Error handling
           window.addEventListener('error', function(e) {
@@ -115,13 +199,19 @@ export const getStreamHTML = (streamUrl: string): string => {
           iframe.addEventListener('load', function() {
             console.log('Iframe loaded');
             
-            // Try to auto-click play button or mode selector in iframe (may fail due to CORS)
             setTimeout(function() {
               try {
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                var iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
                 if (iframeDoc) {
+                  // Inject CSS to hide controls inside iframe
+                  injectHideCSS(iframeDoc);
+                  hideIframeElements(iframeDoc);
+                  createMuteBtn(iframeDoc);
+                  // Keep hiding dynamically added elements
+                  setInterval(function() { hideIframeElements(iframeDoc); }, 500);
+
                   // Try to find and click play/start button
-                  const playButtons = iframeDoc.querySelectorAll('button, [role="button"], .play-button, #play-button');
+                  var playButtons = iframeDoc.querySelectorAll('button, [role="button"], .play-button, #play-button');
                   playButtons.forEach(function(btn) {
                     if (btn.textContent && (
                       btn.textContent.toLowerCase().includes('play') ||
@@ -135,7 +225,7 @@ export const getStreamHTML = (streamUrl: string): string => {
                   });
                   
                   // Try to find video element and check if playing
-                  const videos = iframeDoc.querySelectorAll('video');
+                  var videos = iframeDoc.querySelectorAll('video');
                   if (videos.length > 0) {
                     videos.forEach(function(video) {
                       video.addEventListener('playing', function() {
@@ -204,7 +294,7 @@ export const getStreamHTML = (streamUrl: string): string => {
               reason: 'network-online'
             }));
             // Reload iframe on network restore
-            const currentSrc = iframe.src;
+            var currentSrc = iframe.src;
             iframe.src = '';
             setTimeout(function() {
               iframe.src = currentSrc;
