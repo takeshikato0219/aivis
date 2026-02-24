@@ -45,7 +45,7 @@ interface DetectionZone {
 const GRID_SIZE = 28;
 
 type DetectionZoneSetupParamList = {
-  DetectionZoneSetup: { camera: any };
+  DetectionZoneSetup: { camera: any; zoneType?: 'detection' | 'restricted' | 'entryExit' };
 };
 
 const DetectionZoneSetup: React.FC = () => {
@@ -53,6 +53,7 @@ const DetectionZoneSetup: React.FC = () => {
   const route = useRoute<RouteProp<DetectionZoneSetupParamList, 'DetectionZoneSetup'>>();
   const { t } = useTranslation();
   const camera = route.params.camera;
+  const zoneType = route.params.zoneType || 'detection';
   const centerX = PREVIEW_WIDTH / 2;
   const centerY = PREVIEW_HEIGHT / 2;
   const offset = 80;
@@ -194,6 +195,19 @@ const DetectionZoneSetup: React.FC = () => {
     );
   };
 
+  // Set color based on zoneType
+  const getZoneColor = () => {
+    switch (zoneType) {
+      case 'restricted':
+        return 'rgba(255,0,0,0.3)'; // Red
+      case 'entryExit':
+        return 'rgba(0,255,0,0.3)'; // Green (example)
+      case 'detection':
+      default:
+        return 'rgba(255,255,0,0.3)'; // Yellow
+    }
+  };
+
   useEffect(() => {
     Orientation.lockToLandscapeLeft();
     return () => {
@@ -300,6 +314,7 @@ const DetectionZoneSetup: React.FC = () => {
                   left: zone.topLeft.x,
                   width: zone.topRight.x - zone.topLeft.x,
                   height: zone.bottomLeft.y - zone.topLeft.y,
+                  backgroundColor: getZoneColor(),
                 },
               ]}
             />

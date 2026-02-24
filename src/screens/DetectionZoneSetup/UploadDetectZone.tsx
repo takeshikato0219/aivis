@@ -17,9 +17,10 @@ export default function UploadDetectZone() {
   const { t } = useTranslation();
   const camera = route.params?.camera;
 
-  const handleSetupDetectionZone = () => {
+  const handleSetupDetectionZone = (zoneType: 'detection' | 'restricted' | 'entryExit') => {
     (navigation as any).navigate('DetectionZoneSetup', {
       camera: camera,
+      zoneType: zoneType,
     });
   };
 
@@ -40,19 +41,28 @@ export default function UploadDetectZone() {
           <View style={styles.styleWidth} />
         </View>
         <View style={styles.settingsSection}>
-          <TouchableOpacity style={styles.settingItem} onPress={handleSetupDetectionZone}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => handleSetupDetectionZone('detection')}
+          >
             <View style={styles.settingLeft}>
               <Text style={styles.settingText}>{t('uploadDetectZone.setupDetectionZone')}</Text>
             </View>
             <Icon name="chevron-right" size={24} color="#FFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.settingItem} onPress={handleSetupDetectionZone}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => handleSetupDetectionZone('restricted')}
+          >
             <View style={styles.settingLeft}>
               <Text style={styles.settingText}>{t('uploadDetectZone.setupRestrictedZone')}</Text>
             </View>
             <Icon name="chevron-right" size={24} color="#FFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.settingItem} onPress={handleSetupDetectionZone}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => handleSetupDetectionZone('entryExit')}
+          >
             <View style={styles.settingLeft}>
               <Text style={styles.settingText}>{t('uploadDetectZone.setupEntryExit')}</Text>
             </View>
