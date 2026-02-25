@@ -176,4 +176,26 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#FFF',
   },
+  switchButton: {
+    position: 'absolute',
+    right: 24,
+    top: 24,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  marginIcon: {
+    marginRight: 6,
+  },
+  fontStyle: {
+    color: '#333',
+    fontWeight: 'bold',
+  },
 });

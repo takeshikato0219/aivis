@@ -310,8 +310,7 @@ const DetectionZoneSetup: React.FC = () => {
       { x: 0, y: PREVIEW_HEIGHT },
     ];
     // Helper to determine which side of the line a point is on
-    const side = (pt: { x: number; y: number }) =>
-      dx * (pt.y - p1.y) - dy * (pt.x - p1.x);
+    const side = (pt: { x: number; y: number }) => dx * (pt.y - p1.y) - dy * (pt.x - p1.x);
 
     // For each corner, classify as left or right
     const leftCorners = corners.filter((c) => side(c) < 0);
@@ -522,30 +521,11 @@ const DetectionZoneSetup: React.FC = () => {
                 ))}
                 {/* Switch button */}
                 <TouchableOpacity
-                  style={{
-                    position: 'absolute',
-                    right: 24,
-                    top: 24,
-                    backgroundColor: '#fff',
-                    borderRadius: 20,
-                    padding: 8,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    zIndex: 20,
-                    shadowColor: '#000',
-                    shadowOpacity: 0.15,
-                    shadowRadius: 4,
-                    elevation: 2,
-                  }}
+                  style={styles.switchButton}
                   onPress={() => setIsLeftIn((v) => !v)}
                 >
-                  <Icon
-                    name="swap-horizontal"
-                    size={20}
-                    color="#333"
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text style={{ color: '#333', fontWeight: 'bold' }}>
+                  <Icon name="swap-horizontal" size={20} color="#333" style={styles.marginIcon} />
+                  <Text style={styles.fontStyle}>
                     {t('detectionZone.inGreenOutRed', 'In: Green / Out: Red')}
                   </Text>
                 </TouchableOpacity>
