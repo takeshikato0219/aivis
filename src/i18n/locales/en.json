@@ -513,7 +513,7 @@
     "warning": "Enabling AI detection features may increase battery consumption. It is recommended to turn off unnecessary items."
   },
   "workSchedule": {
-    "scheduleEnabled": "Enable schedule",
+    "scheduleEnabled": "Enable Rule",
     "repeat": "Repeat",
     "activeTime": "AI Active time",
     "save": "Save",
@@ -526,7 +526,8 @@
       "fri": "Fri",
       "sat": "Sat",
       "sun": "Sun"
-    }
+    },
+    "selectFaceToApply": "Select face to apply"
   },
   "listDetectZone": {
     "noneItem": "No detection zones set up yet",

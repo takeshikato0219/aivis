@@ -229,28 +229,28 @@ const Home = () => {
               statusText.toLowerCase().includes('オンライン');
 
             return (
-              <View style={styles.card} key={camera.id}>
-                <View style={styles.videoWrapper}>
-                  <Image source={RetangleImage} style={styles.cardImage} />
-                </View>
-                <View style={styles.cardBadge}>
-                  <View
-                    style={[
-                      styles.badgeDot,
-                      { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
-                    ]}
-                  />
-                  <Text style={styles.badgeText}>{statusText}</Text>
-                </View>
-                <TouchableOpacity onPress={() => goToDetail(camera)}>
+              <TouchableOpacity onPress={() => goToDetail(camera)} key={camera.id}>
+                <View style={styles.card}>
+                  <View style={styles.videoWrapper}>
+                    <Image source={RetangleImage} style={styles.cardImage} />
+                  </View>
+                  <View style={styles.cardBadge}>
+                    <View
+                      style={[
+                        styles.badgeDot,
+                        { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
+                      ]}
+                    />
+                    <Text style={styles.badgeText}>{statusText}</Text>
+                  </View>
                   <View style={styles.rowCenter}>
                     <Text style={styles.cardText}>{camera.name}</Text>
                     <View style={styles.iconCircle}>
                       <MoveRightIconCircle />
                     </View>
                   </View>
-                </TouchableOpacity>
-              </View>
+                </View>
+              </TouchableOpacity>
             );
           })}
           {isLoadingMore && (

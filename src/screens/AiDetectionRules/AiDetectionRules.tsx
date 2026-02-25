@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Pressable,
-  Switch,
   FlatList,
   ListRenderItemInfo,
   StatusBar,
@@ -12,17 +11,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { styles } from './AiDetectionRules.style';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 export type AiRule = {
   id: string;
   title: string;
-  icon: string;
   enabled: boolean;
 };
 
 const RULES: AiRule[] = [
-  { id: 'helmet', title: 'ヘルメット着用検知', icon: '⛑️', enabled: true },
-  { id: 'mask', title: 'マスク着用検知', icon: '😷', enabled: true },
-  { id: 'intrusion', title: '侵入検知', icon: '🚶', enabled: true },
+  { id: 'helmet', title: 'ヘルメット着用検知', enabled: true },
+  { id: 'mask', title: 'マスク着用検知', enabled: true },
+  { id: 'intrusion', title: '侵入検知', enabled: true },
 ];
 
 export default function AiDetectionRules() {
@@ -75,26 +74,16 @@ export default function AiDetectionRules() {
         <>
           <Pressable onPress={handleSetupClockSchedule} disabled={isLoading} style={styles.row}>
             <View style={styles.left}>
-              <View style={styles.iconWrap}>
-                <Text style={styles.iconText}>{item.icon}</Text>
-              </View>
               <Text style={styles.title}>{item.title}</Text>
             </View>
 
-            <Switch
-              value={item.enabled}
-              onValueChange={(v) => onToggleRule(item.id, v)}
-              trackColor={{ false: '#2A3440', true: '#2A9EC6' }}
-              thumbColor={'#F2F6FA'}
-              ios_backgroundColor="#2A3440"
-              disabled={isLoading}
-            />
+            <Icon name="chevron-right" size={24} color="#FFF" />
           </Pressable>
           {!isLast && <View style={styles.divider} />}
         </>
       );
     },
-    [loadingIds, onToggleRule, rules.length, handleSetupClockSchedule]
+    [loadingIds, rules.length, handleSetupClockSchedule]
   );
 
   return (

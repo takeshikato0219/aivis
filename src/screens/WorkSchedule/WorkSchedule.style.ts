@@ -228,4 +228,63 @@ export const styles = StyleSheet.create({
     fontSize: scale(21),
     fontWeight: FONTS.weights.medium,
   },
+  multipleSelectRow: {
+    marginBottom: 18,
+  },
+  memberChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  memberChip: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#2A9EC6',
+    backgroundColor: '#F2F6FA',
+  },
+  memberChipActive: {
+    backgroundColor: '#2A9EC6',
+    borderColor: '#2A9EC6',
+  },
+  memberChipInactive: {
+    backgroundColor: '#F2F6FA',
+    borderColor: '#2A9EC6',
+  },
+  memberChipText: {
+    fontSize: 15,
+    color: '#2A3440',
+  },
+  memberChipTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  memberChipTextInactive: {
+    color: '#2A3440',
+  },
+  styleMultipleSelectRow: {
+    marginTop: 8,
+    backgroundColor: 'rgba(28, 44, 60, 0.55)',
+    color: COLORS.card,
+  },
+  button: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#2A9EC6',
+    borderRadius: 6,
+    minWidth: 70,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    maxWidth: '100%',
+  },
+  text: {
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    flexShrink: 1,
+  },
 });

@@ -440,9 +440,7 @@ const DetectionZoneSetup: React.FC = () => {
                     }}
                     {...entryExitPanResponders[idx].panHandlers}
                   >
-                    <View
-                      style={styles.lineStyle}
-                    />
+                    <View style={styles.lineStyle} />
                   </View>
                 ))}
               </>

@@ -468,33 +468,33 @@ const Login: React.FC = () => {
                     isEnabled={isBiometricEnabled}
                   />
                 </View>
-                <View>
+                <View style={styles.socialButtonRow}>
                   <TouchableOpacity
-                    style={[styles.socialGoogleButton, isLoading && styles.disabledButton]}
+                    style={[
+                      styles.socialButton,
+                      styles.socialGoogleButton,
+                      isLoading && styles.disabledButton,
+                    ]}
                     onPress={handleGoogleLogin}
                     disabled={isLoading}
                     testID="google-login-button"
                   >
                     <View style={styles.socialButtonContent}>
                       <GoogleIconComponent />
-                      <Text style={[styles.socialButtonText, isLoading && styles.disabledText]}>
-                        {t('auth.signInWithGoogle')}
-                      </Text>
                     </View>
                   </TouchableOpacity>
-                </View>
-                <View>
                   <TouchableOpacity
-                    style={[styles.socialLineButton, isLoading && styles.disabledButton]}
+                    style={[
+                      styles.socialButton,
+                      styles.socialLineButton,
+                      isLoading && styles.disabledButton,
+                    ]}
                     onPress={handleLineLogin}
                     disabled={isLoading}
                     testID="line-login-button"
                   >
                     <View style={styles.socialButtonContent}>
                       <LineIconComponent />
-                      <Text style={[styles.socialButtonText, isLoading && styles.disabledText]}>
-                        {t('auth.signInWithLine')}
-                      </Text>
                     </View>
                   </TouchableOpacity>
                 </View>

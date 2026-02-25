@@ -121,6 +121,7 @@ const DetailFace = () => {
   const [prepareProgress, setPrepareProgress] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
   const [changedImageIds, setChangedImageIds] = useState<Set<string>>(new Set());
+  const [isSaveDisabled, setIsSaveDisabled] = useState(false);
 
   // Reset loaded data when memberId changes
   useEffect(() => {
@@ -411,6 +412,7 @@ const DetailFace = () => {
   }, [showSingleDetectModal, selectedImageIndex]);
 
   const handleSave = async () => {
+    setIsSaveDisabled(true);
     if (!member || !selectedRelationship) return;
 
     try {
@@ -456,9 +458,12 @@ const DetailFace = () => {
           },
         ]
       );
+      // After successful save
+      setIsSaveDisabled(true);
     } catch (error) {
       console.error('Failed to update member:', error);
       Alert.alert(t('common.error') || 'Error', 'Failed to update member details');
+      setIsSaveDisabled(false); // Re-enable if error
     } finally {
       setIsUpdating(false);
     }
@@ -775,7 +780,6 @@ const DetailFace = () => {
 
         setMember(updatedMember);
         setHasChanges(true);
-        // Đánh dấu ảnh đã thay đổi
         if (updatedImages[selectedImageIndex]?.id) {
           setChangedImageIds((prev) => new Set(prev).add(updatedImages[selectedImageIndex].id));
         }
@@ -1007,9 +1011,12 @@ const DetailFace = () => {
 
           {/* Save Button */}
           <TouchableOpacity
-            style={[styles.saveButton, (!hasChanges || isUpdating) && styles.saveButtonDisabled]}
+            style={[
+              styles.saveButton,
+              (!hasChanges || isUpdating || isSaveDisabled) && styles.saveButtonDisabled,
+            ]}
             onPress={handleSave}
-            disabled={!hasChanges || isUpdating}
+            disabled={!hasChanges || isUpdating || isSaveDisabled}
           >
             {isUpdating ? (
               <ActivityIndicator size="small" color="#fff" />

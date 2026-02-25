@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, Switch, StatusBar, ScrollView } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { useNavigation } from '@react-navigation/native';
@@ -7,6 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResponsive } from '@hooks/useResponsive';
 import { styles, CONTAINER_H_PADDING, CARD_PADDING } from './WorkSchedule.style';
 import IconClockWorkSchedule from '@assets/svg/icon-clock-workschedule.svg';
+import faceService, { Member } from '@api/faceService';
+import DropDownPicker from 'react-native-dropdown-picker';
+import { StyleProp, ViewStyle } from 'react-native';
 
 type Weekday = {
   key: string;
@@ -30,10 +33,26 @@ const WEEKDAYS: Weekday[] = [
   { key: 'sun', label: '日' },
 ];
 
+interface SaveButtonProps {
+  style?: StyleProp<ViewStyle>;
+  onPress: () => void;
+}
+
 export default function WorkSchedule() {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const { width } = useResponsive();
+  const [members, setMembers] = useState<Member[]>([]);
+  const [openSelect2, setOpenSelect2] = useState(false);
+  const [select2Value, setSelect2Value] = useState<string[]>([]);
+  const [select2Items, setSelect2Items] = useState<{ label: string; value: string }[]>([]);
+
+  // eslint-disable-next-line react/no-unstable-nested-components
+  const SaveButton = ({ style, onPress }: SaveButtonProps) => (
+    <Pressable style={[styles.button, style]} onPress={onPress}>
+      <Text style={styles.text}>{t('workSchedule.save')}</Text>
+    </Pressable>
+  );
 
   const sliderLength = useMemo(() => {
     const available = width - CONTAINER_H_PADDING * 2 - CARD_PADDING * 2;
@@ -104,6 +123,31 @@ export default function WorkSchedule() {
     }
   }, [schedule]);
 
+  const fetchMembers = useCallback(async () => {
+    try {
+      const response = await faceService.getMembers();
+      setMembers(response.data);
+    } catch (error) {
+      console.error('Failed to fetch members:', error);
+    }
+  }, []);
+
+  // Fetch members when component mounts
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  useEffect(() => {
+    setSelect2Items(members.map((m) => ({ label: m.name, value: m.id })));
+  }, [members]);
+
+  const DropDownSaveButton = React.useCallback(
+    (props: { style?: StyleProp<ViewStyle> }) => (
+      <SaveButton style={props.style} onPress={() => setOpenSelect2(false)} />
+    ),
+    []
+  );
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" />
@@ -118,6 +162,45 @@ export default function WorkSchedule() {
           <View style={styles.headerSpacer} />
         </View>
 
+        <View style={styles.cardTopRow}>
+          <Text style={styles.cardTitle}>{t('workSchedule.scheduleEnabled')}</Text>
+          <Switch
+            value={schedule.enabled}
+            onValueChange={onToggleEnabled}
+            trackColor={{ false: '#2A3440', true: '#2A9EC6' }}
+            thumbColor={'#F2F6FA'}
+            ios_backgroundColor="#2A3440"
+          />
+        </View>
+
+        {/* Multiple select */}
+        <View style={styles.multipleSelectRow}>
+          <Text style={styles.sectionLabel}>{t('workSchedule.selectFaceToApply')}</Text>
+          <DropDownPicker
+            open={openSelect2}
+            value={select2Value}
+            items={select2Items}
+            setOpen={setOpenSelect2}
+            setValue={setSelect2Value}
+            setItems={setSelect2Items}
+            multiple={true}
+            mode="BADGE"
+            placeholder={t('workSchedule.selectFaceToApply')}
+            style={styles.styleMultipleSelectRow}
+            // eslint-disable-next-line react-native/no-inline-styles
+            placeholderStyle={{ color: '#fff' }}
+            badgeDotColors={['#2A9EC6']}
+            badgeColors={['#1d5cbb']}
+            // eslint-disable-next-line react-native/no-inline-styles
+            badgeTextStyle={{ color: '#fff' }}
+            zIndex={1000}
+            listMode="MODAL"
+            searchable={true}
+            searchPlaceholder={t('common.search')}
+            CloseIconComponent={DropDownSaveButton}
+          />
+        </View>
+
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -125,19 +208,6 @@ export default function WorkSchedule() {
         >
           {/* Card */}
           <View style={styles.card}>
-            <View style={styles.cardTopRow}>
-              <Text style={styles.cardTitle}>{t('workSchedule.scheduleEnabled')}</Text>
-              <Switch
-                value={schedule.enabled}
-                onValueChange={onToggleEnabled}
-                trackColor={{ false: '#2A3440', true: '#2A9EC6' }}
-                thumbColor={'#F2F6FA'}
-                ios_backgroundColor="#2A3440"
-              />
-            </View>
-
-            <View style={styles.blueLine} />
-
             <Text style={styles.sectionLabel}>{t('workSchedule.repeat')}</Text>
 
             {/* Weekday chips */}
