@@ -145,6 +145,7 @@ export default function WorkSchedule() {
     (props: { style?: StyleProp<ViewStyle> }) => (
       <SaveButton style={props.style} onPress={() => setOpenSelect2(false)} />
     ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 

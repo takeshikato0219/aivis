@@ -1,12 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  FlatList,
-  ListRenderItemInfo,
-  StatusBar,
-} from 'react-native';
+import { View, Text, Pressable, FlatList, ListRenderItemInfo, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';

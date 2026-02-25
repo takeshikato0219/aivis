@@ -580,5 +580,8 @@
     "setupDetectionZone": "検知エリア設定",
     "setupRestrictedZone": "制限エリア設定",
     "setupEntryExit": "出入り追跡の設定 (でいりついせきのせってい)"
+  },
+  "detectionZone": {
+    "inGreenOutRed": "入: 緑 / 出: 赤"
   }
 }

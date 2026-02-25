@@ -18,7 +18,7 @@ import { useLiveStream } from '@hooks/useLiveStream';
 import { useTranslation } from 'react-i18next';
 import { buildStreamUrl } from '@utils/streamUtils';
 import detectionZoneService from '../../services/detectionZone';
-import Svg, { Line } from 'react-native-svg';
+import Svg, { Line, Polygon } from 'react-native-svg';
 
 const getScreenDims = () => {
   const { width, height } = Dimensions.get('window');
@@ -73,9 +73,10 @@ const DetectionZoneSetup: React.FC = () => {
   const marginBottom = PREVIEW_HEIGHT * 0.2;
   const [entryExitPoints, setEntryExitPoints] = useState([
     { x: PREVIEW_WIDTH / 2, y: 1 },
-    { x: PREVIEW_WIDTH / 2, y: PREVIEW_HEIGHT - marginBottom },
+    { x: PREVIEW_WIDTH / 2, y: PREVIEW_HEIGHT - PREVIEW_HEIGHT * 0.15 },
   ]);
   const [activeEntryExitPoint, setActiveEntryExitPoint] = useState<number | null>(null);
+  const [isLeftIn, setIsLeftIn] = useState(true);
   const streamUrl = buildStreamUrl(camera?.rtsp_url);
 
   const {
@@ -138,7 +139,6 @@ const DetectionZoneSetup: React.FC = () => {
     bottomRight: createPanResponder('bottomRight'),
   };
 
-  const EDGE_THRESHOLD = 40;
   const EDGE_MARGIN = 20;
   const entryExitPanResponders = [0, 1].map((idx) =>
     PanResponder.create({
@@ -150,19 +150,26 @@ const DetectionZoneSetup: React.FC = () => {
           const newPoints = [...prev];
           let newX = prev[idx].x + gestureState.dx;
           let newY = prev[idx].y + gestureState.dy;
-          newX = Math.max(EDGE_MARGIN, Math.min(PREVIEW_WIDTH - EDGE_MARGIN, newX));
-          newY = Math.max(1, Math.min(PREVIEW_HEIGHT - marginBottom, newY));
-          if (newY <= EDGE_THRESHOLD) {
+          const distances = [
+            { edge: 'top', dist: Math.abs(newY - 1) },
+            { edge: 'bottom', dist: Math.abs(newY - (PREVIEW_HEIGHT - marginBottom)) },
+            { edge: 'left', dist: Math.abs(newX - EDGE_MARGIN) },
+            { edge: 'right', dist: Math.abs(newX - (PREVIEW_WIDTH - EDGE_MARGIN)) },
+          ];
+          distances.sort((a, b) => a.dist - b.dist);
+          const nearest = distances[0].edge;
+          if (nearest === 'top') {
             newY = 1;
-          } else if (newY >= PREVIEW_HEIGHT - marginBottom - EDGE_THRESHOLD) {
+            newX = Math.max(EDGE_MARGIN, Math.min(PREVIEW_WIDTH - EDGE_MARGIN, newX));
+          } else if (nearest === 'bottom') {
             newY = PREVIEW_HEIGHT - marginBottom;
-          } else if (newX <= EDGE_THRESHOLD) {
+            newX = Math.max(EDGE_MARGIN, Math.min(PREVIEW_WIDTH - EDGE_MARGIN, newX));
+          } else if (nearest === 'left') {
             newX = EDGE_MARGIN;
-          } else if (newX >= PREVIEW_WIDTH - EDGE_THRESHOLD) {
+            newY = Math.max(1, Math.min(PREVIEW_HEIGHT - marginBottom, newY));
+          } else if (nearest === 'right') {
             newX = PREVIEW_WIDTH - EDGE_MARGIN;
-          } else {
-            newX = prev[idx].x;
-            newY = prev[idx].y;
+            newY = Math.max(1, Math.min(PREVIEW_HEIGHT - marginBottom, newY));
           }
           newPoints[idx] = { x: newX, y: newY };
           return newPoints;
@@ -288,6 +295,55 @@ const DetectionZoneSetup: React.FC = () => {
     }
   };
 
+  // Helper: get polygon points for left/right region
+  const getEntryExitPolygons = () => {
+    const [p1, p2] = entryExitPoints;
+    if (p1.x === p2.x && p1.y === p2.y) return { left: [], right: [] };
+    // Calculate normal vector to the line
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    // Corners of the frame in clockwise order
+    const corners = [
+      { x: 0, y: 0 },
+      { x: PREVIEW_WIDTH, y: 0 },
+      { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT },
+      { x: 0, y: PREVIEW_HEIGHT },
+    ];
+    // Helper to determine which side of the line a point is on
+    const side = (pt: { x: number; y: number }) =>
+      dx * (pt.y - p1.y) - dy * (pt.x - p1.x);
+
+    // For each corner, classify as left or right
+    const leftCorners = corners.filter((c) => side(c) < 0);
+    const rightCorners = corners.filter((c) => side(c) >= 0);
+
+    // For left polygon: start at p1, go to p2, then all left corners in order
+    let leftPoly = [p1, p2, ...leftCorners];
+    // For right polygon: start at p2, go to p1, then all right corners in order
+    let rightPoly = [p2, p1, ...rightCorners];
+
+    // Sort the corners in clockwise order for proper polygon rendering
+    const sortClockwise = (points: { x: number; y: number }[]) => {
+      // Calculate centroid
+      const cx = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+      const cy = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+      // Sort by angle from centroid
+      return points.slice().sort((a, b) => {
+        const angleA = Math.atan2(a.y - cy, a.x - cx);
+        const angleB = Math.atan2(b.y - cy, b.x - cx);
+        return angleA - angleB;
+      });
+    };
+
+    leftPoly = sortClockwise(leftPoly);
+    rightPoly = sortClockwise(rightPoly);
+
+    return {
+      left: leftPoly,
+      right: rightPoly,
+    };
+  };
+
   useEffect(() => {
     getZoneDetect();
     Orientation.lockToLandscapeLeft();
@@ -409,14 +465,35 @@ const DetectionZoneSetup: React.FC = () => {
                   }}
                   pointerEvents="none"
                 >
-                  <Line
-                    x1={entryExitPoints[0].x}
-                    y1={entryExitPoints[0].y}
-                    x2={entryExitPoints[1].x}
-                    y2={entryExitPoints[1].y}
-                    stroke="#00FF00"
-                    strokeWidth={4}
-                  />
+                  {(() => {
+                    const { left, right } = getEntryExitPolygons();
+                    const leftColor = isLeftIn ? 'rgba(255,0,0,0.25)' : 'rgba(0,255,0,0.25)';
+                    const rightColor = isLeftIn ? 'rgba(0,255,0,0.25)' : 'rgba(255,0,0,0.25)';
+                    return (
+                      <>
+                        {left.length > 2 && (
+                          <Polygon
+                            points={left.map((p) => `${p.x},${p.y}`).join(' ')}
+                            fill={leftColor}
+                          />
+                        )}
+                        {right.length > 2 && (
+                          <Polygon
+                            points={right.map((p) => `${p.x},${p.y}`).join(' ')}
+                            fill={rightColor}
+                          />
+                        )}
+                        <Line
+                          x1={entryExitPoints[0].x}
+                          y1={entryExitPoints[0].y}
+                          x2={entryExitPoints[1].x}
+                          y2={entryExitPoints[1].y}
+                          stroke="#00FF00"
+                          strokeWidth={4}
+                        />
+                      </>
+                    );
+                  })()}
                 </Svg>
                 {/* Draggable points */}
                 {entryExitPoints.map((pt, idx) => (
@@ -443,6 +520,35 @@ const DetectionZoneSetup: React.FC = () => {
                     <View style={styles.lineStyle} />
                   </View>
                 ))}
+                {/* Switch button */}
+                <TouchableOpacity
+                  style={{
+                    position: 'absolute',
+                    right: 24,
+                    top: 24,
+                    backgroundColor: '#fff',
+                    borderRadius: 20,
+                    padding: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    zIndex: 20,
+                    shadowColor: '#000',
+                    shadowOpacity: 0.15,
+                    shadowRadius: 4,
+                    elevation: 2,
+                  }}
+                  onPress={() => setIsLeftIn((v) => !v)}
+                >
+                  <Icon
+                    name="swap-horizontal"
+                    size={20}
+                    color="#333"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={{ color: '#333', fontWeight: 'bold' }}>
+                    {t('detectionZone.inGreenOutRed', 'In: Green / Out: Red')}
+                  </Text>
+                </TouchableOpacity>
               </>
             ) : (
               <>
@@ -482,12 +588,16 @@ const DetectionZoneSetup: React.FC = () => {
               </>
             )}
             <View style={styles.rightButtons}>
-              <TouchableOpacity style={styles.roundButton} onPress={handleDrawRectangle}>
-                <Icon name="selection-drag" size={22} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.roundButton} onPress={handleReset}>
-                <Icon name="trash-can-outline" size={22} color="#FFFFFF" />
-              </TouchableOpacity>
+              {zoneType === 'entryExit' ? null : (
+                <View>
+                  <TouchableOpacity style={styles.roundButton} onPress={handleDrawRectangle}>
+                    <Icon name="selection-drag" size={22} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.roundButton} onPress={handleReset}>
+                    <Icon name="trash-can-outline" size={22} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </View>
         </View>

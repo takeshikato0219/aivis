@@ -36,6 +36,7 @@ export const styles = StyleSheet.create({
   cameraPreview: {
     flex: 1,
     backgroundColor: '#000',
+    marginBottom: 30,
   },
   overlayContainer: {
     position: 'absolute',

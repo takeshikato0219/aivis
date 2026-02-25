@@ -539,5 +539,8 @@
     "setupDetectionZone": "Setup detection zone",
     "setupRestrictedZone": "Setup restricted zone",
     "setupEntryExit": "Setup Entry/Exit Tracking"
+  },
+  "detectionZone": {
+    "inGreenOutRed": "In: Green / Out: Red"
   }
 }
