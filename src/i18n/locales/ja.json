@@ -312,7 +312,12 @@
     "noWiFiAccessPointFound": "Wi-Fiアクセスポイントが見つかりませんでした。",
     "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Jetson Orin カメラをセットアップするための接続方法を選択してください。",
     "connectionLost": "接続が切断されました",
-    "deviceDisconnectedPleaseReconnect": "デバイスとの接続が切断されました。続行するには再接続してください。"
+    "deviceDisconnectedPleaseReconnect": "デバイスとの接続が切断されました。続行するには再接続してください。",
+    "bluetoothIsOff": "Bluetoothがオフになっています",
+    "pleaseTurnOnBluetoothToScanForNearbyCameras": "近くのカメラをスキャンするためにBluetoothをオンにしてください。",
+    "unableToOpenSettings": "設定を開くことができません",
+    "pleaseOpenBluetoothSettingsManually": "Bluetoothの設定を手動で開いてください。",
+    "openSettings": "設定を開く"
   },
   "pairingCode": {
     "pairingCode": "ペアリングコード",

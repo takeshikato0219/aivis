@@ -271,7 +271,12 @@
     "noWiFiAccessPointFound": "No WiFi access point found.",
     "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Select a connection method to setup your Jetson Orin camera.",
     "connectionLost": "Connection Lost",
-    "deviceDisconnectedPleaseReconnect": "Device has been disconnected. Please reconnect to continue."
+    "deviceDisconnectedPleaseReconnect": "Device has been disconnected. Please reconnect to continue.",
+    "bluetoothIsOff": "Bluetooth is off",
+    "pleaseTurnOnBluetoothToScanForNearbyCameras": "Please turn on Bluetooth to scan for nearby cameras.",
+    "unableToOpenSettings": "Unable to open settings",
+    "pleaseOpenBluetoothSettingsManually": "Please open Bluetooth settings manually.",
+    "openSettings": "Open settings"
   },
   "pairingCode": {
     "pairingCode": "Pairing Code",

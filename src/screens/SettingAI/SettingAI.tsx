@@ -7,7 +7,6 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import IconSettingZone from '@assets/svg/icon-setting-zone.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
-import IconClockSetting from '@assets/svg/icon-clock-setting.svg';
 import IconAISetting from '@assets/svg/icon-ai-setting.svg';
 
 type SettingAIStackParamList = {
@@ -24,10 +23,6 @@ const SettingAI = () => {
     (navigation as any).navigate('UploadDetectZone', {
       camera: camera,
     });
-  };
-
-  const handleSetupClockSchedule = () => {
-    (navigation as any).navigate('WorkSchedule');
   };
 
   const handleSetupAIRule = () => {
@@ -52,13 +47,6 @@ const SettingAI = () => {
             <View style={styles.styleTextButton}>
               <IconSettingZone />
               <Text style={styles.styleText}>{t('settingAI.detectionAreaSetup')}</Text>
-            </View>
-            <MoveRightIcon />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.styleButton} onPress={handleSetupClockSchedule}>
-            <View style={styles.styleTextButton}>
-              <IconClockSetting />
-              <Text style={styles.styleText}>{t('settingAI.operationSchedule')}</Text>
             </View>
             <MoveRightIcon />
           </TouchableOpacity>

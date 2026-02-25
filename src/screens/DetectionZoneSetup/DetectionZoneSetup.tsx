@@ -17,6 +17,8 @@ import { WebView } from 'react-native-webview';
 import { useLiveStream } from '@hooks/useLiveStream';
 import { useTranslation } from 'react-i18next';
 import { buildStreamUrl } from '@utils/streamUtils';
+import detectionZoneService from '../../services/detectionZone';
+import Svg, { Line } from 'react-native-svg';
 
 const getScreenDims = () => {
   const { width, height } = Dimensions.get('window');
@@ -68,6 +70,12 @@ const DetectionZoneSetup: React.FC = () => {
   const [zone, setZone] = useState<DetectionZone>(INITIAL_ZONE);
   const [activeCorner, setActiveCorner] = useState<keyof DetectionZone | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const marginBottom = PREVIEW_HEIGHT * 0.2;
+  const [entryExitPoints, setEntryExitPoints] = useState([
+    { x: PREVIEW_WIDTH / 2, y: 1 },
+    { x: PREVIEW_WIDTH / 2, y: PREVIEW_HEIGHT - marginBottom },
+  ]);
+  const [activeEntryExitPoint, setActiveEntryExitPoint] = useState<number | null>(null);
   const streamUrl = buildStreamUrl(camera?.rtsp_url);
 
   const {
@@ -130,6 +138,40 @@ const DetectionZoneSetup: React.FC = () => {
     bottomRight: createPanResponder('bottomRight'),
   };
 
+  const EDGE_THRESHOLD = 40;
+  const EDGE_MARGIN = 20;
+  const entryExitPanResponders = [0, 1].map((idx) =>
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => setActiveEntryExitPoint(idx),
+      onPanResponderMove: (_, gestureState) => {
+        setEntryExitPoints((prev) => {
+          const newPoints = [...prev];
+          let newX = prev[idx].x + gestureState.dx;
+          let newY = prev[idx].y + gestureState.dy;
+          newX = Math.max(EDGE_MARGIN, Math.min(PREVIEW_WIDTH - EDGE_MARGIN, newX));
+          newY = Math.max(1, Math.min(PREVIEW_HEIGHT - marginBottom, newY));
+          if (newY <= EDGE_THRESHOLD) {
+            newY = 1;
+          } else if (newY >= PREVIEW_HEIGHT - marginBottom - EDGE_THRESHOLD) {
+            newY = PREVIEW_HEIGHT - marginBottom;
+          } else if (newX <= EDGE_THRESHOLD) {
+            newX = EDGE_MARGIN;
+          } else if (newX >= PREVIEW_WIDTH - EDGE_THRESHOLD) {
+            newX = PREVIEW_WIDTH - EDGE_MARGIN;
+          } else {
+            newX = prev[idx].x;
+            newY = prev[idx].y;
+          }
+          newPoints[idx] = { x: newX, y: newY };
+          return newPoints;
+        });
+      },
+      onPanResponderRelease: () => setActiveEntryExitPoint(null),
+    })
+  );
+
   const getZoneCoordinates = () => ({
     topLeft: {
       x: zone.topLeft.x / PREVIEW_WIDTH,
@@ -149,12 +191,49 @@ const DetectionZoneSetup: React.FC = () => {
     },
   });
 
+  const getZoneDetect = async () => {
+    try {
+      const response = await detectionZoneService.getZones(camera.id);
+      const coordinates = response.data[0]?.coordinates;
+      if (Array.isArray(coordinates) && coordinates.length === 4) {
+        setZone({
+          topLeft: {
+            x: coordinates[0].x * PREVIEW_WIDTH,
+            y: coordinates[0].y * PREVIEW_HEIGHT,
+          },
+          topRight: {
+            x: coordinates[1].x * PREVIEW_WIDTH,
+            y: coordinates[1].y * PREVIEW_HEIGHT,
+          },
+          bottomLeft: {
+            x: coordinates[2].x * PREVIEW_WIDTH,
+            y: coordinates[2].y * PREVIEW_HEIGHT,
+          },
+          bottomRight: {
+            x: coordinates[3].x * PREVIEW_WIDTH,
+            y: coordinates[3].y * PREVIEW_HEIGHT,
+          },
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const coordinates = getZoneCoordinates();
-      console.log('📍 Detection zone coordinates:', coordinates);
-      // TODO: call API lưu detection zone ở đây
+      // Convert coordinates to array for API
+      const coordinatesArray = [
+        coordinates.topLeft,
+        coordinates.topRight,
+        coordinates.bottomLeft,
+        coordinates.bottomRight,
+      ];
+      await detectionZoneService.createZone(camera.id, {
+        coordinates: coordinatesArray,
+      });
       navigation.goBack();
     } catch (e) {
       console.error(e);
@@ -168,11 +247,12 @@ const DetectionZoneSetup: React.FC = () => {
   };
 
   const handleDrawRectangle = () => {
+    const marginX = PREVIEW_WIDTH * 0.05;
     setZone({
-      topLeft: { x: 0, y: 0 },
-      topRight: { x: PREVIEW_WIDTH, y: 0 },
-      bottomLeft: { x: 0, y: PREVIEW_HEIGHT },
-      bottomRight: { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT },
+      topLeft: { x: marginX, y: 1 },
+      topRight: { x: PREVIEW_WIDTH - marginX, y: 1 },
+      bottomLeft: { x: marginX, y: PREVIEW_HEIGHT - marginBottom },
+      bottomRight: { x: PREVIEW_WIDTH - marginX, y: PREVIEW_HEIGHT - marginBottom },
     });
   };
 
@@ -199,31 +279,41 @@ const DetectionZoneSetup: React.FC = () => {
   const getZoneColor = () => {
     switch (zoneType) {
       case 'restricted':
-        return 'rgba(255,0,0,0.3)'; // Red
+        return 'rgba(255,0,0,0.3)';
       case 'entryExit':
-        return 'rgba(0,255,0,0.3)'; // Green (example)
+        return 'rgba(0,255,0,0.3)';
       case 'detection':
       default:
-        return 'rgba(255,255,0,0.3)'; // Yellow
+        return 'rgba(255,255,0,0.3)';
     }
   };
 
   useEffect(() => {
+    getZoneDetect();
     Orientation.lockToLandscapeLeft();
     return () => {
       Orientation.lockToPortrait();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backArea} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            style={styles.backArea}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Icon name="chevron-left" color="#FFFFFF" size={26} />
           </TouchableOpacity>
           <View style={styles.flex1} />
-          <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={isSaving}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Text style={styles.saveText}>{t('common.save')}</Text>
           </TouchableOpacity>
         </View>
@@ -305,40 +395,94 @@ const DetectionZoneSetup: React.FC = () => {
               {renderGrid()}
             </View>
 
-            <View
-              pointerEvents="none"
-              style={[
-                styles.zoneOverlay,
-                {
-                  top: zone.topLeft.y,
-                  left: zone.topLeft.x,
-                  width: zone.topRight.x - zone.topLeft.x,
-                  height: zone.bottomLeft.y - zone.topLeft.y,
-                  backgroundColor: getZoneColor(),
-                },
-              ]}
-            />
-
-            {(Object.keys(zone) as (keyof DetectionZone)[]).map((corner) => {
-              const c = zone[corner];
-              return (
+            {/* Entry/Exit zoneType: show vertical line with 2 draggable points */}
+            {zoneType === 'entryExit' ? (
+              <>
+                <Svg
+                  // eslint-disable-next-line react-native/no-inline-styles
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: PREVIEW_WIDTH,
+                    height: PREVIEW_HEIGHT,
+                  }}
+                  pointerEvents="none"
+                >
+                  <Line
+                    x1={entryExitPoints[0].x}
+                    y1={entryExitPoints[0].y}
+                    x2={entryExitPoints[1].x}
+                    y2={entryExitPoints[1].y}
+                    stroke="#00FF00"
+                    strokeWidth={4}
+                  />
+                </Svg>
+                {/* Draggable points */}
+                {entryExitPoints.map((pt, idx) => (
+                  <View
+                    key={idx}
+                    // eslint-disable-next-line react-native/no-inline-styles
+                    style={{
+                      position: 'absolute',
+                      left: pt.x - 14,
+                      top: pt.y - 14,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: '#00FF00',
+                      borderWidth: 2,
+                      borderColor: '#FFF',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      zIndex: 10,
+                      transform: [{ scale: activeEntryExitPoint === idx ? 1.3 : 1 }],
+                    }}
+                    {...entryExitPanResponders[idx].panHandlers}
+                  >
+                    <View
+                      style={styles.lineStyle}
+                    />
+                  </View>
+                ))}
+              </>
+            ) : (
+              <>
+                {/* Default zone overlay and handles for other zone types */}
                 <View
-                  key={corner}
+                  pointerEvents="none"
                   style={[
-                    styles.cornerHandle,
+                    styles.zoneOverlay,
                     {
-                      left: c.x - 14,
-                      top: c.y - 14,
-                      transform: [{ scale: activeCorner === corner ? 1.3 : 1 }],
+                      top: zone.topLeft.y,
+                      left: zone.topLeft.x,
+                      width: zone.topRight.x - zone.topLeft.x,
+                      height: zone.bottomLeft.y - zone.topLeft.y,
+                      backgroundColor: getZoneColor(),
                     },
                   ]}
-                  {...panResponders[corner].panHandlers}
-                >
-                  <View style={styles.cornerInner} />
-                </View>
-              );
-            })}
-
+                />
+                {(Object.keys(zone) as (keyof DetectionZone)[]).map((corner) => {
+                  const c = zone[corner];
+                  return (
+                    <View
+                      key={corner}
+                      style={[
+                        styles.cornerHandle,
+                        {
+                          left: c.x - 14,
+                          top: c.y - 14,
+                          transform: [{ scale: activeCorner === corner ? 1.3 : 1 }],
+                        },
+                      ]}
+                      {...panResponders[corner].panHandlers}
+                    >
+                      <View style={styles.cornerInner} />
+                    </View>
+                  );
+                })}
+              </>
+            )}
             <View style={styles.rightButtons}>
               <TouchableOpacity style={styles.roundButton} onPress={handleDrawRectangle}>
                 <Icon name="selection-drag" size={22} color="#FFFFFF" />

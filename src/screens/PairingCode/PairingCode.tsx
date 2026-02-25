@@ -100,7 +100,7 @@ const PairingCode: React.FC = () => {
             <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
               <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('pairingCode.enterPairingCode')}</Text>
+            <Text style={styles.headerTitle}>{t('pairingCode.pairingCode')}</Text>
           </View>
 
           {/* Scrollable Content - takes remaining space */}

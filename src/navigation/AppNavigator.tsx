@@ -134,6 +134,7 @@ const AppNavigator = () => {
           component={DetectionZoneSetup}
           options={{
             headerShown: false,
+            gestureEnabled: false,
           }}
         />
         <Stack.Screen

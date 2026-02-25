@@ -62,14 +62,18 @@ export default function AiDetectionRules() {
     }
   }, []);
 
+  const handleSetupClockSchedule = useCallback(() => {
+    (navigation as any).navigate('WorkSchedule');
+  }, [navigation]);
+
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<AiRule>) => {
       const isLast = index === rules.length - 1;
       const isLoading = !!loadingIds[item.id];
 
       return (
-        <View>
-          <View style={styles.row}>
+        <>
+          <Pressable onPress={handleSetupClockSchedule} disabled={isLoading} style={styles.row}>
             <View style={styles.left}>
               <View style={styles.iconWrap}>
                 <Text style={styles.iconText}>{item.icon}</Text>
@@ -85,13 +89,12 @@ export default function AiDetectionRules() {
               ios_backgroundColor="#2A3440"
               disabled={isLoading}
             />
-          </View>
-
+          </Pressable>
           {!isLast && <View style={styles.divider} />}
-        </View>
+        </>
       );
     },
-    [loadingIds, onToggleRule, rules.length]
+    [loadingIds, onToggleRule, rules.length, handleSetupClockSchedule]
   );
 
   return (

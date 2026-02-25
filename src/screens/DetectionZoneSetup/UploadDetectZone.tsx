@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StatusBar, TouchableOpacity, Text } from 'react-native';
 import { styles } from '@screens/FaceUpload/FaceUpload.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +6,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import cameraService from '@api/cameraService';
 
 type SettingAIStackParamList = {
   SettingAI: { camera: any };
@@ -15,12 +16,23 @@ export default function UploadDetectZone() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<SettingAIStackParamList, 'SettingAI'>>();
   const { t } = useTranslation();
+  const [link, setLink] = useState<string>('');
   const camera = route.params?.camera;
+
+  const getLinkLive = React.useCallback(async () => {
+    const response = await cameraService.getLiveStreamUrl(camera.id);
+    setLink(response.data.live_url);
+  }, [camera]);
+
+  useEffect(() => {
+    getLinkLive();
+  }, [getLinkLive]);
 
   const handleSetupDetectionZone = (zoneType: 'detection' | 'restricted' | 'entryExit') => {
     (navigation as any).navigate('DetectionZoneSetup', {
       camera: camera,
       zoneType: zoneType,
+      liveUrl: link,
     });
   };
 

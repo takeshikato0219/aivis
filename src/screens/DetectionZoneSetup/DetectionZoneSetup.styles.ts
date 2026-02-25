@@ -151,4 +151,28 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  controls: {
+    position: 'absolute',
+    bottom: 40,
+    right: 40,
+  },
+  muteBtn: {},
+  circle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  icon: {
+    fontSize: 28,
+    color: 'white',
+  },
+  lineStyle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#FFF',
+  },
 });

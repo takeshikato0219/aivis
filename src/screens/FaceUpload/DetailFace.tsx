@@ -1131,7 +1131,6 @@ const DetailFace = () => {
                   photo={true}
                 />
 
-                {/* UI Overlay - giống như FaceUpload */}
                 <View style={styles.overlay}>
                   {/* Header */}
                   <SafeAreaView edges={['top']}>
@@ -1154,7 +1153,6 @@ const DetailFace = () => {
                     </View>
                   </SafeAreaView>
 
-                  {/* Face Frame Container - giống như FaceUpload */}
                   <View style={styles.faceFrameContainer}>
                     <Animated.View
                       style={[
@@ -1164,7 +1162,6 @@ const DetailFace = () => {
                         },
                       ]}
                     >
-                      {/* Prepare Progress Ring */}
                       {isPreparing && (
                         <View style={styles.holdProgressRing}>
                           <Svg width={270} height={351} viewBox="0 0 270 351">

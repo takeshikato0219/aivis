@@ -739,6 +739,7 @@ export const styles = StyleSheet.create({
   },
   settingsSection: {
     marginBottom: 24,
+    paddingHorizontal: 24
   },
   settingItem: {
     flexDirection: 'row',

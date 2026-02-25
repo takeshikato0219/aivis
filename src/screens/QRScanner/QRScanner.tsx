@@ -29,11 +29,6 @@ import RectangleIcon6 from '@assets/svg/rectangle-6.svg';
 import RectangleIcon7 from '@assets/svg/rectangle-7.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 import { useTranslation } from 'react-i18next';
-import { KeyboardIconComponent } from '@components/IconCustom/IconCustom';
-import { COLORS } from '@constants/theme';
-import TextInput from '@components/TextInput/TextInput';
-import { useInput } from '@hooks/useInput';
-import { isPassword } from '@utils/validate';
 import { useAppSelector, store } from '@redux/store';
 import cameraService from '@api/cameraService';
 import { jetsonBLEService } from '@/services/jetsonBLEService';
@@ -80,10 +75,6 @@ const QRScanner: React.FC = () => {
       isProcessingRef.current = false;
     }
   }, [isFocused]);
-
-  const agentCodeInput = useInput({
-    validateFn: isPassword,
-  });
 
   const checkPermissionStatus = async () => {
     try {
@@ -369,20 +360,6 @@ const QRScanner: React.FC = () => {
             <ActivityIndicator size="small" color="#00D9FF" style={styles.btnSearch} />
           </View>
         ) : null}
-
-        <Text style={styles.styleAgentCodeText}>{t('QRScan.agentCode')}</Text>
-        <TextInput
-          value={agentCodeInput.value}
-          onChangeText={agentCodeInput.handleChange}
-          icon={KeyboardIconComponent}
-          secureTextEntry
-          placeholder={t('QRScan.enterManualCode')}
-          autoCapitalize="none"
-          autoComplete="password"
-          style={styles.input}
-          testID="password-input"
-          placeholderTextColor={COLORS.BBBBBB}
-        />
         <TouchableOpacity style={styles.manualButton} onPress={handleManualConnect}>
           <Text style={styles.manualButtonText}>{t('bluetoothScreen.connect')}</Text>
         </TouchableOpacity>

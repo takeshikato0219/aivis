@@ -9,6 +9,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -23,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import RotateCcwIcon from '@assets/svg/rotate-ccw.svg';
 import CctvIcon from '@assets/svg/cctv-icon.svg';
 import { useJetsonBLE } from '@hooks/useJetsonBLE';
+import { BleManager } from 'react-native-ble-plx';
 
 const getScanningText = (scanning: boolean, t: any) => {
   return scanning ? t('bluetoothScreen.scanningForDevices') : t('bluetoothScreen.scanFinished');
@@ -35,12 +38,46 @@ const getHintText = (t: any) => {
 const ConnectDevice: React.FC = () => {
   const navigation = useNavigation<ConnectDeviceScreenNavigationProp>();
   const [alertShown, setAlertShown] = useState(false);
+  const manager = new BleManager();
 
   const { devices, isScanning: scanning, startScan, stopScan } = useJetsonBLE();
 
   const { t } = useTranslation();
 
+  const checkBluetooth = async () => {
+    const state = await manager.state();
+    if (state !== 'PoweredOn') {
+      Alert.alert(
+        t('bluetoothScreen.bluetoothIsOff'),
+        t('bluetoothScreen.pleaseTurnOnBluetoothToScanForNearbyCameras'),
+        [
+          {
+            text: t('bluetoothScreen.openSettings'),
+            onPress: () => openBluetoothSettings(),
+          },
+          { text: t('permission.cancel'), style: 'cancel' },
+        ]
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const openBluetoothSettings = () => {
+    if (Platform.OS === 'android') {
+      Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS');
+    } else if (Platform.OS === 'ios') {
+      Linking.openURL('App-Prefs:root=Bluetooth').catch(() => {
+        Alert.alert(
+          t('bluetoothScreen.unableToOpenSettings'),
+          t('bluetoothScreen.pleaseOpenBluetoothSettingsManually')
+        );
+      });
+    }
+  };
+
   useEffect(() => {
+    checkBluetooth();
     // Auto-scan when component mounts (only if not already scanning)
     if (!scanning) {
       void startScan();
@@ -50,7 +87,7 @@ const ConnectDevice: React.FC = () => {
       stopScan();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array to run only on mount
+  }, []);
 
   const goToPairCode = (device: SerializableDevice) => {
     navigation.navigate('PairingCode', {
@@ -111,7 +148,12 @@ const ConnectDevice: React.FC = () => {
           <View style={styles.devicesHeader}>
             <Text style={styles.devicesTitle}>{devicesFoundText}</Text>
             <TouchableOpacity
-              onPress={startScan}
+              onPress={async () => {
+                const isBluetoothOn = await checkBluetooth();
+                if (isBluetoothOn) {
+                  startScan();
+                }
+              }}
               disabled={scanning}
               style={styles.styleRotate}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
