@@ -25,6 +25,9 @@ export const API_ENDPOINTS = {
 
   // Status Camera
   STATUSES: '/statuses',
+
+  // Rule Master List
+  RULE_MASTER_LIST: '/rules-master',
 };
 
 export type ApiEndpoints = typeof API_ENDPOINTS;

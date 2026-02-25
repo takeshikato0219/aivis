@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { FONTS } from '@constants/theme';
+import { isTablet } from "@utils/responsive";
 
 export const styles = StyleSheet.create({
   safe: {
@@ -111,5 +112,25 @@ export const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
     fontWeight: FONTS.weights.medium,
+  },
+  backButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    width: isTablet() ? 50 : 46,
+    height: isTablet() ? 50 : 46,
+  },
+  loadingText: {
+    color: '#EAF1F7',
+    fontSize: 16,
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 16,
+    textAlign: 'center',
+    paddingVertical: 20,
   },
 });

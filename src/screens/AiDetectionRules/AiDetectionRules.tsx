@@ -1,58 +1,57 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, Pressable, FlatList, ListRenderItemInfo, StatusBar } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  FlatList,
+  ListRenderItemInfo,
+  StatusBar,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { styles } from './AiDetectionRules.style';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import BackIcon from '@assets/svg/icon-back.svg';
+import Rule from '@/services/rule';
 export type AiRule = {
   id: string;
   title: string;
   enabled: boolean;
 };
 
-const RULES: AiRule[] = [
-  { id: 'helmet', title: 'ヘルメット着用検知', enabled: true },
-  { id: 'mask', title: 'マスク着用検知', enabled: true },
-  { id: 'intrusion', title: '侵入検知', enabled: true },
-];
-
 export default function AiDetectionRules() {
   const { t } = useTranslation();
-  const [rules, setRules] = useState<AiRule[]>(RULES);
-  const [loadingIds, setLoadingIds] = useState<Record<string, boolean>>({});
+  const [rules, setRules] = useState<AiRule[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const navigation = useNavigation();
+  const ruleService = React.useMemo(() => new Rule(), []);
 
-  async function updateRuleOnServer(params: { id: string; enabled: boolean }) {
+  const fetchRules = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(`https://api.example.com/ai-rules/${params.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: params.enabled }),
-      });
-      return { ok: response.ok };
+      const response = await ruleService.getRuleMasterList();
+      const mappedRules: AiRule[] = response.data
+        .filter((item: any) => item.is_active)
+        .map((item: any) => ({
+          id: item.id,
+          title: item.rule_name,
+          enabled: item.is_active,
+        }));
+      setRules(mappedRules);
     } catch {
-      return { ok: false };
-    }
-  }
-
-  const onToggleRule = useCallback(async (id: string, nextEnabled: boolean) => {
-    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: nextEnabled } : r)));
-
-    setLoadingIds((prev) => ({ ...prev, [id]: true }));
-
-    try {
-      const res = await updateRuleOnServer({ id, enabled: nextEnabled });
-
-      if (!res.ok) {
-        setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !nextEnabled } : r)));
-      }
-    } catch {
-      setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !nextEnabled } : r)));
+      setError('ルールの取得に失敗しました');
     } finally {
-      setLoadingIds((prev) => ({ ...prev, [id]: false }));
+      setLoading(false);
     }
-  }, []);
+  }, [ruleService]);
+
+  useEffect(() => {
+    fetchRules();
+  }, [fetchRules]);
 
   const handleSetupClockSchedule = useCallback(() => {
     (navigation as any).navigate('WorkSchedule');
@@ -61,23 +60,42 @@ export default function AiDetectionRules() {
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<AiRule>) => {
       const isLast = index === rules.length - 1;
-      const isLoading = !!loadingIds[item.id];
-
       return (
         <>
-          <Pressable onPress={handleSetupClockSchedule} disabled={isLoading} style={styles.row}>
+          <Pressable onPress={handleSetupClockSchedule} style={styles.row}>
             <View style={styles.left}>
               <Text style={styles.title}>{item.title}</Text>
             </View>
-
             <Icon name="chevron-right" size={24} color="#FFF" />
           </Pressable>
           {!isLast && <View style={styles.divider} />}
         </>
       );
     },
-    [loadingIds, rules.length, handleSetupClockSchedule]
+    [rules.length, handleSetupClockSchedule]
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.container}>
+          <Text>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.container}>
+          <Text>{error}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -85,9 +103,9 @@ export default function AiDetectionRules() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => navigation?.goBack?.()} style={styles.backBtn} hitSlop={10}>
-            <Text style={styles.backText}>←</Text>
-          </Pressable>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
+          </TouchableOpacity>
 
           <Text style={styles.headerTitle}>{t('settingAI.aIDetectionRules')}</Text>
           <View style={styles.headerSpacer} />

@@ -27,7 +27,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight || 0,
+    paddingTop: 10,
     height: 56,
   },
   backButton: {

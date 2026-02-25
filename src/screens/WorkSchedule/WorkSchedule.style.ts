@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { COLORS, FONTS } from '@constants/theme';
-import { scale } from '@utils/responsive';
+import { isTablet, scale } from "@utils/responsive";
 
 export const CONTAINER_H_PADDING = scale(20);
 export const CARD_PADDING = scale(18);
@@ -286,5 +286,13 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     flexShrink: 1,
+  },
+  backButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    width: isTablet() ? 50 : 46,
+    height: isTablet() ? 50 : 46,
   },
 });

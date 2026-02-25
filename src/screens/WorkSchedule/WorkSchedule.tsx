@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, Switch, StatusBar, ScrollView } from 'react-native';
+import { View, Text, Pressable, Switch, StatusBar, ScrollView, TouchableOpacity } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import IconClockWorkSchedule from '@assets/svg/icon-clock-workschedule.svg';
 import faceService, { Member } from '@api/faceService';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { StyleProp, ViewStyle } from 'react-native';
+import BackIcon from '@assets/svg/icon-back.svg';
 
 type Weekday = {
   key: string;
@@ -155,9 +156,9 @@ export default function WorkSchedule() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => navigation?.goBack?.()} style={styles.backBtn} hitSlop={10}>
-            <Text style={styles.backText}>←</Text>
-          </Pressable>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
+          </TouchableOpacity>
 
           <Text style={styles.headerTitle}>{t('settingAI.operationSchedule')}</Text>
           <View style={styles.headerSpacer} />

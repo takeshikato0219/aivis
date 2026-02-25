@@ -29,7 +29,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight || 0,
+    paddingTop: 10,
     height: 56,
   },
 
@@ -53,7 +53,7 @@ export const styles = StyleSheet.create({
     fontSize: isTablet() ? 35 : 20,
     fontWeight: FONTS.weights.medium,
     color: COLORS.background,
-    textAlign: 'center',
+
   },
 
   card: {
