@@ -59,6 +59,13 @@ export interface BleState {
   criticalDisconnection: boolean;
   authStatus: number;
   isAuthenticated: boolean;
+  networkStatus: {
+    status: number;
+    connected: boolean;
+    type: string;
+    interface: string;
+    details: string;
+  } | null;
 }
 
 const initialState: BleState = {
@@ -73,6 +80,7 @@ const initialState: BleState = {
   criticalDisconnection: false,
   authStatus: AuthStatus.UNAUTHENTICATED,
   isAuthenticated: false,
+  networkStatus: null,
 };
 
 // =============================================================================
@@ -139,6 +147,10 @@ const bleSlice = createSlice({
       state.isAuthenticated = action.payload;
     },
 
+    setNetworkStatus: (state, action: PayloadAction<BleState['networkStatus']>) => {
+      state.networkStatus = action.payload;
+    },
+
     // Reset all state
     resetBleState: (state) => {
       state.devices = initialState.devices;
@@ -191,6 +203,7 @@ export const {
   setCriticalDisconnection,
   setAuthStatus,
   setIsAuthenticated,
+  setNetworkStatus,
 } = bleSlice.actions;
 
 export default bleSlice.reducer;

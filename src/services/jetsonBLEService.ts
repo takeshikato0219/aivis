@@ -19,6 +19,7 @@ import {
   setIsAuthenticated,
   SerializableDevice,
   AuthStatus,
+  setNetworkStatus,
 } from '@redux/slices/bleSlice';
 import { Platform, PermissionsAndroid } from 'react-native';
 
@@ -95,6 +96,7 @@ class JetsonBLEService {
   private scanTimeout: ReturnType<typeof setTimeout> | null = null;
   private wifiScanTimeout: ReturnType<typeof setTimeout> | null = null;
   private initialized: boolean = false;
+  private netCheckTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // ---------------------------------------------------------------------------
   // INITIALIZATION
@@ -230,6 +232,66 @@ class JetsonBLEService {
     );
     this.subscriptions.push(wifiListSub);
 
+    const netStatusSub = device.monitorCharacteristicForService(
+      SERVICE_UUID,
+      NET_STATUS_CHAR_UUID,
+      (monitorError, characteristic) => {
+        if (monitorError) {
+          if (!monitorError.message?.includes('cancelled')) {
+            console.error('[BLE] Network status subscription error:', monitorError);
+          }
+          return;
+        }
+
+        if (characteristic?.value) {
+          try {
+            const jsonStr = base64ToString(characteristic.value);
+            const data = JSON.parse(jsonStr);
+            let type: ConnectionTypeValue;
+            // Accept both string and number types for data.type
+            switch (data.type) {
+              case 1:
+              case 'wifi':
+                type = ConnectionType.WIFI;
+                break;
+              case 2:
+              case 'ethernet':
+                type = ConnectionType.ETHERNET;
+                break;
+              case 3:
+              case 'cellular':
+                type = ConnectionType.CELLULAR;
+                break;
+              case 0:
+              case 'none':
+              default:
+                type = ConnectionType.NONE;
+            }
+
+            // Dispatch to Redux
+            store.dispatch(
+              setNetworkStatus({
+                status: data.status,
+                connected: data.connected,
+                type: type,
+                interface: data.interface,
+                details: data.details,
+              })
+            );
+
+            console.log('[BLE] Network status received:', type);
+
+            this.cleanupNetCheckTimeout();
+          } catch (err) {
+            console.error('[BLE] Network status parse error:', err);
+            this.cleanupNetCheckTimeout();
+          }
+        }
+      }
+    );
+
+    this.subscriptions.push(netStatusSub);
+
     // Set up disconnect listener
     const disconnectSub = bleManager.onDeviceDisconnected(device.id, () => {
       console.log('[BLE] Device disconnected unexpectedly, cleaning up subscriptions...');
@@ -241,6 +303,13 @@ class JetsonBLEService {
       store.dispatch(setCriticalDisconnection(true));
     });
     this.subscriptions.push(disconnectSub);
+  }
+
+  private cleanupNetCheckTimeout(): void {
+    if (this.netCheckTimeout) {
+      clearTimeout(this.netCheckTimeout);
+      this.netCheckTimeout = null;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -553,7 +622,7 @@ class JetsonBLEService {
           store.dispatch(setError('WiFi scan timeout - no response from device'));
         }
         this.wifiScanTimeout = null;
-      }, 30000); // 30 seconds timeout
+      }, 15000); // 30 seconds timeout
 
       return true;
     } catch (err: any) {
@@ -595,78 +664,35 @@ class JetsonBLEService {
    * Writes to NET_CHECK_CHAR_UUID and monitors NET_STATUS_CHAR_UUID for response.
    * @returns Promise with ConnectionTypeValue or null if failed
    */
-  checkNetworkStatus = async (): Promise<ConnectionTypeValue | null> => {
+  checkNetworkStatus = async (): Promise<boolean> => {
     if (!this.connectedDevice) {
       store.dispatch(setError('Not connected to the device'));
-      return null;
+      return false;
     }
 
     try {
+      this.cleanupNetCheckTimeout();
       store.dispatch(clearError());
 
-      // Create a promise that will resolve when we receive the status
-      const statusPromise = new Promise<ConnectionTypeValue>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Network status check timeout'));
-        }, 10000); // 10 seconds timeout
+      console.log('[BLE] Requesting network status...');
 
-        // Subscribe to NET_STATUS_CHAR_UUID to receive the response
-        const statusSub = this.connectedDevice!.monitorCharacteristicForService(
-          SERVICE_UUID,
-          NET_STATUS_CHAR_UUID,
-          (monitorError, characteristic) => {
-            if (monitorError) {
-              clearTimeout(timeout);
-              statusSub.remove();
-              reject(monitorError);
-              return;
-            }
-
-            if (characteristic?.value) {
-              clearTimeout(timeout);
-              statusSub.remove();
-
-              const statusStr = base64ToString(characteristic.value);
-              console.log('[BLE] Network status received:', statusStr);
-
-              // Parse the status and return ConnectionType
-              if (
-                statusStr === ConnectionType.WIFI ||
-                statusStr === ConnectionType.ETHERNET ||
-                statusStr === ConnectionType.CELLULAR ||
-                statusStr === ConnectionType.NONE
-              ) {
-                resolve(statusStr as ConnectionTypeValue);
-              } else {
-                // Try to parse as JSON if it's a more complex response
-                try {
-                  const data = JSON.parse(statusStr);
-                  resolve((data.type || ConnectionType.NONE) as ConnectionTypeValue);
-                } catch {
-                  resolve(ConnectionType.NONE);
-                }
-              }
-            }
-          }
-        );
-
-        // Add subscription to clean up list
-        this.subscriptions.push(statusSub);
-      });
-
-      // Write to NET_CHECK_CHAR_UUID to trigger the check (send 1 to request status)
       await this.connectedDevice.writeCharacteristicWithResponseForService(
         SERVICE_UUID,
         NET_CHECK_CHAR_UUID,
         byteToBase64(1)
       );
 
-      // Wait for the status response and return
-      return await statusPromise;
+      this.netCheckTimeout = setTimeout(() => {
+        console.warn('[BLE] Network check timeout');
+        store.dispatch(setError('Network status timeout - no response from device'));
+        this.netCheckTimeout = null;
+      }, 10000);
+
+      return true;
     } catch (err: any) {
-      console.error('[BLE] Network status check error:', err);
-      store.dispatch(setError(err?.message || 'Network status check error'));
-      return null;
+      this.cleanupNetCheckTimeout();
+      store.dispatch(setError(err?.message || 'Network status request failed'));
+      return false;
     }
   };
 

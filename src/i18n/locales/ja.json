@@ -453,7 +453,9 @@
     "cellularNetwork": "モバイルネットワーク",
     "cellular": "モバイル ({{generation}})",
     "done": "完了",
-    "idle": "待機中"
+    "idle": "待機中",
+    "lanConnectionIsActive": "LAN接続があります",
+    "noLanConnection": "LAN接続がありません"
   },
   "faceUpload": {
     "title": "顔登録",
@@ -578,8 +580,12 @@
     "setupDetectZone": "検知エリア設定",
     "setupZone": "ゾーン設定",
     "setupDetectionZone": "検知エリア設定",
-    "setupRestrictedZone": "制限エリア設定",
-    "setupEntryExit": "出入り追跡の設定 (でいりついせきのせってい)"
+    "successTitle": "成功",
+    "successMessage": "検知ゾーンの設定が成功しました",
+    "failureTitle": "失敗",
+    "failureMessage": "検知ゾーンの設定に失敗しました",
+    "setupRestrictedZone": "立ち入り禁止エリア",
+    "setupEntryExit": "出入り追跡の設定"
   },
   "detectionZone": {
     "inGreenOutRed": "入: 緑 / 出: 赤"

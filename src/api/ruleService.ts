@@ -1,5 +1,5 @@
-import axiosInstance from '../api/axiosConfig';
-import { API_BASE_URL, API_ENDPOINTS } from '@api/apiEndpoints';
+import axiosInstance from './axiosConfig';
+import { API_ENDPOINTS } from './apiEndpoints';
 
 export interface RuleMasterResponse {
   id: string;
@@ -29,13 +29,11 @@ export interface RuleMasterListApiResponse {
   };
 }
 
-class Rule {
+class RuleService {
   async getRuleMasterList(): Promise<RuleMasterListApiResponse> {
-    // Updated endpoint usage
-    const url = `${API_BASE_URL}${API_ENDPOINTS.RULE_MASTER_LIST}`;
-    const response = await axiosInstance.get<RuleMasterListApiResponse>(url);
+    const response = await axiosInstance.get<RuleMasterListApiResponse>(API_ENDPOINTS.RULES_MASTER);
     return response.data;
   }
 }
 
-export default Rule;
+export default new RuleService();

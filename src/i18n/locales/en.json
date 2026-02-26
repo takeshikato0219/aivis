@@ -412,7 +412,9 @@
     "cellularNetwork": "Cellular Network",
     "cellular": "Cellular ({{generation}})",
     "done": "Done",
-    "idle": "Idle"
+    "idle": "Idle",
+    "lanConnectionIsActive": "LAN connection is active",
+    "noLanConnection": "No LAN connection"
   },
   "faceUpload": {
     "title": "Face Registration",
@@ -537,6 +539,10 @@
     "setupDetectZone": "Setup Detect Zone",
     "setupZone": "Setup Zone",
     "setupDetectionZone": "Setup detection zone",
+    "successTitle": "Success",
+    "successMessage": "Detection zone setup successful",
+    "failureTitle": "Failure",
+    "failureMessage": "Detection zone setup failed",
     "setupRestrictedZone": "Setup restricted zone",
     "setupEntryExit": "Setup Entry/Exit Tracking"
   },

@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, Switch, StatusBar, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  Switch,
+  StatusBar,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';

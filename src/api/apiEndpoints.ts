@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   // Cameras
   CAMERAS: '/cameras',
   FACILITIES: '/facilities',
+  CAMERAS_DETECTION_TYPE: '/camerasdetection-types',
   // Face
   MEMBER_RELATIONSHIPS: '/member-relationships',
   MEMBERS: '/members',
@@ -27,7 +28,7 @@ export const API_ENDPOINTS = {
   STATUSES: '/statuses',
 
   // Rule Master List
-  RULE_MASTER_LIST: '/rules-master',
+  RULES_MASTER: '/rules-master',
 };
 
 export type ApiEndpoints = typeof API_ENDPOINTS;

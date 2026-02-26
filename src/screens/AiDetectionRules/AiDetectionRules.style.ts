@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { FONTS } from '@constants/theme';
-import { isTablet } from "@utils/responsive";
+import { isTablet } from '@utils/responsive';
 
 export const styles = StyleSheet.create({
   safe: {

@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { buildStreamUrl } from '@utils/streamUtils';
 import detectionZoneService from '../../services/detectionZone';
 import Svg, { Line, Polygon } from 'react-native-svg';
+import { showCommonAlert } from '@components/Alert/Alert';
 
 const getScreenDims = () => {
   const { width, height } = Dimensions.get('window');
@@ -47,7 +48,11 @@ interface DetectionZone {
 const GRID_SIZE = 28;
 
 type DetectionZoneSetupParamList = {
-  DetectionZoneSetup: { camera: any; zoneType?: 'detection' | 'restricted' | 'entryExit' };
+  DetectionZoneSetup: {
+    camera: any;
+    zoneType?: 'detection' | 'restricted' | 'entryExit';
+    typeId?: string;
+  };
 };
 
 const DetectionZoneSetup: React.FC = () => {
@@ -56,6 +61,7 @@ const DetectionZoneSetup: React.FC = () => {
   const { t } = useTranslation();
   const camera = route.params.camera;
   const zoneType = route.params.zoneType || 'detection';
+  const typeId = route.params.typeId || '';
   const centerX = PREVIEW_WIDTH / 2;
   const centerY = PREVIEW_HEIGHT / 2;
   const offset = 80;
@@ -200,9 +206,47 @@ const DetectionZoneSetup: React.FC = () => {
 
   const getZoneDetect = async () => {
     try {
-      const response = await detectionZoneService.getZones(camera.id);
+      const response = await detectionZoneService.getZones(camera.id, typeId);
       const coordinates = response.data[0]?.coordinates;
-      if (Array.isArray(coordinates) && coordinates.length === 4) {
+      if (zoneType === 'entryExit') {
+        if (Array.isArray(coordinates) && coordinates.length >= 2) {
+          setEntryExitPoints([
+            {
+              x: coordinates[0].x * PREVIEW_WIDTH,
+              y: coordinates[0].y * PREVIEW_HEIGHT,
+            },
+            {
+              x: coordinates[1].x * PREVIEW_WIDTH,
+              y: coordinates[1].y * PREVIEW_HEIGHT,
+            },
+          ]);
+        }
+        if (coordinates?.length === 3) {
+          const p1 = {
+            x: coordinates[0].x * PREVIEW_WIDTH,
+            y: coordinates[0].y * PREVIEW_HEIGHT,
+          };
+
+          const p2 = {
+            x: coordinates[1].x * PREVIEW_WIDTH,
+            y: coordinates[1].y * PREVIEW_HEIGHT,
+          };
+
+          const inCorner = {
+            x: coordinates[2].x * PREVIEW_WIDTH,
+            y: coordinates[2].y * PREVIEW_HEIGHT,
+          };
+
+          setEntryExitPoints([p1, p2]);
+
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+
+          const side = dx * (inCorner.y - p1.y) - dy * (inCorner.x - p1.x);
+
+          setIsLeftIn(side < 0);
+        }
+      } else if (Array.isArray(coordinates) && coordinates.length === 4) {
         setZone({
           topLeft: {
             x: coordinates[0].x * PREVIEW_WIDTH,
@@ -229,19 +273,78 @@ const DetectionZoneSetup: React.FC = () => {
 
   const handleSave = async () => {
     setIsSaving(true);
+
     try {
-      const coordinates = getZoneCoordinates();
-      // Convert coordinates to array for API
-      const coordinatesArray = [
-        coordinates.topLeft,
-        coordinates.topRight,
-        coordinates.bottomLeft,
-        coordinates.bottomRight,
-      ];
-      await detectionZoneService.createZone(camera.id, {
+      let coordinatesArray: { x: number; y: number }[] = [];
+
+      if (zoneType === 'entryExit') {
+        const { left, right } = getEntryExitPolygons();
+        const inPolygon = isLeftIn ? left : right;
+
+        const frameCorners = [
+          { x: 0, y: 0 },
+          { x: PREVIEW_WIDTH, y: 0 },
+          { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT },
+          { x: 0, y: PREVIEW_HEIGHT },
+        ];
+
+        const inCorner =
+          frameCorners.find((corner) =>
+            inPolygon.some((p) => p.x === corner.x && p.y === corner.y)
+          ) || frameCorners[0];
+
+        coordinatesArray = [
+          {
+            x: entryExitPoints[0].x / PREVIEW_WIDTH,
+            y: entryExitPoints[0].y / PREVIEW_HEIGHT,
+          },
+          {
+            x: entryExitPoints[1].x / PREVIEW_WIDTH,
+            y: entryExitPoints[1].y / PREVIEW_HEIGHT,
+          },
+          {
+            x: inCorner.x / PREVIEW_WIDTH,
+            y: inCorner.y / PREVIEW_HEIGHT,
+          },
+        ];
+      } else {
+        const coordinates = getZoneCoordinates();
+
+        coordinatesArray = [
+          coordinates.topLeft,
+          coordinates.topRight,
+          coordinates.bottomLeft,
+          coordinates.bottomRight,
+        ];
+      }
+      const response = await detectionZoneService.createZone(camera.id, {
+        zone_type_id: typeId,
         coordinates: coordinatesArray,
       });
-      navigation.goBack();
+
+      if (response.success) {
+        showCommonAlert({
+          title: t('detectionZone.successTitle', 'Success'),
+          message: t('detectionZone.successMessage', 'Detection zone setup successful'),
+          buttons: [
+            {
+              text: t('common.ok'),
+              onPress: () => navigation.goBack(),
+            },
+          ],
+        });
+      } else {
+        showCommonAlert({
+          title: t('detectionZone.failureTitle', 'Failure'),
+          message: t('detectionZone.failureMessage', 'Detection zone setup failed'),
+          buttons: [
+            {
+              text: t('common.ok'),
+              onPress: () => navigation.goBack(),
+            },
+          ],
+        });
+      }
     } catch (e) {
       console.error(e);
     } finally {

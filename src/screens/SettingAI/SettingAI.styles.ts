@@ -1,4 +1,4 @@
-import { StyleSheet, Platform, StatusBar } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { COLORS, FONTS } from '@constants/theme';
 import { isTablet } from '@utils/responsive';
 

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import cameraService from '@api/cameraService';
+import detectionZoneService from '@/services/detectionZone';
 
 type SettingAIStackParamList = {
   SettingAI: { camera: any };
@@ -28,10 +29,24 @@ export default function UploadDetectZone() {
     getLinkLive();
   }, [getLinkLive]);
 
-  const handleSetupDetectionZone = (zoneType: 'detection' | 'restricted' | 'entryExit') => {
+  const getTypeZone = async (zoneType: 'detection' | 'restricted' | 'entryExit') => {
+    const response = await detectionZoneService.getType();
+    if (zoneType === 'detection') {
+      return response.data[0].id;
+    } else if (zoneType === 'restricted') {
+      return response.data[2].id;
+    } else if (zoneType === 'entryExit') {
+      return response.data[1].id;
+    }
+    return '';
+  };
+
+  const handleSetupDetectionZone = async (zoneType: 'detection' | 'restricted' | 'entryExit') => {
+    const typeId = await getTypeZone(zoneType);
     (navigation as any).navigate('DetectionZoneSetup', {
       camera: camera,
       zoneType: zoneType,
+      typeId: typeId,
       liveUrl: link,
     });
   };

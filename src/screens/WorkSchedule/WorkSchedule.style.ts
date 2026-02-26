@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { COLORS, FONTS } from '@constants/theme';
-import { isTablet, scale } from "@utils/responsive";
+import { isTablet, scale } from '@utils/responsive';
 
 export const CONTAINER_H_PADDING = scale(20);
 export const CARD_PADDING = scale(18);

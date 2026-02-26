@@ -1,4 +1,4 @@
-import { StyleSheet, Platform, StatusBar } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { COLORS, FONTS } from '@constants/theme';
 import { isTablet, scale } from '@utils/responsive';
 
@@ -53,7 +53,6 @@ export const styles = StyleSheet.create({
     fontSize: isTablet() ? 35 : 20,
     fontWeight: FONTS.weights.medium,
     color: COLORS.background,
-
   },
 
   card: {
