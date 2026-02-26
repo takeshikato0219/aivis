@@ -30,57 +30,57 @@ import { COLORS } from '@constants/theme';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { isName } from '@utils/validate';
 
-const FACE_POSITIONS = [
-  {
-    key: 'center',
-    label: 'Center',
-    instruction: 'Look straight at the camera',
-    scanDuration: 3000,
-    prepareTime: 2000, // Time to prepare before scan
-  },
-  {
-    key: 'left',
-    label: 'Turn Left',
-    instruction: 'Slowly turn your head LEFT',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'right',
-    label: 'Turn Right',
-    instruction: 'Slowly turn your head RIGHT',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'up',
-    label: 'Look Up',
-    instruction: 'Slowly tilt your head UP',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'down',
-    label: 'Look Down',
-    instruction: 'Slowly tilt your head DOWN',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-] as const;
-
-type FacePosition = (typeof FACE_POSITIONS)[number]['key'];
-
-interface FaceData {
-  position: FacePosition;
-  imageUri: string;
-  timestamp: number;
-  scanProgress: number;
-}
+type FacePosition = 'center' | 'left' | 'right' | 'up' | 'down';
 
 const FaceUpload: React.FC = () => {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const { hasPermission, requestPermission } = useCameraPermission();
+
+  const FACE_POSITIONS = [
+    {
+      key: 'center',
+      label: t('faceUpload.center'),
+      instruction: t('faceUpload.lookStraightAtTheCamera'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'left',
+      label: t('faceUpload.turnLeftFace'),
+      instruction: t('faceUpload.slowlyTurnYourHeadLEFT'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'right',
+      label: t('faceUpload.turnRightFace'),
+      instruction: t('faceUpload.slowlyTurnYourHeadRIGHT'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'up',
+      label: t('faceUpload.lookUpFace'),
+      instruction: t('faceUpload.slowlyTiltYourHeadUP'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'down',
+      label: t('faceUpload.lookDownFace'),
+      instruction: t('faceUpload.slowlyTiltYourHeadDOWN'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+  ] as const;
+
+  interface FaceData {
+    position: FacePosition;
+    imageUri: string;
+    timestamp: number;
+    scanProgress: number;
+  }
 
   const [currentPositionIndex, setCurrentPositionIndex] = useState(0);
   const [capturedFaces, setCapturedFaces] = useState<FaceData[]>([]);
@@ -558,6 +558,38 @@ const FaceUpload: React.FC = () => {
     }
   };
 
+  const stopAllScanning = () => {
+    stopPrepare();
+    stopScanning();
+
+    setIsProcessing(false);
+    setIsPreparing(false);
+    setIsScanning(false);
+
+    // stop animation
+    scanLineAnim.stopAnimation();
+    particleAnim.stopAnimation();
+    pulseAnim.stopAnimation();
+
+    scanLineAnim.setValue(0);
+    particleAnim.setValue(0);
+
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+
+    if (prepareTimerRef.current) {
+      clearTimeout(prepareTimerRef.current);
+      prepareTimerRef.current = null;
+    }
+
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
+
   const handleRetake = () => {
     Alert.alert(
       t('faceUpload.retake') || 'Retake?',
@@ -841,6 +873,7 @@ const FaceUpload: React.FC = () => {
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => {
+                stopAllScanning();
                 Alert.alert(
                   t('common.cancel') || 'Cancel',
                   t('faceUpload.cancelConfirm') || 'Are you sure you want to cancel?',

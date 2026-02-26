@@ -522,7 +522,17 @@
     "adjustPosition": "位置を調整してもう一度お試しください",
     "captureFailed": "顔の撮影に失敗しました",
     "deleteMember": "メンバーを削除",
-    "deleteMemberConfirmation": "このメンバーを削除してもよろしいですか？"
+    "deleteMemberConfirmation": "このメンバーを削除してもよろしいですか？",
+    "center": "中央",
+    "lookStraightAtTheCamera": "カメラをまっすぐ見てください",
+    "turnLeftFace": "左を向く",
+    "slowlyTurnYourHeadLEFT": "ゆっくりと頭を左に向けてください",
+    "turnRightFace": "右を向く",
+    "slowlyTurnYourHeadRIGHT": "ゆっくりと頭を右に向けてください",
+    "lookUpFace": "上を見る",
+    "slowlyTiltYourHeadUP": "ゆっくりと頭を上に傾けてください",
+    "lookDownFace": "下を見る",
+    "slowlyTiltYourHeadDOWN": "ゆっくりと頭を下に傾けてください"
   },
   "liveStream": {
     "connectionSuccessful": "接続に成功しました",
@@ -541,7 +551,9 @@
     "settingAI": "Al設定",
     "detectionAreaSetup": "検知エリア設定",
     "operationSchedule": "稼働スケジュール",
-    "aIDetectionRules": "AI検知ルール"
+    "aIDetectionRules": "AI検知ルール",
+    "deleteCamera": "カメラを削除",
+    "doYouWantToDelete": "削除しますか？"
   },
   "listFace": {
     "listFace": "顔リスト",
@@ -556,7 +568,7 @@
     "warning": "AI検知機能を有効にすると、バッテリー消費が増加する可 能性があります。不要な項目はオフにすることをお勧めし ます。"
   },
   "workSchedule": {
-    "scheduleEnabled": "ルールを有効にする",
+    "scheduleEnabled": "ルールの有効化／無効化",
     "repeat": "繰り返し",
     "activeTime": "AI 知有効時間",
     "save": "保存",
@@ -570,7 +582,9 @@
       "sat": "土",
       "sun": "日"
     },
-    "selectFaceToApply": "適用する顔を選択"
+    "selectFaceToApply": "適用する顔を選択",
+    "updateSuccessful": "更新に成功しました",
+    "updateFailed": "更新に失敗しました"
   },
   "listDetectZone": {
     "noneItem": "監視エリアがまだ設定されていません",

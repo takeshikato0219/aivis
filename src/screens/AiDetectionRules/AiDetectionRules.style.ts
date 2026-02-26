@@ -93,7 +93,6 @@ export const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginLeft: 70,
     backgroundColor: 'rgba(234,241,247,0.16)',
   },
   footer: {
@@ -132,5 +131,14 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  noRuleContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  noRuleText: {
+    color: '#FFF',
+    fontSize: 16,
   },
 });

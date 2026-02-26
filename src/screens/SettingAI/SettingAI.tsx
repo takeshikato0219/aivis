@@ -8,6 +8,8 @@ import { useTranslation } from 'react-i18next';
 import IconSettingZone from '@assets/svg/icon-setting-zone.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 import IconAISetting from '@assets/svg/icon-ai-setting.svg';
+import { showCommonAlert } from '@components/Alert/Alert';
+import cameraService from '@api/cameraService';
 
 type SettingAIStackParamList = {
   SettingAI: { camera: any };
@@ -26,7 +28,54 @@ const SettingAI = () => {
   };
 
   const handleSetupAIRule = () => {
-    (navigation as any).navigate('AiDetectionRules');
+    (navigation as any).navigate('AiDetectionRules', {
+      camera: camera,
+    });
+  };
+
+  const handleDeleteCamera = async () => {
+    showCommonAlert({
+      title: '',
+      message: t('settingAI.doYouWantToDelete'),
+      buttons: [
+        {
+          text: t('common.ok'),
+          onPress: () => deleteCamera(),
+        },
+        {
+          text: t('common.cancel'),
+          onPress: () => {},
+        },
+      ],
+    });
+  };
+
+  const deleteCamera = async () => {
+    try {
+      const response = await cameraService.deleteCamera(camera.id);
+      if (response.success) {
+        showCommonAlert({
+          title: '',
+          message: response.message,
+          buttons: [
+            {
+              text: t('common.ok'),
+              onPress: () => navigation.navigate('Home' as any),
+            },
+          ],
+        });
+      }
+    } catch (error) {
+      showCommonAlert({
+        title: '',
+        message: error instanceof Error ? error.message : t('common.error'),
+        buttons: [
+          {
+            text: t('common.ok'),
+          },
+        ],
+      });
+    }
   };
 
   return (
@@ -56,6 +105,11 @@ const SettingAI = () => {
               <Text style={styles.styleText}>{t('settingAI.aIDetectionRules')}</Text>
             </View>
             <MoveRightIcon />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.styleButtonDelete} onPress={handleDeleteCamera}>
+            <View style={styles.styleTextButton}>
+              <Text style={styles.styleText}>{t('settingAI.deleteCamera')}</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

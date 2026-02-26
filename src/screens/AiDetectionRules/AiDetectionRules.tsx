@@ -9,89 +9,66 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { styles } from './AiDetectionRules.style';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import BackIcon from '@assets/svg/icon-back.svg';
-import ruleService from '@api/ruleService';
+import cameraService from '@api/cameraService';
 export type AiRule = {
   id: string;
   title: string;
   enabled: boolean;
 };
 
-const RULES: AiRule[] = [
-  { id: 'helmet', title: 'ヘルメット着用検知', enabled: true },
-  { id: 'mask', title: 'マスク着用検知', enabled: true },
-  { id: 'intrusion', title: '侵入検知', enabled: true },
-];
+type AiDetectionRulesStackParamList = {
+  AiDetectionRules: { camera: any };
+};
 
 export default function AiDetectionRules() {
   const { t } = useTranslation();
-  const [rules, setRules] = useState<AiRule[]>(RULES);
-  const [loadingIds, setLoadingIds] = useState<Record<string, boolean>>({});
+  const [rules, setRules] = useState<AiRule[]>([]);
   const navigation = useNavigation();
+  const route = useRoute<RouteProp<AiDetectionRulesStackParamList, 'AiDetectionRules'>>();
+  const camera = route.params?.camera;
 
-  async function updateRuleOnServer(params: { id: string; enabled: boolean }) {
-    try {
-      const response = await fetch(`https://api.example.com/ai-rules/${params.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: params.enabled }),
-      });
-      return { ok: response.ok };
-    } catch {
-      return { ok: false };
-    }
-  }
-
-  const onToggleRule = useCallback(async (id: string, nextEnabled: boolean) => {
-    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: nextEnabled } : r)));
-
-    setLoadingIds((prev) => ({ ...prev, [id]: true }));
-
-    try {
-      const res = await updateRuleOnServer({ id, enabled: nextEnabled });
-
-      if (!res.ok) {
-        setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !nextEnabled } : r)));
-      }
-    } catch {
-      setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !nextEnabled } : r)));
-    } finally {
-      setLoadingIds((prev) => ({ ...prev, [id]: false }));
-    }
-  }, []);
-
-  const fetchRules = async () => {
-    const response = await ruleService.getRuleMasterList();
+  const fetchRules = useCallback(async () => {
+    if (!camera?.id) return;
+    const response = await cameraService.getRulesForCamera(camera.id);
     const mappedRules: AiRule[] = response.data
       .filter((item: any) => item.is_active)
       .map((item: any) => ({
         id: item.id,
-        title: item.rule_name,
+        title: item.name,
         enabled: item.is_active,
       }));
     setRules(mappedRules);
-  };
+  }, [camera?.id]);
 
   useEffect(() => {
     fetchRules();
-  }, []);
+  }, [fetchRules]);
 
-  const handleSetupClockSchedule = useCallback(() => {
-    (navigation as any).navigate('WorkSchedule');
-  }, [navigation]);
+  const handleSetupClockSchedule = useCallback(
+    (ruleId: string, title: string) => {
+      (navigation as any).navigate('WorkSchedule', {
+        camera: camera,
+        ruleId,
+        title,
+      });
+    },
+    [camera, navigation]
+  );
 
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<AiRule>) => {
       const isLast = index === rules.length - 1;
-      const isLoading = !!loadingIds[item.id];
-
       return (
         <>
-          <Pressable onPress={handleSetupClockSchedule} disabled={isLoading} style={styles.row}>
+          <Pressable
+            onPress={() => handleSetupClockSchedule(item.id, item.title)}
+            style={styles.row}
+          >
             <View style={styles.left}>
               <Text style={styles.title}>{item.title}</Text>
             </View>
@@ -102,7 +79,7 @@ export default function AiDetectionRules() {
         </>
       );
     },
-    [loadingIds, rules.length, handleSetupClockSchedule]
+    [rules.length, handleSetupClockSchedule]
   );
 
   return (
@@ -123,13 +100,19 @@ export default function AiDetectionRules() {
 
         {/* Card */}
         <View style={styles.card}>
-          <FlatList
-            data={rules}
-            keyExtractor={(i) => i.id}
-            renderItem={renderItem}
-            scrollEnabled={false}
-            contentContainerStyle={styles.cardContent}
-          />
+          {rules.length === 0 ? (
+            <View style={styles.noRuleContainer}>
+              <Text style={styles.noRuleText}>No rule</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={rules}
+              keyExtractor={(i) => i.id}
+              renderItem={renderItem}
+              scrollEnabled={false}
+              contentContainerStyle={styles.cardContent}
+            />
+          )}
         </View>
 
         {/* Footer hint */}

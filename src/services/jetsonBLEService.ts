@@ -486,7 +486,6 @@ class JetsonBLEService {
               }
             }
           );
-          pinCode = '123456';
           // Send PIN
           connectedDevice
             .writeCharacteristicWithResponseForService(
@@ -508,7 +507,6 @@ class JetsonBLEService {
           // PIN sai → disconnect
           setAuthStatus(AuthStatus.INVALID_PIN);
           setIsAuthenticated(false);
-          await bleManager.cancelDeviceConnection(connectedDevice.id);
           setError('Incorrect PIN');
           return;
         }

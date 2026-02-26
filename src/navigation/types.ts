@@ -62,8 +62,12 @@ export type AppStackParamList = {
   SettingAI: { camera: Camera };
   ListFace: undefined;
   DetailFace: { memberId: string; relationships?: MemberRelationship[] };
-  AiDetectionRules: undefined;
-  WorkSchedule: undefined;
+  AiDetectionRules: { camera: Camera };
+  WorkSchedule: {
+    camera: Camera;
+    ruleId: string;
+    title: string;
+  };
   UploadDetectZone: {
     camera: Camera;
   };
@@ -131,6 +135,9 @@ export type SettingAIScreenRouteProp = RouteProp<AppStackParamList, 'SettingAI'>
 
 export type DetailFaceNavigationProp = StackNavigationProp<AppStackParamList, 'DetailFace'>;
 export type DetailFaceRouteProp = RouteProp<AppStackParamList, 'DetailFace'>;
+
+export type WorkScheduleNavigationProp = StackNavigationProp<AppStackParamList, 'WorkSchedule'>;
+export type WorkScheduleRouteProp = RouteProp<AppStackParamList, 'WorkSchedule'>;
 
 // ===== DECLARE GLOBAL =====
 declare global {

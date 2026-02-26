@@ -8,7 +8,8 @@ import {
   GetWorkflowStatusesResponse,
   StatusCamera,
   LiveStreamUrlResponse,
-} from './types/cameraTypes';
+  RuleMasterListApiResponse, WorkScheduleApiResponse
+} from "./types/cameraTypes";
 
 class CameraService {
   async registerCamera(data: RegisterCameraRequest): Promise<RegisterCameraResponse> {
@@ -66,6 +67,35 @@ class CameraService {
   async getLiveStreamUrl(cameraId: string): Promise<LiveStreamUrlResponse> {
     const response = await axiosInstance.get<LiveStreamUrlResponse>(
       `${API_ENDPOINTS.CAMERAS}/${cameraId}/livestream`
+    );
+    return response.data;
+  }
+
+  async getRulesForCamera(cameraId: string): Promise<RuleMasterListApiResponse> {
+    const response = await axiosInstance.get(`${API_ENDPOINTS.CAMERAS}/${cameraId}/rules`);
+    return response.data;
+  }
+
+  async deleteCamera(cameraId: string): Promise<GetWorkflowStatusesResponse> {
+    const response = await axiosInstance.delete(`${API_ENDPOINTS.CAMERAS}/${cameraId}`);
+    return response.data;
+  }
+
+  async getWorkScheduleForRule(cameraId: string, ruleId: string): Promise<WorkScheduleApiResponse> {
+    const response = await axiosInstance.get(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}/rules/${ruleId}`
+    );
+    return response.data;
+  }
+
+  async updateWorkScheduleForRule(
+    cameraId: string,
+    ruleId: string,
+    scheduleData: { [key: string]: any }
+  ): Promise<WorkScheduleApiResponse> {
+    const response = await axiosInstance.patch(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}/rules/${ruleId}`,
+      scheduleData,
     );
     return response.data;
   }

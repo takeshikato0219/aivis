@@ -87,3 +87,52 @@ export type LiveStreamUrlResponse = {
     exp_minutes: number;
   };
 };
+
+export interface RuleMasterResponse {
+  id: string;
+  rule_name: string;
+  code: string;
+  facility_id: string;
+  facility_name: string | null;
+  start_time: string;
+  end_time: string;
+  weekdays: number[];
+  notification_message_template: string;
+  is_active: boolean;
+}
+
+export interface RuleMasterListApiResponse {
+  success: boolean;
+  message: string;
+  data: RuleMasterResponse[];
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+    is_truncated: boolean | null;
+  };
+}
+
+export interface WorkScheduleApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    camera_id: string;
+    user_id: string;
+    rules_master_id: string;
+    facility_id: string;
+    name: string;
+    code: string;
+    member_ids: string[];
+    start_time: string;
+    end_time: string;
+    weekdays: number[];
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+  };
+}

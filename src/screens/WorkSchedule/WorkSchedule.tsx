@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResponsive } from '@hooks/useResponsive';
@@ -19,6 +19,9 @@ import faceService, { Member } from '@api/faceService';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { StyleProp, ViewStyle } from 'react-native';
 import BackIcon from '@assets/svg/icon-back.svg';
+import { WorkScheduleRouteProp } from '@navigation/types';
+import cameraService from '@api/cameraService';
+import { showCommonAlert } from '@components/Alert/Alert';
 
 type Weekday = {
   key: string;
@@ -48,13 +51,46 @@ interface SaveButtonProps {
 }
 
 export default function WorkSchedule() {
-  const navigation = useNavigation();
   const { t } = useTranslation();
   const { width } = useResponsive();
   const [members, setMembers] = useState<Member[]>([]);
   const [openSelect2, setOpenSelect2] = useState(false);
   const [select2Value, setSelect2Value] = useState<string[]>([]);
   const [select2Items, setSelect2Items] = useState<{ label: string; value: string }[]>([]);
+  const navigation = useNavigation();
+  const route = useRoute<WorkScheduleRouteProp>();
+  const camera = route.params?.camera;
+  const ruleId = route.params?.ruleId;
+
+  useEffect(() => {
+    getSchedule();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const getSchedule = async () => {
+    const response = await cameraService.getWorkScheduleForRule(camera.id, ruleId);
+    if (response && response.data) {
+      const data = response.data;
+      const weekdayMap = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+      const repeatDays = Array.isArray(data.weekdays)
+        ? data.weekdays.map((n: number) => weekdayMap[n - 1]).filter(Boolean)
+        : [];
+      function timeToMinutes(timeStr: string) {
+        if (!timeStr) return 0;
+        const [hh, mm] = timeStr.split(':').map(Number);
+        return hh * 60 + mm;
+      }
+      setSchedule({
+        enabled: data.is_active,
+        repeatDays,
+        startMinute: timeToMinutes(data.start_time),
+        endMinute: timeToMinutes(data.end_time),
+      });
+      if (Array.isArray(data.member_ids)) {
+        setSelect2Value(data.member_ids);
+      }
+    }
+  };
 
   // eslint-disable-next-line react/no-unstable-nested-components
   const SaveButton = ({ style, onPress }: SaveButtonProps) => (
@@ -74,17 +110,9 @@ export default function WorkSchedule() {
     startMinute: 6 * 60,
     endMinute: 18 * 60,
   });
-
   const [saving, setSaving] = useState(false);
 
-  async function apiUpdateScheduleDraft(_payload: Partial<ScheduleConfig>) {
-    await new Promise((r) => setTimeout(r, 250));
-    return { ok: true };
-  }
-  async function apiSaveSchedule(_payload: ScheduleConfig) {
-    await new Promise((r) => setTimeout(r, 400));
-    return { ok: true };
-  }
+  const isViewDisabled = !schedule.enabled;
 
   const timeRangeText = useMemo(() => {
     function pad2(n: number) {
@@ -100,7 +128,6 @@ export default function WorkSchedule() {
 
   const onToggleEnabled = useCallback(async (enabled: boolean) => {
     setSchedule((p) => ({ ...p, enabled }));
-    await apiUpdateScheduleDraft({ enabled });
   }, []);
 
   const onToggleDay = useCallback(async (dayKey: string) => {
@@ -110,7 +137,6 @@ export default function WorkSchedule() {
         ? prev.repeatDays.filter((d) => d !== dayKey)
         : [...prev.repeatDays, dayKey];
 
-      apiUpdateScheduleDraft({ repeatDays: nextDays });
       return { ...prev, repeatDays: nextDays };
     });
   }, []);
@@ -118,19 +144,7 @@ export default function WorkSchedule() {
   const onChangeTime = useCallback(async (values: number[]) => {
     const [startMinute, endMinute] = values;
     setSchedule((p) => ({ ...p, startMinute, endMinute }));
-    await apiUpdateScheduleDraft({ startMinute, endMinute });
   }, []);
-
-  const onPressSave = useCallback(async () => {
-    setSaving(true);
-    try {
-      const res = await apiSaveSchedule(schedule);
-      if (!res.ok) {
-      }
-    } finally {
-      setSaving(false);
-    }
-  }, [schedule]);
 
   const fetchMembers = useCallback(async () => {
     try {
@@ -140,6 +154,78 @@ export default function WorkSchedule() {
       console.error('Failed to fetch members:', error);
     }
   }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const member_ids = select2Value;
+      function minuteToTimeString(min: number) {
+        const clampedMin = Math.max(0, Math.min(min, 1439));
+        const hh = Math.floor(clampedMin / 60)
+          .toString()
+          .padStart(2, '0');
+        const mm = (clampedMin % 60).toString().padStart(2, '0');
+        return `${hh}:${mm}:00`;
+      }
+      const start_time = minuteToTimeString(schedule.startMinute);
+      // Clamp endMinute to 1439 (23:59)
+      const end_time = minuteToTimeString(schedule.endMinute);
+      const weekdayMap: Record<string, number> = {
+        mon: 1,
+        tue: 2,
+        wed: 3,
+        thu: 4,
+        fri: 5,
+        sat: 6,
+        sun: 7,
+      };
+      const weekdays = schedule.repeatDays.map((d) => weekdayMap[d]).filter((n) => n !== undefined);
+      const is_active = schedule.enabled;
+      const response = await cameraService.updateWorkScheduleForRule(camera.id, ruleId, {
+        member_ids,
+        start_time,
+        end_time,
+        weekdays,
+        is_active,
+      });
+
+      if (response.success) {
+        showCommonAlert({
+          title: t('uploadDetectZone.successTitle'),
+          message: t('workSchedule.updateSuccessful'),
+          buttons: [
+            {
+              text: t('common.ok'),
+              onPress: () => navigation.goBack(),
+            },
+          ],
+        });
+      } else {
+        showCommonAlert({
+          title: t('uploadDetectZone.failureTitle'),
+          message: t('workSchedule.updateFailed'),
+          buttons: [
+            {
+              text: t('common.ok'),
+            },
+          ],
+        });
+      }
+    } catch (error) {
+      showCommonAlert({
+        title: t('uploadDetectZone.failureTitle'),
+        // @ts-ignore
+        message: error.message,
+        buttons: [
+          {
+            text: t('common.ok'),
+          },
+        ],
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Fetch members when component mounts
   useEffect(() => {
@@ -158,17 +244,22 @@ export default function WorkSchedule() {
     []
   );
 
+  const sliderDisabled = { backgroundColor: '#d1d5db' };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" />
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
             <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>{t('settingAI.operationSchedule')}</Text>
+          <Text style={styles.headerTitle}>{route.params?.title}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -184,7 +275,7 @@ export default function WorkSchedule() {
         </View>
 
         {/* Multiple select */}
-        <View style={styles.multipleSelectRow}>
+        <View style={styles.multipleSelectRow} pointerEvents={isViewDisabled ? 'none' : 'auto'}>
           <Text style={styles.sectionLabel}>{t('workSchedule.selectFaceToApply')}</Text>
           <DropDownPicker
             open={openSelect2}
@@ -208,6 +299,7 @@ export default function WorkSchedule() {
             searchable={true}
             searchPlaceholder={t('common.search')}
             CloseIconComponent={DropDownSaveButton}
+            disabled={isViewDisabled}
           />
         </View>
 
@@ -215,6 +307,7 @@ export default function WorkSchedule() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           bounces={false}
+          pointerEvents={isViewDisabled ? 'none' : 'auto'}
         >
           {/* Card */}
           <View style={styles.card}>
@@ -228,12 +321,18 @@ export default function WorkSchedule() {
                   <Pressable
                     key={d.key}
                     onPress={() => onToggleDay(d.key)}
-                    style={[styles.dayChip, active ? styles.dayChipActive : styles.dayChipInactive]}
+                    style={[
+                      styles.dayChip,
+                      active ? styles.dayChipActive : styles.dayChipInactive,
+                      isViewDisabled ? styles.dayChipDisabled : null,
+                    ]}
+                    disabled={isViewDisabled}
                   >
                     <Text
                       style={[
                         styles.dayChipText,
                         active ? styles.dayChipTextActive : styles.dayChipTextInactive,
+                        isViewDisabled ? styles.dayChipTextDisabled : null,
                       ]}
                     >
                       {t(`workSchedule.weekdays.${d.key}`)}
@@ -264,15 +363,15 @@ export default function WorkSchedule() {
                 min={0}
                 max={1439}
                 step={5}
-                enabledOne={schedule.enabled}
-                enabledTwo={schedule.enabled}
-                onValuesChangeFinish={onChangeTime}
+                enabledOne={!isViewDisabled}
+                enabledTwo={!isViewDisabled}
+                onValuesChangeFinish={isViewDisabled ? undefined : onChangeTime}
                 sliderLength={sliderLength}
-                trackStyle={styles.sliderTrack}
-                selectedStyle={styles.sliderSelected}
-                unselectedStyle={styles.sliderUnselected}
-                markerStyle={styles.sliderMarker}
+                trackStyle={isViewDisabled ? sliderDisabled : styles.sliderTrack}
+                selectedStyle={isViewDisabled ? sliderDisabled : styles.sliderSelected}
+                unselectedStyle={isViewDisabled ? sliderDisabled : styles.sliderUnselected}
                 containerStyle={styles.sliderAlignCenter}
+                markerStyle={styles.sliderMarker}
               />
 
               <View style={styles.timeTicks}>
@@ -287,18 +386,11 @@ export default function WorkSchedule() {
 
           {/* Save button */}
           <Pressable
-            onPress={onPressSave}
+            onPress={handleSave}
             disabled={saving}
-            style={({ pressed }) => [
-              styles.saveBtn,
-              pressed && { opacity: 0.9 },
-              saving && { opacity: 0.7 },
-            ]}
+            style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.9 }]}
           >
-            <Text style={styles.saveIcon}>✓</Text>
-            <Text style={styles.saveText}>
-              {saving ? t('workSchedule.saving') : t('workSchedule.save')}
-            </Text>
+            <Text style={styles.saveText}>{t('workSchedule.save')}</Text>
           </Pressable>
         </ScrollView>
       </View>

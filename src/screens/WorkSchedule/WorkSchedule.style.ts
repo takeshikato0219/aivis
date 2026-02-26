@@ -112,6 +112,10 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(160, 190, 210, 0.25)',
   },
+  dayChipDisabled: {
+    backgroundColor: '#d1d5db', // gray background
+    borderColor: '#d1d5db',
+  },
   dayChipText: {
     fontSize: scale(16),
     fontWeight: FONTS.weights.semiBold,
@@ -121,6 +125,10 @@ export const styles = StyleSheet.create({
   },
   dayChipTextInactive: {
     color: 'rgba(234,241,247,0.8)',
+  },
+  dayChipTextDisabled: {
+    color: '#888', // gray text
+    opacity: 1,
   },
   divider: {
     height: 1,
@@ -186,8 +194,8 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(234,241,247,0.25)',
   },
   sliderMarker: {
-    height: scale(28),
-    width: scale(28),
+    height: scale(20),
+    width: scale(20),
     borderRadius: scale(14),
     backgroundColor: '#F2F6FA',
     borderWidth: 3,
@@ -272,7 +280,6 @@ export const styles = StyleSheet.create({
   },
   button: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
     backgroundColor: '#2A9EC6',
     borderRadius: 6,
     minWidth: 70,
@@ -294,5 +301,17 @@ export const styles = StyleSheet.create({
   buttonIcon: {
     width: isTablet() ? 50 : 46,
     height: isTablet() ? 50 : 46,
+  },
+  dropDownItemStyleEnabled: {
+    color: '#fff',
+    backgroundColor: 'rgba(28, 44, 60, 0.55)',
+  },
+  dropDownPlaceholderStyleEnabled: {
+    color: '#fff',
+    opacity: 1,
+  },
+  dropDownBadgeTextStyleEnabled: {
+    color: '#fff',
+    opacity: 1,
   },
 });

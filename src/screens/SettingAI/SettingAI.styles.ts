@@ -71,4 +71,14 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  styleButtonDelete: {
+    flexDirection: 'row',
+    marginHorizontal: 24,
+    padding: 16,
+    backgroundColor: '#c20b0b',
+    borderRadius: 22,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
