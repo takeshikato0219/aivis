@@ -29,6 +29,7 @@ import { useInput } from '@hooks/useInput';
 import { isPasswordWifi } from '@utils/validate';
 import { useAppSelector } from '@redux/store';
 import { useJetsonBLE, WiFiScanStatus } from '@hooks/useJetsonBLE';
+import { jetsonBLEService } from '@/services/jetsonBLEService';
 
 const getSignalStyle = (signal: string) => {
   const signalStyles = {
@@ -246,6 +247,10 @@ const NetworkSetup: React.FC = () => {
     }
   };
 
+  const handleBackToScan = async () => {
+    navigation.navigate('ConnectDevice' as never);
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
@@ -259,7 +264,7 @@ const NetworkSetup: React.FC = () => {
           <SafeAreaView style={styles.safeAreaContainer} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <TouchableOpacity style={styles.backButton} onPress={() => handleBackToScan()}>
                 <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>{t('networkSetup.networkSetup')}</Text>

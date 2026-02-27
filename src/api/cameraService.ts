@@ -8,8 +8,9 @@ import {
   GetWorkflowStatusesResponse,
   StatusCamera,
   LiveStreamUrlResponse,
-  RuleMasterListApiResponse, WorkScheduleApiResponse
-} from "./types/cameraTypes";
+  RuleMasterListApiResponse,
+  WorkScheduleApiResponse,
+} from './types/cameraTypes';
 
 class CameraService {
   async registerCamera(data: RegisterCameraRequest): Promise<RegisterCameraResponse> {
@@ -95,7 +96,7 @@ class CameraService {
   ): Promise<WorkScheduleApiResponse> {
     const response = await axiosInstance.patch(
       `${API_ENDPOINTS.CAMERAS}/${cameraId}/rules/${ruleId}`,
-      scheduleData,
+      scheduleData
     );
     return response.data;
   }

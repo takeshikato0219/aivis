@@ -163,6 +163,7 @@ const AppNavigator = () => {
           component={NetworkSetup}
           options={{
             headerShown: false,
+            gestureEnabled: false,
           }}
         />
         <Stack.Screen

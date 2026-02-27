@@ -26,6 +26,7 @@ import RotateCcwIcon from '@assets/svg/rotate-ccw.svg';
 import CctvIcon from '@assets/svg/cctv-icon.svg';
 import { useJetsonBLE } from '@hooks/useJetsonBLE';
 import { BleManager } from 'react-native-ble-plx';
+import { jetsonBLEService } from "@/services/jetsonBLEService";
 
 const getScanningText = (scanning: boolean, t: any) => {
   return scanning ? t('bluetoothScreen.scanningForDevices') : t('bluetoothScreen.scanFinished');
@@ -194,7 +195,7 @@ const ConnectDevice: React.FC = () => {
                       </View>
                       <View style={styles.deviceInfo}>
                         <Text style={styles.deviceName} numberOfLines={2} ellipsizeMode="tail">
-                          {item.name || t('bluetoothScreen.unknownDevice')} - {item.id.slice(-4)}
+                          {item.name || t('bluetoothScreen.unknownDevice')}
                         </Text>
                         <View style={styles.signalRow}>
                           <View style={styles.signalDot} />

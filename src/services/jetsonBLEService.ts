@@ -58,6 +58,17 @@ export const ConnectionTypeText: Record<ConnectionTypeValue, string> = {
   [ConnectionType.CELLULAR]: 'Di động (LTE/4G)',
 };
 
+export enum ConnectResultType {
+  SUCCESS = 'SUCCESS',
+  INVALID_PIN = 'INVALID_PIN',
+  CONNECTION_ERROR = 'CONNECTION_ERROR',
+  TIMEOUT = 'TIMEOUT',
+}
+
+export interface ConnectResult {
+  type: ConnectResultType;
+}
+
 // =============================================================================
 // BASE64 HELPERS
 // =============================================================================
@@ -292,6 +303,29 @@ class JetsonBLEService {
 
     this.subscriptions.push(netStatusSub);
 
+    // Subscribe AUTH_STATUS notifications (ONLY ONCE)
+    const authSub = device.monitorCharacteristicForService(
+      SERVICE_UUID,
+      AUTH_STATUS_CHAR_UUID,
+      (monitorError, characteristic) => {
+        if (monitorError) {
+          if (!monitorError.message?.includes('cancelled')) {
+            console.error('[BLE] Auth subscription error:', monitorError);
+          }
+          return;
+        }
+
+        if (characteristic?.value) {
+          const status = base64ToByte(characteristic.value);
+
+          store.dispatch(setAuthStatus(status));
+          store.dispatch(setIsAuthenticated(status === AuthStatus.AUTHENTICATED));
+        }
+      }
+    );
+
+    this.subscriptions.push(authSub);
+
     // Set up disconnect listener
     const disconnectSub = bleManager.onDeviceDisconnected(device.id, () => {
       console.log('[BLE] Device disconnected unexpectedly, cleaning up subscriptions...');
@@ -398,17 +432,21 @@ class JetsonBLEService {
     bleManager.stopDeviceScan();
 
     // Filter by SERVICE_UUID at BLE stack level
-    bleManager.startDeviceScan([SERVICE_UUID], { allowDuplicates: false }, (scanError, device) => {
-      if (scanError) {
-        store.dispatch(setError(scanError.message));
-        store.dispatch(setScanning(false));
-        return;
-      }
+    bleManager.startDeviceScan(
+      null,
+      { allowDuplicates: false, scanMode: 2, legacyScan: true },
+      (error, device) => {
+        if (error) {
+          store.dispatch(setError(error.message));
+          store.dispatch(setScanning(false));
+          return;
+        }
 
-      if (device) {
-        store.dispatch(addDevice(toSerializableDevice(device)));
+        if (device?.serviceUUIDs?.includes(SERVICE_UUID)) {
+          store.dispatch(addDevice(toSerializableDevice(device)));
+        }
       }
-    });
+    );
 
     // Auto-stop after SCAN_TIMEOUT_MS
     this.scanTimeout = setTimeout(() => {
@@ -427,114 +465,101 @@ class JetsonBLEService {
   // CONNECT
   // ---------------------------------------------------------------------------
 
-  connect = async (device: Device | SerializableDevice, pinCode: string): Promise<void> => {
+  connect = async (
+    device: Device | SerializableDevice,
+    pinCode: string
+  ): Promise<{ success: boolean; reason?: string }> => {
     try {
       store.dispatch(clearError());
 
-      // 1. Connect to device
-      let connectedDevice = await bleManager.connectToDevice(device.id);
+      let connectedDevice: Device;
 
-      // 2. Discover all services + characteristics
-      connectedDevice = await connectedDevice.discoverAllServicesAndCharacteristics();
-      this.connectedDevice = connectedDevice;
+      if (this.connectedDevice && this.connectedDevice.id === device.id) {
+        connectedDevice = this.connectedDevice;
+      } else {
+        connectedDevice = await bleManager.connectToDevice(device.id);
+        connectedDevice = await connectedDevice.discoverAllServicesAndCharacteristics();
 
-      // 3. Setup subscriptions
-      await this.setupSubscriptions(connectedDevice);
+        this.connectedDevice = connectedDevice;
 
-      // 4. Authenticate with PIN (if supported)
-      try {
-        // Subscribe to auth status notifications
-        const authStatusSub = connectedDevice.monitorCharacteristicForService(
-          SERVICE_UUID,
-          AUTH_STATUS_CHAR_UUID,
-          (monitorError: any, characteristic: any) => {
-            if (monitorError) {
-              console.error('[BLE] Auth status monitor error:', monitorError.message);
-              return;
-            }
-            if (characteristic?.value) {
-              const status = base64ToByte(characteristic.value);
-              console.log(`[BLE] Auth status notification: ${status}`);
-              setAuthStatus(status);
-            }
-          }
+        await this.setupSubscriptions(connectedDevice);
+
+        store.dispatch(
+          setConnected({
+            isConnected: true,
+            deviceId: connectedDevice.id,
+          })
         );
-        this.subscriptions.push(authStatusSub);
-
-        // Send your PIN and wait for the results.
-        const authResult = await new Promise<number>((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('PIN verification timeout has ended.'));
-          }, 5000);
-
-          // Subscribe temporarily to receive authentication results.
-          const tempSub = connectedDevice.monitorCharacteristicForService(
-            SERVICE_UUID,
-            AUTH_STATUS_CHAR_UUID,
-            (monitorError: any, characteristic: any) => {
-              if (monitorError) {
-                clearTimeout(timeout);
-                tempSub.remove();
-                reject(monitorError);
-                return;
-              }
-              if (characteristic?.value) {
-                const status = base64ToByte(characteristic.value);
-                clearTimeout(timeout);
-                tempSub.remove();
-                resolve(status);
-              }
-            }
-          );
-          // Send PIN
-          connectedDevice
-            .writeCharacteristicWithResponseForService(
-              SERVICE_UUID,
-              PIN_CHAR_UUID,
-              stringToBase64(pinCode)
-            )
-            .catch((err: any) => {
-              clearTimeout(timeout);
-              tempSub.remove();
-              reject(err);
-            });
-        });
-
-        if (authResult === AuthStatus.AUTHENTICATED) {
-          setAuthStatus(AuthStatus.AUTHENTICATED);
-          setIsAuthenticated(true);
-        } else {
-          // PIN sai → disconnect
-          setAuthStatus(AuthStatus.INVALID_PIN);
-          setIsAuthenticated(false);
-          setError('Incorrect PIN');
-          return;
-        }
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (authErr: any) {
-        setIsAuthenticated(true);
-        setAuthStatus(AuthStatus.AUTHENTICATED);
       }
 
-      // 5. Read initial status
-      const statusChar = await connectedDevice.readCharacteristicForService(
-        SERVICE_UUID,
-        STATUS_CHAR_UUID
-      );
-      if (statusChar.value) {
-        store.dispatch(setWifiStatus(base64ToByte(statusChar.value)));
+      store.dispatch(setAuthStatus(AuthStatus.UNAUTHENTICATED));
+      store.dispatch(setIsAuthenticated(false));
+
+      const isAuth = await this.authenticate(connectedDevice, pinCode);
+
+      if (!isAuth) {
+        return { success: false, reason: 'INVALID_PIN' };
       }
 
-      // 6. Update connected state
-      store.dispatch(setConnected({ isConnected: true, deviceId: connectedDevice.id }));
+      return { success: true };
     } catch (err: any) {
-      // Cleanup subscriptions on connection error
+      console.log('[BLE] connect error:', err);
       this.cleanupSubscriptions();
-      store.dispatch(setError(err?.message || 'Connection error'));
+      this.connectedDevice = null;
+
       store.dispatch(setConnected({ isConnected: false, deviceId: null }));
-      throw err;
+
+      return { success: false, reason: 'CONNECTION_ERROR' };
     }
   };
+
+  private async authenticate(device: Device, pinCode: string): Promise<boolean> {
+    return new Promise(async (resolve, reject) => {
+      let finished = false;
+
+      const timeout = setTimeout(() => {
+        if (finished) return;
+        finished = true;
+        unsubscribe();
+        resolve(false);
+      }, 5000);
+
+      const unsubscribe = store.subscribe(() => {
+        const { authStatus } = store.getState().ble;
+
+        if (authStatus === AuthStatus.AUTHENTICATED) {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve(true);
+        }
+
+        if (authStatus === AuthStatus.INVALID_PIN) {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve(false);
+        }
+      });
+
+      try {
+        await device.writeCharacteristicWithResponseForService(
+          SERVICE_UUID,
+          PIN_CHAR_UUID,
+          stringToBase64(pinCode)
+        );
+      } catch (err) {
+        if (!finished) {
+          finished = true;
+          clearTimeout(timeout);
+          unsubscribe();
+          reject(err);
+        }
+      }
+    });
+  }
 
   // ---------------------------------------------------------------------------
   // DISCONNECT

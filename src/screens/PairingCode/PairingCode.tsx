@@ -57,25 +57,28 @@ const PairingCode: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (code.length !== 6 || code.split('').some((val) => !val)) {
-      return;
-    }
-    if (!device) {
-      setError(t('networkSetup.connectionFailed'));
-      return;
-    }
-    setError('');
+    if (code.length !== 6) return;
+
     setLoading(true);
-    try {
-      await connect(device as any, code);
-      navigation.navigate('NetworkSetup', {
-        cameraAp: device?.name || device?.localName || 'BLE Camera',
-      });
-    } catch {
-      setError(t('networkSetup.connectionFailed'));
-    } finally {
+    setError('');
+
+    const result = await connect(device as any, code);
+    if (!result || !result.success) {
+      if (result?.reason === 'INVALID_PIN') {
+        setError('Incorrect PIN');
+      } else {
+        setError('Connection failed');
+      }
+
       setLoading(false);
+      return;
     }
+
+    navigation.navigate('NetworkSetup', {
+      cameraAp: device?.name || device?.localName || 'BLE Camera',
+    });
+
+    setLoading(false);
   };
 
   return (

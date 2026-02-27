@@ -6,20 +6,18 @@ import {
   Dimensions,
   PanResponder,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import Orientation from 'react-native-orientation-locker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { styles } from './DetectionZoneSetup.styles';
-import { WebView } from 'react-native-webview';
-import { useLiveStream } from '@hooks/useLiveStream';
 import { useTranslation } from 'react-i18next';
-import { buildStreamUrl } from '@utils/streamUtils';
 import detectionZoneService from '../../services/detectionZone';
 import Svg, { Line, Polygon } from 'react-native-svg';
 import { showCommonAlert } from '@components/Alert/Alert';
+import { RTCView } from 'react-native-webrtc';
+import { useStream } from '@hooks/useStream';
 
 const getScreenDims = () => {
   const { width, height } = Dimensions.get('window');
@@ -83,20 +81,9 @@ const DetectionZoneSetup: React.FC = () => {
   ]);
   const [activeEntryExitPoint, setActiveEntryExitPoint] = useState<number | null>(null);
   const [isLeftIn, setIsLeftIn] = useState(true);
-  const streamUrl = buildStreamUrl(camera?.rtsp_url);
-
-  const {
-    webViewRef,
-    isLoading,
-    connectionStatus,
-    isReconnecting,
-    handleWebViewLoad,
-    handleWebViewError,
-    handleWebViewHttpError,
-    handleManualRetry,
-    handleWebViewMessage,
-    getInjectedJavaScript,
-  } = useLiveStream();
+  const live_url =
+    'wss://avisaitest-nginx001.wpstories.org/api/ws?src=camera&token=eyJwYXZpbGFvYWRJRCI6eyJjYW1lcmFfaWQiOiAiN2I4MWM3NzAtMGEyNS00Y2JjLTg3ZjgtN2JjY2JmMjgwNDUxIiwic3RhcnRfdGltZSI6IjIwMjYtMDItMjZUMTc6MDE6NTUuMzMzOTU1KzA3OjAwIiwidGltZV9leHAiOiAiMjAyNi0wMi0yNlQxNzozMTo1NS4zMzM5NTMrMDc6MDAiLCJleHBzIjoxNjc4NzYwMDAwLCJzaWduYXR1cmUiOiAiVElUTEVHSFgtJNE9qRTF1NnMxOVlJSmJYVTRXUysveGdYRW9BZ3ZTY2dVQms9In19';
+  const { displayStream, isStalled, stallReason, error, reconnect } = useStream({ live_url });
 
   const createPanResponder = (corner: keyof DetectionZone) =>
     PanResponder.create({
@@ -479,68 +466,27 @@ const DetectionZoneSetup: React.FC = () => {
 
       <View style={styles.body}>
         <View style={styles.previewContainer}>
-          <WebView
-            ref={webViewRef}
-            source={{ uri: streamUrl }}
-            style={styles.cameraPreview}
-            onLoad={handleWebViewLoad}
-            onError={handleWebViewError}
-            onHttpError={handleWebViewHttpError}
-            allowsInlineMediaPlayback={true}
-            mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            startInLoadingState={false}
-            originWhitelist={['*']}
-            allowFileAccess={true}
-            allowUniversalAccessFromFileURLs={true}
-            scalesPageToFit={false}
-            renderToHardwareTextureAndroid={true}
-            androidLayerType="hardware"
-            cacheEnabled={false}
-            {...(Platform.OS === 'ios' && {
-              allowsBackForwardNavigationGestures: false,
-              decelerationRate: 'normal',
-              bounces: false,
-              scrollEnabled: false,
-              suppressesIncrementalRendering: true,
-            })}
-            {...(Platform.OS === 'android' && {
-              mixedContentMode: 'always',
-              thirdPartyCookiesEnabled: true,
-              allowFileAccessFromFileURLs: true,
-              textZoom: 100,
-            })}
-            onMessage={handleWebViewMessage}
-            injectedJavaScript={getInjectedJavaScript()}
-          />
-
-          {isLoading && !isReconnecting && (
+          {/* RTCView for WebRTC video stream */}
+          {displayStream ? (
+            <RTCView
+              streamURL={displayStream.toURL()}
+              style={styles.cameraPreview}
+              objectFit="cover"
+            />
+          ) : (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#4CAF50" />
-              <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={handleManualRetry}>
-                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
-              </TouchableOpacity>
+              <Text style={styles.loadingText}>
+                {isStalled ? stallReason : 'Loading stream...'}
+              </Text>
             </View>
           )}
-
-          {isReconnecting && (
-            <View style={styles.reconnectingOverlay}>
-              <ActivityIndicator size="large" color="#FFA500" />
-              <Text style={styles.reconnectingText}>{t('liveStream.reconnecting')}</Text>
-              <Text style={styles.reconnectingSubtext}>{t('liveStream.connectionLost')}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={handleManualRetry}>
-                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {connectionStatus === 'failed' && !isReconnecting && !isLoading && (
+          {/* Error and reconnect overlays */}
+          {error && (
             <View style={styles.errorOverlay}>
-              <Text style={styles.errorText}>{t('liveStream.reconnectFailed')}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={handleManualRetry}>
-                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={reconnect}>
+                <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
           )}

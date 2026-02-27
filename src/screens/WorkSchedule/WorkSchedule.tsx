@@ -112,8 +112,6 @@ export default function WorkSchedule() {
   });
   const [saving, setSaving] = useState(false);
 
-  const isViewDisabled = !schedule.enabled;
-
   const timeRangeText = useMemo(() => {
     function pad2(n: number) {
       return n < 10 ? `0${n}` : `${n}`;
@@ -244,18 +242,13 @@ export default function WorkSchedule() {
     []
   );
 
-  const sliderDisabled = { backgroundColor: '#d1d5db' };
-
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" />
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
           </TouchableOpacity>
 
@@ -275,7 +268,7 @@ export default function WorkSchedule() {
         </View>
 
         {/* Multiple select */}
-        <View style={styles.multipleSelectRow} pointerEvents={isViewDisabled ? 'none' : 'auto'}>
+        <View style={styles.multipleSelectRow}>
           <Text style={styles.sectionLabel}>{t('workSchedule.selectFaceToApply')}</Text>
           <DropDownPicker
             open={openSelect2}
@@ -299,7 +292,6 @@ export default function WorkSchedule() {
             searchable={true}
             searchPlaceholder={t('common.search')}
             CloseIconComponent={DropDownSaveButton}
-            disabled={isViewDisabled}
           />
         </View>
 
@@ -307,7 +299,6 @@ export default function WorkSchedule() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           bounces={false}
-          pointerEvents={isViewDisabled ? 'none' : 'auto'}
         >
           {/* Card */}
           <View style={styles.card}>
@@ -321,18 +312,12 @@ export default function WorkSchedule() {
                   <Pressable
                     key={d.key}
                     onPress={() => onToggleDay(d.key)}
-                    style={[
-                      styles.dayChip,
-                      active ? styles.dayChipActive : styles.dayChipInactive,
-                      isViewDisabled ? styles.dayChipDisabled : null,
-                    ]}
-                    disabled={isViewDisabled}
+                    style={[styles.dayChip, active ? styles.dayChipActive : styles.dayChipInactive]}
                   >
                     <Text
                       style={[
                         styles.dayChipText,
                         active ? styles.dayChipTextActive : styles.dayChipTextInactive,
-                        isViewDisabled ? styles.dayChipTextDisabled : null,
                       ]}
                     >
                       {t(`workSchedule.weekdays.${d.key}`)}
@@ -363,13 +348,11 @@ export default function WorkSchedule() {
                 min={0}
                 max={1439}
                 step={5}
-                enabledOne={!isViewDisabled}
-                enabledTwo={!isViewDisabled}
-                onValuesChangeFinish={isViewDisabled ? undefined : onChangeTime}
+                onValuesChangeFinish={onChangeTime}
                 sliderLength={sliderLength}
-                trackStyle={isViewDisabled ? sliderDisabled : styles.sliderTrack}
-                selectedStyle={isViewDisabled ? sliderDisabled : styles.sliderSelected}
-                unselectedStyle={isViewDisabled ? sliderDisabled : styles.sliderUnselected}
+                trackStyle={styles.sliderTrack}
+                selectedStyle={styles.sliderSelected}
+                unselectedStyle={styles.sliderUnselected}
                 containerStyle={styles.sliderAlignCenter}
                 markerStyle={styles.sliderMarker}
               />

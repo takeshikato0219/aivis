@@ -35,13 +35,11 @@ export default function AiDetectionRules() {
   const fetchRules = useCallback(async () => {
     if (!camera?.id) return;
     const response = await cameraService.getRulesForCamera(camera.id);
-    const mappedRules: AiRule[] = response.data
-      .filter((item: any) => item.is_active)
-      .map((item: any) => ({
-        id: item.id,
-        title: item.name,
-        enabled: item.is_active,
-      }));
+    const mappedRules: AiRule[] = response.data.map((item: any) => ({
+      id: item.id,
+      title: item.name,
+      enabled: true,
+    }));
     setRules(mappedRules);
   }, [camera?.id]);
 
