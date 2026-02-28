@@ -108,9 +108,9 @@ export const styles = StyleSheet.create({
     zIndex: 10,
   },
   loadingText: {
-    color: '#fff',
-    marginTop: 12,
     fontSize: 14,
+    color: '#FCD34D',
+    marginTop: 2,
   },
   reconnectingOverlay: {
     ...StyleSheet.absoluteFill,

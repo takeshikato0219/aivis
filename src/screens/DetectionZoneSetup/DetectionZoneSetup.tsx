@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,16 +18,14 @@ import Svg, { Line, Polygon } from 'react-native-svg';
 import { showCommonAlert } from '@components/Alert/Alert';
 import { RTCView } from 'react-native-webrtc';
 import { useStream } from '@hooks/useStream';
+import cameraService from '@api/cameraService';
 
 const getScreenDims = () => {
   const { width, height } = Dimensions.get('window');
-  const w = Math.max(width, height);
-  const h = Math.min(width, height);
-  return { SCREEN_WIDTH: w, SCREEN_HEIGHT: h };
+  return { SCREEN_WIDTH: Math.max(width, height), SCREEN_HEIGHT: Math.min(width, height) };
 };
 
 const { SCREEN_WIDTH, SCREEN_HEIGHT } = getScreenDims();
-
 const PREVIEW_WIDTH = SCREEN_WIDTH;
 const PREVIEW_HEIGHT = SCREEN_HEIGHT;
 
@@ -35,7 +33,6 @@ interface Corner {
   x: number;
   y: number;
 }
-
 interface DetectionZone {
   topLeft: Corner;
   topRight: Corner;
@@ -82,35 +79,8 @@ const DetectionZoneSetup: React.FC = () => {
   ]);
   const [activeEntryExitPoint, setActiveEntryExitPoint] = useState<number | null>(null);
   const [isLeftIn, setIsLeftIn] = useState(true);
-  const live_url = route.params.liveUrl;
-
-  const { displayStream, isStalled, stallReason, reconnectAttempt, error, reconnect } = useStream({
-    live_url,
-  });
-
-  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-
-  const clampZoneToPreview = (zone: DetectionZone): DetectionZone => {
-    return {
-      topLeft: {
-        x: clamp(zone.topLeft.x, 0, PREVIEW_WIDTH),
-        y: clamp(zone.topLeft.y, 0, PREVIEW_HEIGHT),
-      },
-      topRight: {
-        x: clamp(zone.topRight.x, 0, PREVIEW_WIDTH),
-        y: clamp(zone.topRight.y, 0, PREVIEW_HEIGHT),
-      },
-      bottomLeft: {
-        x: clamp(zone.bottomLeft.x, 0, PREVIEW_WIDTH),
-        y: clamp(zone.bottomLeft.y, 0, PREVIEW_HEIGHT),
-      },
-      bottomRight: {
-        x: clamp(zone.bottomRight.x, 0, PREVIEW_WIDTH),
-        y: clamp(zone.bottomRight.y, 0, PREVIEW_HEIGHT),
-      },
-    };
-  };
-
+  const [liveUrl, setLiveUrl] = useState(route.params.liveUrl);
+  const [timeExp, setTimeExp] = useState<string | null>(null);
   const [liveViewLayout, setLiveViewLayout] = useState({
     x: 0,
     y: 0,
@@ -118,13 +88,44 @@ const DetectionZoneSetup: React.FC = () => {
     height: PREVIEW_HEIGHT,
   });
 
+  const fetchLiveUrl = useCallback(async () => {
+    const res = await cameraService.getLiveStreamUrl(camera.id);
+    if (res.success && res.data) {
+      setLiveUrl(res.data.live_url);
+      setTimeExp(res.data.time_exp);
+    }
+  }, [camera.id]);
+
+  useEffect(() => {
+    if (!timeExp) return;
+    const refreshMs = new Date(timeExp).getTime() - Date.now() - 2 * 60 * 1000;
+    if (refreshMs > 0) {
+      const timer = setTimeout(fetchLiveUrl, refreshMs);
+      return () => clearTimeout(timer);
+    }
+  }, [timeExp, fetchLiveUrl]);
+
+  useEffect(() => {
+    fetchLiveUrl();
+    getZoneDetect();
+    Orientation.lockToLandscapeLeft();
+    return () => {
+      Orientation.lockToPortrait();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchLiveUrl]);
+
+  const { displayStream, isStalled, stallReason, reconnectAttempt, error, reconnect } = useStream({
+    live_url: liveUrl,
+  });
+
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const clampZoneToLiveView = (zone: DetectionZone): DetectionZone => {
     const { x, y, width, height } = liveViewLayout;
     return {
-      topLeft: {
-        x: clamp(zone.topLeft.x, x, x + width),
-        y: clamp(zone.topLeft.y, y, y + height),
-      },
+      topLeft: { x: clamp(zone.topLeft.x, x, x + width), y: clamp(zone.topLeft.y, y, y + height) },
       topRight: {
         x: clamp(zone.topRight.x, x, x + width),
         y: clamp(zone.topRight.y, y, y + height),
@@ -140,48 +141,44 @@ const DetectionZoneSetup: React.FC = () => {
     };
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const setZoneClamped = (zone: DetectionZone) => setZone(clampZoneToLiveView(zone));
 
   const createPanResponder = (corner: keyof DetectionZone) =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        setActiveCorner(corner);
-      },
-      onPanResponderMove: (_, gestureState) => {
+      onPanResponderGrant: () => setActiveCorner(corner),
+      onPanResponderMove: (_, g) => {
         setZone((prev) => {
-          const prevCorner = prev[corner];
           const newX = clamp(
-            prevCorner.x + gestureState.dx,
+            prev[corner].x + g.dx,
             liveViewLayout.x,
             liveViewLayout.x + liveViewLayout.width
           );
           const newY = clamp(
-            prevCorner.y + gestureState.dy,
+            prev[corner].y + g.dy,
             liveViewLayout.y,
             liveViewLayout.y + liveViewLayout.height
           );
-          const updated: DetectionZone = { ...prev, [corner]: { x: newX, y: newY } };
-          switch (corner) {
-            case 'topLeft':
-              updated.topRight.y = newY;
-              updated.bottomLeft.x = newX;
-              break;
-            case 'topRight':
-              updated.topLeft.y = newY;
-              updated.bottomRight.x = newX;
-              break;
-            case 'bottomLeft':
-              updated.topLeft.x = newX;
-              updated.bottomRight.y = newY;
-              break;
-            case 'bottomRight':
-              updated.topRight.x = newX;
-              updated.bottomLeft.y = newY;
-              break;
+          const u: DetectionZone = { ...prev, [corner]: { x: newX, y: newY } };
+          if (corner === 'topLeft') {
+            u.topRight.y = newY;
+            u.bottomLeft.x = newX;
           }
-          return clampZoneToLiveView(updated);
+          if (corner === 'topRight') {
+            u.topLeft.y = newY;
+            u.bottomRight.x = newX;
+          }
+          if (corner === 'bottomLeft') {
+            u.topLeft.x = newX;
+            u.bottomRight.y = newY;
+          }
+          if (corner === 'bottomRight') {
+            u.topRight.x = newX;
+            u.bottomLeft.y = newY;
+          }
+          return clampZoneToLiveView(u);
         });
       },
       onPanResponderRelease: () => setActiveCorner(null),
@@ -200,34 +197,33 @@ const DetectionZoneSetup: React.FC = () => {
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => setActiveEntryExitPoint(idx),
-      onPanResponderMove: (_, gestureState) => {
+      onPanResponderMove: (_, g) => {
         setEntryExitPoints((prev) => {
-          const newPoints = [...prev];
-          let newX = prev[idx].x + gestureState.dx;
-          let newY = prev[idx].y + gestureState.dy;
-          const distances = [
-            { edge: 'top', dist: Math.abs(newY - 1) },
-            { edge: 'bottom', dist: Math.abs(newY - (PREVIEW_HEIGHT - marginBottom)) },
-            { edge: 'left', dist: Math.abs(newX - EDGE_MARGIN) },
-            { edge: 'right', dist: Math.abs(newX - (PREVIEW_WIDTH - EDGE_MARGIN)) },
-          ];
-          distances.sort((a, b) => a.dist - b.dist);
-          const nearest = distances[0].edge;
+          const pts = [...prev];
+          let nx = prev[idx].x + g.dx;
+          let ny = prev[idx].y + g.dy;
+          const dists = [
+            { edge: 'top', d: Math.abs(ny - 1) },
+            { edge: 'bottom', d: Math.abs(ny - (PREVIEW_HEIGHT - marginBottom)) },
+            { edge: 'left', d: Math.abs(nx - EDGE_MARGIN) },
+            { edge: 'right', d: Math.abs(nx - (PREVIEW_WIDTH - EDGE_MARGIN)) },
+          ].sort((a, b) => a.d - b.d);
+          const nearest = dists[0].edge;
           if (nearest === 'top') {
-            newY = 1;
-            newX = Math.max(EDGE_MARGIN, Math.min(PREVIEW_WIDTH - EDGE_MARGIN, newX));
+            ny = 1;
+            nx = clamp(nx, EDGE_MARGIN, PREVIEW_WIDTH - EDGE_MARGIN);
           } else if (nearest === 'bottom') {
-            newY = PREVIEW_HEIGHT - marginBottom;
-            newX = Math.max(EDGE_MARGIN, Math.min(PREVIEW_WIDTH - EDGE_MARGIN, newX));
+            ny = PREVIEW_HEIGHT - PREVIEW_HEIGHT * 0.15;
+            nx = clamp(nx, EDGE_MARGIN, PREVIEW_WIDTH - EDGE_MARGIN);
           } else if (nearest === 'left') {
-            newX = EDGE_MARGIN;
-            newY = Math.max(1, Math.min(PREVIEW_HEIGHT - marginBottom, newY));
+            nx = EDGE_MARGIN;
+            ny = clamp(ny, 1, PREVIEW_HEIGHT - marginBottom);
           } else if (nearest === 'right') {
-            newX = PREVIEW_WIDTH - EDGE_MARGIN;
-            newY = Math.max(1, Math.min(PREVIEW_HEIGHT - marginBottom, newY));
+            nx = PREVIEW_WIDTH - EDGE_MARGIN;
+            ny = clamp(ny, 1, PREVIEW_HEIGHT - marginBottom);
           }
-          newPoints[idx] = { x: newX, y: newY };
-          return newPoints;
+          pts[idx] = { x: nx, y: ny };
+          return pts;
         });
       },
       onPanResponderRelease: () => setActiveEntryExitPoint(null),
@@ -235,22 +231,10 @@ const DetectionZoneSetup: React.FC = () => {
   );
 
   const getZoneCoordinates = () => ({
-    topLeft: {
-      x: zone.topLeft.x / PREVIEW_WIDTH,
-      y: zone.topLeft.y / PREVIEW_HEIGHT,
-    },
-    topRight: {
-      x: zone.topRight.x / PREVIEW_WIDTH,
-      y: zone.topRight.y / PREVIEW_HEIGHT,
-    },
-    bottomLeft: {
-      x: zone.bottomLeft.x / PREVIEW_WIDTH,
-      y: zone.bottomLeft.y / PREVIEW_HEIGHT,
-    },
-    bottomRight: {
-      x: zone.bottomRight.x / PREVIEW_WIDTH,
-      y: zone.bottomRight.y / PREVIEW_HEIGHT,
-    },
+    topLeft: { x: zone.topLeft.x / PREVIEW_WIDTH, y: zone.topLeft.y / PREVIEW_HEIGHT },
+    topRight: { x: zone.topRight.x / PREVIEW_WIDTH, y: zone.topRight.y / PREVIEW_HEIGHT },
+    bottomLeft: { x: zone.bottomLeft.x / PREVIEW_WIDTH, y: zone.bottomLeft.y / PREVIEW_HEIGHT },
+    bottomRight: { x: zone.bottomRight.x / PREVIEW_WIDTH, y: zone.bottomRight.y / PREVIEW_HEIGHT },
   });
 
   const getZoneDetect = async () => {
@@ -260,61 +244,28 @@ const DetectionZoneSetup: React.FC = () => {
       if (zoneType === 'entryExit') {
         if (Array.isArray(coordinates) && coordinates.length >= 2) {
           setEntryExitPoints([
-            {
-              x: coordinates[0].x * PREVIEW_WIDTH,
-              y: coordinates[0].y * PREVIEW_HEIGHT,
-            },
-            {
-              x: coordinates[1].x * PREVIEW_WIDTH,
-              y: coordinates[1].y * PREVIEW_HEIGHT,
-            },
+            { x: coordinates[0].x * PREVIEW_WIDTH, y: coordinates[0].y * PREVIEW_HEIGHT },
+            { x: coordinates[1].x * PREVIEW_WIDTH, y: coordinates[1].y * PREVIEW_HEIGHT },
           ]);
         }
         if (coordinates?.length === 3) {
-          const p1 = {
-            x: coordinates[0].x * PREVIEW_WIDTH,
-            y: coordinates[0].y * PREVIEW_HEIGHT,
-          };
-
-          const p2 = {
-            x: coordinates[1].x * PREVIEW_WIDTH,
-            y: coordinates[1].y * PREVIEW_HEIGHT,
-          };
-
-          const inCorner = {
-            x: coordinates[2].x * PREVIEW_WIDTH,
-            y: coordinates[2].y * PREVIEW_HEIGHT,
-          };
-
+          const p1 = { x: coordinates[0].x * PREVIEW_WIDTH, y: coordinates[0].y * PREVIEW_HEIGHT };
+          const p2 = { x: coordinates[1].x * PREVIEW_WIDTH, y: coordinates[1].y * PREVIEW_HEIGHT };
+          const ic = { x: coordinates[2].x * PREVIEW_WIDTH, y: coordinates[2].y * PREVIEW_HEIGHT };
           setEntryExitPoints([p1, p2]);
-
-          const dx = p2.x - p1.x;
-          const dy = p2.y - p1.y;
-
-          const side = dx * (inCorner.y - p1.y) - dy * (inCorner.x - p1.x);
-
+          const side = (p2.x - p1.x) * (ic.y - p1.y) - (p2.y - p1.y) * (ic.x - p1.x);
           setIsLeftIn(side < 0);
         }
       } else if (Array.isArray(coordinates) && coordinates.length === 4) {
-        const rawZone = {
-          topLeft: {
-            x: coordinates[0].x * PREVIEW_WIDTH,
-            y: coordinates[0].y * PREVIEW_HEIGHT,
-          },
-          topRight: {
-            x: coordinates[1].x * PREVIEW_WIDTH,
-            y: coordinates[1].y * PREVIEW_HEIGHT,
-          },
-          bottomLeft: {
-            x: coordinates[2].x * PREVIEW_WIDTH,
-            y: coordinates[2].y * PREVIEW_HEIGHT,
-          },
+        setZoneClamped({
+          topLeft: { x: coordinates[0].x * PREVIEW_WIDTH, y: coordinates[0].y * PREVIEW_HEIGHT },
+          topRight: { x: coordinates[1].x * PREVIEW_WIDTH, y: coordinates[1].y * PREVIEW_HEIGHT },
+          bottomLeft: { x: coordinates[2].x * PREVIEW_WIDTH, y: coordinates[2].y * PREVIEW_HEIGHT },
           bottomRight: {
             x: coordinates[3].x * PREVIEW_WIDTH,
             y: coordinates[3].y * PREVIEW_HEIGHT,
           },
-        };
-        setZoneClamped(rawZone);
+        });
       }
     } catch (e) {
       console.error(e);
@@ -323,78 +274,42 @@ const DetectionZoneSetup: React.FC = () => {
 
   const handleSave = async () => {
     setIsSaving(true);
-
     try {
-      let coordinatesArray: { x: number; y: number }[] = [];
-
+      let coords: { x: number; y: number }[] = [];
       if (zoneType === 'entryExit') {
         const { left, right } = getEntryExitPolygons();
-        const inPolygon = isLeftIn ? left : right;
-
-        const frameCorners = [
+        const inPoly = isLeftIn ? left : right;
+        const frameCornersArr = [
           { x: 0, y: 0 },
           { x: PREVIEW_WIDTH, y: 0 },
           { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT },
           { x: 0, y: PREVIEW_HEIGHT },
         ];
-
-        const inCorner =
-          frameCorners.find((corner) =>
-            inPolygon.some((p) => p.x === corner.x && p.y === corner.y)
-          ) || frameCorners[0];
-
-        coordinatesArray = [
-          {
-            x: entryExitPoints[0].x / PREVIEW_WIDTH,
-            y: entryExitPoints[0].y / PREVIEW_HEIGHT,
-          },
-          {
-            x: entryExitPoints[1].x / PREVIEW_WIDTH,
-            y: entryExitPoints[1].y / PREVIEW_HEIGHT,
-          },
-          {
-            x: inCorner.x / PREVIEW_WIDTH,
-            y: inCorner.y / PREVIEW_HEIGHT,
-          },
+        const ic =
+          frameCornersArr.find((c) => inPoly.some((p) => p.x === c.x && p.y === c.y)) ||
+          frameCornersArr[0];
+        coords = [
+          { x: entryExitPoints[0].x / PREVIEW_WIDTH, y: entryExitPoints[0].y / PREVIEW_HEIGHT },
+          { x: entryExitPoints[1].x / PREVIEW_WIDTH, y: entryExitPoints[1].y / PREVIEW_HEIGHT },
+          { x: ic.x / PREVIEW_WIDTH, y: ic.y / PREVIEW_HEIGHT },
         ];
       } else {
-        const coordinates = getZoneCoordinates();
-
-        coordinatesArray = [
-          coordinates.topLeft,
-          coordinates.topRight,
-          coordinates.bottomLeft,
-          coordinates.bottomRight,
-        ];
+        const c = getZoneCoordinates();
+        coords = [c.topLeft, c.topRight, c.bottomLeft, c.bottomRight];
       }
       const response = await detectionZoneService.createZone(camera.id, {
         zone_type_id: typeId,
-        coordinates: coordinatesArray,
+        coordinates: coords,
       });
-
-      if (response.success) {
-        showCommonAlert({
-          title: t('detectionZone.successTitle', 'Success'),
-          message: t('detectionZone.successMessage', 'Detection zone setup successful'),
-          buttons: [
-            {
-              text: t('common.ok'),
-              onPress: () => navigation.goBack(),
-            },
-          ],
-        });
-      } else {
-        showCommonAlert({
-          title: t('detectionZone.failureTitle', 'Failure'),
-          message: t('detectionZone.failureMessage', 'Detection zone setup failed'),
-          buttons: [
-            {
-              text: t('common.ok'),
-              onPress: () => navigation.goBack(),
-            },
-          ],
-        });
-      }
+      showCommonAlert({
+        title: response.success
+          ? t('detectionZone.successTitle', 'Success')
+          : t('detectionZone.failureTitle', 'Failure'),
+        message: response.success
+          ? t('detectionZone.successMessage', 'Detection zone setup successful')
+          : t('detectionZone.failureMessage', 'Detection zone setup failed'),
+        buttons: [{ text: t('common.ok'), onPress: () => navigation.goBack() }],
+      });
     } catch (e) {
       console.error(e);
     } finally {
@@ -402,11 +317,8 @@ const DetectionZoneSetup: React.FC = () => {
     }
   };
 
-  const handleReset = () => {
-    setZoneClamped(INITIAL_ZONE);
-  };
-
-  const handleDrawRectangle = () => {
+  const handleReset = () => setZoneClamped(INITIAL_ZONE);
+  const handleDrawRectangle = () =>
     setZoneClamped({
       topLeft: { x: liveViewLayout.x, y: liveViewLayout.y },
       topRight: { x: liveViewLayout.x + liveViewLayout.width, y: liveViewLayout.y },
@@ -416,74 +328,51 @@ const DetectionZoneSetup: React.FC = () => {
         y: liveViewLayout.y + liveViewLayout.height,
       },
     });
-  };
 
   const renderGrid = () => {
-    const verticalLines = [];
-    const horizontalLines = [];
-
-    for (let x = 0; x <= PREVIEW_WIDTH; x += GRID_SIZE) {
-      verticalLines.push(<View key={`v-${x}`} style={[styles.gridLineVertical, { left: x }]} />);
-    }
-
-    for (let y = 0; y <= PREVIEW_HEIGHT; y += GRID_SIZE) {
-      horizontalLines.push(<View key={`h-${y}`} style={[styles.gridLineHorizontal, { top: y }]} />);
-    }
+    const v = [];
+    const h = [];
+    for (let x = 0; x <= PREVIEW_WIDTH; x += GRID_SIZE)
+      v.push(<View key={`v-${x}`} style={[styles.gridLineVertical, { left: x }]} />);
+    for (let y = 0; y <= PREVIEW_HEIGHT; y += GRID_SIZE)
+      h.push(<View key={`h-${y}`} style={[styles.gridLineHorizontal, { top: y }]} />);
     return (
       <>
-        {verticalLines}
-        {horizontalLines}
+        {v}
+        {h}
       </>
     );
   };
 
-  const getZoneColor = () => {
-    switch (zoneType) {
-      case 'restricted':
-        return 'rgba(255,0,0,0.3)';
-      case 'entryExit':
-        return 'rgba(0,255,0,0.3)';
-      case 'detection':
-      default:
-        return 'rgba(255,255,0,0.3)';
-    }
-  };
+  const getZoneColor = () =>
+    zoneType === 'restricted'
+      ? 'rgba(255,0,0,0.3)'
+      : zoneType === 'entryExit'
+        ? 'rgba(0,255,0,0.3)'
+        : 'rgba(255,255,0,0.3)';
 
   const getEntryExitPolygons = () => {
     const [p1, p2] = entryExitPoints;
     if (p1.x === p2.x && p1.y === p2.y) return { left: [], right: [] };
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
+    const dx = p2.x - p1.x,
+      dy = p2.y - p1.y;
     const corners = [
       { x: 0, y: 0 },
       { x: PREVIEW_WIDTH, y: 0 },
       { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT },
       { x: 0, y: PREVIEW_HEIGHT },
     ];
-    const side = (pt: { x: number; y: number }) => dx * (pt.y - p1.y) - dy * (pt.x - p1.x);
-
-    const leftCorners = corners.filter((c) => side(c) < 0);
-    const rightCorners = corners.filter((c) => side(c) >= 0);
-
-    let leftPoly = [p1, p2, ...leftCorners];
-    let rightPoly = [p2, p1, ...rightCorners];
-
-    const sortClockwise = (points: { x: number; y: number }[]) => {
-      const cx = points.reduce((sum, p) => sum + p.x, 0) / points.length;
-      const cy = points.reduce((sum, p) => sum + p.y, 0) / points.length;
-      return points.slice().sort((a, b) => {
-        const angleA = Math.atan2(a.y - cy, a.x - cx);
-        const angleB = Math.atan2(b.y - cy, b.x - cx);
-        return angleA - angleB;
-      });
+    const side = (pt: Corner) => dx * (pt.y - p1.y) - dy * (pt.x - p1.x);
+    const cw = (pts: Corner[]) => {
+      const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+      const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+      return pts
+        .slice()
+        .sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
     };
-
-    leftPoly = sortClockwise(leftPoly);
-    rightPoly = sortClockwise(rightPoly);
-
     return {
-      left: leftPoly,
-      right: rightPoly,
+      left: cw([p1, p2, ...corners.filter((c) => side(c) < 0)]),
+      right: cw([p2, p1, ...corners.filter((c) => side(c) >= 0)]),
     };
   };
 
@@ -495,6 +384,11 @@ const DetectionZoneSetup: React.FC = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleReconnect = async () => {
+    await fetchLiveUrl();
+    reconnect();
+  };
 
   return (
     <View style={styles.root}>
@@ -520,54 +414,37 @@ const DetectionZoneSetup: React.FC = () => {
 
       <View style={styles.body}>
         <View style={styles.previewContainer}>
-          {/*
-            FIX QUAN TRỌNG: Bỏ key={displayStream.toURL()} khỏi RTCView
-            key thay đổi → RTCView unmount/mount lại → màn đen trong lúc mount
-            Thay bằng key cố định "live-view" → RTCView KHÔNG re-mount
-            streamURL thay đổi → RTCView tự update nội dung mà không re-mount
-          */}
-          {displayStream ? (
-            <RTCView
-              key="live-view"
-              streamURL={displayStream.toURL()}
-              style={styles.cameraPreview}
-              objectFit="cover"
-              zOrder={1}
-              mirror={false}
-              onLayout={(e) => {
-                const { x, y, width, height } = e.nativeEvent.layout;
-                setLiveViewLayout({ x, y, width, height });
-              }}
-            />
-          ) : (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#4CAF50" />
-              <Text style={styles.loadingText}>
-                {isStalled ? stallReason : 'Loading stream...'}
-              </Text>
-            </View>
-          )}
+          <RTCView
+            key="live-view"
+            streamURL={displayStream?.toURL()}
+            style={styles.cameraPreview}
+            objectFit="cover"
+            zOrder={1}
+            mirror={false}
+            onLayout={(e) => {
+              const { x, y, width, height } = e.nativeEvent.layout;
+              setLiveViewLayout({ x, y, width, height });
+            }}
+          />
 
-          {/* Stall overlay — chỉ hiện khi thật sự stall (lỗi mạng, ICE failed...) */}
-          {isStalled && displayStream && (
+          {/* Stall overlay — hiện đè khi stall thật (ICE failed, mute timeout) */}
+          {isStalled && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="small" color="#FFF" />
-              <Text style={styles.loadingText}>{`Reconnecting… (${reconnectAttempt})`}</Text>
+              <Text style={styles.loadingText}>
+                {`Reconnecting… (${reconnectAttempt})`}
+              </Text>
               {stallReason ? (
-                <Text
-                  style={[styles.loadingText, { fontSize: 11, color: '#FCD34D', marginTop: 2 }]}
-                >
-                  {stallReason}
-                </Text>
+                <Text style={styles.loadingText}>{stallReason}</Text>
               ) : null}
             </View>
           )}
 
-          {/* Error overlay — chỉ hiện khi không phải đang stall */}
+          {/* Error overlay — hard failure, cần user retry */}
           {error && !isStalled && (
             <View style={styles.errorOverlay}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={reconnect}>
+              <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
@@ -596,21 +473,15 @@ const DetectionZoneSetup: React.FC = () => {
                 >
                   {(() => {
                     const { left, right } = getEntryExitPolygons();
-                    const leftColor = isLeftIn ? 'rgba(255,0,0,0.25)' : 'rgba(0,255,0,0.25)';
-                    const rightColor = isLeftIn ? 'rgba(0,255,0,0.25)' : 'rgba(255,0,0,0.25)';
+                    const lc = isLeftIn ? 'rgba(255,0,0,0.25)' : 'rgba(0,255,0,0.25)';
+                    const rc = isLeftIn ? 'rgba(0,255,0,0.25)' : 'rgba(255,0,0,0.25)';
                     return (
                       <>
                         {left.length > 2 && (
-                          <Polygon
-                            points={left.map((p) => `${p.x},${p.y}`).join(' ')}
-                            fill={leftColor}
-                          />
+                          <Polygon points={left.map((p) => `${p.x},${p.y}`).join(' ')} fill={lc} />
                         )}
                         {right.length > 2 && (
-                          <Polygon
-                            points={right.map((p) => `${p.x},${p.y}`).join(' ')}
-                            fill={rightColor}
-                          />
+                          <Polygon points={right.map((p) => `${p.x},${p.y}`).join(' ')} fill={rc} />
                         )}
                         <Line
                           x1={entryExitPoints[0].x}
@@ -694,8 +565,9 @@ const DetectionZoneSetup: React.FC = () => {
                 })}
               </>
             )}
+
             <View style={styles.rightButtons}>
-              {zoneType === 'entryExit' ? null : (
+              {zoneType !== 'entryExit' && (
                 <View>
                   <TouchableOpacity style={styles.roundButton} onPress={handleDrawRectangle}>
                     <Icon name="selection-drag" size={22} color="#FFFFFF" />
