@@ -6,7 +6,16 @@ const size = 180;
 const center = size / 2;
 const sweepColor = '#5AF7FF';
 
-export const RadarScan: React.FC = () => {
+interface DeviceDot {
+  x: number;
+  y: number;
+}
+
+interface RadarScanProps {
+  deviceDots?: DeviceDot[];
+}
+
+export const RadarScan: React.FC<RadarScanProps> = ({ deviceDots = [] }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -34,6 +43,45 @@ export const RadarScan: React.FC = () => {
     const arc2 = `A ${r} ${r} 0 0 1 ${x2} ${y2}`;
     const close = 'Z';
     return `${move} ${arc1} ${arc2} ${close}`;
+  };
+
+  // eslint-disable-next-line react/no-unstable-nested-components
+  const BlinkingDot: React.FC<{ x: number; y: number; delay?: number }> = ({ x, y, delay = 0 }) => {
+    const opacityAnim = useRef(new Animated.Value(0.3)).current;
+
+    useEffect(() => {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 600,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0.3,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      loop.start();
+      return () => loop.stop();
+    }, [opacityAnim, delay]);
+
+    return (
+      <Animated.View
+        style={[
+          styles.deviceDot,
+          {
+            top: y - 6,
+            left: x - 6,
+            opacity: opacityAnim,
+          },
+        ]}
+      />
+    );
   };
 
   const spin = rotateAnim.interpolate({
@@ -79,6 +127,10 @@ export const RadarScan: React.FC = () => {
       </Animated.View>
       {/* Dot/trung tâm */}
       <View style={[styles.dotCenter, { top: center - 7, left: center - 7 }]} />
+      {/* Device Dots */}
+      {deviceDots.map((dot, idx) => (
+        <BlinkingDot key={idx} x={dot.x} y={dot.y} delay={idx * 200} />
+      ))}
     </View>
   );
 };
@@ -100,6 +152,17 @@ const styles = StyleSheet.create({
     borderColor: '#23E0FF',
     opacity: 0.8,
     zIndex: 10,
+  },
+  deviceDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#38E9FF',
+    borderWidth: 2,
+    borderColor: '#1B8FFF',
+    opacity: 0.95,
+    zIndex: 9,
   },
 });
 

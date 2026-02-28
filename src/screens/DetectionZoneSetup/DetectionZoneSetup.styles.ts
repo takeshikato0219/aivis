@@ -35,8 +35,9 @@ export const styles = StyleSheet.create({
   },
   cameraPreview: {
     flex: 1,
-    backgroundColor: '#000',
-    marginBottom: 30,
+    backgroundColor: '#c20b0b',
+    marginBottom: 10,
+    marginHorizontal: 15,
   },
   overlayContainer: {
     position: 'absolute',
@@ -197,5 +198,10 @@ export const styles = StyleSheet.create({
   fontStyle: {
     color: '#333',
     fontWeight: 'bold',
+  },
+  stallReasonText: {
+    fontSize: 11,
+    color: '#FCD34D',
+    marginTop: 2,
   },
 });

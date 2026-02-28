@@ -248,7 +248,7 @@ const NetworkSetup: React.FC = () => {
   };
 
   const handleBackToScan = async () => {
-    navigation.navigate('ConnectDevice' as never);
+    navigation.navigate('ConnectDevice');
   };
 
   return (

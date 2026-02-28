@@ -50,6 +50,7 @@ type DetectionZoneSetupParamList = {
     camera: any;
     zoneType?: 'detection' | 'restricted' | 'entryExit';
     typeId?: string;
+    liveUrl: string;
   };
 };
 
@@ -81,9 +82,65 @@ const DetectionZoneSetup: React.FC = () => {
   ]);
   const [activeEntryExitPoint, setActiveEntryExitPoint] = useState<number | null>(null);
   const [isLeftIn, setIsLeftIn] = useState(true);
-  const live_url =
-    'wss://avisaitest-nginx001.wpstories.org/api/ws?src=camera&token=eyJwYXZpbGFvYWRJRCI6eyJjYW1lcmFfaWQiOiAiN2I4MWM3NzAtMGEyNS00Y2JjLTg3ZjgtN2JjY2JmMjgwNDUxIiwic3RhcnRfdGltZSI6IjIwMjYtMDItMjZUMTc6MDE6NTUuMzMzOTU1KzA3OjAwIiwidGltZV9leHAiOiAiMjAyNi0wMi0yNlQxNzozMTo1NS4zMzM5NTMrMDc6MDAiLCJleHBzIjoxNjc4NzYwMDAwLCJzaWduYXR1cmUiOiAiVElUTEVHSFgtJNE9qRTF1NnMxOVlJSmJYVTRXUysveGdYRW9BZ3ZTY2dVQms9In19';
-  const { displayStream, isStalled, stallReason, error, reconnect } = useStream({ live_url });
+  const live_url = route.params.liveUrl;
+
+  const { displayStream, isStalled, stallReason, reconnectAttempt, error, reconnect } = useStream({
+    live_url,
+  });
+
+  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+  const clampZoneToPreview = (zone: DetectionZone): DetectionZone => {
+    return {
+      topLeft: {
+        x: clamp(zone.topLeft.x, 0, PREVIEW_WIDTH),
+        y: clamp(zone.topLeft.y, 0, PREVIEW_HEIGHT),
+      },
+      topRight: {
+        x: clamp(zone.topRight.x, 0, PREVIEW_WIDTH),
+        y: clamp(zone.topRight.y, 0, PREVIEW_HEIGHT),
+      },
+      bottomLeft: {
+        x: clamp(zone.bottomLeft.x, 0, PREVIEW_WIDTH),
+        y: clamp(zone.bottomLeft.y, 0, PREVIEW_HEIGHT),
+      },
+      bottomRight: {
+        x: clamp(zone.bottomRight.x, 0, PREVIEW_WIDTH),
+        y: clamp(zone.bottomRight.y, 0, PREVIEW_HEIGHT),
+      },
+    };
+  };
+
+  const [liveViewLayout, setLiveViewLayout] = useState({
+    x: 0,
+    y: 0,
+    width: PREVIEW_WIDTH,
+    height: PREVIEW_HEIGHT,
+  });
+
+  const clampZoneToLiveView = (zone: DetectionZone): DetectionZone => {
+    const { x, y, width, height } = liveViewLayout;
+    return {
+      topLeft: {
+        x: clamp(zone.topLeft.x, x, x + width),
+        y: clamp(zone.topLeft.y, y, y + height),
+      },
+      topRight: {
+        x: clamp(zone.topRight.x, x, x + width),
+        y: clamp(zone.topRight.y, y, y + height),
+      },
+      bottomLeft: {
+        x: clamp(zone.bottomLeft.x, x, x + width),
+        y: clamp(zone.bottomLeft.y, y, y + height),
+      },
+      bottomRight: {
+        x: clamp(zone.bottomRight.x, x, x + width),
+        y: clamp(zone.bottomRight.y, y, y + height),
+      },
+    };
+  };
+
+  const setZoneClamped = (zone: DetectionZone) => setZone(clampZoneToLiveView(zone));
 
   const createPanResponder = (corner: keyof DetectionZone) =>
     PanResponder.create({
@@ -95,11 +152,17 @@ const DetectionZoneSetup: React.FC = () => {
       onPanResponderMove: (_, gestureState) => {
         setZone((prev) => {
           const prevCorner = prev[corner];
-          const newX = Math.max(0, Math.min(PREVIEW_WIDTH, prevCorner.x + gestureState.dx));
-          const newY = Math.max(0, Math.min(PREVIEW_HEIGHT, prevCorner.y + gestureState.dy));
-
+          const newX = clamp(
+            prevCorner.x + gestureState.dx,
+            liveViewLayout.x,
+            liveViewLayout.x + liveViewLayout.width
+          );
+          const newY = clamp(
+            prevCorner.y + gestureState.dy,
+            liveViewLayout.y,
+            liveViewLayout.y + liveViewLayout.height
+          );
           const updated: DetectionZone = { ...prev, [corner]: { x: newX, y: newY } };
-
           switch (corner) {
             case 'topLeft':
               updated.topRight.y = newY;
@@ -118,8 +181,7 @@ const DetectionZoneSetup: React.FC = () => {
               updated.bottomLeft.y = newY;
               break;
           }
-
-          return updated;
+          return clampZoneToLiveView(updated);
         });
       },
       onPanResponderRelease: () => setActiveCorner(null),
@@ -234,7 +296,7 @@ const DetectionZoneSetup: React.FC = () => {
           setIsLeftIn(side < 0);
         }
       } else if (Array.isArray(coordinates) && coordinates.length === 4) {
-        setZone({
+        const rawZone = {
           topLeft: {
             x: coordinates[0].x * PREVIEW_WIDTH,
             y: coordinates[0].y * PREVIEW_HEIGHT,
@@ -251,7 +313,8 @@ const DetectionZoneSetup: React.FC = () => {
             x: coordinates[3].x * PREVIEW_WIDTH,
             y: coordinates[3].y * PREVIEW_HEIGHT,
           },
-        });
+        };
+        setZoneClamped(rawZone);
       }
     } catch (e) {
       console.error(e);
@@ -340,16 +403,18 @@ const DetectionZoneSetup: React.FC = () => {
   };
 
   const handleReset = () => {
-    setZone(INITIAL_ZONE);
+    setZoneClamped(INITIAL_ZONE);
   };
 
   const handleDrawRectangle = () => {
-    const marginX = PREVIEW_WIDTH * 0.05;
-    setZone({
-      topLeft: { x: marginX, y: 1 },
-      topRight: { x: PREVIEW_WIDTH - marginX, y: 1 },
-      bottomLeft: { x: marginX, y: PREVIEW_HEIGHT - marginBottom },
-      bottomRight: { x: PREVIEW_WIDTH - marginX, y: PREVIEW_HEIGHT - marginBottom },
+    setZoneClamped({
+      topLeft: { x: liveViewLayout.x, y: liveViewLayout.y },
+      topRight: { x: liveViewLayout.x + liveViewLayout.width, y: liveViewLayout.y },
+      bottomLeft: { x: liveViewLayout.x, y: liveViewLayout.y + liveViewLayout.height },
+      bottomRight: {
+        x: liveViewLayout.x + liveViewLayout.width,
+        y: liveViewLayout.y + liveViewLayout.height,
+      },
     });
   };
 
@@ -372,7 +437,6 @@ const DetectionZoneSetup: React.FC = () => {
     );
   };
 
-  // Set color based on zoneType
   const getZoneColor = () => {
     switch (zoneType) {
       case 'restricted':
@@ -385,38 +449,28 @@ const DetectionZoneSetup: React.FC = () => {
     }
   };
 
-  // Helper: get polygon points for left/right region
   const getEntryExitPolygons = () => {
     const [p1, p2] = entryExitPoints;
     if (p1.x === p2.x && p1.y === p2.y) return { left: [], right: [] };
-    // Calculate normal vector to the line
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
-    // Corners of the frame in clockwise order
     const corners = [
       { x: 0, y: 0 },
       { x: PREVIEW_WIDTH, y: 0 },
       { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT },
       { x: 0, y: PREVIEW_HEIGHT },
     ];
-    // Helper to determine which side of the line a point is on
     const side = (pt: { x: number; y: number }) => dx * (pt.y - p1.y) - dy * (pt.x - p1.x);
 
-    // For each corner, classify as left or right
     const leftCorners = corners.filter((c) => side(c) < 0);
     const rightCorners = corners.filter((c) => side(c) >= 0);
 
-    // For left polygon: start at p1, go to p2, then all left corners in order
     let leftPoly = [p1, p2, ...leftCorners];
-    // For right polygon: start at p2, go to p1, then all right corners in order
     let rightPoly = [p2, p1, ...rightCorners];
 
-    // Sort the corners in clockwise order for proper polygon rendering
     const sortClockwise = (points: { x: number; y: number }[]) => {
-      // Calculate centroid
       const cx = points.reduce((sum, p) => sum + p.x, 0) / points.length;
       const cy = points.reduce((sum, p) => sum + p.y, 0) / points.length;
-      // Sort by angle from centroid
       return points.slice().sort((a, b) => {
         const angleA = Math.atan2(a.y - cy, a.x - cx);
         const angleB = Math.atan2(b.y - cy, b.x - cx);
@@ -466,12 +520,24 @@ const DetectionZoneSetup: React.FC = () => {
 
       <View style={styles.body}>
         <View style={styles.previewContainer}>
-          {/* RTCView for WebRTC video stream */}
+          {/*
+            FIX QUAN TRỌNG: Bỏ key={displayStream.toURL()} khỏi RTCView
+            key thay đổi → RTCView unmount/mount lại → màn đen trong lúc mount
+            Thay bằng key cố định "live-view" → RTCView KHÔNG re-mount
+            streamURL thay đổi → RTCView tự update nội dung mà không re-mount
+          */}
           {displayStream ? (
             <RTCView
+              key="live-view"
               streamURL={displayStream.toURL()}
               style={styles.cameraPreview}
               objectFit="cover"
+              zOrder={1}
+              mirror={false}
+              onLayout={(e) => {
+                const { x, y, width, height } = e.nativeEvent.layout;
+                setLiveViewLayout({ x, y, width, height });
+              }}
             />
           ) : (
             <View style={styles.loadingOverlay}>
@@ -481,8 +547,24 @@ const DetectionZoneSetup: React.FC = () => {
               </Text>
             </View>
           )}
-          {/* Error and reconnect overlays */}
-          {error && (
+
+          {/* Stall overlay — chỉ hiện khi thật sự stall (lỗi mạng, ICE failed...) */}
+          {isStalled && displayStream && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="small" color="#FFF" />
+              <Text style={styles.loadingText}>{`Reconnecting… (${reconnectAttempt})`}</Text>
+              {stallReason ? (
+                <Text
+                  style={[styles.loadingText, { fontSize: 11, color: '#FCD34D', marginTop: 2 }]}
+                >
+                  {stallReason}
+                </Text>
+              ) : null}
+            </View>
+          )}
+
+          {/* Error overlay — chỉ hiện khi không phải đang stall */}
+          {error && !isStalled && (
             <View style={styles.errorOverlay}>
               <Text style={styles.errorText}>{error}</Text>
               <TouchableOpacity style={styles.retryButton} onPress={reconnect}>
@@ -499,7 +581,6 @@ const DetectionZoneSetup: React.FC = () => {
               {renderGrid()}
             </View>
 
-            {/* Entry/Exit zoneType: show vertical line with 2 draggable points */}
             {zoneType === 'entryExit' ? (
               <>
                 <Svg
@@ -543,7 +624,6 @@ const DetectionZoneSetup: React.FC = () => {
                     );
                   })()}
                 </Svg>
-                {/* Draggable points */}
                 {entryExitPoints.map((pt, idx) => (
                   <View
                     key={idx}
@@ -568,7 +648,6 @@ const DetectionZoneSetup: React.FC = () => {
                     <View style={styles.lineStyle} />
                   </View>
                 ))}
-                {/* Switch button */}
                 <TouchableOpacity
                   style={styles.switchButton}
                   onPress={() => setIsLeftIn((v) => !v)}
@@ -581,7 +660,6 @@ const DetectionZoneSetup: React.FC = () => {
               </>
             ) : (
               <>
-                {/* Default zone overlay and handles for other zone types */}
                 <View
                   pointerEvents="none"
                   style={[

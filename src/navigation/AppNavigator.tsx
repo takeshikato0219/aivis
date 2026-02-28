@@ -152,18 +152,18 @@ const AppNavigator = () => {
           }}
         />
         <Stack.Screen
-          name="ConnectWifiHotspot"
-          component={ConnectWifiHotspot}
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
           name="NetworkSetup"
           component={NetworkSetup}
           options={{
             headerShown: false,
             gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="ConnectWifiHotspot"
+          component={ConnectWifiHotspot}
+          options={{
+            headerShown: false,
           }}
         />
         <Stack.Screen

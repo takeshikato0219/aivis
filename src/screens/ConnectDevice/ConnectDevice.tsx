@@ -26,7 +26,6 @@ import RotateCcwIcon from '@assets/svg/rotate-ccw.svg';
 import CctvIcon from '@assets/svg/cctv-icon.svg';
 import { useJetsonBLE } from '@hooks/useJetsonBLE';
 import { BleManager } from 'react-native-ble-plx';
-import { jetsonBLEService } from "@/services/jetsonBLEService";
 
 const getScanningText = (scanning: boolean, t: any) => {
   return scanning ? t('bluetoothScreen.scanningForDevices') : t('bluetoothScreen.scanFinished');
@@ -34,6 +33,20 @@ const getScanningText = (scanning: boolean, t: any) => {
 
 const getHintText = (t: any) => {
   return t('bluetoothScreen.makeSureYourCameraIsPoweredOn');
+};
+
+const RADAR_SIZE = 180;
+const RADAR_CENTER = RADAR_SIZE / 2;
+
+const getDeviceDots = (deviceCount: number) => {
+  return Array.from({ length: deviceCount }).map(() => {
+    const angle = Math.random() * 2 * Math.PI;
+    const radius = RADAR_CENTER * (0.3 + 0.65 * Math.random());
+    return {
+      x: RADAR_CENTER + radius * Math.cos(angle),
+      y: RADAR_CENTER + radius * Math.sin(angle),
+    };
+  });
 };
 
 const ConnectDevice: React.FC = () => {
@@ -110,6 +123,8 @@ const ConnectDevice: React.FC = () => {
   const devicesFoundText =
     t('bluetoothScreen.devicesFound') + (scanning ? '' : ` (${devices.length})`);
 
+  const deviceDots = getDeviceDots(devices.length);
+
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
@@ -141,7 +156,7 @@ const ConnectDevice: React.FC = () => {
 
           {/* Radar graphic */}
           <View style={styles.radarContainer}>
-            <RadarScan />
+            <RadarScan deviceDots={deviceDots} />
           </View>
 
           <Text style={styles.scanningText}>{scanningText}</Text>
