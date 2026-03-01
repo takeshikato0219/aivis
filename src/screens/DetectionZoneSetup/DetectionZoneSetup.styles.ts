@@ -35,7 +35,7 @@ export const styles = StyleSheet.create({
   },
   cameraPreview: {
     flex: 1,
-    backgroundColor: '#c20b0b',
+    backgroundColor: '#000',
     marginBottom: 10,
     marginHorizontal: 15,
   },

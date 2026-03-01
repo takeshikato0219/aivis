@@ -136,3 +136,10 @@ export interface WorkScheduleApiResponse {
     updated_at: string;
   };
 }
+
+export interface StreamQuality {
+  label: string;
+  value: 'low' | 'medium' | 'high' | 'hd';
+  resolution: string;
+  bitrate: number;
+}

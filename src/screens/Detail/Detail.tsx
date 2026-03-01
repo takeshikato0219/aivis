@@ -84,11 +84,10 @@ const Detail = () => {
   const isOnline =
     statusText.toLowerCase().includes('online') || statusText.toLowerCase().includes('オンライン');
 
-  const handleCameraPress = (item: any) => {
+  const handleCameraPress = (_item: any) => {
     navigation.navigate('CameraLive', {
-      cameraId: item.id,
-      cameraName: item.name,
-      baseUrl: camera.rtsp_url,
+      cameraId: camera.id,
+      cameraName: camera.name,
     });
   };
 

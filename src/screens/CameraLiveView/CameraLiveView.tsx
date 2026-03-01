@@ -14,15 +14,12 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Video, { VideoRef, OnLoadData, OnVideoErrorData } from 'react-native-video';
 import { captureRef } from 'react-native-view-shot';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import { check, request, RESULTS, PERMISSIONS } from 'react-native-permissions';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { CameraLiveScreenNavigationProp, CameraLiveScreenRouteProp } from '@navigation/types';
-import { CameraConfig, StreamQuality } from '@/services/cameraService';
-import cameraService from '../../services/cameraService';
-import webRTCManager from '../../services/webRTCManager';
+import cameraService from '@api/cameraService';
 import recordingService from '../../services/recordingService';
 import { getStyles } from './CameraLiveView.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +27,11 @@ import LogoDetail from '@assets/svg/logo-detail.svg';
 import CloseIcon from '@assets/svg/close-icon.svg';
 import NoRecordingDataIcon from '@assets/svg/no-recording-data-icon.svg';
 import { useTranslation } from 'react-i18next';
+import { RTCView } from 'react-native-webrtc';
+import { useStream } from '@hooks/useStream';
+// @ts-ignore
+import { StreamStatus } from '@redux/slices/streamSlice';
+import { StreamQuality } from '@api/types/cameraTypes';
 
 const STREAM_QUALITIES: StreamQuality[] = [
   { label: '流畅', value: 'low', resolution: '640x480', bitrate: 256 },
@@ -38,14 +40,11 @@ const STREAM_QUALITIES: StreamQuality[] = [
   { label: 'HD', value: 'hd', resolution: '2560x1440', bitrate: 2048 },
 ];
 
-const TEST_STREAMS = ['https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'];
-
 const CameraLiveView: React.FC = () => {
   const navigation = useNavigation<CameraLiveScreenNavigationProp>();
   const route = useRoute<CameraLiveScreenRouteProp>();
-  const videoRef = useRef<VideoRef>(null);
   const videoContainerRef = useRef<View>(null);
-  const { cameraId, baseUrl = 'https://your-camera-api.com' } = route.params;
+  const { cameraId } = route.params;
   const { t } = useTranslation();
 
   const { width, height } = useWindowDimensions();
@@ -56,19 +55,18 @@ const CameraLiveView: React.FC = () => {
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   // States
-  const [streamUrl, setStreamUrl] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
+  const [liveUrl, setLiveUrl] = useState('');
+  const [micUrl, setMicUrl] = useState('');
   const [isTalking, setIsTalking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
-  const [currentQuality, setCurrentQuality] = useState<StreamQuality>(STREAM_QUALITIES[2]);
   const [bitrate, setBitrate] = useState<number>(0);
   const [showQualityModal, setShowQualityModal] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [videoError, setVideoError] = useState<string>('');
-  const [streamIndex, setStreamIndex] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
+  const [currentQuality, setCurrentQuality] = useState<StreamQuality>(STREAM_QUALITIES[2]);
+  const [timeExp, setTimeExp] = useState<string | null>(null);
 
   // Animation effect for quality modal
   useEffect(() => {
@@ -105,89 +103,42 @@ const CameraLiveView: React.FC = () => {
     }
   }, [isAnimating, showQualityModal, slideAnim, opacityAnim, height]);
 
-  const initializeCamera = useCallback(async () => {
+  const fetchLiveUrl = useCallback(async () => {
     try {
-      setIsLoading(true);
-      setVideoError('');
-
-      const cameraConfig: CameraConfig = {
-        baseUrl,
-        cameraId,
-      };
-      cameraService.initialize(cameraConfig);
-
-      try {
-        const url = await cameraService.getStreamUrl(currentQuality.value);
-        setStreamUrl(url);
-        console.log('Stream URL from service:', url);
-      } catch (error) {
-        console.log('Using test stream, service error:', error);
-        setStreamUrl(TEST_STREAMS[streamIndex]);
+      const res = await cameraService.getLiveStreamUrl(cameraId);
+      if (res.success && res.data) {
+        setLiveUrl(res.data.live_url);
+        setMicUrl(res.data.mic);
+        setTimeExp(res.data.time_exp);
       }
-
-      try {
-        const status = await cameraService.getCameraStatus();
-        setBitrate(status.bitrate);
-      } catch (error) {
-        console.log('Cannot get camera status:', error);
-        setBitrate(currentQuality.bitrate);
-      }
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error initializing camera:', error);
-      setVideoError('初始化失败');
-      setIsLoading(false);
+    } catch {
+      // handle error
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl, cameraId, currentQuality.value, streamIndex]);
+  }, [cameraId]);
 
   useEffect(() => {
-    const cleanup = async () => {
-      if (isTalking) {
-        await stopTalking();
-      }
-      webRTCManager.closeConnection();
-    };
+    fetchLiveUrl();
+  }, [fetchLiveUrl]);
 
-    initializeCamera();
-
-    return () => {
-      void cleanup();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initializeCamera]);
-
-  const handleVideoLoad = (data: OnLoadData) => {
-    console.log('Video loaded successfully:', data);
-    setIsLoading(false);
-    setVideoError('');
-  };
-
-  const handleVideoError = (error: OnVideoErrorData) => {
-    console.error('Video error details:', error);
-
-    const errorMessage =
-      error?.error?.errorString || error?.error?.localizedDescription || 'Unknown error';
-
-    setVideoError(errorMessage);
-    setIsLoading(false);
-
-    if (streamIndex < TEST_STREAMS.length - 1) {
-      setTimeout(() => {
-        console.log(`Trying stream ${streamIndex + 1}... `);
-        setStreamIndex(streamIndex + 1);
-        setStreamUrl(TEST_STREAMS[streamIndex + 1]);
-        setIsLoading(true);
-      }, 2000);
+  useEffect(() => {
+    if (!timeExp) return;
+    const refreshMs = new Date(timeExp).getTime() - Date.now() - 2 * 60 * 1000;
+    if (refreshMs > 0) {
+      const timer = setTimeout(fetchLiveUrl, refreshMs);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [timeExp, fetchLiveUrl]);
 
-  const retryStream = () => {
-    setStreamIndex(0);
-    setVideoError('');
-    initializeCamera();
-  };
+  const {
+    displayStream,
+    isStalled,
+    stallReason,
+    reconnectAttempt,
+    error,
+    status,
+    reconnect,
+    toggleMic,
+  } = useStream({ live_url: liveUrl, mic: micUrl });
 
   const requestFullscreen = () => {
     setIsFullscreen(true);
@@ -254,41 +205,15 @@ const CameraLiveView: React.FC = () => {
 
       await CameraRoll.saveToCameraRoll(uri, 'photo');
       Alert.alert(t('cameraLive.success'), t('cameraLive.screenshotSaved'));
-    } catch (error) {
-      console.error('Error taking snapshot:', error);
+    } catch (err) {
+      console.error('Error taking snapshot:', err);
       Alert.alert(t('common.error'), t('cameraLive.unableToTakeScreenshot'));
     }
   }, [t]);
 
   const toggleTalk = async () => {
-    try {
-      if (!isTalking) {
-        await webRTCManager.initializePeerConnection();
-        const stream = await webRTCManager.startLocalAudioStream();
-
-        if (stream) {
-          const offer = await webRTCManager.createOffer();
-          console.log(offer);
-          await cameraService.startAudioStream('audio-stream-url');
-          setIsTalking(true);
-        }
-      } else {
-        await stopTalking();
-      }
-    } catch (error) {
-      console.error('Error toggling talk:', error);
-      Alert.alert(t('common.error'), t('cameraLive.unableToEnableVoiceFunction'));
-    }
-  };
-
-  const stopTalking = async () => {
-    try {
-      await cameraService.stopAudioStream();
-      webRTCManager.stopLocalAudioStream();
-      setIsTalking(false);
-    } catch (error) {
-      console.error('Error stopping talk:', error);
-    }
+    await toggleMic();
+    setIsTalking((prev) => !prev);
   };
 
   const openQualityModal = () => {
@@ -302,26 +227,17 @@ const CameraLiveView: React.FC = () => {
 
   const changeQuality = async (quality: StreamQuality) => {
     try {
-      setIsLoading(true);
+      setIsRecording(true);
       closeQualityModal();
 
       setCurrentQuality(quality);
       setBitrate(quality.bitrate);
 
-      try {
-        await cameraService.changeResolution(quality.value);
-        const newUrl = await cameraService.getStreamUrl(quality.value);
-        setStreamUrl(newUrl);
-      } catch (error) {
-        console.log('Using test stream for quality change', error);
-        setStreamUrl(TEST_STREAMS[0]);
-      }
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error changing quality:', error);
+      setIsRecording(false);
+    } catch (err) {
+      console.error('Error changing quality:', err);
       Alert.alert(t('common.error'), t('common.unableToChangeResolution'));
-      setIsLoading(false);
+      setIsRecording(false);
     }
   };
 
@@ -333,8 +249,8 @@ const CameraLiveView: React.FC = () => {
         setIsRecording(true);
         setRecordingStartTime(new Date());
         Alert.alert(t('cameraLive.recording'), t('cameraLive.recordingStarted'));
-      } catch (error) {
-        console.error('Error starting recording:', error);
+      } catch (err) {
+        console.error('Error starting recording:', err);
         Alert.alert(
           t('common.error'),
           t('cameraLive.unableToStartRecording') || 'Unable to start recording'
@@ -395,8 +311,8 @@ const CameraLiveView: React.FC = () => {
           ? Math.round((new Date().getTime() - startTime.getTime()) / 1000)
           : recordingService.getRecordingDuration();
         Alert.alert(t('cameraLive.success'), `${t('cameraLive.videoSaved')} (${duration}s)`);
-      } catch (error) {
-        console.error('Error saving video:', error);
+      } catch (err) {
+        console.error('Error saving video:', err);
         Alert.alert(t('common.error'), t('cameraLive.unableToSaveVideo'));
         setIsRecording(false);
         setRecordingStartTime(null);
@@ -414,6 +330,17 @@ const CameraLiveView: React.FC = () => {
   const handleClose = () => {
     navigation.goBack();
   };
+
+  const handleReconnect = async () => {
+    await fetchLiveUrl();
+    reconnect();
+  };
+
+  // Determine if error overlay should show.
+  // FIX: hide during CONNECTING to prevent red flash between reconnect cycles.
+  // Also hide when we have a displayStream — stream is fine, no need to show error.
+  const showErrorOverlay =
+    !!error && !isStalled && !displayStream && status !== StreamStatus.CONNECTING;
 
   const renderQualityModal = () => {
     if (!showQualityModal) {
@@ -483,72 +410,32 @@ const CameraLiveView: React.FC = () => {
   };
 
   const renderVideoPlayer = () => {
-    if (videoError && !isLoading) {
-      return (
-        <View style={styles.errorContainer}>
-          <Icon name="alert-circle" size={64} color="#EF4444" />
-          <Text style={styles.errorTitle}>{t('cameraLive.videoLoadingFailed')}</Text>
-          <Text style={styles.errorText}>{videoError}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={retryStream}>
-            <Icon name="refresh" size={20} color="#FFF" />
-            <Text style={styles.retryButtonText}>{t('cameraLive.retry')}</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    if (!streamUrl) {
-      return (
-        <View style={styles.loadingContainer}>
-          {isLoading ? (
-            <>
-              <ActivityIndicator size="large" color="#FFF" />
-              <Text style={styles.loadingText}>{t('common.loading')}</Text>
-            </>
-          ) : (
-            <>
-              <Icon name="camera-off" size={64} color="#6B7280" />
-              <Text style={styles.loadingText}>{t('cameraLive.cameraNotConnected')}</Text>
-            </>
-          )}
-        </View>
-      );
-    }
-
     return (
-      <>
-        <Video
-          ref={videoRef}
-          source={{
-            uri: streamUrl,
-            type: 'm3u8',
-          }}
-          style={styles.video}
-          resizeMode="contain"
-          repeat
-          paused={false}
-          muted={isMuted}
-          playInBackground={false}
-          playWhenInactive={false}
-          useTextureView={Platform.OS === 'android'}
-          onLoad={handleVideoLoad}
-          onError={handleVideoError}
-          onLoadStart={() => {
-            setIsLoading(true);
-          }}
-          onBuffer={({ isBuffering }) => {
-            console.log('Video buffering:', isBuffering);
-          }}
-          ignoreSilentSwitch="ignore"
-          mixWithOthers="mix"
+      <View style={styles.videoContainer}>
+        <RTCView
+          streamURL={displayStream?.toURL()}
+          style={styles.videoContainer}
+          objectFit="cover"
+          zOrder={1}
+          mirror={false}
         />
-        {isLoading && (
+
+        {/* Stall overlay — shown when VideoRTC detects a true stream stall */}
+        {isStalled && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#FFF" />
-            <Text style={styles.loadingText}>{t('common.loading')}</Text>
+            <ActivityIndicator size="small" color="#FFF" />
+            <Text style={styles.loadingText}>{`Reconnecting…`}</Text>
           </View>
         )}
-      </>
+        {showErrorOverlay && (
+          <View style={styles.errorOverlay}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     );
   };
 

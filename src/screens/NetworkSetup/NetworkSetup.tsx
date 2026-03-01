@@ -29,7 +29,6 @@ import { useInput } from '@hooks/useInput';
 import { isPasswordWifi } from '@utils/validate';
 import { useAppSelector } from '@redux/store';
 import { useJetsonBLE, WiFiScanStatus } from '@hooks/useJetsonBLE';
-import { jetsonBLEService } from '@/services/jetsonBLEService';
 
 const getSignalStyle = (signal: string) => {
   const signalStyles = {

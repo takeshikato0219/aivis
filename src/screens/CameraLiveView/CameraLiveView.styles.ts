@@ -66,6 +66,17 @@ export const getStyles = (width: number, height: number) => {
       fontSize: 16,
       marginTop: 12,
     },
+    errorOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 10,
+    },
 
     errorContainer: {
       flex: 1,

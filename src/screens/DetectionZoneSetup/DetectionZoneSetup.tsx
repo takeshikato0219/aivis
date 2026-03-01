@@ -18,6 +18,7 @@ import Svg, { Line, Polygon } from 'react-native-svg';
 import { showCommonAlert } from '@components/Alert/Alert';
 import { RTCView } from 'react-native-webrtc';
 import { useStream } from '@hooks/useStream';
+import { StreamStatus } from '@redux/slices/streamSlice';
 import cameraService from '@api/cameraService';
 
 const getScreenDims = () => {
@@ -91,7 +92,7 @@ const DetectionZoneSetup: React.FC = () => {
   const fetchLiveUrl = useCallback(async () => {
     const res = await cameraService.getLiveStreamUrl(camera.id);
     if (res.success && res.data) {
-      setLiveUrl(res.data.live_url);
+      setLiveUrl((prev) => (prev === res.data!.live_url ? prev : res.data!.live_url));
       setTimeExp(res.data.time_exp);
     }
   }, [camera.id]);
@@ -115,9 +116,15 @@ const DetectionZoneSetup: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchLiveUrl]);
 
-  const { displayStream, isStalled, stallReason, reconnectAttempt, error, reconnect } = useStream({
+  const { displayStream, lastGoodStream, isStalled, error, status, reconnect } = useStream({
     live_url: liveUrl,
   });
+
+  // FIX: Use a stable stream reference for RTCView
+  // - displayStream = remoteStream ?? lastGoodStream (never null if stream arrived once)
+  // - During reconnect cycles: remoteStream is null but lastGoodStream holds last frame
+  // - RTCView keeps showing last frame instead of going black
+  const stableStreamURL = displayStream?.toURL() ?? null;
 
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
@@ -125,7 +132,10 @@ const DetectionZoneSetup: React.FC = () => {
   const clampZoneToLiveView = (zone: DetectionZone): DetectionZone => {
     const { x, y, width, height } = liveViewLayout;
     return {
-      topLeft: { x: clamp(zone.topLeft.x, x, x + width), y: clamp(zone.topLeft.y, y, y + height) },
+      topLeft: {
+        x: clamp(zone.topLeft.x, x, x + width),
+        y: clamp(zone.topLeft.y, y, y + height),
+      },
       topRight: {
         x: clamp(zone.topRight.x, x, x + width),
         y: clamp(zone.topRight.y, y, y + height),
@@ -275,7 +285,7 @@ const DetectionZoneSetup: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      let coords: { x: number; y: number }[] = [];
+      let coords: { x: number; y: number }[];
       if (zoneType === 'entryExit') {
         const { left, right } = getEntryExitPolygons();
         const inPoly = isLeftIn ? left : right;
@@ -376,19 +386,24 @@ const DetectionZoneSetup: React.FC = () => {
     };
   };
 
-  useEffect(() => {
-    getZoneDetect();
-    Orientation.lockToLandscapeLeft();
-    return () => {
-      Orientation.lockToPortrait();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handleReconnect = async () => {
     await fetchLiveUrl();
     reconnect();
   };
+
+  // FIX: Only show error overlay for genuine errors (not reconnect cycles)
+  // Conditions:
+  // - Must have an error message
+  // - NOT stalled (stall has its own overlay with spinner)
+  // - No live stream AND no last good stream (if lastGoodStream exists, show that instead)
+  // - NOT in connecting/disconnected transient states
+  const showErrorOverlay =
+    !!error &&
+    !isStalled &&
+    !displayStream &&
+    !lastGoodStream &&
+    status !== StreamStatus.CONNECTING &&
+    status !== StreamStatus.DISCONNECTED;
 
   return (
     <View style={styles.root}>
@@ -414,34 +429,42 @@ const DetectionZoneSetup: React.FC = () => {
 
       <View style={styles.body}>
         <View style={styles.previewContainer}>
-          <RTCView
-            key="live-view"
-            streamURL={displayStream?.toURL()}
-            style={styles.cameraPreview}
-            objectFit="cover"
-            zOrder={1}
-            mirror={false}
-            onLayout={(e) => {
-              const { x, y, width, height } = e.nativeEvent.layout;
-              setLiveViewLayout({ x, y, width, height });
-            }}
-          />
-
-          {/* Stall overlay — hiện đè khi stall thật (ICE failed, mute timeout) */}
-          {isStalled && (
-            <View style={styles.loadingOverlay}>
+          {stableStreamURL ? (
+            <RTCView
+              streamURL={stableStreamURL}
+              style={styles.cameraPreview}
+              objectFit="cover"
+              zOrder={1}
+              mirror={false}
+              onLayout={(e) => {
+                const { x, y, width, height } = e.nativeEvent.layout;
+                setLiveViewLayout({ x, y, width, height });
+              }}
+            />
+          ) : (
+            // Only shown before first stream ever arrives
+            <View
+              style={[styles.cameraPreview, styles.loadingOverlay]}
+              onLayout={(e) => {
+                const { x, y, width, height } = e.nativeEvent.layout;
+                setLiveViewLayout({ x, y, width, height });
+              }}
+            >
               <ActivityIndicator size="small" color="#FFF" />
-              <Text style={styles.loadingText}>
-                {`Reconnecting… (${reconnectAttempt})`}
-              </Text>
-              {stallReason ? (
-                <Text style={styles.loadingText}>{stallReason}</Text>
-              ) : null}
+              <Text style={styles.loadingText}>{'Connecting…'}</Text>
             </View>
           )}
 
-          {/* Error overlay — hard failure, cần user retry */}
-          {error && !isStalled && (
+          {/* Reconnecting spinner overlay — shown ON TOP of frozen last frame */}
+          {isStalled && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="small" color="#FFF" />
+              <Text style={styles.loadingText}>{'Reconnecting…'}</Text>
+            </View>
+          )}
+
+          {/* Error overlay — only shown when there's truly no stream to fall back to */}
+          {showErrorOverlay && (
             <View style={styles.errorOverlay}>
               <Text style={styles.errorText}>{error}</Text>
               <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
