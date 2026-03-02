@@ -204,4 +204,9 @@ export const styles = StyleSheet.create({
     color: '#FCD34D',
     marginTop: 2,
   },
+  webViewContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+    overflow: 'hidden',
+  },
 });

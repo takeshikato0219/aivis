@@ -24,7 +24,38 @@ interface TokenPayload {
 
 const PC_CONFIG = {
   bundlePolicy: 'max-bundle',
-  iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }],
+  iceTransportPolicy: 'all',
+  iceCandidatePoolSize: 10,
+  iceServers: [
+    {
+      urls: [
+        'stun:stun.cloudflare.com:3478',
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+      ],
+    },
+    // TURN relay — needed when direct P2P is blocked by NAT/firewall
+    {
+      urls: 'turn:global.relay.metered.ca:80',
+      username: 'e5d6c6a76e8e19d0ef45f780',
+      credential: 'DCotkMumpZpJu7L0',
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+      username: 'e5d6c6a76e8e19d0ef45f780',
+      credential: 'DCotkMumpZpJu7L0',
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:443',
+      username: 'e5d6c6a76e8e19d0ef45f780',
+      credential: 'DCotkMumpZpJu7L0',
+    },
+    {
+      urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+      username: 'e5d6c6a76e8e19d0ef45f780',
+      credential: 'DCotkMumpZpJu7L0',
+    },
+  ],
 };
 
 // ─── Token Utils ──────────────────────────────────────────────────────────────
@@ -98,6 +129,7 @@ export class VideoRTC {
   private reconnectTID: ReturnType<typeof setTimeout> | null = null;
   private reconnectN = 0;
   private stallTID: ReturnType<typeof setTimeout> | null = null;
+  private wsConnectTID: ReturnType<typeof setTimeout> | null = null;
   private onmsg: Record<string, (m: WRTCMsg) => void> = {};
 
   get isStalled() {
@@ -122,12 +154,33 @@ export class VideoRTC {
     this.wsState = 1;
     this._notify();
 
+    console.log('[VideoRTC] connecting to', url.substring(0, 80) + '...');
+
     const ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';
+
+    // Connection timeout — if WS doesn't open within 15s, force reconnect
+    this.wsConnectTID = setTimeout(() => {
+      this.wsConnectTID = null;
+      if (!this._destroyed && this.wsState === 1) {
+        console.warn('[VideoRTC] WS connect timeout after 15s');
+        this._closeWS();
+        this._scheduleReconnect(false);
+      }
+    }, 15_000);
+
     ws.onopen = () => {
+      if (this.wsConnectTID) {
+        clearTimeout(this.wsConnectTID);
+        this.wsConnectTID = null;
+      }
       if (!this._destroyed) this._wsOpen();
     };
     ws.onclose = () => {
+      if (this.wsConnectTID) {
+        clearTimeout(this.wsConnectTID);
+        this.wsConnectTID = null;
+      }
       if (!this._destroyed) this._wsClose();
     };
     ws.onmessage = (ev: any) => {
@@ -166,6 +219,10 @@ export class VideoRTC {
     if (this.stallTID) {
       clearTimeout(this.stallTID);
       this.stallTID = null;
+    }
+    if (this.wsConnectTID) {
+      clearTimeout(this.wsConnectTID);
+      this.wsConnectTID = null;
     }
   }
 
@@ -315,6 +372,22 @@ export class VideoRTC {
     const pc = new RTCPeerConnection(PC_CONFIG as any);
     pc.createDataChannel('keepalive');
 
+    // ICE connection timeout — if ICE doesn't reach 'connected' within 30s, force reconnect
+    let iceTID: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      iceTID = null;
+      if (this._destroyed || this.pc !== pc) return;
+      const iceState = (pc as any).iceConnectionState;
+      if (iceState !== 'connected' && iceState !== 'completed') {
+        console.warn(
+          '[VideoRTC] ⏰ ICE timeout after 30s — state:',
+          iceState,
+          '— forcing reconnect'
+        );
+        this._closePC();
+        this._scheduleReconnect(false);
+      }
+    }, 30_000);
+
     // === ICE Debug Monitoring ===
     pc.addEventListener('iceconnectionstatechange', () => {
       if (this._destroyed) return;
@@ -325,14 +398,30 @@ export class VideoRTC {
         console.log('[VideoRTC] ICE checking - finding best route...');
       } else if (iceState === 'connected') {
         console.log('[VideoRTC] ✅ ICE connected - P2P established');
+        if (iceTID) {
+          clearTimeout(iceTID);
+          iceTID = null;
+        }
       } else if (iceState === 'completed') {
         console.log('[VideoRTC] ✅ ICE completed');
+        if (iceTID) {
+          clearTimeout(iceTID);
+          iceTID = null;
+        }
       } else if (iceState === 'failed') {
         console.error('[VideoRTC] ❌ ICE FAILED - NAT/firewall blocking or no TURN server');
+        if (iceTID) {
+          clearTimeout(iceTID);
+          iceTID = null;
+        }
       } else if (iceState === 'disconnected') {
         console.warn('[VideoRTC] ⚠️ ICE disconnected - may recover');
       } else if (iceState === 'closed') {
         console.log('[VideoRTC] ICE closed');
+        if (iceTID) {
+          clearTimeout(iceTID);
+          iceTID = null;
+        }
       }
     });
 

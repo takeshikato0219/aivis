@@ -137,7 +137,7 @@ const ConnectDevice: React.FC = () => {
         <SafeAreaView style={styles.container} edges={['top']}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Home')}>
               <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{t('bluetoothScreen.connectDevice')}</Text>

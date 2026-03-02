@@ -27,10 +27,8 @@ import LogoDetail from '@assets/svg/logo-detail.svg';
 import CloseIcon from '@assets/svg/close-icon.svg';
 import NoRecordingDataIcon from '@assets/svg/no-recording-data-icon.svg';
 import { useTranslation } from 'react-i18next';
-import { RTCView } from 'react-native-webrtc';
-import { useStream } from '@hooks/useStream';
-// @ts-ignore
-import { StreamStatus } from '@redux/slices/streamSlice';
+import { WebView } from 'react-native-webview';
+import { buildStreamHtmlUrl, getInjectedStreamPlayerJS } from '@utils/streamUtils';
 import { StreamQuality } from '@api/types/cameraTypes';
 
 const STREAM_QUALITIES: StreamQuality[] = [
@@ -56,8 +54,6 @@ const CameraLiveView: React.FC = () => {
 
   // States
   const [isRecording, setIsRecording] = useState(false);
-  const [liveUrl, setLiveUrl] = useState('');
-  const [micUrl, setMicUrl] = useState('');
   const [isTalking, setIsTalking] = useState(false);
   const [bitrate, setBitrate] = useState<number>(0);
   const [showQualityModal, setShowQualityModal] = useState(false);
@@ -67,6 +63,10 @@ const CameraLiveView: React.FC = () => {
   const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
   const [currentQuality, setCurrentQuality] = useState<StreamQuality>(STREAM_QUALITIES[2]);
   const [timeExp, setTimeExp] = useState<string | null>(null);
+  const [streamHtmlUrl, setStreamHtmlUrl] = useState('');
+  const [isWebViewLoading, setIsWebViewLoading] = useState(true);
+  const [webViewError, setWebViewError] = useState<string | null>(null);
+  const webViewRef = useRef<WebView>(null);
 
   // Animation effect for quality modal
   useEffect(() => {
@@ -107,9 +107,9 @@ const CameraLiveView: React.FC = () => {
     try {
       const res = await cameraService.getLiveStreamUrl(cameraId);
       if (res.success && res.data) {
-        setLiveUrl(res.data.live_url);
-        setMicUrl(res.data.mic);
         setTimeExp(res.data.time_exp);
+        const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
+        setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
       }
     } catch {
       // handle error
@@ -129,10 +129,7 @@ const CameraLiveView: React.FC = () => {
     }
   }, [timeExp, fetchLiveUrl]);
 
-  const { displayStream, isStalled, error, status, reconnect, toggleMic } = useStream({
-    live_url: liveUrl,
-    mic: micUrl,
-  });
+  const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
 
   const requestFullscreen = () => {
     setIsFullscreen(true);
@@ -206,7 +203,6 @@ const CameraLiveView: React.FC = () => {
   }, [t]);
 
   const toggleTalk = async () => {
-    await toggleMic();
     setIsTalking((prev) => !prev);
   };
 
@@ -326,15 +322,88 @@ const CameraLiveView: React.FC = () => {
   };
 
   const handleReconnect = async () => {
+    setWebViewError(null);
+    setIsWebViewLoading(true);
     await fetchLiveUrl();
-    reconnect();
+    webViewRef.current?.reload();
   };
 
   // Determine if error overlay should show.
-  // FIX: hide during CONNECTING to prevent red flash between reconnect cycles.
-  // Also hide when we have a displayStream — stream is fine, no need to show error.
-  const showErrorOverlay =
-    !!error && !isStalled && !displayStream && status !== StreamStatus.CONNECTING;
+  const showErrorOverlay = !!webViewError && !isWebViewLoading;
+
+  const renderVideoPlayer = () => {
+    return (
+      <View style={styles.videoContainer}>
+        {streamHtmlUrl ? (
+          <WebView
+            ref={webViewRef}
+            source={{ uri: streamHtmlUrl }}
+            style={styles.videoContainer}
+            javaScriptEnabled
+            domStorageEnabled
+            mediaPlaybackRequiresUserAction={false}
+            allowsInlineMediaPlayback
+            allowsFullscreenVideo={false}
+            scrollEnabled={false}
+            bounces={false}
+            overScrollMode="never"
+            injectedJavaScript={INJECTED_JS}
+            allowsBackForwardNavigationGestures={false}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            startInLoadingState={false}
+            originWhitelist={['*']}
+            mixedContentMode="always"
+            setBuiltInZoomControls={false}
+            setSupportMultipleWindows={false}
+            {...(Platform.OS === 'ios' && {
+              allowsAirPlayForMediaPlayback: false,
+              dataDetectorTypes: 'none',
+              decelerationRate: 'normal',
+            })}
+            onLoadStart={() => {
+              setIsWebViewLoading(true);
+              setWebViewError(null);
+            }}
+            onLoadEnd={() => setIsWebViewLoading(false)}
+            onError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              setWebViewError(nativeEvent.description || 'Stream load failed');
+              setIsWebViewLoading(false);
+            }}
+            onHttpError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              setWebViewError(`HTTP ${nativeEvent.statusCode}`);
+              setIsWebViewLoading(false);
+            }}
+          />
+        ) : (
+          <View style={[styles.videoContainer, styles.loadingOverlay]}>
+            <ActivityIndicator size="small" color="#FFF" />
+            <Text style={styles.loadingText}>{'Connecting…'}</Text>
+          </View>
+        )}
+
+        {/* Loading overlay khi WebView đang tải */}
+        {isWebViewLoading && streamHtmlUrl ? (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="small" color="#FFF" />
+            <Text style={styles.loadingText}>{'Loading stream…'}</Text>
+          </View>
+        ) : null}
+
+        {/* Error overlay khi WebView bị lỗi */}
+        {showErrorOverlay ? (
+          <View style={styles.errorOverlay}>
+            <Text style={styles.errorText}>{webViewError}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
+    );
+  };
 
   const renderQualityModal = () => {
     if (!showQualityModal) {
@@ -399,36 +468,6 @@ const CameraLiveView: React.FC = () => {
             )}
           />
         </Animated.View>
-      </View>
-    );
-  };
-
-  const renderVideoPlayer = () => {
-    return (
-      <View style={styles.videoContainer}>
-        <RTCView
-          streamURL={displayStream?.toURL()}
-          style={styles.videoContainer}
-          objectFit="cover"
-          zOrder={1}
-          mirror={false}
-        />
-
-        {/* Stall overlay — shown when VideoRTC detects a true stream stall */}
-        {isStalled && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="small" color="#FFF" />
-            <Text style={styles.loadingText}>{`Reconnecting…`}</Text>
-          </View>
-        )}
-        {showErrorOverlay && (
-          <View style={styles.errorOverlay}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
     );
   };

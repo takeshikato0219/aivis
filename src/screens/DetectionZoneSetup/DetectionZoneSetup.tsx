@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Dimensions,
   PanResponder,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import Orientation from 'react-native-orientation-locker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,9 +17,8 @@ import { useTranslation } from 'react-i18next';
 import detectionZoneService from '../../services/detectionZone';
 import Svg, { Line, Polygon } from 'react-native-svg';
 import { showCommonAlert } from '@components/Alert/Alert';
-import { RTCView } from 'react-native-webrtc';
-import { useStream } from '@hooks/useStream';
-import { StreamStatus } from '@redux/slices/streamSlice';
+import { WebView } from 'react-native-webview';
+import { buildStreamHtmlUrl, getInjectedStreamPlayerJS } from '@utils/streamUtils';
 import cameraService from '@api/cameraService';
 
 const getScreenDims = () => {
@@ -80,8 +80,13 @@ const DetectionZoneSetup: React.FC = () => {
   ]);
   const [activeEntryExitPoint, setActiveEntryExitPoint] = useState<number | null>(null);
   const [isLeftIn, setIsLeftIn] = useState(true);
-  const [liveUrl, setLiveUrl] = useState(route.params.liveUrl);
+  const [streamHtmlUrl, setStreamHtmlUrl] = useState(() =>
+    buildStreamHtmlUrl(route.params.liveUrl)
+  );
   const [timeExp, setTimeExp] = useState<string | null>(null);
+  const [isWebViewLoading, setIsWebViewLoading] = useState(true);
+  const [webViewError, setWebViewError] = useState<string | null>(null);
+  const webViewRef = useRef<WebView>(null);
   const [liveViewLayout, setLiveViewLayout] = useState({
     x: 0,
     y: 0,
@@ -92,7 +97,8 @@ const DetectionZoneSetup: React.FC = () => {
   const fetchLiveUrl = useCallback(async () => {
     const res = await cameraService.getLiveStreamUrl(camera.id);
     if (res.success && res.data) {
-      setLiveUrl((prev) => (prev === res.data!.live_url ? prev : res.data!.live_url));
+      const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
+      setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
       setTimeExp(res.data.time_exp);
     }
   }, [camera.id]);
@@ -115,16 +121,6 @@ const DetectionZoneSetup: React.FC = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchLiveUrl]);
-
-  const { displayStream, lastGoodStream, isStalled, error, status, reconnect } = useStream({
-    live_url: liveUrl,
-  });
-
-  // FIX: Use a stable stream reference for RTCView
-  // - displayStream = remoteStream ?? lastGoodStream (never null if stream arrived once)
-  // - During reconnect cycles: remoteStream is null but lastGoodStream holds last frame
-  // - RTCView keeps showing last frame instead of going black
-  const stableStreamURL = displayStream?.toURL() ?? null;
 
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
@@ -387,17 +383,13 @@ const DetectionZoneSetup: React.FC = () => {
   };
 
   const handleReconnect = async () => {
+    setWebViewError(null);
+    setIsWebViewLoading(true);
     await fetchLiveUrl();
-    reconnect();
+    webViewRef.current?.reload();
   };
 
-  const showErrorOverlay =
-    !!error &&
-    !isStalled &&
-    !displayStream &&
-    !lastGoodStream &&
-    status !== StreamStatus.CONNECTING &&
-    status !== StreamStatus.DISCONNECTED;
+  const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
 
   return (
     <View style={styles.root}>
@@ -423,20 +415,55 @@ const DetectionZoneSetup: React.FC = () => {
 
       <View style={styles.body}>
         <View style={styles.previewContainer}>
-          {stableStreamURL ? (
-            <RTCView
-              streamURL={stableStreamURL}
+          {streamHtmlUrl ? (
+            <WebView
+              ref={webViewRef}
+              source={{ uri: streamHtmlUrl }}
               style={styles.cameraPreview}
-              objectFit="cover"
-              zOrder={1}
-              mirror={false}
+              containerStyle={styles.webViewContainer}
+              javaScriptEnabled
+              domStorageEnabled
+              mediaPlaybackRequiresUserAction={false}
+              allowsInlineMediaPlayback
+              allowsFullscreenVideo={false}
+              scrollEnabled={false}
+              bounces={false}
+              overScrollMode="never"
+              injectedJavaScript={INJECTED_JS}
+              allowsBackForwardNavigationGestures={false}
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              startInLoadingState={false}
+              originWhitelist={['*']}
+              mixedContentMode="always"
+              setBuiltInZoomControls={false}
+              setSupportMultipleWindows={false}
+              {...(Platform.OS === 'ios' && {
+                allowsAirPlayForMediaPlayback: false,
+                dataDetectorTypes: 'none',
+                decelerationRate: 'normal',
+              })}
+              onLoadStart={() => {
+                setIsWebViewLoading(true);
+                setWebViewError(null);
+              }}
+              onLoadEnd={() => setIsWebViewLoading(false)}
+              onError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                setWebViewError(nativeEvent.description || 'Stream load failed');
+                setIsWebViewLoading(false);
+              }}
+              onHttpError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                setWebViewError(`HTTP ${nativeEvent.statusCode}`);
+                setIsWebViewLoading(false);
+              }}
               onLayout={(e) => {
                 const { x, y, width, height } = e.nativeEvent.layout;
                 setLiveViewLayout({ x, y, width, height });
               }}
             />
           ) : (
-            // Only shown before first stream ever arrives
             <View
               style={[styles.cameraPreview, styles.loadingOverlay]}
               onLayout={(e) => {
@@ -449,23 +476,23 @@ const DetectionZoneSetup: React.FC = () => {
             </View>
           )}
 
-          {/* Reconnecting spinner overlay — shown ON TOP of frozen last frame */}
-          {isStalled && (
+          {/* Loading overlay khi WebView đang tải */}
+          {isWebViewLoading && streamHtmlUrl ? (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="small" color="#FFF" />
-              <Text style={styles.loadingText}>{'Reconnecting…'}</Text>
+              <Text style={styles.loadingText}>{'Loading stream…'}</Text>
             </View>
-          )}
+          ) : null}
 
-          {/* Error overlay — only shown when there's truly no stream to fall back to */}
-          {showErrorOverlay && (
+          {/* Error overlay khi WebView bị lỗi */}
+          {webViewError && !isWebViewLoading ? (
             <View style={styles.errorOverlay}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{webViewError}</Text>
               <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
-          )}
+          ) : null}
 
           <View
             style={[styles.overlayContainer, { width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT }]}

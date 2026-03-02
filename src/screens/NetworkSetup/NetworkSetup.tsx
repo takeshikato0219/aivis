@@ -247,7 +247,10 @@ const NetworkSetup: React.FC = () => {
   };
 
   const handleBackToScan = async () => {
-    navigation.navigate('ConnectDevice');
+    navigation.reset({
+      index: 1,
+      routes: [{ name: 'Home' }, { name: 'ConnectDevice' }],
+    });
   };
 
   return (
