@@ -73,7 +73,6 @@ const DetectionZoneSetup: React.FC = () => {
   const [zone, setZone] = useState<DetectionZone>(INITIAL_ZONE);
   const [activeCorner, setActiveCorner] = useState<keyof DetectionZone | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const marginBottom = PREVIEW_HEIGHT * 0.2;
   const [entryExitPoints, setEntryExitPoints] = useState([
     { x: PREVIEW_WIDTH / 2, y: 1 },
     { x: PREVIEW_WIDTH / 2, y: PREVIEW_HEIGHT - PREVIEW_HEIGHT * 0.15 },
@@ -122,7 +121,26 @@ const DetectionZoneSetup: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchLiveUrl]);
 
-  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+  const clamp = useCallback(
+    (v: number, min: number, max: number) => Math.max(min, Math.min(max, v)),
+    []
+  );
+
+  // Clamp entryExitPoints to live view bounds when layout changes
+  useEffect(() => {
+    if (zoneType === 'entryExit' && liveViewLayout.width > 0 && liveViewLayout.height > 0) {
+      const lx = liveViewLayout.x;
+      const ly = liveViewLayout.y;
+      const lRight = lx + liveViewLayout.width;
+      const lBottom = ly + liveViewLayout.height;
+      setEntryExitPoints((prev) =>
+        prev.map((pt) => ({
+          x: clamp(pt.x, lx, lRight),
+          y: clamp(pt.y, ly, lBottom),
+        }))
+      );
+    }
+  }, [liveViewLayout, zoneType, clamp]);
 
   // eslint-disable-next-line @typescript-eslint/no-shadow
   const clampZoneToLiveView = (zone: DetectionZone): DetectionZone => {
@@ -197,7 +215,6 @@ const DetectionZoneSetup: React.FC = () => {
     bottomRight: createPanResponder('bottomRight'),
   };
 
-  const EDGE_MARGIN = 20;
   const entryExitPanResponders = [0, 1].map((idx) =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -208,25 +225,31 @@ const DetectionZoneSetup: React.FC = () => {
           const pts = [...prev];
           let nx = prev[idx].x + g.dx;
           let ny = prev[idx].y + g.dy;
+          const lx = liveViewLayout.x;
+          const ly = liveViewLayout.y;
+          const lw = liveViewLayout.width;
+          const lh = liveViewLayout.height;
+          const lRight = lx + lw;
+          const lBottom = ly + lh;
           const dists = [
-            { edge: 'top', d: Math.abs(ny - 1) },
-            { edge: 'bottom', d: Math.abs(ny - (PREVIEW_HEIGHT - marginBottom)) },
-            { edge: 'left', d: Math.abs(nx - EDGE_MARGIN) },
-            { edge: 'right', d: Math.abs(nx - (PREVIEW_WIDTH - EDGE_MARGIN)) },
+            { edge: 'top', d: Math.abs(ny - ly) },
+            { edge: 'bottom', d: Math.abs(ny - lBottom) },
+            { edge: 'left', d: Math.abs(nx - lx) },
+            { edge: 'right', d: Math.abs(nx - lRight) },
           ].sort((a, b) => a.d - b.d);
           const nearest = dists[0].edge;
           if (nearest === 'top') {
-            ny = 1;
-            nx = clamp(nx, EDGE_MARGIN, PREVIEW_WIDTH - EDGE_MARGIN);
+            ny = ly;
+            nx = clamp(nx, lx, lRight);
           } else if (nearest === 'bottom') {
-            ny = PREVIEW_HEIGHT - PREVIEW_HEIGHT * 0.15;
-            nx = clamp(nx, EDGE_MARGIN, PREVIEW_WIDTH - EDGE_MARGIN);
+            ny = lBottom;
+            nx = clamp(nx, lx, lRight);
           } else if (nearest === 'left') {
-            nx = EDGE_MARGIN;
-            ny = clamp(ny, 1, PREVIEW_HEIGHT - marginBottom);
+            nx = lx;
+            ny = clamp(ny, ly, lBottom);
           } else if (nearest === 'right') {
-            nx = PREVIEW_WIDTH - EDGE_MARGIN;
-            ny = clamp(ny, 1, PREVIEW_HEIGHT - marginBottom);
+            nx = lRight;
+            ny = clamp(ny, ly, lBottom);
           }
           pts[idx] = { x: nx, y: ny };
           return pts;
@@ -286,10 +309,13 @@ const DetectionZoneSetup: React.FC = () => {
         const { left, right } = getEntryExitPolygons();
         const inPoly = isLeftIn ? left : right;
         const frameCornersArr = [
-          { x: 0, y: 0 },
-          { x: PREVIEW_WIDTH, y: 0 },
-          { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT },
-          { x: 0, y: PREVIEW_HEIGHT },
+          { x: liveViewLayout.x, y: liveViewLayout.y },
+          { x: liveViewLayout.x + liveViewLayout.width, y: liveViewLayout.y },
+          {
+            x: liveViewLayout.x + liveViewLayout.width,
+            y: liveViewLayout.y + liveViewLayout.height,
+          },
+          { x: liveViewLayout.x, y: liveViewLayout.y + liveViewLayout.height },
         ];
         const ic =
           frameCornersArr.find((c) => inPoly.some((p) => p.x === c.x && p.y === c.y)) ||
@@ -362,11 +388,15 @@ const DetectionZoneSetup: React.FC = () => {
     if (p1.x === p2.x && p1.y === p2.y) return { left: [], right: [] };
     const dx = p2.x - p1.x,
       dy = p2.y - p1.y;
+    const lx = liveViewLayout.x;
+    const ly = liveViewLayout.y;
+    const lRight = lx + liveViewLayout.width;
+    const lBottom = ly + liveViewLayout.height;
     const corners = [
-      { x: 0, y: 0 },
-      { x: PREVIEW_WIDTH, y: 0 },
-      { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT },
-      { x: 0, y: PREVIEW_HEIGHT },
+      { x: lx, y: ly },
+      { x: lRight, y: ly },
+      { x: lRight, y: lBottom },
+      { x: lx, y: lBottom },
     ];
     const side = (pt: Corner) => dx * (pt.y - p1.y) - dy * (pt.x - p1.x);
     const cw = (pts: Corner[]) => {
