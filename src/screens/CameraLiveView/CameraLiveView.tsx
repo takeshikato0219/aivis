@@ -129,16 +129,10 @@ const CameraLiveView: React.FC = () => {
     }
   }, [timeExp, fetchLiveUrl]);
 
-  const {
-    displayStream,
-    isStalled,
-    stallReason,
-    reconnectAttempt,
-    error,
-    status,
-    reconnect,
-    toggleMic,
-  } = useStream({ live_url: liveUrl, mic: micUrl });
+  const { displayStream, isStalled, error, status, reconnect, toggleMic } = useStream({
+    live_url: liveUrl,
+    mic: micUrl,
+  });
 
   const requestFullscreen = () => {
     setIsFullscreen(true);

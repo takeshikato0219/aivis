@@ -1,4 +1,4 @@
-import { Device, Subscription } from 'react-native-ble-plx';
+import { Device, Subscription, BleErrorCode } from 'react-native-ble-plx';
 import { Buffer } from 'buffer';
 import bleManager from '@utils/bleManagerSingleton';
 import { store } from '@redux/store';
@@ -13,7 +13,6 @@ import {
   setWifiNetworks,
   setWifiScanStatus,
   resetConnectionState,
-  setCriticalDisconnection,
   WiFiScanStatus,
   setAuthStatus,
   setIsAuthenticated,
@@ -108,6 +107,9 @@ class JetsonBLEService {
   private wifiScanTimeout: ReturnType<typeof setTimeout> | null = null;
   private initialized: boolean = false;
   private netCheckTimeout: ReturnType<typeof setTimeout> | null = null;
+  private isConnected = false;
+  private isDisconnecting = false;
+  private isCleaningUp = false;
 
   // ---------------------------------------------------------------------------
   // INITIALIZATION
@@ -168,175 +170,123 @@ class JetsonBLEService {
   // ---------------------------------------------------------------------------
 
   private async setupSubscriptions(device: Device): Promise<void> {
-    // Subscribe Status notifications
-    const statusSub = device.monitorCharacteristicForService(
-      SERVICE_UUID,
-      STATUS_CHAR_UUID,
-      (monitorError, characteristic) => {
-        if (monitorError) {
-          if (!monitorError.message?.includes('cancelled')) {
-            console.error('[BLE] Status subscription error:', monitorError);
-            store.dispatch(setConnected({ isConnected: false, deviceId: null }));
-            // Cleanup subscriptions on critical error
+    const safeMonitor = (charUUID: string, handler: (value: string) => void): Subscription => {
+      // Do NOT pass a custom transactionId here. Using a custom transactionId
+      // and then calling both cancelTransaction() + sub.remove() fires the
+      // error callback twice — the second time with a null error code, which
+      // causes a NullPointerException in PromiseImpl.reject on Android.
+      // Instead we let the library manage the transactionId internally and
+      // ONLY call sub.remove() during cleanup, which cancels internally once.
+      return device.monitorCharacteristicForService(
+        SERVICE_UUID,
+        charUUID,
+        (error, characteristic) => {
+          if (error) {
+            // BleErrorCode.OperationCancelled (2) is fired when sub.remove() is
+            // called — this is expected and MUST be swallowed silently.
             if (
-              monitorError.message?.includes('disconnected') ||
-              monitorError.message?.includes('connection lost')
+              error.errorCode === BleErrorCode.OperationCancelled ||
+              error.errorCode == null ||
+              error.message?.toLowerCase().includes('cancel')
             ) {
-              this.cleanupSubscriptions();
-              this.connectedDevice = null;
-              store.dispatch(setCriticalDisconnection(true));
+              return;
             }
+            const errorMsg = error?.message ?? 'Unknown BLE monitor error';
+            console.warn('[BLE] Monitor error:', errorMsg);
+            return;
           }
-          return;
-        }
-        if (characteristic?.value) {
-          store.dispatch(setWifiStatus(base64ToByte(characteristic.value)));
-        }
-      }
-    );
-    this.subscriptions.push(statusSub);
 
-    // Subscribe WiFiList notifications
-    const wifiListSub = device.monitorCharacteristicForService(
-      SERVICE_UUID,
-      WIFI_LIST_CHAR_UUID,
-      (monitorError, characteristic) => {
-        if (monitorError) {
-          if (!monitorError.message?.includes('cancelled')) {
-            console.error('[BLE] WiFi list subscription error:', monitorError);
-            // Cleanup subscriptions on critical error
-            if (
-              monitorError.message?.includes('disconnected') ||
-              monitorError.message?.includes('connection lost')
-            ) {
-              this.cleanupSubscriptions();
-              this.connectedDevice = null;
-              store.dispatch(setCriticalDisconnection(true));
-            }
-          }
-          return;
-        }
-        if (characteristic?.value) {
-          try {
-            const jsonStr = base64ToString(characteristic.value);
-            console.log('jsonStr', jsonStr);
-            const data = JSON.parse(jsonStr);
-            store.dispatch(setWifiScanStatus(data.status));
-            store.dispatch(setWifiNetworks(data.networks || []));
-
-            // Clear timeout since we received response
-            if (this.wifiScanTimeout) {
-              clearTimeout(this.wifiScanTimeout);
-              this.wifiScanTimeout = null;
-            }
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          } catch (parseError) {
-            store.dispatch(setError('WiFi list parsing error'));
-            // Clear timeout on error too
-            if (this.wifiScanTimeout) {
-              clearTimeout(this.wifiScanTimeout);
-              this.wifiScanTimeout = null;
-            }
+          if (characteristic?.value) {
+            handler(characteristic.value);
           }
         }
-      }
-    );
-    this.subscriptions.push(wifiListSub);
+      );
+    };
 
-    const netStatusSub = device.monitorCharacteristicForService(
-      SERVICE_UUID,
-      NET_STATUS_CHAR_UUID,
-      (monitorError, characteristic) => {
-        if (monitorError) {
-          if (!monitorError.message?.includes('cancelled')) {
-            console.error('[BLE] Network status subscription error:', monitorError);
-          }
-          return;
-        }
-
-        if (characteristic?.value) {
-          try {
-            const jsonStr = base64ToString(characteristic.value);
-            const data = JSON.parse(jsonStr);
-            let type: ConnectionTypeValue;
-            // Accept both string and number types for data.type
-            switch (data.type) {
-              case 1:
-              case 'wifi':
-                type = ConnectionType.WIFI;
-                break;
-              case 2:
-              case 'ethernet':
-                type = ConnectionType.ETHERNET;
-                break;
-              case 3:
-              case 'cellular':
-                type = ConnectionType.CELLULAR;
-                break;
-              case 0:
-              case 'none':
-              default:
-                type = ConnectionType.NONE;
-            }
-
-            // Dispatch to Redux
-            store.dispatch(
-              setNetworkStatus({
-                status: data.status,
-                connected: data.connected,
-                type: type,
-                interface: data.interface,
-                details: data.details,
-              })
-            );
-
-            console.log('[BLE] Network status received:', type);
-
-            this.cleanupNetCheckTimeout();
-          } catch (err) {
-            console.error('[BLE] Network status parse error:', err);
-            this.cleanupNetCheckTimeout();
-          }
-        }
-      }
+    this.subscriptions.push(
+      safeMonitor(STATUS_CHAR_UUID, (value) => {
+        store.dispatch(setWifiStatus(base64ToByte(value)));
+      })
     );
 
-    this.subscriptions.push(netStatusSub);
-
-    // Subscribe AUTH_STATUS notifications (ONLY ONCE)
-    const authSub = device.monitorCharacteristicForService(
-      SERVICE_UUID,
-      AUTH_STATUS_CHAR_UUID,
-      (monitorError, characteristic) => {
-        if (monitorError) {
-          if (!monitorError.message?.includes('cancelled')) {
-            console.error('[BLE] Auth subscription error:', monitorError);
-          }
-          return;
-        }
-
-        if (characteristic?.value) {
-          const status = base64ToByte(characteristic.value);
-
-          store.dispatch(setAuthStatus(status));
-          store.dispatch(setIsAuthenticated(status === AuthStatus.AUTHENTICATED));
-        }
-      }
+    this.subscriptions.push(
+      safeMonitor(WIFI_LIST_CHAR_UUID, (value) => {
+        try {
+          const data = JSON.parse(base64ToString(value));
+          store.dispatch(setWifiScanStatus(data.status));
+          store.dispatch(setWifiNetworks(data.networks || []));
+        } catch {}
+      })
     );
 
-    this.subscriptions.push(authSub);
+    this.subscriptions.push(
+      safeMonitor(NET_STATUS_CHAR_UUID, (value) => {
+        try {
+          const data = JSON.parse(base64ToString(value));
+          store.dispatch(
+            setNetworkStatus({
+              status: data.status,
+              connected: data.connected,
+              type: data.type || ConnectionType.NONE,
+              interface: data.interface,
+              details: data.details,
+            })
+          );
+        } catch {}
+      })
+    );
 
-    // Set up disconnect listener
+    this.subscriptions.push(
+      safeMonitor(AUTH_STATUS_CHAR_UUID, (value) => {
+        const status = base64ToByte(value);
+        store.dispatch(setAuthStatus(status));
+        store.dispatch(setIsAuthenticated(status === AuthStatus.AUTHENTICATED));
+      })
+    );
+
+    // Only ONE disconnect handler
     const disconnectSub = bleManager.onDeviceDisconnected(device.id, () => {
-      console.log('[BLE] Device disconnected unexpectedly, cleaning up subscriptions...');
-      // Cleanup subscriptions when device disconnects unexpectedly
-      this.cleanupSubscriptions();
-      store.dispatch(resetConnectionState());
-      this.connectedDevice = null;
-      // Trigger critical disconnection alert
-      store.dispatch(setCriticalDisconnection(true));
+      console.log('[BLE] Disconnected event received');
+
+      if (this.isDisconnecting) return;
+
+      this.internalDisconnectCleanup();
     });
+
     this.subscriptions.push(disconnectSub);
+  }
+
+  private internalDisconnectCleanup() {
+    if (!this.isConnected) return;
+
+    this.isConnected = false;
+    this.isDisconnecting = true;
+
+    this.safeCleanupSubscriptions();
+
+    this.connectedDevice = null;
+    store.dispatch(resetConnectionState());
+
+    this.isDisconnecting = false;
+  }
+
+  private safeCleanupSubscriptions(): void {
+    if (this.isCleaningUp) return;
+
+    this.isCleaningUp = true;
+
+    // Only call sub.remove() — do NOT also call cancelTransaction() for the
+    // same monitor. Calling both fires the error callback twice; the second
+    // time the native layer passes a null error code into PromiseImpl.reject,
+    // causing a NullPointerException crash on Android.
+    const subs = this.subscriptions.splice(0); // clear first to prevent re-entry
+    subs.forEach((sub) => {
+      try {
+        sub?.remove?.();
+      } catch {}
+    });
+
+    this.isCleaningUp = false;
   }
 
   private cleanupNetCheckTimeout(): void {
@@ -351,8 +301,14 @@ class JetsonBLEService {
   // ---------------------------------------------------------------------------
 
   private cleanupSubscriptions(): void {
-    this.subscriptions.forEach((sub) => sub.remove());
-    this.subscriptions = [];
+    const subs = this.subscriptions.splice(0);
+    subs.forEach((sub) => {
+      try {
+        sub?.remove?.();
+      } catch (e) {
+        console.warn('[BLE] Safe remove subscription error:', e);
+      }
+    });
   }
 
   private cleanupScanTimeout(): void {
@@ -433,16 +389,19 @@ class JetsonBLEService {
 
     // Filter by SERVICE_UUID at BLE stack level
     bleManager.startDeviceScan(
-      null,
-      { allowDuplicates: false, scanMode: 2, legacyScan: true },
+      [SERVICE_UUID],
+      {
+        scanMode: 2,
+        allowDuplicates: true,
+      },
       (error, device) => {
         if (error) {
-          store.dispatch(setError(error.message));
-          store.dispatch(setScanning(false));
+          const errorMsg = error?.message ?? 'BLE scan error';
+          store.dispatch(setError(errorMsg));
           return;
         }
 
-        if (device?.serviceUUIDs?.includes(SERVICE_UUID)) {
+        if (device) {
           store.dispatch(addDevice(toSerializableDevice(device)));
         }
       }
@@ -465,51 +424,39 @@ class JetsonBLEService {
   // CONNECT
   // ---------------------------------------------------------------------------
 
-  connect = async (
-    device: Device | SerializableDevice,
-    pinCode: string
-  ): Promise<{ success: boolean; reason?: string }> => {
+  connect = async (device: Device | SerializableDevice, pinCode: string) => {
     try {
-      store.dispatch(clearError());
-
-      let connectedDevice: Device;
-
-      if (this.connectedDevice && this.connectedDevice.id === device.id) {
-        connectedDevice = this.connectedDevice;
-      } else {
-        connectedDevice = await bleManager.connectToDevice(device.id);
-        connectedDevice = await connectedDevice.discoverAllServicesAndCharacteristics();
-
-        this.connectedDevice = connectedDevice;
-
-        await this.setupSubscriptions(connectedDevice);
-
-        store.dispatch(
-          setConnected({
-            isConnected: true,
-            deviceId: connectedDevice.id,
-          })
-        );
+      if (this.isConnected) {
+        return { success: true };
       }
 
-      store.dispatch(setAuthStatus(AuthStatus.UNAUTHENTICATED));
-      store.dispatch(setIsAuthenticated(false));
+      const connectedDevice = await bleManager.connectToDevice(device.id);
+      await connectedDevice.discoverAllServicesAndCharacteristics();
 
-      const isAuth = await this.authenticate(connectedDevice, pinCode);
+      this.connectedDevice = connectedDevice;
+      this.isConnected = true;
 
-      if (!isAuth) {
+      await this.setupSubscriptions(connectedDevice);
+
+      store.dispatch(
+        setConnected({
+          isConnected: true,
+          deviceId: connectedDevice.id,
+        })
+      );
+
+      const auth = await this.authenticate(connectedDevice, pinCode);
+
+      if (!auth) {
+        await this.disconnect();
         return { success: false, reason: 'INVALID_PIN' };
       }
 
       return { success: true };
-    } catch (err: any) {
+    } catch (err) {
       console.log('[BLE] connect error:', err);
-      this.cleanupSubscriptions();
-      this.connectedDevice = null;
-
-      store.dispatch(setConnected({ isConnected: false, deviceId: null }));
-
-      return { success: false, reason: 'CONNECTION_ERROR' };
+      await this.disconnect();
+      return { success: false };
     }
   };
 
@@ -550,12 +497,13 @@ class JetsonBLEService {
           PIN_CHAR_UUID,
           stringToBase64(pinCode)
         );
-      } catch (err) {
+      } catch (err: any) {
         if (!finished) {
           finished = true;
           clearTimeout(timeout);
           unsubscribe();
-          reject(err);
+          const errorObj = err && typeof err === 'object' ? err : { message: String(err) };
+          reject({ code: errorObj.code || 'BLE_ERROR', message: errorObj.message || 'BLE error' });
         }
       }
     });
@@ -566,16 +514,22 @@ class JetsonBLEService {
   // ---------------------------------------------------------------------------
 
   disconnect = async (): Promise<void> => {
-    // Remove all subscriptions first
-    this.cleanupSubscriptions();
+    if (!this.isConnected) return;
 
-    // Cancel connection
-    if (this.connectedDevice) {
-      await bleManager.cancelDeviceConnection(this.connectedDevice.id);
-      this.connectedDevice = null;
-    }
+    this.isDisconnecting = true;
+
+    try {
+      this.safeCleanupSubscriptions();
+
+      if (this.connectedDevice) {
+        await bleManager.cancelDeviceConnection(this.connectedDevice.id);
+      }
+    } catch {}
+
     this.connectedDevice = null;
-    // Reset state
+    this.isConnected = false;
+    this.isDisconnecting = false;
+
     store.dispatch(resetConnectionState());
   };
 

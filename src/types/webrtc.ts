@@ -24,18 +24,7 @@ interface TokenPayload {
 
 const PC_CONFIG = {
   bundlePolicy: 'max-bundle',
-  iceServers: [
-    // Multiple STUN servers for better fallback
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: 'stun:stun.relay.metered.ca:80' },
-    // TODO: Add TURN server from backend for restrictive NAT environments
-    // { urls: 'turn:YOUR_TURN_SERVER:3478', username: 'user', credential: 'pass' }
-  ],
-  iceCandidatePoolSize: 10, // Pre-gather candidates for faster connection
-  iceTransportPolicy: 'all', // Allow all connection types (host, srflx, relay)
+  iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }],
 };
 
 // ─── Token Utils ──────────────────────────────────────────────────────────────
@@ -105,8 +94,6 @@ export class VideoRTC {
   private mode = '';
   private ws: WebSocket | null = null;
   private pc: RTCPeerConnection | null = null;
-  // FIX #1: lastStream NEVER cleared on reconnect — only on destroy()
-  // This ensures silent=true is always computed correctly when PC closes
   private lastStream: MediaStream | null = null;
   private reconnectTID: ReturnType<typeof setTimeout> | null = null;
   private reconnectN = 0;
@@ -166,7 +153,6 @@ export class VideoRTC {
     this.onConnectionState = null;
     this.onModeChange = null;
     this.onError = null;
-    // Only place lastStream is cleared
     this.lastStream = null;
   }
 
@@ -214,14 +200,12 @@ export class VideoRTC {
   private _scheduleReconnect(silent: boolean) {
     if (this._destroyed || !this.wsURL) return;
 
-    // Guard: prevent double-scheduling
     if (this.reconnectTID) {
       console.log('[VideoRTC] reconnect already scheduled, skipping');
       return;
     }
 
     this._silentReconnecting = silent;
-    // Only grow backoff for non-silent (error) reconnects
     if (!silent) this.reconnectN++;
     const delay = silent ? RECON_BASE : Math.min(RECON_BASE * this.reconnectN, 30_000);
 
@@ -256,7 +240,6 @@ export class VideoRTC {
     this._silentReconnecting = false;
     this._serverClosing = false;
     console.warn('[VideoRTC] stall:', reason);
-    // FIX #2: Pass lastStream (never null here) so UI keeps last frame
     this.onStreamStall?.(this.lastStream, reason);
     this.onError?.(`Reconnecting… (${reason})`);
     this._closeWS();
@@ -288,13 +271,7 @@ export class VideoRTC {
     }
     this.ws = null;
 
-    // Set _serverClosing IMMEDIATELY — prevents track.ended from triggering stall
     this._serverClosing = true;
-
-    // Snapshot hadStream NOW before any _closePC() can be called
-    // In react-native-webrtc, WS close does NOT automatically transition PC to
-    // "closed" state — connectionstatechange→closed may never fire unless we call
-    // pc.close() ourselves. So we MUST handle reconnect scheduling here.
     const hadStream = this.lastStream !== null;
 
     console.log(
@@ -310,7 +287,6 @@ export class VideoRTC {
 
     if (this.reconnectTID || this._stalled || this._destroyed) return;
 
-    // Close PC here — connectionstatechange→closed may fire but guard prevents double-schedule
     this._closePC();
     this._scheduleReconnect(hadStream);
   }

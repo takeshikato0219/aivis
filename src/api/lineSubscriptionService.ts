@@ -59,12 +59,6 @@ export class LineSubscriptionService extends BaseLineService {
       if (!profile?.userId) {
         throw new Error('Unable to get LINE user profile');
       }
-
-      // In a real implementation, this would:
-      // 1. Send a welcome message to the user via LINE Messaging API
-      // 2. Add user to your subscription database
-      // 3. Send push notifications, etc.
-
       const success = await this.sendSubscriptionMessage(profile.userId);
 
       if (success) {

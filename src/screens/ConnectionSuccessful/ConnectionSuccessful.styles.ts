@@ -11,6 +11,7 @@ export const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: 20,
+    paddingTop: 20,
   },
   logoContainer: {
     alignItems: 'center',
@@ -261,7 +262,6 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 20,
-    backgroundColor: '#0A0E1A',
   },
   primaryButton: {
     flexDirection: 'row',

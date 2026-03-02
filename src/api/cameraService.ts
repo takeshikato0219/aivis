@@ -25,12 +25,7 @@ class CameraService {
     if (data.description !== undefined) requestBody.description = data.description;
     const response = await axiosInstance.patch<RegisterCameraResponse>(
       `${API_ENDPOINTS.CAMERAS}/${data.id}`,
-      requestBody,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
+      requestBody
     );
 
     return response.data;

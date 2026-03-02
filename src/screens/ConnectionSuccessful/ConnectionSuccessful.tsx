@@ -9,6 +9,7 @@ import {
   Image,
   ScrollView,
   TextInput,
+  KeyboardAvoidingView,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,8 @@ import { ConnectionSuccessfulScreenRouteProp } from '@navigation/types';
 import { CameraStatus } from '@api/types/cameraTypes';
 import { buildStreamUrl } from '@utils/streamUtils';
 import { useLiveStream } from '@hooks/useLiveStream';
+import cameraService from '@api/cameraService';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 interface CameraInfo {
   id: string;
@@ -45,8 +48,7 @@ const ConnectionSuccessful: React.FC = () => {
   const { width: screenWidth } = useWindowDimensions();
   const cameraData = route.params?.cameraData;
 
-  // Calculate stream width to fit outer view (excluding marginHorizontal: 20)
-  const streamWidth = screenWidth - 40; // 20px margin each side
+  const streamWidth = screenWidth - 40;
 
   // Use live stream hook
   const {
@@ -82,13 +84,32 @@ const ConnectionSuccessful: React.FC = () => {
 
   const [cameraName, setCameraName] = useState(cameraData?.name || t(''));
 
+  const changeNameCamera = async () => {
+    if (!cameraData?.id || !cameraName.trim()) return;
+    try {
+      await cameraService.registerCamera({
+        id: cameraData.id,
+        name: cameraName.trim(),
+      });
+    } catch (error) {
+      console.error('Failed to update camera name:', error);
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <KeyboardAwareScrollView
+      enableOnAndroid
+      extraScrollHeight={20}
+      keyboardShouldPersistTaps="handled"
+      //eslint-disable-next-line react-native/no-inline-styles
+      contentContainerStyle={{ flexGrow: 1 }}
+    >
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.successBadgeContainer}>
           <View style={styles.logoContainer}>
@@ -179,6 +200,7 @@ const ConnectionSuccessful: React.FC = () => {
             )}
           </View>
         </View>
+
         <View style={styles.cameraInfoFooter}>
           <View style={styles.cameraIconContainer}>
             <View style={styles.cameraIcon}>
@@ -204,15 +226,16 @@ const ConnectionSuccessful: React.FC = () => {
               style={styles.editNameInput}
               value={cameraName}
               onChangeText={setCameraName}
+              onBlur={changeNameCamera}
               placeholder={t('liveStream.exampleLivingRoomCamera')}
               placeholderTextColor="#8B92A8"
-              editable={false}
             />
           </View>
           <Text style={styles.cameraNameHint}>
             {t('liveStream.thisNameWillAppearInYourDashboardAlerts')}
           </Text>
         </View>
+
         <SafeAreaView edges={['bottom']} style={styles.bottomSection}>
           <TouchableOpacity
             style={styles.primaryButton}
@@ -239,7 +262,7 @@ const ConnectionSuccessful: React.FC = () => {
           </TouchableOpacity>
         </SafeAreaView>
       </ScrollView>
-    </View>
+    </KeyboardAwareScrollView>
   );
 };
 

@@ -19,12 +19,10 @@ import { useAppDispatch, useAppSelector } from '../redux/store';
 
 export interface UseStreamConfig {
   live_url: string;
-  hls_url?: string; // HLS fallback URL
   mic?: string;
   autoConnect?: boolean;
   maxRetries?: number;
   retryDelay?: number;
-  hlsFallbackAfterRetries?: number; // Switch to HLS after N WebRTC failures (default: 2)
 }
 
 export interface UseStreamResult {
@@ -36,13 +34,9 @@ export interface UseStreamResult {
   reconnectAttempt: number;
   error: string | null;
   status: StreamStatus;
-  activeProtocol: 'webrtc' | 'hls' | null; // Current streaming protocol
-  hlsUrl: string | null; // Active HLS URL (when using HLS)
   connect: () => void;
   disconnect: () => void;
   reconnect: () => void;
-  switchToWebRTC: () => void; // Force switch back to WebRTC
-  switchToHLS: () => void; // Force switch to HLS
   startMic: () => Promise<void>;
   stopMic: () => void;
   toggleMic: () => Promise<void>;
@@ -56,12 +50,10 @@ function fmtMs(ms: number) {
 
 export function useStream({
   live_url,
-  hls_url,
   mic: micURL,
   autoConnect = true,
   maxRetries = 3,
   retryDelay = 3000,
-  hlsFallbackAfterRetries = 2,
 }: UseStreamConfig): UseStreamResult {
   const dispatch = useAppDispatch();
   const micState = useAppSelector((s) => s.stream.micState);
@@ -73,8 +65,6 @@ export function useStream({
 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [lastGoodStream, setLastGoodStream] = useState<MediaStream | null>(null);
-  const [activeProtocol, setActiveProtocol] = useState<'webrtc' | 'hls' | null>(null);
-  const [activeHlsUrl, setActiveHlsUrl] = useState<string | null>(null);
 
   const rtcRef = useRef<VideoRTC | null>(null);
   const micRef = useRef<MicRTC | null>(null);
@@ -82,35 +72,21 @@ export function useStream({
   const tokenTID = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCount = useRef(0);
   const isMounted = useRef(true);
-  const shouldUseHLS = useRef(false);
 
-  // KEY FIX: All values read by VideoRTC callbacks go through refs.
-  // This prevents stale closures without needing to recreate `connect` on every render.
-  // If `connect` were recreated on every render (e.g. because lastGoodStream changed),
-  // the old VideoRTC instance would hold a reference to the old callback, and the
-  // new `connect` would destroy+recreate the VideoRTC — causing an infinite loop.
   const liveUrlRef = useRef(live_url);
-  const hlsUrlRef = useRef(hls_url);
   const maxRetriesRef = useRef(maxRetries);
   const retryDelayRef = useRef(retryDelay);
-  const hlsFallbackAfterRetriesRef = useRef(hlsFallbackAfterRetries);
   const lastGoodStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     liveUrlRef.current = live_url;
   }, [live_url]);
   useEffect(() => {
-    hlsUrlRef.current = hls_url;
-  }, [hls_url]);
-  useEffect(() => {
     maxRetriesRef.current = maxRetries;
   }, [maxRetries]);
   useEffect(() => {
     retryDelayRef.current = retryDelay;
   }, [retryDelay]);
-  useEffect(() => {
-    hlsFallbackAfterRetriesRef.current = hlsFallbackAfterRetries;
-  }, [hlsFallbackAfterRetries]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -207,13 +183,11 @@ export function useStream({
       if (!isMounted.current) return;
       if (rtcRef.current?.isSilentReconnecting) return;
       if (s === 2) {
-        setActiveProtocol('webrtc');
         safeDispatch(setStatus(StreamStatus.CONNECTED));
         safeDispatch(resetRetry());
         retryCount.current = 0;
         safeDispatch(setError(null));
       } else if (s === 1) {
-        setActiveProtocol('webrtc');
         if (!lastGoodStreamRef.current) {
           safeDispatch(setStatus(StreamStatus.CONNECTING));
         }
@@ -266,58 +240,11 @@ export function useStream({
     rtc.connect(url);
   }, [safeDispatch]);
 
-  // ── Switch to HLS ─────────────────────────────────────────────────────────
-  const switchToHLS = useCallback(() => {
-    const hls = hlsUrlRef.current;
-    if (!hls) {
-      console.warn('[useStream] No HLS URL available for fallback');
-      return;
-    }
-
-    console.log('[useStream] Switching to HLS fallback');
-
-    // Cleanup WebRTC
-    if (rtcRef.current) {
-      rtcRef.current.destroy();
-      rtcRef.current = null;
-    }
-    if (retryTID.current) {
-      clearTimeout(retryTID.current);
-      retryTID.current = null;
-    }
-
-    shouldUseHLS.current = true;
-    setActiveProtocol('hls');
-    setActiveHlsUrl(hls);
-    safeDispatch(setStatus(StreamStatus.CONNECTED));
-    safeDispatch(setError(null));
-    safeDispatch(clearStall());
-  }, [safeDispatch]);
-
-  // ── Switch to WebRTC ──────────────────────────────────────────────────────
-  const switchToWebRTC = useCallback(() => {
-    console.log('[useStream] Switching back to WebRTC');
-
-    shouldUseHLS.current = false;
-    setActiveProtocol(null);
-    setActiveHlsUrl(null);
-    retryCount.current = 0;
-    safeDispatch(resetRetry());
-
-    // Reconnect WebRTC
-    setTimeout(() => {
-      if (isMounted.current) connect();
-    }, 300);
-  }, [connect, safeDispatch]);
-
   // ── Disconnect ────────────────────────────────────────────────────────────
   const disconnect = useCallback(() => {
     disconnectAll();
     lastGoodStreamRef.current = null;
     setLastGoodStream(null);
-    shouldUseHLS.current = false;
-    setActiveProtocol(null);
-    setActiveHlsUrl(null);
     safeDispatch(reset());
     safeDispatch(setStatus(StreamStatus.DISCONNECTED));
   }, [disconnectAll, safeDispatch]);

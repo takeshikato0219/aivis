@@ -391,12 +391,6 @@ const DetectionZoneSetup: React.FC = () => {
     reconnect();
   };
 
-  // FIX: Only show error overlay for genuine errors (not reconnect cycles)
-  // Conditions:
-  // - Must have an error message
-  // - NOT stalled (stall has its own overlay with spinner)
-  // - No live stream AND no last good stream (if lastGoodStream exists, show that instead)
-  // - NOT in connecting/disconnected transient states
   const showErrorOverlay =
     !!error &&
     !isStalled &&
