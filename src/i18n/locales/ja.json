@@ -603,6 +603,8 @@
     "setupEntryExit": "出入り追跡の設定"
   },
   "detectionZone": {
-    "inGreenOutRed": "入: 緑 / 出: 赤"
+    "inGreenOutRed": "入: 緑 / 出: 赤",
+    "successMessage": "検知ゾーンの設定に成功しました",
+    "failureMessage": "検知ゾーンの設定に失敗しました"
   }
 }

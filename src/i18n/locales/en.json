@@ -562,6 +562,8 @@
     "setupEntryExit": "Setup Entry/Exit Tracking"
   },
   "detectionZone": {
-    "inGreenOutRed": "In: Green / Out: Red"
+    "inGreenOutRed": "In: Green / Out: Red",
+    "successMessage": "Detection zone setup successful",
+    "failureMessage": "Detection zone setup failed"
   }
 }

@@ -355,8 +355,8 @@ const DetectionZoneSetup: React.FC = () => {
       });
       showCommonAlert({
         title: response.success
-          ? t('detectionZone.successTitle', 'Success')
-          : t('detectionZone.failureTitle', 'Failure'),
+          ? t('common.success', 'Success')
+          : t('uploadDetectZone.failureTitle', 'Failure'),
         message: response.success
           ? t('detectionZone.successMessage', 'Detection zone setup successful')
           : t('detectionZone.failureMessage', 'Detection zone setup failed'),
