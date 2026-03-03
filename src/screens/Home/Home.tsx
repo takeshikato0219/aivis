@@ -36,6 +36,8 @@ import { useErrorHandler } from '@hooks/useErrorHandler';
 import CameraIcon from '@assets/png/camera.png';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import RNFS from 'react-native-fs';
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -58,6 +60,7 @@ const Home = () => {
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
   const [hasCamerasInAllTab, setHasCamerasInAllTab] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastFrameUris, setLastFrameUris] = useState<{ [cameraId: string]: string | null }>({});
 
   // USING COMMON HOOKS
   const { syncUserData } = useUserSync();
@@ -189,6 +192,40 @@ const Home = () => {
     setIsRefreshing(false);
   }, [fetchCameraList, selectedFacilityId]);
 
+  // Load last frame URIs for all cameras
+  const loadLastFrames = useCallback(async (cameras: Camera[]) => {
+    const uris: { [cameraId: string]: string | null } = {};
+    for (const camera of cameras) {
+      try {
+        const savedPath = await AsyncStorage.getItem(`camera_last_frame_${camera.id}`);
+        if (savedPath) {
+          const exists = await RNFS.exists(savedPath);
+          if (exists) {
+            uris[camera.id] = `file://${savedPath}?t=${Date.now()}`;
+          } else {
+            uris[camera.id] = null;
+          }
+        } else {
+          uris[camera.id] = null;
+        }
+      } catch {
+        uris[camera.id] = null;
+      }
+    }
+    setLastFrameUris(uris);
+  }, []);
+
+  // Load last frames when cameraList changes or Home regains focus
+  useFocusEffect(
+    useCallback(() => {
+      if (cameraList.length > 0) {
+        loadLastFrames(cameraList);
+      } else {
+        setLastFrameUris({});
+      }
+    }, [cameraList, loadLastFrames])
+  );
+
   const renderCameraContent = () => {
     if (isLoadingCameras) {
       return (
@@ -228,11 +265,16 @@ const Home = () => {
               statusText.toLowerCase().includes('online') ||
               statusText.toLowerCase().includes('オンライン');
 
+            const lastFrameUri = lastFrameUris[camera.id] || null;
+
             return (
               <TouchableOpacity onPress={() => goToDetail(camera)} key={camera.id}>
                 <View style={styles.card}>
                   <View style={styles.videoWrapper}>
-                    <Image source={RetangleImage} style={styles.cardImage} />
+                    <Image
+                      source={lastFrameUri ? { uri: lastFrameUri, cache: 'reload' } : RetangleImage}
+                      style={styles.cardImage}
+                    />
                   </View>
                   <View style={styles.cardBadge}>
                     <View

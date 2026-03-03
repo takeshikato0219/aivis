@@ -23,7 +23,6 @@ export interface UseLiveStreamReturn {
   handleWebViewHttpError: (syntheticEvent: any) => void;
   handleManualRetry: () => void;
   handleWebViewMessage: (event: any) => void;
-  getInjectedJavaScript: () => string;
   cleanup: () => void;
 }
 
@@ -287,144 +286,6 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     [handleConnectionLost, connectionStatus]
   );
 
-  const getInjectedJavaScript = useCallback((): string => {
-    return `
-  (function () {
-    // Inject CSS to hide all mute/unmute/volume buttons (common selectors)
-    var style = document.createElement('style');
-    style.textContent = [
-      '[id*="mute" i], [class*="mute" i], [id*="volume" i], [class*="volume" i], [aria-label*="mute" i], [aria-label*="volume" i], button[title*="mute" i], button[title*="volume" i], button[aria-label*="mute" i], button[aria-label*="volume" i] {',
-      '  display: none !important;',
-      '}',
-      // Hide custom mute button if injected previously
-      '#__rn_mute_btn { display: none !important; }',
-    ].join('\\n');
-    document.head.appendChild(style);
-
-    // Remove any mute/unmute/volume button elements on interval
-    function removeMuteButtons() {
-      var selectors = [
-        '[id*="mute" i]', '[class*="mute" i]', '[id*="volume" i]', '[class*="volume" i]',
-        '[aria-label*="mute" i]', '[aria-label*="volume" i]',
-        'button[title*="mute" i]', 'button[title*="volume" i]',
-        'button[aria-label*="mute" i]', 'button[aria-label*="volume" i]',
-        '#__rn_mute_btn'
-      ];
-      var nodes = document.querySelectorAll(selectors.join(','));
-      nodes.forEach(function(node) { node.remove(); });
-    }
-    removeMuteButtons();
-    setInterval(removeMuteButtons, 1000);
-
-    // 1. CSS: universal hide + whitelist video/canvas/mute
-    var s = document.createElement('style');
-    s.textContent = [
-      'html,body{background:#000!important;margin:0!important;padding:0!important;overflow:hidden!important;}',
-      'video, canvas {',
-      '  display:block!important; visibility:visible!important;',
-      '  opacity:1!important; position:fixed!important;',
-      '  top:0!important; left:0!important;',
-      '  width:100vw!important; height:100vh!important;',
-      '  object-fit:contain!important; z-index:1!important;',
-      '  background:#000!important; pointer-events:auto!important;',
-      '}',
-      '#__rn_mute_btn {',
-      '  display:flex!important; visibility:visible!important;',
-      '  align-items:center!important; justify-content:center!important;',
-      '  position:fixed!important; bottom:16px!important; right:16px!important;',
-      '  z-index:9999999!important; width:44px!important; height:44px!important;',
-      '  border-radius:50%!important; border:none!important;',
-      '  background:rgba(0,0,0,0.55)!important; color:#fff!important;',
-      '  font-size:22px!important; cursor:pointer!important;',
-      '  pointer-events:auto!important; opacity:0.9!important;',
-      '  -webkit-tap-highlight-color:transparent!important;',
-      '}',
-      '#__rn_mute_btn:active{opacity:1!important;transform:scale(0.92)!important;}'
-    ].join('\\n');
-    document.head.appendChild(s);
-
-    // 2. DOM cleanup: walk up from media elements to mark parent chain, hide everything else
-    function hideUnwantedElements() {
-      var validSet = new Set();
-      // Mark the mute button
-      var mb = document.getElementById('__rn_mute_btn');
-      if (mb) validSet.add(mb);
-      // Find all media elements and mark their parent chain up to body
-      var mediaEls = document.querySelectorAll('video, canvas, audio');
-      mediaEls.forEach(function(m) {
-        var node = m;
-        while (node && node !== document.body) {
-          validSet.add(node);
-          node = node.parentElement;
-        }
-      });
-      // Now hide everything not in the valid set
-      var all = document.body.querySelectorAll('*');
-      all.forEach(function(el) {
-        var tag = el.tagName.toLowerCase();
-        if (tag==='script'||tag==='style'||tag==='source') return;
-        if (validSet.has(el)) {
-          // Parent of media: strip decoration but keep visible
-          if (tag!=='video'&&tag!=='canvas'&&tag!=='audio'&&el.id!=='__rn_mute_btn') {
-            el.style.cssText='margin:0!important;padding:0!important;border:none!important;background:transparent!important;overflow:visible!important;';
-          }
-          return;
-        }
-        // Hide everything else
-        el.style.cssText='display:none!important;visibility:hidden!important;width:0!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important;position:absolute!important;pointer-events:none!important;';
-      });
-    }
-    hideUnwantedElements();
-    setInterval(hideUnwantedElements, 300);
-
-    // 3. Custom mute/unmute button
-    var muteBtn = document.createElement('div');
-    muteBtn.id = '__rn_mute_btn';
-    muteBtn.textContent = '\\uD83D\\uDD07';
-    var isMuted = true;
-    function syncMute() {
-      document.querySelectorAll('video').forEach(function(v){ v.muted = isMuted; });
-      muteBtn.textContent = isMuted ? '\\uD83D\\uDD07' : '\\uD83D\\uDD0A';
-    }
-    function toggleMute(e) {
-      e.stopPropagation(); e.preventDefault();
-      isMuted = !isMuted;
-      syncMute();
-    }
-    muteBtn.addEventListener('click', toggleMute);
-    muteBtn.addEventListener('touchend', toggleMute);
-    document.body.appendChild(muteBtn);
-    setInterval(syncMute, 1000);
-
-    // 4. Stream status detection
-    var send = function(type, data) {
-      window.ReactNativeWebView.postMessage(JSON.stringify(Object.assign({type:type}, data||{})));
-    };
-    var lastFrame = Date.now();
-    var playing = false;
-    function waitCanvas(){
-      var canvas = document.querySelector('canvas');
-      if(!canvas){ requestAnimationFrame(waitCanvas); return; }
-      var ctx = canvas.getContext('2d');
-      function detect(){
-        try{
-          var p = ctx.getImageData(0,0,1,1).data;
-          if(p[0]||p[1]||p[2]){
-            lastFrame = Date.now();
-            if(!playing){ playing=true; send('playing'); }
-          }
-          if(Date.now()-lastFrame>4000){ playing=false; send('stalled'); }
-        }catch(e){}
-        requestAnimationFrame(detect);
-      }
-      detect();
-    }
-    waitCanvas();
-  })();
-  true;
-  `;
-  }, []);
-
   const cleanup = useCallback(() => {
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
@@ -509,7 +370,6 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     handleWebViewHttpError,
     handleManualRetry,
     handleWebViewMessage,
-    getInjectedJavaScript,
     cleanup,
   };
 };

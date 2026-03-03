@@ -8,6 +8,7 @@ export const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#0A0E1A',
   },
   contentContainer: {
     paddingBottom: 20,
@@ -18,7 +19,6 @@ export const styles = StyleSheet.create({
   },
   successBadgeContainer: {
     alignItems: 'center',
-    paddingTop: 20,
     paddingBottom: 20,
   },
   successText: {

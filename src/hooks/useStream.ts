@@ -18,7 +18,7 @@ import {
 import { useAppDispatch, useAppSelector } from '../redux/store';
 
 export interface UseStreamConfig {
-  live_url: string;
+  live_url?: string;
   mic?: string;
   autoConnect?: boolean;
   maxRetries?: number;
@@ -343,9 +343,6 @@ export function useStream({
     };
   }, []);
 
-  // remoteStream = live feed from active PC
-  // lastGoodStream = last frame ever received, never null after first stream
-  // displayStream = whichever is available → user never sees black screen
   const displayStream = remoteStream ?? lastGoodStream;
 
   return {

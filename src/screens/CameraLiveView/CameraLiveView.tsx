@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -12,12 +12,15 @@ import {
   Animated,
   TouchableWithoutFeedback,
   Platform,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { captureRef } from 'react-native-view-shot';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import { check, request, RESULTS, PERMISSIONS } from 'react-native-permissions';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import RNFS from 'react-native-fs';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraLiveScreenNavigationProp, CameraLiveScreenRouteProp } from '@navigation/types';
 import cameraService from '@api/cameraService';
 import recordingService from '../../services/recordingService';
@@ -28,8 +31,15 @@ import CloseIcon from '@assets/svg/close-icon.svg';
 import NoRecordingDataIcon from '@assets/svg/no-recording-data-icon.svg';
 import { useTranslation } from 'react-i18next';
 import { WebView } from 'react-native-webview';
-import { buildStreamHtmlUrl, getInjectedStreamPlayerJS } from '@utils/streamUtils';
+import {
+  buildIOSStreamInlineHtml,
+  buildStreamHtmlUrl,
+  getInjectedStreamPlayerJS,
+} from '@utils/streamUtils';
 import { StreamQuality } from '@api/types/cameraTypes';
+import { useLiveStream } from '@hooks/useLiveStream';
+import { useStream } from '@hooks/useStream';
+// @ts-ignore
 
 const STREAM_QUALITIES: StreamQuality[] = [
   { label: '流畅', value: 'low', resolution: '640x480', bitrate: 256 },
@@ -42,6 +52,7 @@ const CameraLiveView: React.FC = () => {
   const navigation = useNavigation<CameraLiveScreenNavigationProp>();
   const route = useRoute<CameraLiveScreenRouteProp>();
   const videoContainerRef = useRef<View>(null);
+  const captureResolveRef = useRef<((base64: string) => void) | null>(null);
   const { cameraId } = route.params;
   const { t } = useTranslation();
 
@@ -55,18 +66,36 @@ const CameraLiveView: React.FC = () => {
   // States
   const [isRecording, setIsRecording] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
-  const [bitrate, setBitrate] = useState<number>(0);
   const [showQualityModal, setShowQualityModal] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [streamWsUrl, setStreamWsUrl] = useState<string>('');
+  const [isMuted, setIsMuted] = useState(true);
   const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
   const [currentQuality, setCurrentQuality] = useState<StreamQuality>(STREAM_QUALITIES[2]);
   const [timeExp, setTimeExp] = useState<string | null>(null);
   const [streamHtmlUrl, setStreamHtmlUrl] = useState('');
-  const [isWebViewLoading, setIsWebViewLoading] = useState(true);
-  const [webViewError, setWebViewError] = useState<string | null>(null);
-  const webViewRef = useRef<WebView>(null);
+  const [micUrl, setMicUrl] = useState('');
+
+  // useLiveStream hook — auto-retry, heartbeat, NetInfo monitoring
+  const {
+    webViewRef,
+    isLoading: isWebViewLoading,
+    connectionStatus,
+    isReconnecting,
+    retryCount,
+    handleWebViewLoad,
+    handleWebViewError: onWebViewError,
+    handleWebViewHttpError: onWebViewHttpError,
+    handleManualRetry,
+    handleWebViewMessage,
+  } = useLiveStream({ maxRetries: 3, heartbeatTimeout: 15000 });
+
+  // Derive error state from hook
+  const webViewError = connectionStatus === 'failed';
+
+  // Derive live status: only "connected" means truly live
+  const isLive = connectionStatus === 'connected' && !!streamHtmlUrl && !isWebViewLoading;
 
   // Animation effect for quality modal
   useEffect(() => {
@@ -108,6 +137,8 @@ const CameraLiveView: React.FC = () => {
       const res = await cameraService.getLiveStreamUrl(cameraId);
       if (res.success && res.data) {
         setTimeExp(res.data.time_exp);
+        setStreamWsUrl(res.data.live_url);
+        setMicUrl(res.data.mic);
         const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
         setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
       }
@@ -129,7 +160,46 @@ const CameraLiveView: React.FC = () => {
     }
   }, [timeExp, fetchLiveUrl]);
 
+  const { toggleMic } = useStream({
+    mic: micUrl,
+  });
+
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        fetchLiveUrl().then(() => {
+          webViewRef.current?.reload();
+        });
+      }
+      appStateRef.current = nextAppState;
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [fetchLiveUrl, webViewRef]);
+
   const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
+
+  const iosStreamSource = useMemo(() => {
+    if (Platform.OS !== 'ios' || !streamWsUrl) return null;
+    const result = buildIOSStreamInlineHtml(streamWsUrl);
+    return result.html ? result : null;
+  }, [streamWsUrl]);
+
+  const toggleMute = useCallback(() => {
+    setIsMuted((prev) => {
+      const next = !prev;
+      webViewRef.current?.injectJavaScript(`
+      (function(){
+        var muted = ${next};
+        document.querySelectorAll('video').forEach(function(v){ v.muted = muted; });
+        true;
+      })();
+    `);
+      return next;
+    });
+  }, [webViewRef]);
 
   const requestFullscreen = () => {
     setIsFullscreen(true);
@@ -139,31 +209,70 @@ const CameraLiveView: React.FC = () => {
     setIsFullscreen(false);
   };
 
+  const captureFrameFromWebView = useCallback((): Promise<string | null> => {
+    return new Promise((resolve) => {
+      if (!webViewRef.current) {
+        resolve(null);
+        return;
+      }
+
+      const timeout = setTimeout(() => {
+        resolve(null);
+      }, 3000);
+
+      captureResolveRef.current = (base64: string) => {
+        clearTimeout(timeout);
+        captureResolveRef.current = null;
+        resolve(base64);
+      };
+
+      webViewRef.current.injectJavaScript(`
+        (function(){
+          try {
+            var video = document.querySelector('video');
+            var canvas = document.querySelector('canvas');
+            var c = document.createElement('canvas');
+            var ctx = c.getContext('2d');
+            if (video && video.readyState >= 2 && video.videoWidth > 0) {
+              c.width = video.videoWidth;
+              c.height = video.videoHeight;
+              ctx.drawImage(video, 0, 0, c.width, c.height);
+            } else if (canvas && canvas.width > 0) {
+              c.width = canvas.width;
+              c.height = canvas.height;
+              ctx.drawImage(canvas, 0, 0, c.width, c.height);
+            } else {
+              window.ReactNativeWebView.postMessage(JSON.stringify({type:'frameCaptured', data:''}));
+              return;
+            }
+            var dataUrl = c.toDataURL('image/jpeg', 0.8);
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'frameCaptured', data: dataUrl}));
+          } catch(e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'frameCaptured', data:''}));
+          }
+        })();
+        true;
+      `);
+    });
+  }, [webViewRef]);
+
   const takeSnapshot = useCallback(async () => {
     try {
-      // Check if videoContainerRef is available
-      if (!videoContainerRef.current) {
+      const base64Data = await captureFrameFromWebView();
+
+      if (!base64Data) {
         Alert.alert(t('common.error'), t('cameraLive.failedToCaptureSnapshot'));
         return;
       }
 
-      // Use captureRef to capture the video container view
-      // This works better on Android with collapsable={false} set on the View
-      const uri = await captureRef(videoContainerRef, {
-        format: 'png',
-        quality: 1.0,
-        result: 'tmpfile',
-      });
+      // Lưu base64 thành file tạm
+      const tmpPath = `${RNFS.CachesDirectoryPath}/snapshot_${Date.now()}.jpg`;
+      const base64String = base64Data.replace(/^data:image\/\w+;base64,/, '');
+      await RNFS.writeFile(tmpPath, base64String, 'base64');
 
-      if (!uri) {
-        Alert.alert(t('common.error'), t('cameraLive.failedToCaptureSnapshot'));
-        return;
-      }
-
-      // Request photo library permission
+      // Xin quyền truy cập thư viện ảnh
       let permissionStatus;
       if (Platform.OS === 'ios') {
-        // iOS: Use PHOTO_LIBRARY_ADD_ONLY for iOS 11+ (only write access)
         permissionStatus = await check(PERMISSIONS.IOS.PHOTO_LIBRARY_ADD_ONLY);
         if (permissionStatus !== RESULTS.GRANTED) {
           permissionStatus = await request(PERMISSIONS.IOS.PHOTO_LIBRARY_ADD_ONLY);
@@ -191,24 +300,24 @@ const CameraLiveView: React.FC = () => {
             ? 'Photo library permission is required to save screenshots'
             : 'Storage permission is required to save screenshots'
         );
+        // Xóa file tạm
+        await RNFS.unlink(tmpPath).catch(() => {});
         return;
       }
 
-      await CameraRoll.saveToCameraRoll(uri, 'photo');
+      await CameraRoll.saveToCameraRoll(`file://${tmpPath}`, 'photo');
+      // Xóa file tạm sau khi lưu thành công
+      await RNFS.unlink(tmpPath).catch(() => {});
       Alert.alert(t('cameraLive.success'), t('cameraLive.screenshotSaved'));
     } catch (err) {
       console.error('Error taking snapshot:', err);
       Alert.alert(t('common.error'), t('cameraLive.unableToTakeScreenshot'));
     }
-  }, [t]);
+  }, [t, captureFrameFromWebView]);
 
   const toggleTalk = async () => {
+    await toggleMic();
     setIsTalking((prev) => !prev);
-  };
-
-  const openQualityModal = () => {
-    setShowQualityModal(true);
-    setIsAnimating(true);
   };
 
   const closeQualityModal = () => {
@@ -221,7 +330,6 @@ const CameraLiveView: React.FC = () => {
       closeQualityModal();
 
       setCurrentQuality(quality);
-      setBitrate(quality.bitrate);
 
       setIsRecording(false);
     } catch (err) {
@@ -233,7 +341,6 @@ const CameraLiveView: React.FC = () => {
 
   const toggleRecording = useCallback(async () => {
     if (!isRecording) {
-      // Start screen recording
       try {
         await recordingService.startRecording();
         setIsRecording(true);
@@ -317,19 +424,41 @@ const CameraLiveView: React.FC = () => {
     }
   }, [isRecording, recordingStartTime, t]);
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    try {
+      const base64Data = await captureFrameFromWebView();
+
+      if (base64Data) {
+        const dir = `${RNFS.DocumentDirectoryPath}/camera_snapshots`;
+        const dirExists = await RNFS.exists(dir);
+        if (!dirExists) {
+          await RNFS.mkdir(dir);
+        }
+
+        const destPath = `${dir}/camera_${cameraId}_last_frame.jpg`;
+        if (await RNFS.exists(destPath)) {
+          await RNFS.unlink(destPath);
+        }
+
+        // Remove the data URL prefix (e.g. "data:image/jpeg;base64,")
+        const base64String = base64Data.replace(/^data:image\/\w+;base64,/, '');
+        await RNFS.writeFile(destPath, base64String, 'base64');
+
+        await AsyncStorage.setItem(`camera_last_frame_${cameraId}`, destPath);
+      }
+    } catch (err) {
+      console.warn('Failed to capture last frame on close:', err);
+    }
     navigation.goBack();
   };
 
   const handleReconnect = async () => {
-    setWebViewError(null);
-    setIsWebViewLoading(true);
     await fetchLiveUrl();
-    webViewRef.current?.reload();
+    handleManualRetry();
   };
 
   // Determine if error overlay should show.
-  const showErrorOverlay = !!webViewError && !isWebViewLoading;
+  const showErrorOverlay = webViewError && !isWebViewLoading;
 
   const renderVideoPlayer = () => {
     return (
@@ -337,7 +466,11 @@ const CameraLiveView: React.FC = () => {
         {streamHtmlUrl ? (
           <WebView
             ref={webViewRef}
-            source={{ uri: streamHtmlUrl }}
+            source={
+              Platform.OS === 'ios' && iosStreamSource
+                ? { html: iosStreamSource.html, baseUrl: iosStreamSource.baseUrl }
+                : { uri: streamHtmlUrl }
+            }
             style={styles.videoContainer}
             javaScriptEnabled
             domStorageEnabled
@@ -360,44 +493,63 @@ const CameraLiveView: React.FC = () => {
               allowsAirPlayForMediaPlayback: false,
               dataDetectorTypes: 'none',
               decelerationRate: 'normal',
+              useWebKit: true,
             })}
-            onLoadStart={() => {
-              setIsWebViewLoading(true);
-              setWebViewError(null);
+            onContentProcessDidTerminate={() => {
+              webViewRef.current?.reload();
             }}
-            onLoadEnd={() => setIsWebViewLoading(false)}
-            onError={(syntheticEvent) => {
-              const { nativeEvent } = syntheticEvent;
-              setWebViewError(nativeEvent.description || 'Stream load failed');
-              setIsWebViewLoading(false);
-            }}
-            onHttpError={(syntheticEvent) => {
-              const { nativeEvent } = syntheticEvent;
-              setWebViewError(`HTTP ${nativeEvent.statusCode}`);
-              setIsWebViewLoading(false);
+            onLoad={handleWebViewLoad}
+            onError={onWebViewError}
+            onHttpError={onWebViewHttpError}
+            onMessage={(event) => {
+              try {
+                const data = JSON.parse(event.nativeEvent.data);
+                if (data.type === 'frameCaptured' && captureResolveRef.current) {
+                  captureResolveRef.current(data.data || '');
+                  return;
+                }
+              } catch {
+                // ignore parse errors
+              }
+              handleWebViewMessage(event);
             }}
           />
         ) : (
           <View style={[styles.videoContainer, styles.loadingOverlay]}>
             <ActivityIndicator size="small" color="#FFF" />
-            <Text style={styles.loadingText}>{'Connecting…'}</Text>
+            <Text style={styles.loadingText}>{t('bluetoothScreen.connecting')}</Text>
           </View>
         )}
 
-        {/* Loading overlay khi WebView đang tải */}
+        {!isFullscreen && streamHtmlUrl && connectionStatus === 'connected' && !webViewError && (
+          <TouchableOpacity style={styles.muteButton} onPress={toggleMute} activeOpacity={0.75}>
+            <Icon name={isMuted ? 'volume-off' : 'volume-high'} size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
+
         {isWebViewLoading && streamHtmlUrl ? (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="small" color="#FFF" />
-            <Text style={styles.loadingText}>{'Loading stream…'}</Text>
+            <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
           </View>
         ) : null}
 
-        {/* Error overlay khi WebView bị lỗi */}
-        {showErrorOverlay ? (
+        {isReconnecting && streamHtmlUrl ? (
+          <View style={styles.reconnectingOverlay}>
+            <ActivityIndicator size="small" color="#FFF" />
+            <Text style={styles.loadingText}>
+              {t('liveStream.reconnecting') || 'Reconnecting...'} ({retryCount})
+            </Text>
+          </View>
+        ) : null}
+
+        {showErrorOverlay && streamHtmlUrl ? (
           <View style={styles.errorOverlay}>
-            <Text style={styles.errorText}>{webViewError}</Text>
+            <Text style={styles.errorText}>
+              {t('liveStream.connectionFailed') || 'Connection failed'}
+            </Text>
             <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -495,17 +647,10 @@ const CameraLiveView: React.FC = () => {
               {/* Fullscreen Top Overlay */}
               <View style={styles.topOverlay}>
                 <View style={styles.topLeft}>
-                  <View style={styles.liveIndicator}>
-                    <View style={styles.liveRedDot} />
-                    <Text style={styles.liveText}>Live</Text>
+                  <View style={[styles.liveIndicator, !isLive && styles.offlineIndicator]}>
+                    <View style={[styles.liveRedDot, !isLive && styles.offlineDot]} />
+                    <Text style={styles.liveText}>{isLive ? 'Live' : 'Offline'}</Text>
                   </View>
-                  <View style={styles.bitrateIndicator}>
-                    <Icon name="wifi" size={12} color="#FFF" />
-                    <Text style={styles.bitrateText}>{bitrate}kb/s</Text>
-                  </View>
-                  <TouchableOpacity style={styles.hdBadge} onPress={openQualityModal}>
-                    <Text style={styles.hdText}>{currentQuality.label}</Text>
-                  </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
@@ -515,7 +660,7 @@ const CameraLiveView: React.FC = () => {
 
               {/* Fullscreen Right Controls */}
               <View style={styles.fullscreenRightControls}>
-                <TouchableOpacity style={styles.controlButton} onPress={() => setIsMuted(!isMuted)}>
+                <TouchableOpacity style={styles.controlButton} onPress={toggleMute}>
                   <Icon name={isMuted ? 'volume-off' : 'volume-high'} size={22} color="#FFF" />
                 </TouchableOpacity>
 
@@ -532,7 +677,7 @@ const CameraLiveView: React.FC = () => {
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.controlButton} onPress={toggleTalk}>
-                  <Icon name="microphone" size={22} color={isTalking ? '#4CAF50' : '#FFF'} />
+                  <Icon name="microphone" size={22} color={isTalking ? '#EF4444' : '#FFF'} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -566,24 +711,13 @@ const CameraLiveView: React.FC = () => {
 
           <View style={styles.topOverlay}>
             <View style={styles.topLeft}>
-              <View style={styles.liveIndicator}>
-                <View style={styles.liveRedDot} />
-                <Text style={styles.liveText}>Live</Text>
-              </View>
-              <View style={styles.bitrateIndicator}>
-                <Icon name="wifi" size={12} color="#FFF" />
-                <Text style={styles.bitrateText}>{bitrate}kb/s</Text>
+              <View style={[styles.liveIndicator, !isLive && styles.offlineIndicator]}>
+                <View style={[styles.liveRedDot, !isLive && styles.offlineDot]} />
+                <Text style={styles.liveText}>{isLive ? 'Live' : 'Offline'}</Text>
               </View>
             </View>
 
             <View style={styles.hdStyle}>
-              <TouchableOpacity
-                style={styles.hdBadge}
-                onPress={openQualityModal}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.hdText}>{currentQuality.label}</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                 <CloseIcon />
               </TouchableOpacity>
@@ -602,12 +736,7 @@ const CameraLiveView: React.FC = () => {
         </View>
       </View>
 
-      <View style={styles.infoSection}>
-        <View style={styles.infoIconContainer}>
-          <NoRecordingDataIcon />
-        </View>
-        <Text style={styles.infoText}>{t('cameraLive.thereIsNoRecordingData')}</Text>
-      </View>
+      <View style={styles.infoSection} />
 
       <View style={styles.bottomControls}>
         <TouchableOpacity style={styles.mainButton} onPress={toggleRecording}>

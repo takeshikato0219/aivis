@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,13 @@ import {
   Image,
   TouchableWithoutFeedback,
   ScrollView,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import RNFS from 'react-native-fs';
 import { styles } from './Detail.styles';
 
 import BackIcon from '@assets/svg/icon-back.svg';
@@ -71,6 +74,30 @@ const Detail = () => {
   ];
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [lastFrameUri, setLastFrameUri] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLastFrameUri(null);
+
+      const loadLastFrame = async () => {
+        try {
+          const savedPath = await AsyncStorage.getItem(`camera_last_frame_${camera?.id}`);
+          if (savedPath) {
+            const exists = await RNFS.exists(savedPath);
+            if (exists) {
+              setLastFrameUri(`file://${savedPath}?t=${Date.now()}`);
+            } else {
+              setLastFrameUri(null);
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to load last frame:', err);
+        }
+      };
+      loadLastFrame();
+    }, [camera?.id])
+  );
 
   const backgrounds = [CameraShopDetailBgPng, CameraHomeDetailBgPng, CameraFactoryDetailBgPng];
 
@@ -84,7 +111,7 @@ const Detail = () => {
   const isOnline =
     statusText.toLowerCase().includes('online') || statusText.toLowerCase().includes('オンライン');
 
-  const handleCameraPress = (_item: any) => {
+  const handleCameraPress = () => {
     navigation.navigate('CameraLive', {
       cameraId: camera.id,
       cameraName: camera.name,
@@ -99,6 +126,7 @@ const Detail = () => {
 
   return (
     <View style={styles.container}>
+      <StatusBar translucent backgroundColor="transparent" />
       <ImageBackground
         source={backgrounds[activeIndex]}
         style={styles.backgroundImage}
@@ -127,20 +155,25 @@ const Detail = () => {
             showsVerticalScrollIndicator={false}
           >
             <View>
-              <View style={styles.card}>
-                <View style={styles.videoWrapper}>
-                  <Image source={RetangleImage} style={styles.cardImage} />
+              <TouchableOpacity onPress={() => handleCameraPress()}>
+                <View style={styles.card}>
+                  <View style={styles.videoWrapper}>
+                    <Image
+                      source={lastFrameUri ? { uri: lastFrameUri, cache: 'reload' } : RetangleImage}
+                      style={styles.cardImage}
+                    />
+                  </View>
+                  <View style={styles.cardBadge}>
+                    <View
+                      style={[
+                        styles.badgeDot,
+                        { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
+                      ]}
+                    />
+                    <Text style={styles.badgeText}>{statusText}</Text>
+                  </View>
                 </View>
-                <View style={styles.cardBadge}>
-                  <View
-                    style={[
-                      styles.badgeDot,
-                      { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
-                    ]}
-                  />
-                  <Text style={styles.badgeText}>{statusText}</Text>
-                </View>
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.cartSecurityMode}>
                 <Text style={styles.textSecurityMode}>{t('detail.securityMode')}</Text>
@@ -178,7 +211,7 @@ const Detail = () => {
             {INITIAL_LIST.map((item, idx) => (
               <View key={item.id}>
                 {idx > 0 && <ItemSeparator />}
-                <TouchableWithoutFeedback onPress={() => handleCameraPress(item)}>
+                <TouchableWithoutFeedback onPress={() => handleCameraPress()}>
                   <ImageBackground source={item.frame} style={styles.rowFront} resizeMode="cover">
                     <Text style={styles.filterText}>{item.name}</Text>
                     <MoveRightIcon />

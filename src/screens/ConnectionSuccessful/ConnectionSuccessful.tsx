@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,7 @@ import {
   ActivityIndicator,
   Platform,
   Image,
-  ScrollView,
   TextInput,
-  KeyboardAvoidingView,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,8 +24,11 @@ import IconPencil from '@assets/svg/pencil-icon.svg';
 import SettingIcon from '@assets/svg/settings-icon-incisor.svg';
 import { ConnectionSuccessfulScreenRouteProp } from '@navigation/types';
 import { CameraStatus } from '@api/types/cameraTypes';
-import { buildStreamUrl } from '@utils/streamUtils';
-import { useLiveStream } from '@hooks/useLiveStream';
+import {
+  buildStreamHtmlUrl,
+  getInjectedStreamPlayerJS,
+  buildIOSStreamInlineHtml,
+} from '@utils/streamUtils';
 import cameraService from '@api/cameraService';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
@@ -50,19 +51,48 @@ const ConnectionSuccessful: React.FC = () => {
 
   const streamWidth = screenWidth - 40;
 
-  // Use live stream hook
-  const {
-    webViewRef,
-    isLoading,
-    connectionStatus,
-    isReconnecting,
-    handleWebViewLoad,
-    handleWebViewError,
-    handleWebViewHttpError,
-    handleManualRetry,
-    handleWebViewMessage,
-    getInjectedJavaScript,
-  } = useLiveStream();
+  // Self-managed stream state (same as DetectionZoneSetup)
+  const webViewRef = useRef<WebView>(null);
+  const [streamHtmlUrl, setStreamHtmlUrl] = useState('');
+  const [timeExp, setTimeExp] = useState<string | null>(null);
+  const [isWebViewLoading, setIsWebViewLoading] = useState(true);
+  const [webViewError, setWebViewError] = useState<string | null>(null);
+
+  const fetchLiveUrl = useCallback(async () => {
+    if (!cameraData?.id) return;
+    try {
+      const res = await cameraService.getLiveStreamUrl(cameraData.id);
+      if (res.success && res.data) {
+        const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
+        setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
+        setTimeExp(res.data.time_exp);
+      }
+    } catch (error) {
+      console.error('Failed to fetch live URL:', error);
+    }
+  }, [cameraData?.id]);
+
+  // Auto-refresh stream URL before expiry
+  useEffect(() => {
+    if (!timeExp) return;
+    const refreshMs = new Date(timeExp).getTime() - Date.now() - 2 * 60 * 1000;
+    if (refreshMs > 0) {
+      const timer = setTimeout(fetchLiveUrl, refreshMs);
+      return () => clearTimeout(timer);
+    }
+  }, [timeExp, fetchLiveUrl]);
+
+  // Fetch live URL on mount
+  useEffect(() => {
+    fetchLiveUrl();
+  }, [fetchLiveUrl]);
+
+  const handleReconnect = async () => {
+    setWebViewError(null);
+    setIsWebViewLoading(true);
+    await fetchLiveUrl();
+    webViewRef.current?.reload();
+  };
 
   const getStatus = (status?: string | CameraStatus): 'online' | 'offline' => {
     if (!status) return 'online';
@@ -73,13 +103,12 @@ const ConnectionSuccessful: React.FC = () => {
   };
 
   // Convert Camera to CameraInfo
-  const streamUrl = buildStreamUrl(cameraData?.rtsp_url);
   const cameraInfo: CameraInfo = {
     id: cameraData?.id || '1',
     name: cameraData?.name || 'AIVIS Pro Cam 1',
     serial: cameraData?.serial || 'シリアル：8928-XXXX-12',
     status: getStatus(cameraData?.status),
-    streamUrl,
+    streamUrl: streamHtmlUrl,
   };
 
   const [cameraName, setCameraName] = useState(cameraData?.name || t(''));
@@ -96,172 +125,179 @@ const ConnectionSuccessful: React.FC = () => {
     }
   };
 
+  const INJECTED_JS = Platform.OS === 'ios' ? undefined : getInjectedStreamPlayerJS('android');
+
   return (
     <KeyboardAwareScrollView
       enableOnAndroid
-      extraScrollHeight={20}
+      extraScrollHeight={100}
       keyboardShouldPersistTaps="handled"
-      //eslint-disable-next-line react-native/no-inline-styles
-      contentContainerStyle={{ flexGrow: 1 }}
+      showsVerticalScrollIndicator={false}
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.successBadgeContainer}>
-          <View style={styles.logoContainer}>
-            <CompleteIcon
-              width={responsive.isTablet ? 200 : 100}
-              height={responsive.isTablet ? 200 : 100}
-            />
-          </View>
-          <Text style={styles.successText}>{t('liveStream.connectionSuccessful')}</Text>
+      <StatusBar barStyle="light-content" backgroundColor="#0A0E1A" />
+      <View style={styles.successBadgeContainer}>
+        <View style={styles.logoContainer}>
+          <CompleteIcon
+            width={responsive.isTablet ? 200 : 100}
+            height={responsive.isTablet ? 200 : 100}
+          />
+        </View>
+        <Text style={styles.successText}>{t('liveStream.connectionSuccessful')}</Text>
+      </View>
+
+      <View style={styles.cameraCard}>
+        {/* Live Badge */}
+        <View style={styles.liveBadge}>
+          <View style={styles.liveIndicator} />
+          <Text style={styles.liveText}>Live</Text>
         </View>
 
-        <View style={styles.cameraCard}>
-          {/* Live Badge */}
-          <View style={styles.liveBadge}>
-            <View style={styles.liveIndicator} />
-            <Text style={styles.liveText}>Live</Text>
-          </View>
+        <View style={styles.aivasLogoContainer}>
+          <LogoDetail width={98} height={28} />
+        </View>
 
-          <View style={styles.aivasLogoContainer}>
-            <LogoDetail width={98} height={28} />
-          </View>
-
-          <View style={[styles.streamWrapper, { width: streamWidth }]}>
+        <View style={[styles.streamWrapper, { width: streamWidth }]}>
+          {streamHtmlUrl ? (
             <WebView
               ref={webViewRef}
-              source={{ uri: streamUrl }}
+              source={
+                Platform.OS === 'ios'
+                  ? {
+                      html: buildIOSStreamInlineHtml(streamHtmlUrl).html,
+                      baseUrl: buildIOSStreamInlineHtml(streamHtmlUrl).baseUrl,
+                    }
+                  : { uri: streamHtmlUrl }
+              }
               style={styles.webView}
-              onLoad={handleWebViewLoad}
-              onError={handleWebViewError}
-              onHttpError={handleWebViewHttpError}
-              allowsInlineMediaPlayback={true}
+              javaScriptEnabled
+              domStorageEnabled
               mediaPlaybackRequiresUserAction={false}
-              javaScriptEnabled={true}
-              domStorageEnabled={true}
+              allowsInlineMediaPlayback
+              allowsFullscreenVideo={false}
+              scrollEnabled={false}
+              bounces={false}
+              overScrollMode="never"
+              injectedJavaScript={INJECTED_JS}
+              allowsBackForwardNavigationGestures={false}
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
               startInLoadingState={false}
               originWhitelist={['*']}
-              allowFileAccess={true}
-              allowUniversalAccessFromFileURLs={true}
-              scalesPageToFit={false}
-              renderToHardwareTextureAndroid={true}
-              androidLayerType="hardware"
-              cacheEnabled={false}
+              mixedContentMode="always"
+              setBuiltInZoomControls={false}
+              setSupportMultipleWindows={false}
               {...(Platform.OS === 'ios' && {
-                allowsBackForwardNavigationGestures: false,
+                allowsAirPlayForMediaPlayback: false,
+                dataDetectorTypes: 'none',
                 decelerationRate: 'normal',
-                bounces: false,
-                scrollEnabled: false,
-                suppressesIncrementalRendering: true,
+                useWebKit: true,
               })}
-              {...(Platform.OS === 'android' && {
-                mixedContentMode: 'always',
-                thirdPartyCookiesEnabled: true,
-                allowFileAccessFromFileURLs: true,
-                textZoom: 100,
-              })}
-              onMessage={handleWebViewMessage}
-              injectedJavaScript={getInjectedJavaScript()}
+              onContentProcessDidTerminate={() => {
+                webViewRef.current?.reload();
+              }}
+              onLoadStart={() => {
+                setIsWebViewLoading(true);
+                setWebViewError(null);
+              }}
+              onLoadEnd={() => setIsWebViewLoading(false)}
+              onError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                setWebViewError(nativeEvent.description || 'Stream load failed');
+                setIsWebViewLoading(false);
+              }}
+              onHttpError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                setWebViewError(`HTTP ${nativeEvent.statusCode}`);
+                setIsWebViewLoading(false);
+              }}
             />
+          ) : (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#4CAF50" />
+              <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
+            </View>
+          )}
 
-            {isLoading && !isReconnecting && (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="large" color="#4CAF50" />
-                <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
-                <TouchableOpacity style={styles.loadingRetryButton} onPress={handleManualRetry}>
-                  <Text style={styles.loadingRetryButtonText}>{t('common.retry')}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+          {isWebViewLoading && streamHtmlUrl ? (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#4CAF50" />
+              <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
+            </View>
+          ) : null}
 
-            {isReconnecting && (
-              <View style={styles.reconnectingOverlay}>
-                <ActivityIndicator size="large" color="#FFA500" />
-                <Text style={styles.reconnectingText}>{t('liveStream.reconnecting')}</Text>
-                <Text style={styles.reconnectingSubtext}>{t('liveStream.connectionLost')}</Text>
-                <TouchableOpacity style={styles.loadingRetryButton} onPress={handleManualRetry}>
-                  <Text style={styles.loadingRetryButtonText}>{t('common.retry')}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+          {webViewError && !isWebViewLoading ? (
+            <View style={styles.errorOverlay}>
+              <Text style={styles.errorText}>{webViewError}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
+                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
+      </View>
 
-            {connectionStatus === 'failed' && !isReconnecting && !isLoading && (
-              <View style={styles.errorOverlay}>
-                <Text style={styles.errorText}>{t('liveStream.reconnectFailed')}</Text>
-                <TouchableOpacity style={styles.retryButton} onPress={handleManualRetry}>
-                  <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+      <View style={styles.cameraInfoFooter}>
+        <View style={styles.cameraIconContainer}>
+          <View style={styles.cameraIcon}>
+            <Image source={CameraLiveViewIcon} style={styles.cardImage} />
           </View>
         </View>
 
-        <View style={styles.cameraInfoFooter}>
-          <View style={styles.cameraIconContainer}>
-            <View style={styles.cameraIcon}>
-              <Image source={CameraLiveViewIcon} style={styles.cardImage} />
-            </View>
-          </View>
-
-          <View style={styles.cameraDetails}>
-            <Text style={styles.cameraName}>{cameraInfo.name}</Text>
-            <Text style={styles.cameraSerial}>{cameraInfo.serial}</Text>
-            <View style={styles.statusRow}>
-              <View style={styles.onlineDot} />
-              <Text style={styles.statusText}>{t('liveStream.onlineAndReady')}</Text>
-            </View>
+        <View style={styles.cameraDetails}>
+          <Text style={styles.cameraName}>{cameraInfo.name}</Text>
+          <Text style={styles.cameraSerial}>{cameraInfo.serial}</Text>
+          <View style={styles.statusRow}>
+            <View style={styles.onlineDot} />
+            <Text style={styles.statusText}>{t('liveStream.onlineAndReady')}</Text>
           </View>
         </View>
+      </View>
 
-        <View style={styles.cameraNameSection}>
-          <Text style={styles.cameraNameLabel}>{t('liveStream.cameraName')}</Text>
-          <View style={styles.editNameButton}>
-            <IconPencil />
-            <TextInput
-              style={styles.editNameInput}
-              value={cameraName}
-              onChangeText={setCameraName}
-              onBlur={changeNameCamera}
-              placeholder={t('liveStream.exampleLivingRoomCamera')}
-              placeholderTextColor="#8B92A8"
-            />
-          </View>
-          <Text style={styles.cameraNameHint}>
-            {t('liveStream.thisNameWillAppearInYourDashboardAlerts')}
-          </Text>
+      <View style={styles.cameraNameSection}>
+        <Text style={styles.cameraNameLabel}>{t('liveStream.cameraName')}</Text>
+        <View style={styles.editNameButton}>
+          <IconPencil />
+          <TextInput
+            style={styles.editNameInput}
+            value={cameraName}
+            onChangeText={setCameraName}
+            onBlur={changeNameCamera}
+            placeholder={t('liveStream.exampleLivingRoomCamera')}
+            placeholderTextColor="#8B92A8"
+          />
         </View>
+        <Text style={styles.cameraNameHint}>
+          {t('liveStream.thisNameWillAppearInYourDashboardAlerts')}
+        </Text>
+      </View>
 
-        <SafeAreaView edges={['bottom']} style={styles.bottomSection}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => {
-              navigation.navigate('Home' as any);
-            }}
-          >
-            <View style={styles.viewButtonBottom}>
-              <Text style={styles.primaryButtonText}>{t('liveStream.startMonitoring')}</Text>
-              <MoveRightIcon style={styles.positionButtonBottom} />
-            </View>
-          </TouchableOpacity>
+      <SafeAreaView edges={['bottom']} style={styles.bottomSection}>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => {
+            navigation.navigate('Home' as any);
+          }}
+        >
+          <View style={styles.viewButtonBottom}>
+            <Text style={styles.primaryButtonText}>{t('liveStream.startMonitoring')}</Text>
+            <MoveRightIcon style={styles.positionButtonBottom} />
+          </View>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => {
-              navigation.navigate('FaceUpload' as never);
-            }}
-          >
-            <View style={styles.viewButtonBottom}>
-              <Text style={styles.secondaryButtonText}>{t('liveStream.faceSetup')}</Text>
-            </View>
-            <SettingIcon width={20} height={20} color="#fff" style={styles.positionButtonBottom} />
-          </TouchableOpacity>
-        </SafeAreaView>
-      </ScrollView>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => {
+            navigation.navigate('FaceUpload' as never);
+          }}
+        >
+          <View style={styles.viewButtonBottom}>
+            <Text style={styles.secondaryButtonText}>{t('liveStream.faceSetup')}</Text>
+          </View>
+          <SettingIcon width={20} height={20} color="#fff" style={styles.positionButtonBottom} />
+        </TouchableOpacity>
+      </SafeAreaView>
     </KeyboardAwareScrollView>
   );
 };

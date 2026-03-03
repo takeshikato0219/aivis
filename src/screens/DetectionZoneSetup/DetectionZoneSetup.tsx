@@ -18,7 +18,11 @@ import detectionZoneService from '../../services/detectionZone';
 import Svg, { Line, Polygon } from 'react-native-svg';
 import { showCommonAlert } from '@components/Alert/Alert';
 import { WebView } from 'react-native-webview';
-import { buildStreamHtmlUrl, getInjectedStreamPlayerJS } from '@utils/streamUtils';
+import {
+  buildStreamHtmlUrl,
+  getInjectedStreamPlayerJS,
+  buildIOSStreamInlineHtml,
+} from '@utils/streamUtils';
 import cameraService from '@api/cameraService';
 
 const getScreenDims = () => {
@@ -92,6 +96,22 @@ const DetectionZoneSetup: React.FC = () => {
     width: PREVIEW_WIDTH,
     height: PREVIEW_HEIGHT,
   });
+
+  const [isMuted, setIsMuted] = useState(true);
+
+  const toggleMute = useCallback(() => {
+    setIsMuted((prev) => {
+      const next = !prev;
+      webViewRef.current?.injectJavaScript(`
+      (function(){
+        var muted = ${next};
+        document.querySelectorAll('video').forEach(function(v){ v.muted = muted; });
+        true;
+      })();
+    `);
+      return next;
+    });
+  }, []);
 
   const fetchLiveUrl = useCallback(async () => {
     const res = await cameraService.getLiveStreamUrl(camera.id);
@@ -419,7 +439,7 @@ const DetectionZoneSetup: React.FC = () => {
     webViewRef.current?.reload();
   };
 
-  const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
+  const INJECTED_JS = Platform.OS === 'ios' ? undefined : getInjectedStreamPlayerJS('android');
 
   return (
     <View style={styles.root}>
@@ -448,7 +468,14 @@ const DetectionZoneSetup: React.FC = () => {
           {streamHtmlUrl ? (
             <WebView
               ref={webViewRef}
-              source={{ uri: streamHtmlUrl }}
+              source={
+                Platform.OS === 'ios'
+                  ? {
+                      html: buildIOSStreamInlineHtml(streamHtmlUrl).html,
+                      baseUrl: buildIOSStreamInlineHtml(streamHtmlUrl).baseUrl,
+                    }
+                  : { uri: streamHtmlUrl }
+              }
               style={styles.cameraPreview}
               containerStyle={styles.webViewContainer}
               javaScriptEnabled
@@ -472,7 +499,11 @@ const DetectionZoneSetup: React.FC = () => {
                 allowsAirPlayForMediaPlayback: false,
                 dataDetectorTypes: 'none',
                 decelerationRate: 'normal',
+                useWebKit: true,
               })}
+              onContentProcessDidTerminate={() => {
+                webViewRef.current?.reload();
+              }}
               onLoadStart={() => {
                 setIsWebViewLoading(true);
                 setWebViewError(null);
@@ -502,15 +533,20 @@ const DetectionZoneSetup: React.FC = () => {
               }}
             >
               <ActivityIndicator size="small" color="#FFF" />
-              <Text style={styles.loadingText}>{'Connecting…'}</Text>
+              <Text style={styles.loadingText}>{t('bluetoothScreen.connecting')}</Text>
             </View>
           )}
 
-          {/* Loading overlay khi WebView đang tải */}
+          {streamHtmlUrl && !isWebViewLoading && !webViewError && (
+            <TouchableOpacity style={styles.muteButton} onPress={toggleMute} activeOpacity={0.75}>
+              <Icon name={isMuted ? 'volume-off' : 'volume-high'} size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+
           {isWebViewLoading && streamHtmlUrl ? (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="small" color="#FFF" />
-              <Text style={styles.loadingText}>{'Loading stream…'}</Text>
+              <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
             </View>
           ) : null}
 

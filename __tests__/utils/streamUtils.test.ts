@@ -62,21 +62,27 @@ describe('streamUtils', () => {
       const wsUrl = 'ws://localhost:8554/api/ws?src=mycam&token=xyz';
       const result = buildStreamHtmlUrl(wsUrl);
 
-      expect(result).toBe('http://localhost:8554/stream.html?src=mycam&mode=webrtc,mse,hls,mjpeg&autoplay=true');
+      expect(result).toBe(
+        'http://localhost:8554/stream.html?src=mycam&mode=webrtc,mse,hls,mjpeg&autoplay=true'
+      );
     });
 
     it('should default src to "camera" when src param is missing', () => {
       const wsUrl = 'wss://example.com/api/ws?token=abc';
       const result = buildStreamHtmlUrl(wsUrl);
 
-      expect(result).toBe('https://example.com/stream.html?src=camera&mode=webrtc,mse,hls,mjpeg&autoplay=true');
+      expect(result).toBe(
+        'https://example.com/stream.html?src=camera&mode=webrtc,mse,hls,mjpeg&autoplay=true'
+      );
     });
 
     it('should encode special characters in src param', () => {
       const wsUrl = 'wss://example.com/api/ws?src=camera/stream1&token=abc';
       const result = buildStreamHtmlUrl(wsUrl);
 
-      expect(result).toBe(`https://example.com/stream.html?src=${encodeURIComponent('camera/stream1')}&mode=webrtc,mse,hls,mjpeg&autoplay=true`);
+      expect(result).toBe(
+        `https://example.com/stream.html?src=${encodeURIComponent('camera/stream1')}&mode=webrtc,mse,hls,mjpeg&autoplay=true`
+      );
     });
 
     it('should return empty string for invalid URL', () => {
