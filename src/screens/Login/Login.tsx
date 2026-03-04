@@ -359,8 +359,6 @@ const Login: React.FC = () => {
     }
   };
 
-  // Conditional container: ScrollView when screen is small or in landscape
-  // iPhone 7/8 has height ~667px, iPhone SE ~568px
   const isSmallScreen = responsive.height < 700;
   const shouldUseScrollView = responsive.isLandscape || isSmallScreen;
   const Container = shouldUseScrollView ? ScrollView : View;

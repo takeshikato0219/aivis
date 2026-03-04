@@ -155,9 +155,9 @@ export const styles = StyleSheet.create({
   },
 
   rowFront: {
-    borderRadius: 12,
+    borderRadius: 22,
     padding: 16,
-    minHeight: 72,
+    minHeight: 70,
     marginHorizontal: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',

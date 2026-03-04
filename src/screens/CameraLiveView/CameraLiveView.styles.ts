@@ -383,15 +383,17 @@ export const getStyles = (width: number, height: number) => {
     },
     muteButton: {
       position: 'absolute',
-      top: 2,
+      top: 7,
       right: 60,
-      width: 44,
-      height: 44,
+      width: 34,
+      height: 34,
       borderRadius: 22,
       backgroundColor: 'rgba(0,0,0,0.55)',
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 9999,
+      borderWidth: 1,
+      borderColor: '#aba7a7',
     },
   });
 };

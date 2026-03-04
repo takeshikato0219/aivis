@@ -492,7 +492,10 @@
     "lookUpFace": "Look Up",
     "slowlyTiltYourHeadUP": "Slowly tilt your head UP",
     "lookDownFace": "Look Down",
-    "slowlyTiltYourHeadDOWN": "Slowly tilt your head DOWN"
+    "slowlyTiltYourHeadDOWN": "Slowly tilt your head DOWN",
+    "selectPhoto": "Please select one photo from the library. For improved accuracy, please choose all 5 photos from different angles.",
+    "pleaseChooseAtLeastOneImage": "Please choose at least one image",
+    "pleaseEnterTheRequiredInformation": "Please enter the required information."
   },
   "liveStream": {
     "connectionSuccessful": "Connection Successful",
@@ -518,7 +521,11 @@
   "listFace": {
     "listFace": "List Face",
     "noMembers": "No members found",
-    "addFirstMember": "Add your first member"
+    "addFirstMember": "Add your first member",
+    "selectFunction": "Select function",
+    "takePhoto": "Take photo",
+    "uploadPhotoFromLibrary": "Upload photo from library",
+    "close": "Close"
   },
   "detailFace": {
     "detailFace": "Detail Face"
@@ -564,6 +571,8 @@
   "detectionZone": {
     "inGreenOutRed": "In: Green / Out: Red",
     "successMessage": "Detection zone setup successful",
-    "failureMessage": "Detection zone setup failed"
+    "failureMessage": "Detection zone setup failed",
+    "setupError": "Setup error",
+    "twoPointError": "The two points must not coincide with the edge of the frame. Please select a different position!"
   }
 }

@@ -321,7 +321,29 @@ const DetectionZoneSetup: React.FC = () => {
     }
   };
 
+  const isEntryExitInvalid = () => {
+    if (zoneType !== 'entryExit') return false;
+    const [p1, p2] = entryExitPoints;
+    const isVertical = p1.x === p2.x;
+    const isHorizontal = p1.y === p2.y;
+    const x0 = liveViewLayout.x;
+    const xMax = liveViewLayout.x + liveViewLayout.width;
+    const y0 = liveViewLayout.y;
+    const yMax = liveViewLayout.y + liveViewLayout.height;
+    if (isVertical && (p1.x === x0 || p1.x === xMax)) return true;
+    return isHorizontal && (p1.y === y0 || p1.y === yMax);
+  };
+
   const handleSave = async () => {
+    if (isEntryExitInvalid()) {
+      showCommonAlert({
+        title: t('detectionZone.setupError'),
+        message: t('detectionZone.twoPointError'),
+        buttons: [{ text: t('common.ok') }],
+      });
+      setIsSaving(false);
+      return;
+    }
     setIsSaving(true);
     try {
       let coords: { x: number; y: number }[];

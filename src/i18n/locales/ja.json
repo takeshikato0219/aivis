@@ -533,7 +533,10 @@
     "lookUpFace": "上を見る",
     "slowlyTiltYourHeadUP": "ゆっくりと頭を上に傾けてください",
     "lookDownFace": "下を見る",
-    "slowlyTiltYourHeadDOWN": "ゆっくりと頭を下に傾けてください"
+    "slowlyTiltYourHeadDOWN": "ゆっくりと頭を下に傾けてください",
+    "selectPhoto": "ライブラリから写真を1枚選択してください。精度を高めたい場合は、5つの角度すべての写真を選択してください。",
+    "pleaseChooseAtLeastOneImage": "少なくとも1枚の画像を選択してください",
+    "pleaseEnterTheRequiredInformation": "必要な情報を入力してください。"
   },
   "liveStream": {
     "connectionSuccessful": "接続に成功しました",
@@ -559,7 +562,11 @@
   "listFace": {
     "listFace": "顔リスト",
     "noMembers": "メンバーが見つかりません",
-    "addFirstMember": "最初のメンバーを追加してください"
+    "addFirstMember": "最初のメンバーを追加してください",
+    "selectFunction": "機能を選択",
+    "takePhoto": "写真を撮る",
+    "uploadPhotoFromLibrary": "ライブラリから写真をアップロード",
+    "close": "閉じる"
   },
   "detailFace": {
     "detailFace": "詳細顔"
@@ -605,6 +612,8 @@
   "detectionZone": {
     "inGreenOutRed": "入: 緑 / 出: 赤",
     "successMessage": "検知ゾーンの設定に成功しました",
-    "failureMessage": "検知ゾーンの設定に失敗しました"
+    "failureMessage": "検知ゾーンの設定に失敗しました",
+    "setupError": "設定エラー",
+    "twoPointError": "2つのポイントがフレームの端と一致してはいけません。別の位置を選択してください。"
   }
 }

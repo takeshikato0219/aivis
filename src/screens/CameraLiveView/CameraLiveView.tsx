@@ -27,8 +27,6 @@ import recordingService from '../../services/recordingService';
 import { getStyles } from './CameraLiveView.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LogoDetail from '@assets/svg/logo-detail.svg';
-import CloseIcon from '@assets/svg/close-icon.svg';
-import NoRecordingDataIcon from '@assets/svg/no-recording-data-icon.svg';
 import { useTranslation } from 'react-i18next';
 import { WebView } from 'react-native-webview';
 import {
@@ -265,12 +263,10 @@ const CameraLiveView: React.FC = () => {
         return;
       }
 
-      // Lưu base64 thành file tạm
       const tmpPath = `${RNFS.CachesDirectoryPath}/snapshot_${Date.now()}.jpg`;
       const base64String = base64Data.replace(/^data:image\/\w+;base64,/, '');
       await RNFS.writeFile(tmpPath, base64String, 'base64');
 
-      // Xin quyền truy cập thư viện ảnh
       let permissionStatus;
       if (Platform.OS === 'ios') {
         permissionStatus = await check(PERMISSIONS.IOS.PHOTO_LIBRARY_ADD_ONLY);
@@ -306,7 +302,6 @@ const CameraLiveView: React.FC = () => {
       }
 
       await CameraRoll.saveToCameraRoll(`file://${tmpPath}`, 'photo');
-      // Xóa file tạm sau khi lưu thành công
       await RNFS.unlink(tmpPath).catch(() => {});
       Alert.alert(t('cameraLive.success'), t('cameraLive.screenshotSaved'));
     } catch (err) {
@@ -546,7 +541,7 @@ const CameraLiveView: React.FC = () => {
         {showErrorOverlay && streamHtmlUrl ? (
           <View style={styles.errorOverlay}>
             <Text style={styles.errorText}>
-              {t('liveStream.connectionFailed') || 'Connection failed'}
+              {t('networkSetup.connectionFailed') || 'Connection failed'}
             </Text>
             <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
               <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
@@ -719,7 +714,7 @@ const CameraLiveView: React.FC = () => {
 
             <View style={styles.hdStyle}>
               <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                <CloseIcon />
+                <Icon name="close" size={24} color="#FFF" />
               </TouchableOpacity>
             </View>
           </View>

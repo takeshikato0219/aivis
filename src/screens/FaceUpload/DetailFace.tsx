@@ -244,7 +244,6 @@ const DetailFace = () => {
     );
   };
 
-  // Thêm PositionArrow component (copy từ FaceUpload)
   // eslint-disable-next-line react/no-unstable-nested-components
   const PositionArrow: React.FC<{ position: string }> = ({ position }) => {
     const getArrowStyle = () => {

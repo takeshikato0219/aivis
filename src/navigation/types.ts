@@ -57,10 +57,10 @@ export type AppStackParamList = {
   ConnectWifiHotspot: { wifi: any };
   NetworkSetup: { cameraAp: string };
   Setting: undefined;
-  FaceUpload: undefined;
+  FaceUpload: { type: string };
   ConnectionSuccessful: { cameraData: Camera };
   SettingAI: { camera: Camera };
-  ListFace: undefined;
+  ListFace: { type: string };
   DetailFace: { memberId: string; relationships?: MemberRelationship[] };
   AiDetectionRules: { camera: Camera };
   WorkSchedule: {
@@ -90,19 +90,11 @@ export type CameraLiveScreenNavigationProp = StackNavigationProp<AppStackParamLi
 export type CameraLiveScreenRouteProp = RouteProp<AppStackParamList, 'CameraLive'>;
 
 export type CameraSetupScreenNavigationProp = StackNavigationProp<AppStackParamList, 'CameraSetup'>;
-export type CameraSetupScreenRouteProp = RouteProp<AppStackParamList, 'CameraSetup'>;
-
-export type DetectionZoneSetupScreenNavigationProp = StackNavigationProp<
-  AppStackParamList,
-  'DetectionZoneSetup'
->;
-export type DetectionZoneSetupScreenRouteProp = RouteProp<AppStackParamList, 'DetectionZoneSetup'>;
 
 export type SetupCompleteScreenNavigationProp = StackNavigationProp<
   AppStackParamList,
   'SetupComplete'
 >;
-export type SetupCompleteScreenRouteProp = RouteProp<AppStackParamList, 'SetupComplete'>;
 
 export type ConnectDeviceScreenNavigationProp = CompositeNavigationProp<
   StackNavigationProp<AppStackParamList, 'ConnectDevice'>,
@@ -121,23 +113,17 @@ export type ConnectWifiHotspotRouteProp = RouteProp<AppStackParamList, 'ConnectW
 export type NetworkSetupNavigationProp = StackNavigationProp<AppStackParamList, 'NetworkSetup'>;
 export type NetworkSetupRouteProp = RouteProp<AppStackParamList, 'NetworkSetup'>;
 
-export type ConnectionSuccessfulScreenNavigationProp = StackNavigationProp<
-  AppStackParamList,
-  'ConnectionSuccessful'
->;
 export type ConnectionSuccessfulScreenRouteProp = RouteProp<
   AppStackParamList,
   'ConnectionSuccessful'
 >;
 
-export type SettingAIScreenNavigationProp = StackNavigationProp<AppStackParamList, 'SettingAI'>;
-export type SettingAIScreenRouteProp = RouteProp<AppStackParamList, 'SettingAI'>;
-
 export type DetailFaceNavigationProp = StackNavigationProp<AppStackParamList, 'DetailFace'>;
 export type DetailFaceRouteProp = RouteProp<AppStackParamList, 'DetailFace'>;
 
-export type WorkScheduleNavigationProp = StackNavigationProp<AppStackParamList, 'WorkSchedule'>;
 export type WorkScheduleRouteProp = RouteProp<AppStackParamList, 'WorkSchedule'>;
+
+export type ListFaceRouteProp = RouteProp<AppStackParamList, 'ListFace'>;
 
 // ===== DECLARE GLOBAL =====
 declare global {

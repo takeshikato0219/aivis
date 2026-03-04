@@ -1,5 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  TouchableWithoutFeedback,
+} from 'react-native';
 import { styles } from './FaceUpload.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackIcon from '@assets/svg/icon-back.svg';
@@ -17,6 +24,7 @@ const ListFace = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [relationships, setRelationships] = useState<MemberRelationship[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const fetchMembers = useCallback(async () => {
     try {
@@ -48,8 +56,12 @@ const ListFace = () => {
     }, [fetchMembers])
   );
 
-  const goToFaceUpload = () => {
-    navigation.navigate('FaceUpload' as never);
+  const openModal = () => setModalVisible(true);
+  const closeModal = () => setModalVisible(false);
+
+  const handleTakePhoto = (type: string) => {
+    closeModal();
+    navigation.navigate('FaceUpload', { type: type });
   };
 
   const renderMemberItem = useCallback(
@@ -86,11 +98,67 @@ const ListFace = () => {
           <View style={styles.viewTitle}>
             <Text style={styles.headerTitle}>{t('listFace.listFace')}</Text>
           </View>
-          <TouchableOpacity onPress={goToFaceUpload}>
+          <TouchableOpacity onPress={openModal}>
             <Icon name="plus" size={30} color="#fff" />
           </TouchableOpacity>
         </View>
-
+        {modalVisible && (
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback onPress={closeModal}>
+              <View style={styles.styleBackdrop} />
+            </TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              {/* Drag indicator */}
+              <View style={styles.dragIndicator} />
+              {/* Header */}
+              <View style={styles.headerModal}>
+                <Text style={styles.titleModal}>{t('listFace.selectFunction')}</Text>
+                <TouchableOpacity onPress={closeModal}>
+                  <Icon name="close" size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
+              {/* Options */}
+              <View style={styles.styleOption}>
+                <TouchableOpacity
+                  style={styles.btnTakePhoto}
+                  onPress={() => handleTakePhoto('capture')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.viewTakePhoto}>
+                    <Icon name="camera" size={28} color="#00ADD4" />
+                  </View>
+                  <View style={styles.modalFlex}>
+                    <Text style={styles.textTakePhoto}>{t('listFace.takePhoto')}</Text>
+                  </View>
+                  <Icon name="chevron-right" size={24} color="#BBBBBB" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.btnUploadPhoto}
+                  onPress={() => handleTakePhoto('upload')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.viewBtnUploadPhoto}>
+                    <Icon name="image" size={28} color="#00ADD4" />
+                  </View>
+                  <View style={styles.modalFlex}>
+                    <Text style={styles.textUploadPhoto}>
+                      {t('listFace.uploadPhotoFromLibrary')}
+                    </Text>
+                  </View>
+                  <Icon name="chevron-right" size={24} color="#BBBBBB" />
+                </TouchableOpacity>
+              </View>
+              {/* Cancel Button */}
+              <View style={styles.viewCancel}>
+                <TouchableOpacity style={styles.btnCancel} onPress={closeModal} activeOpacity={0.7}>
+                  <Text style={styles.textCancel}>
+                    {t('register.cancel') || t('listFace.close')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
         {/* Members List */}
         <View style={styles.listContainer}>
           {isLoading ? (

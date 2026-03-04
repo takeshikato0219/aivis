@@ -29,6 +29,7 @@ import { useInput } from '@hooks/useInput';
 import { isPasswordWifi } from '@utils/validate';
 import { useAppSelector } from '@redux/store';
 import { useJetsonBLE, WiFiScanStatus } from '@hooks/useJetsonBLE';
+import { jetsonBLEService } from '@/services/jetsonBLEService';
 
 const getSignalStyle = (signal: string) => {
   const signalStyles = {
@@ -247,6 +248,7 @@ const NetworkSetup: React.FC = () => {
   };
 
   const handleBackToScan = async () => {
+    jetsonBLEService.disconnect();
     navigation.reset({
       index: 1,
       routes: [{ name: 'Home' }, { name: 'ConnectDevice' }],
