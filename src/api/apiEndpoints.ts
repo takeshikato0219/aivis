@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
     CHANGE_PASSWORD: '/auth/change-password',
     GOOGLE_LOGIN: '/oauth/google/login',
     LINE_LOGIN: '/oauth/line/login',
+    LINE_LINK: '/oauth/line/link',
   },
   // Cameras
   CAMERAS: '/cameras',

@@ -295,7 +295,7 @@ export const getStyles = (width: number, height: number) => {
       marginBottom: 6,
     },
     iconCircleActive: {
-      backgroundColor: '#EF4444',
+      backgroundColor: '#44ef52',
     },
     mainButtonText: {
       color: '#FFF',

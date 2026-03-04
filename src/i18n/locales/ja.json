@@ -386,7 +386,9 @@
     "lineAuthRequiredMessage": "LINE公式アカウントを購読するには、まずLINEで認証する必要があります。",
     "cannotUnsubscribeMessage": "購読を解除するにはLINE認証が必要です。",
     "loginWithLine": "LINEでログイン",
-    "failedToUpdateUserProfilePleaseTryAgain": "ユーザープロファイルの更新に失敗しました。もう一度お試しください。"
+    "failedToUpdateUserProfilePleaseTryAgain": "ユーザープロファイルの更新に失敗しました。もう一度お試しください。",
+    "LINEDisplayName": "LINE表示名：",
+    "LINEUserID": "LINEユーザーID："
   },
   "networkSetup": {
     "networkSetup": "ネットワーク設定",

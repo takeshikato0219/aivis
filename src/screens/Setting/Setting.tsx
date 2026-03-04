@@ -34,6 +34,7 @@ const Setting = () => {
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isUnsubscribing, setIsUnsubscribing] = useState(false);
+  const [lineProfile, setLineProfile] = useState<any>(null);
 
   const goBack = () => {
     navigation.goBack();
@@ -185,7 +186,8 @@ const Setting = () => {
       const success = await LineSubscriptionService.subscribeToOfficialAccount();
       if (success) {
         try {
-          await Line.getProfile();
+          const profile = await Line.getProfile();
+          setLineProfile(profile);
         } catch (profileError) {
           console.error('Error updating LINE profile info:', profileError);
         }
@@ -224,6 +226,7 @@ const Setting = () => {
                 prev ? { ...prev, isSubscribed: false } : { isSubscribed: false }
               );
             }
+            setLineProfile(null);
           } catch (error) {
             console.error('Error unsubscribing from LINE:', error);
           } finally {
@@ -234,12 +237,8 @@ const Setting = () => {
     ]);
   };
 
-  const handleOpenOfficialAccount = () => {
-    void LineSubscriptionService.openOfficialAccount();
-  };
-
   const goToFaceUpload = () => {
-    navigation.navigate('ListFace');
+    navigation.navigate('ListFace', { type: '' });
   };
 
   return (
@@ -273,13 +272,14 @@ const Setting = () => {
             <View style={styles.section}>
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
-                {user?.line_user_id && (
-                  <View style={{ marginTop: 16, alignItems: 'center' }}>
-                    <Text style={{ color: '#FFF', fontSize: 16 }}>
-                      Tên LINE: {user.line_display_name || 'Chưa có'}
+                {lineProfile && (
+                  <View style={styles.marginLine}>
+                    <Text style={styles.lineStyle}>
+                      {t('lineSubscription.LINEDisplayName')}
+                      {lineProfile.displayName}
                     </Text>
-                    <Text style={{ color: '#FFF', fontSize: 16, marginTop: 4 }}>
-                      LINE ID: {user.line_user_id}
+                    <Text style={styles.lineStyle}>
+                      {t('lineSubscription.LINEUserID')} {lineProfile.userId}
                     </Text>
                   </View>
                 )}
@@ -310,13 +310,6 @@ const Setting = () => {
                     )}
                   </TouchableOpacity>
                 )}
-
-                <TouchableOpacity
-                  style={[styles.lineButton, styles.openAccountButton]}
-                  onPress={handleOpenOfficialAccount}
-                >
-                  <Text style={styles.buttonText}>{t('lineSubscription.openOfficialAccount')}</Text>
-                </TouchableOpacity>
               </View>
             </View>
           </ScrollView>

@@ -168,6 +168,15 @@ class AuthService {
     });
     return this.mapLoginResponse(response);
   }
+
+  async linkLineAccount(idToken: string): Promise<any> {
+    return axiosInstance.post(API_ENDPOINTS.AUTH.LINE_LINK, {
+      id_token: idToken,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+  }
 }
 
 export default new AuthService();

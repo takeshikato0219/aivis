@@ -683,6 +683,7 @@ const FaceUpload: React.FC = () => {
   const renderChoosePhoto = () => (
     <View style={styles.detailSection}>
       <Text style={styles.detailSectionTitle}>{t('faceUpload.images') || 'Images'}</Text>
+      <Text style={styles.detailSectionTitle}>{t('faceUpload.selectPhoto')}</Text>
       <View style={styles.imagesGrid}>
         {[0, 1, 2, 3, 4].map((index) => (
           <View key={index} style={styles.imageItemContainerPhoto}>

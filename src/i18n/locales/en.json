@@ -345,7 +345,9 @@
     "lineAuthRequiredMessage": "To subscribe to our LINE Official Account, you need to authenticate with LINE first.",
     "cannotUnsubscribeMessage": "You need to be authenticated with LINE to unsubscribe.",
     "loginWithLine": "Login with LINE",
-    "failedToUpdateUserProfilePleaseTryAgain": "Failed to update user profile. Please try again."
+    "failedToUpdateUserProfilePleaseTryAgain": "Failed to update user profile. Please try again.",
+    "LINEDisplayName": "LINE Display Name:",
+    "LINEUserID": "LINE User ID:"
   },
   "networkSetup": {
     "networkSetup": "Network Setup",

@@ -27,6 +27,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS } from '@constants/theme';
 import { DetailFaceNavigationProp, DetailFaceRouteProp } from '@navigation/types';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
+import { useImagePicker } from '@hooks/useImagePicker';
+import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';
 
 // Face position titles for individual image editing
 const FACE_POSITION_TITLES = [
@@ -122,6 +124,11 @@ const DetailFace = () => {
   const [isCapturing, setIsCapturing] = useState(false);
   const [changedImageIds, setChangedImageIds] = useState<Set<string>>(new Set());
   const [isSaveDisabled, setIsSaveDisabled] = useState(false);
+
+  // New: track which image index is being edited for upload
+  const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null);
+
+  const imagePicker = useImagePicker();
 
   // Reset loaded data when memberId changes
   useEffect(() => {
@@ -492,54 +499,34 @@ const DetailFace = () => {
   };
 
   // Handle image press to open single face detection modal
-  const handleImagePress = async (index: number) => {
-    if (!hasPermission) {
-      const granted = await requestPermission();
-      if (!granted) {
-        Alert.alert(
-          t('faceUpload.cameraPermission') || 'Camera Permission Required',
-          t('faceUpload.cameraPermissionDesc') || 'We need camera access to capture your face'
-        );
-        return;
+  const handleImagePress = (index: number) => {
+    setEditingImageIndex(index);
+    imagePicker.handleUploadPress();
+  };
+
+  useEffect(() => {
+    if (
+      editingImageIndex !== null &&
+      imagePicker.selectedImage &&
+      member &&
+      member.images &&
+      member.images[editingImageIndex]
+    ) {
+      const updatedImages = [...member.images];
+      updatedImages[editingImageIndex] = {
+        ...updatedImages[editingImageIndex],
+        image_url: imagePicker.selectedImage.uri,
+      };
+      setMember({ ...member, images: updatedImages });
+      setHasChanges(true);
+      if (updatedImages[editingImageIndex]?.id) {
+        setChangedImageIds((prev) => new Set(prev).add(updatedImages[editingImageIndex].id));
       }
+      setEditingImageIndex(null);
+      imagePicker.setSelectedImage(null);
     }
+  }, [editingImageIndex, imagePicker, member, imagePicker.selectedImage]);
 
-    // Reset all detection states before opening modal
-    setIsPreparing(false);
-    setIsDetecting(false);
-    setIsCapturing(false);
-    setPrepareProgress(0);
-    setDetectProgress(0);
-
-    setSelectedImageIndex(index);
-    setShowSingleDetectModal(true);
-  };
-
-  // Handle close detect modal
-  const handleCloseDetectModal = () => {
-    // Stop all animations and processes first
-    stopSinglePrepare();
-    stopSingleScanning();
-
-    // Reset all animation values
-    fadeAnim.setValue(0);
-    scaleAnim.setValue(1);
-    scanLineAnim.setValue(0);
-    particleAnim.setValue(0);
-    pulseAnim.setValue(1);
-    successAnim.setValue(0);
-
-    // Close modal
-    setShowSingleDetectModal(false);
-    setSelectedImageIndex(-1);
-    setIsPreparing(false);
-    setIsDetecting(false);
-    setIsCapturing(false);
-    setPrepareProgress(0);
-    setDetectProgress(0);
-  };
-
-  // Get error message for incorrect face position
   const getPositionErrorMessage = (position: string): string => {
     switch (position) {
       case 'center':
@@ -854,44 +841,15 @@ const DetailFace = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('detailFace.detailFace') || 'Member Detail'}</Text>
-            <View style={styles.styleWidth} />
-          </View>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4CAF50" />
-            <Text style={styles.loadingText}>{t('common.loading') || 'Loading...'}</Text>
-          </View>
-        </SafeAreaView>
-      </View>
-    );
-  }
-
-  if (!member) {
-    return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('detailFace.detailFace') || 'Member Detail'}</Text>
-            <View style={styles.styleWidth} />
-          </View>
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>{t('common.notAvailable') || 'Member not found'}</Text>
-          </View>
-        </SafeAreaView>
-      </View>
-    );
-  }
+  const handleCloseDetectModal = () => {
+    setShowSingleDetectModal(false);
+    setSelectedImageIndex(-1);
+    setIsPreparing(false);
+    setIsDetecting(false);
+    setIsCapturing(false);
+    setPrepareProgress(0);
+    setDetectProgress(0);
+  };
 
   return (
     <View style={styles.container}>
@@ -1335,6 +1293,30 @@ const DetailFace = () => {
           </View>
         </Modal>
       </SafeAreaView>
+      <ImagePickerModal
+        visible={imagePicker.showImagePicker}
+        slideAnim={imagePicker.slideAnim}
+        opacityAnim={imagePicker.opacityAnim}
+        onClose={() => {
+          imagePicker.closeModal();
+          setEditingImageIndex(null);
+        }}
+        onTakePhoto={() => {
+          imagePicker.closeModal();
+          if (!hasPermission) {
+            requestPermission();
+            return;
+          }
+          setIsPreparing(false);
+          setIsDetecting(false);
+          setIsCapturing(false);
+          setPrepareProgress(0);
+          setDetectProgress(0);
+          setSelectedImageIndex(editingImageIndex ?? -1);
+          setShowSingleDetectModal(true);
+        }}
+        onChooseFromLibrary={imagePicker.handleChooseFromLibrary}
+      />
     </View>
   );
 };

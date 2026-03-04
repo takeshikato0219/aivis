@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableWithoutFeedback,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { styles } from './FaceUpload.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +19,8 @@ import faceService, { Member, MemberRelationship } from '@api/faceService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AppStackParamList } from '@navigation/types';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
 const ListFace = () => {
   const navigation = useNavigation<StackNavigationProp<AppStackParamList>>();
   const { t } = useTranslation();
@@ -24,7 +28,9 @@ const ListFace = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [relationships, setRelationships] = useState<MemberRelationship[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
   const fetchMembers = useCallback(async () => {
     try {
@@ -56,8 +62,38 @@ const ListFace = () => {
     }, [fetchMembers])
   );
 
-  const openModal = () => setModalVisible(true);
-  const closeModal = () => setModalVisible(false);
+  const openModal = () => {
+    setShowModal(true);
+    Animated.parallel([
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeModal = () => {
+    Animated.parallel([
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_HEIGHT,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowModal(false);
+    });
+  };
 
   const handleTakePhoto = (type: string) => {
     closeModal();
@@ -102,12 +138,15 @@ const ListFace = () => {
             <Icon name="plus" size={30} color="#fff" />
           </TouchableOpacity>
         </View>
-        {modalVisible && (
-          <View style={styles.modalContainer}>
+        {showModal && (
+          <View style={styles.modalContainer} pointerEvents="box-none">
             <TouchableWithoutFeedback onPress={closeModal}>
-              <View style={styles.styleBackdrop} />
+              <Animated.View style={[styles.styleBackdrop, { opacity: opacityAnim }]} />
             </TouchableWithoutFeedback>
-            <View style={styles.modalContent}>
+            <Animated.View
+              style={[styles.modalContent, { transform: [{ translateY: slideAnim }] }]}
+              pointerEvents="box-none"
+            >
               {/* Drag indicator */}
               <View style={styles.dragIndicator} />
               {/* Header */}
@@ -156,7 +195,7 @@ const ListFace = () => {
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </Animated.View>
           </View>
         )}
         {/* Members List */}
