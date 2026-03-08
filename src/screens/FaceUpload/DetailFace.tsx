@@ -920,50 +920,43 @@ const DetailFace = () => {
           {/* Images Section */}
           <View style={styles.detailSection}>
             <Text style={styles.detailSectionTitle}>{t('faceUpload.images') || 'Images'}</Text>
-            {(() => {
-              const images = member?.images || [];
-              if (images.length > 0) {
+            <View style={styles.imagesGrid}>
+              {[0, 1, 2, 3, 4].map((index) => {
+                const images = member?.images || [];
+                const image = images[index];
+                const positionTitle = FACE_POSITION_TITLES[index];
                 return (
-                  <>
-                    <View style={styles.imagesGrid}>
-                      {images.map((image, index) => {
-                        const positionTitle = FACE_POSITION_TITLES[index];
-                        return (
-                          <View key={image.id || index} style={styles.imageItemContainer}>
-                            <Text style={styles.imageTitle}>
-                              {index + 1}. {positionTitle?.getTitle(t) || `Position ${index + 1}`}
-                            </Text>
-                            <TouchableOpacity
-                              style={styles.imageItem}
-                              onPress={() => handleImagePress(index)}
-                            >
-                              <Image
-                                source={{ uri: image.image_url }}
-                                style={styles.imagePreview}
-                                resizeMode="cover"
-                              />
-                              <View style={styles.imageOverlay}>
-                                <Icon name="pencil" size={20} color="#fff" />
-                                <Text style={styles.imageIndex}>{index + 1}</Text>
-                              </View>
-                            </TouchableOpacity>
-                          </View>
-                        );
-                      })}
-                    </View>
-                    <Text style={styles.imageNote}>
-                      {t('faceUpload.tapToEditImage') || 'Tap on image to edit'}
+                  <View key={image?.id || index} style={styles.imageItemContainer}>
+                    <Text style={styles.imageTitle}>
+                      {index + 1}. {positionTitle?.getTitle(t) || `Position ${index + 1}`}
                     </Text>
-                  </>
+                    <TouchableOpacity
+                      style={styles.imageItem}
+                      onPress={() => handleImagePress(index)}
+                    >
+                      {image && image.image_url ? (
+                        <Image
+                          source={{ uri: image.image_url }}
+                          style={styles.imagePreview}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.imageOverlay}>
+                          <Icon name="plus" size={32} color="#ccc" />
+                        </View>
+                      )}
+                      <View style={styles.imageOverlay}>
+                        <Icon name="pencil" size={20} color="#fff" />
+                        <Text style={styles.imageIndex}>{index + 1}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
                 );
-              } else {
-                return (
-                  <Text style={styles.detailValue}>
-                    {t('faceUpload.noImages') || 'No images available'}
-                  </Text>
-                );
-              }
-            })()}
+              })}
+            </View>
+            <Text style={styles.imageNote}>
+              {t('faceUpload.tapToEditImage') || 'Tap on image to edit'}
+            </Text>
           </View>
 
           {/* Save Button */}

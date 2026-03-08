@@ -18,6 +18,7 @@ export interface User {
   line_display_name?: string | null;
   is_admin?: boolean;
   is_active?: boolean;
+  has_followed_bot?: boolean;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;

@@ -9,6 +9,7 @@ export const styles = StyleSheet.create({
   },
   keyboardView: {
     flex: 1,
+    marginBottom: 40,
   },
   scrollContent: {
     flexGrow: 1,
@@ -182,6 +183,11 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
   },
   webLoginButton: {
-    backgroundColor: '#00C300', // LINE green color
+    backgroundColor: '#00C300',
+  },
+  iconLineBottom: {
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

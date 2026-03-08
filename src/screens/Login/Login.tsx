@@ -359,6 +359,10 @@ const Login: React.FC = () => {
     }
   };
 
+  const gotoPolicy = (type: string) => {
+    navigation.navigate('Policy', { type });
+  };
+
   const isSmallScreen = responsive.height < 700;
   const shouldUseScrollView = responsive.isLandscape || isSmallScreen;
   const Container = shouldUseScrollView ? ScrollView : View;
@@ -505,6 +509,17 @@ const Login: React.FC = () => {
             <Text style={styles.registerButton}>{t('auth.dontHaveAnAccountYet')}</Text>
             <TouchableOpacity onPress={handleRegister}>
               <Text style={styles.labelStyleForgotText}>{t('auth.register')}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.styleCreateAcc}>
+            <TouchableOpacity onPress={() => gotoPolicy('terms')}>
+              <Text style={styles.labelStyleForgotText}>{t('auth.termsOfUse')}</Text>
+            </TouchableOpacity>
+            <View style={styles.iconLineBottom}>
+              <Text>-</Text>
+            </View>
+            <TouchableOpacity onPress={() => gotoPolicy('privacy')}>
+              <Text style={styles.labelStyleForgotText}>{t('auth.privacyPolicy')}</Text>
             </TouchableOpacity>
           </View>
         </View>

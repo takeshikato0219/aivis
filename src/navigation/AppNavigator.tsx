@@ -30,6 +30,8 @@ import DetailFace from '@screens/FaceUpload/DetailFace';
 import AiDetectionRules from '@screens/AiDetectionRules/AiDetectionRules';
 import WorkSchedule from '@screens/WorkSchedule/WorkSchedule';
 import UploadDetectZone from '@screens/DetectionZoneSetup/UploadDetectZone';
+import ListNotificationCamera from '@screens/ListNotificationCamera/ListNotificationCamera';
+import CustomerReport from '@screens/CustomerReport/CustomerReport';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -226,6 +228,20 @@ const AppNavigator = () => {
         <Stack.Screen
           name="UploadDetectZone"
           component={UploadDetectZone}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ListNotificationCamera"
+          component={ListNotificationCamera}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="CustomerReport"
+          component={CustomerReport}
           options={{
             headerShown: false,
           }}

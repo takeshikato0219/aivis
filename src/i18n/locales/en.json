@@ -24,7 +24,8 @@
     "ok": "OK",
     "yes": "Yes",
     "no": "No",
-    "grantPermission": "Grant Permission"
+    "grantPermission": "Grant Permission",
+    "confirm": "Confirm"
   },
   "auth": {
     "login": "Login",
@@ -79,7 +80,9 @@
     "lineAndroidIntentError": "LINE app intent not available",
     "loginWithLineApp": "Login with LINE App",
     "loginWithBrowser": "Login with Browser (Web)",
-    "webLoginNotAvailable": "Web login requires additional setup. Please use LINE app for now."
+    "webLoginNotAvailable": "Web login requires additional setup. Please use LINE app for now.",
+    "termsOfUse": "Terms of Use",
+    "privacyPolicy": "Privacy Policy"
   },
   "home": {
     "title": "Welcome Back!",
@@ -156,7 +159,8 @@
     "safeMode": "Safe Mode",
     "releaseMode": "Release Mode",
     "securityMode": "Security Mode",
-    "textNotification": "Intrusion detection, immediate notification"
+    "textNotification": "Intrusion detection, immediate notification",
+    "doYouWantToSwitchMode": "Do you want to switch mode?"
   },
   "validate": {
     "emailRequired": "The email field is required.",
@@ -576,5 +580,8 @@
     "failureMessage": "Detection zone setup failed",
     "setupError": "Setup error",
     "twoPointError": "The two points must not coincide with the edge of the frame. Please select a different position!"
+  },
+  "listNotificationCamera": {
+    "tapTheListBelowToView": "Tap the list below to view"
   }
 }

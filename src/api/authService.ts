@@ -36,6 +36,7 @@ class AuthService {
       agency_code: data.agency_code,
       status: data.status,
       type: data.type,
+      has_followed_bot: data.has_followed_bot,
     };
   }
 
@@ -169,9 +170,9 @@ class AuthService {
     return this.mapLoginResponse(response);
   }
 
-  async linkLineAccount(idToken: string): Promise<any> {
+  async linkLineAccount(userId: string): Promise<any> {
     return axiosInstance.post(API_ENDPOINTS.AUTH.LINE_LINK, {
-      id_token: idToken,
+      line_user_id: userId,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },

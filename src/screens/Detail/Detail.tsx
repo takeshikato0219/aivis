@@ -8,6 +8,7 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -30,15 +31,32 @@ import RetangleImage from '@assets/png/rectangle-home.png';
 import CameraHomeDetailBgPng from '@assets/png/camera-home-detail-bg.png';
 import CameraFactoryDetailBgPng from '@assets/png/camera-factory-detail-bg.png';
 import CameraShopDetailBgPng from '@assets/png/camera-shop-detail-bg.png';
+import IconHome from '@assets/svg/icon-home.svg';
+import IconPerson from '@assets/svg/icon-person.svg';
+import IconSuspect from '@assets/svg/icon-suspect.svg';
+import IconLive from '@assets/svg/icon-live.svg';
+import IconBear from '@assets/svg/icon-bear.svg';
+import IconListFace from '@assets/svg/icon-list-face.svg';
 
 import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/types';
 import { COLORS } from '@constants/theme';
 
+const livingItem = {
+  id: '4',
+  name: 'ライブカメラ',
+  status: 'Online',
+  counter: '5',
+  frame: {
+    uri: '',
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+};
+
 const INITIAL_LIST = [
-  { id: '1', name: 'Front Door', status: 'Online' },
-  { id: '2', name: 'Backyard', status: 'Offline' },
-  { id: '3', name: 'Garage', status: 'Online' },
-  { id: '4', name: 'Living Room', status: 'Online' },
+  { id: '1', name: '㷌宅人数', status: 'Online', counter: '1/2人' },
+  { id: '2', name: '本日の通行人', status: 'Offline', counter: '45人' },
+  { id: '3', name: '未登録検知', status: 'Online', counter: '5人' },
+  { id: '5', name: '生物検知', status: 'Online', counter: '5' },
 ].map((item) => ({
   ...item,
   frame: {
@@ -46,6 +64,29 @@ const INITIAL_LIST = [
     backgroundColor: 'rgba(255,255,255,0.4)',
   },
 }));
+
+const CAMERA_LIST = [
+  ...INITIAL_LIST.slice(0, 3),
+  livingItem,
+  ...INITIAL_LIST.slice(3),
+  {
+    id: '6',
+    name: '人物登録',
+    status: 'Online',
+    counter: '4人',
+    frame: { uri: '', backgroundColor: 'rgba(255,255,255,0.4)' },
+  },
+];
+const ICONS = [IconHome, IconPerson, IconSuspect, IconLive, IconBear, IconListFace];
+// Map index sang tên icon để truyền đi
+const ICON_NAMES = [
+  'IconHome',
+  'IconPerson',
+  'IconSuspect',
+  'IconLive',
+  'IconBear',
+  'IconListFace',
+];
 
 const ItemSeparator = () => <View style={styles.itemSeparator} />;
 
@@ -116,6 +157,14 @@ const Detail = () => {
       cameraId: camera.id,
       cameraName: camera.name,
     });
+  };
+
+  const handlePressNotification = (itemName: string, iconName: string) => {
+    navigation.navigate('ListNotificationCamera', { title: itemName, icon: iconName });
+  };
+
+  const handlePressCustomerReport = (itemName: string, iconName: string) => {
+    navigation.navigate('CustomerReport', { title: itemName, icon: iconName });
   };
 
   const handleSetupDetectionZone = () => {
@@ -189,6 +238,25 @@ const Detail = () => {
                 {filters.map((filter, idx) => {
                   const Icon = activeIndex === idx ? filter.iconActive : filter.iconUnActive;
 
+                  const handleTabPress = () => {
+                    if (activeIndex === idx) return;
+                    Alert.alert(
+                      t('common.confirm'),
+                      t('detail.doYouWantToSwitchMode'),
+                      [
+                        {
+                          text: t('common.cancel'),
+                          style: 'cancel',
+                        },
+                        {
+                          text: t('common.ok'),
+                          onPress: () => setActiveIndex(idx),
+                        },
+                      ],
+                      { cancelable: true }
+                    );
+                  };
+
                   return (
                     <TouchableOpacity
                       key={filter.name}
@@ -197,7 +265,7 @@ const Detail = () => {
                         activeIndex === idx && styles.activeFilterBtn,
                         activeIndex === idx && styles.filterBtnActiveWarning,
                       ]}
-                      onPress={() => setActiveIndex(idx)}
+                      onPress={handleTabPress}
                     >
                       <Icon />
                       <Text style={styles.filterText}>{filter.name}</Text>
@@ -208,12 +276,32 @@ const Detail = () => {
               </ScrollView>
             </View>
             {/* Camera List */}
-            {INITIAL_LIST.map((item, idx) => (
+            {CAMERA_LIST.map((item, idx) => (
               <View key={item.id}>
                 {idx > 0 && <ItemSeparator />}
-                <TouchableWithoutFeedback onPress={() => handleCameraPress()}>
+                <TouchableWithoutFeedback
+                  onPress={
+                    idx === 3
+                      ? handleCameraPress
+                      : idx === 1
+                      ? () => handlePressCustomerReport(item.name, ICON_NAMES[idx])
+                      : () => handlePressNotification(item.name, ICON_NAMES[idx])
+                  }
+                >
                   <ImageBackground source={item.frame} style={styles.rowFront} resizeMode="cover">
-                    <Text style={styles.filterText}>{item.name}</Text>
+                    {/* eslint-disable-next-line react-native/no-inline-styles */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {ICONS[idx] && (
+                        // eslint-disable-next-line react-native/no-inline-styles
+                        <View style={{ marginRight: 8 }}>
+                          {React.createElement(ICONS[idx], { width: 24, height: 24 })}
+                        </View>
+                      )}
+                      <View>
+                        <Text style={styles.filterText}>{item.name}</Text>
+                        <Text style={styles.filterText}>{item.counter}</Text>
+                      </View>
+                    </View>
                     <MoveRightIcon />
                   </ImageBackground>
                 </TouchableWithoutFeedback>

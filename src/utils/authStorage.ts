@@ -4,6 +4,7 @@ import { User } from '@api/types/authTypes';
 const ACCESS_TOKEN_KEY = 'accessToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 const USER_KEY = 'user';
+const LINE_PROFILE_KEY = 'lineProfile';
 
 export const setUserData = async (user: User) => {
   try {
@@ -28,7 +29,12 @@ export const setAuthData = async (accessToken: string, refreshToken: string, use
 
 export const removeAuthData = async () => {
   try {
-    await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY]);
+    await AsyncStorage.multiRemove([
+      ACCESS_TOKEN_KEY,
+      REFRESH_TOKEN_KEY,
+      USER_KEY,
+      LINE_PROFILE_KEY,
+    ]);
   } catch (e) {
     console.log('Error removing auth data:', e);
   }

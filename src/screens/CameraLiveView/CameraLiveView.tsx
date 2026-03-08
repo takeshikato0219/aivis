@@ -36,8 +36,8 @@ import {
 } from '@utils/streamUtils';
 import { StreamQuality } from '@api/types/cameraTypes';
 import { useLiveStream } from '@hooks/useLiveStream';
-import { useStream } from '@hooks/useStream';
-// @ts-ignore
+import { useMic } from '@hooks/useMic';
+import { MicState } from '@redux/slices/streamSlice';
 
 const STREAM_QUALITIES: StreamQuality[] = [
   { label: '流畅', value: 'low', resolution: '640x480', bitrate: 256 },
@@ -63,7 +63,6 @@ const CameraLiveView: React.FC = () => {
 
   // States
   const [isRecording, setIsRecording] = useState(false);
-  const [isTalking, setIsTalking] = useState(false);
   const [showQualityModal, setShowQualityModal] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -88,6 +87,14 @@ const CameraLiveView: React.FC = () => {
     handleManualRetry,
     handleWebViewMessage,
   } = useLiveStream({ maxRetries: 3, heartbeatTimeout: 15000 });
+
+  const { micState, toggleMic, stopMic, handleMicMessage } = useMic({
+    micUrl: micUrl,
+    streamWsUrl: streamWsUrl,
+    webViewRef: webViewRef,
+  });
+
+  const isTalking = micState === MicState.STREAMING || micState === MicState.CONNECTING;
 
   // Derive error state from hook
   const webViewError = connectionStatus === 'failed';
@@ -157,10 +164,6 @@ const CameraLiveView: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [timeExp, fetchLiveUrl]);
-
-  const { toggleMic } = useStream({
-    mic: micUrl,
-  });
 
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   useEffect(() => {
@@ -310,10 +313,9 @@ const CameraLiveView: React.FC = () => {
     }
   }, [t, captureFrameFromWebView]);
 
-  const toggleTalk = async () => {
+  const toggleTalk = useCallback(async () => {
     await toggleMic();
-    setIsTalking((prev) => !prev);
-  };
+  }, [toggleMic]);
 
   const closeQualityModal = () => {
     setIsAnimating(false);
@@ -420,6 +422,9 @@ const CameraLiveView: React.FC = () => {
   }, [isRecording, recordingStartTime, t]);
 
   const handleClose = async () => {
+    // Stop mic if active before closing
+    stopMic();
+
     try {
       const base64Data = await captureFrameFromWebView();
 
@@ -484,6 +489,7 @@ const CameraLiveView: React.FC = () => {
             mixedContentMode="always"
             setBuiltInZoomControls={false}
             setSupportMultipleWindows={false}
+            mediaCapturePermissionGrantType="grant"
             {...(Platform.OS === 'ios' && {
               allowsAirPlayForMediaPlayback: false,
               dataDetectorTypes: 'none',
@@ -501,6 +507,14 @@ const CameraLiveView: React.FC = () => {
                 const data = JSON.parse(event.nativeEvent.data);
                 if (data.type === 'frameCaptured' && captureResolveRef.current) {
                   captureResolveRef.current(data.data || '');
+                  return;
+                }
+                if (data.type === '__mic_state') {
+                  handleMicMessage(data);
+                  return;
+                }
+                if (data.type === 'needReload') {
+                  webViewRef.current?.reload();
                   return;
                 }
               } catch {

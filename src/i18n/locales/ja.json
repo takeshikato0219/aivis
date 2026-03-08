@@ -24,7 +24,8 @@
     "ok": "OK",
     "yes": "はい",
     "no": "いいえ",
-    "grantPermission": "権限を許可"
+    "grantPermission": "権限を許可",
+    "confirm": "確認"
   },
   "auth": {
     "login": "登錄",
@@ -79,7 +80,9 @@
     "lineAndroidIntentError": "LINEアプリのインテントが利用できません",
     "loginWithLineApp": "LINEアプリでログイン",
     "loginWithBrowser": "ブラウザでログイン（Web）",
-    "webLoginNotAvailable": "Webログインには追加設定が必要です。今はLINEアプリをご使用ください。"
+    "webLoginNotAvailable": "Webログインには追加設定が必要です。今はLINEアプリをご使用ください。",
+    "termsOfUse": "利用規約",
+    "privacyPolicy": "プライバシーポリシー"
   },
   "home": {
     "title": "お帰りなさい！",
@@ -197,7 +200,8 @@
     "safeMode": "安心モード",
     "releaseMode": "解除モード",
     "securityMode": "セキュリティモード",
-    "textNotification": "侵入 知 即時通知"
+    "textNotification": "侵入 知 即時通知",
+    "doYouWantToSwitchMode": "モードを切り替えますか？"
   },
   "validate": {
     "emailRequired": "メールアドレスを入力してください。",
@@ -617,5 +621,8 @@
     "failureMessage": "検知ゾーンの設定に失敗しました",
     "setupError": "設定エラー",
     "twoPointError": "2つのポイントがフレームの端と一致してはいけません。別の位置を選択してください。"
+  },
+  "listNotificationCamera": {
+    "tapTheListBelowToView": "下のリストをタップして表示してください"
   }
 }

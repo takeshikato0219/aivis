@@ -16,6 +16,7 @@ export type AuthStackParamList = {
   ForgotPassword: undefined;
   ResetPassword: { token: string };
   VerifyEmail: { email: string };
+  Policy: { type: string };
 };
 
 // ===== APP STACK =====
@@ -71,6 +72,8 @@ export type AppStackParamList = {
   UploadDetectZone: {
     camera: Camera;
   };
+  ListNotificationCamera: { title: string; icon: string };
+  CustomerReport: { title: string; icon: string };
 };
 
 // ===== NAVIGATION PROPS =====

@@ -44,6 +44,26 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
   return `(function(){
     var isIOS = ${platform === 'ios'};
 
+    (function() {
+      var OrigWS = window.WebSocket;
+      if (window.__wsPatched) return;
+      window.__wsPatched = true;
+      window.__openSockets = [];
+      window.WebSocket = function(url, protocols) {
+        var ws = protocols ? new OrigWS(url, protocols) : new OrigWS(url);
+        window.__openSockets.push(ws);
+        ws.addEventListener('close', function() {
+          window.__openSockets = window.__openSockets.filter(function(s){ return s !== ws; });
+        });
+        return ws;
+      };
+      window.WebSocket.prototype = OrigWS.prototype;
+      window.WebSocket.CONNECTING = OrigWS.CONNECTING;
+      window.WebSocket.OPEN = OrigWS.OPEN;
+      window.WebSocket.CLOSING = OrigWS.CLOSING;
+      window.WebSocket.CLOSED = OrigWS.CLOSED;
+    })();
+
     var s = document.createElement('style');
     s.textContent = [
       'html,body{background:#000!important;margin:0!important;padding:0!important;overflow:hidden!important;width:100%!important;height:100%!important;}',
@@ -55,7 +75,6 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
       '  object-fit:cover!important; z-index:1!important;',
       '  background:#000!important; pointer-events:auto!important;',
       '}',
-      // ✅ Xóa style #__rn_mute_btn
       'video::-webkit-media-controls-play-button,',
       'video::-webkit-media-controls-timeline,',
       'video::-webkit-media-controls-current-time-display,',
@@ -116,7 +135,6 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
       if (v.paused) v.play().catch(function(){});
     }
 
-    // ✅ Nhận lệnh mute từ React Native
     function handleMuteMessage(data) {
       try {
         var msg = JSON.parse(data);
@@ -127,9 +145,7 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
         }
       } catch(ex) {}
     }
-    // Android
     window.addEventListener('message', function(e) { handleMuteMessage(e.data); });
-    // iOS WKWebView
     document.addEventListener('message', function(e) { handleMuteMessage(e.data); });
 
     function init() {
@@ -148,7 +164,6 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
     setTimeout(init, 1500);
     setTimeout(init, 3000);
 
-    // Health check: send heartbeat/playing/stalled to React Native
     var _lastTime = 0;
     var _stallCount = 0;
     var _isPlaying = false;
@@ -162,7 +177,6 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
     setInterval(function(){
       var video = document.querySelector('video');
       var canvas = document.querySelector('canvas');
-      // Check video element
       if (video) {
         if (video.readyState >= 2 && !video.paused && video.currentTime > _lastTime) {
           _lastTime = video.currentTime;
@@ -175,7 +189,6 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
         }
         return;
       }
-      // Check canvas element
       if (canvas) {
         try {
           var ctx = canvas.getContext('2d');
@@ -192,18 +205,34 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
       }
     }, 3000);
 
+    window.__playerStop = function() {
+      document.querySelectorAll('video, audio').forEach(function(el) {
+        try {
+          el.pause();
+          el.muted = true;
+          el.srcObject = null;
+          el.src = '';
+          el.load();
+        } catch(e) {}
+      });
+      if (window.__openSockets) {
+        window.__openSockets.forEach(function(ws) {
+          try { ws.close(); } catch(e) {}
+        });
+        window.__openSockets = [];
+      }
+    };
+
+    window.__playerStart = function() {
+      sendRN('needReload');
+    };
+
     true;
   })();`;
 }
 
 /**
- * Tạo inline HTML page cho iOS WebView — load stream trực tiếp qua go2rtc API,
- * không dùng stream.html (tránh logo, controls, header của go2rtc).
- *
- * Trên iOS WKWebView, WebRTC không khả dụng nên dùng MSE → HLS → MJPEG fallback.
- * Page chỉ chứa 1 video element full-screen, không có UI chrome.
- *
- * @param wsUrl  - WebSocket URL gốc (wss://…/api/ws?src=camera&token=…)
+ * @param wsUrl - (wss://…/api/ws?src=camera&token=…)
  * @returns {{ html: string; baseUrl: string }}
  */
 export function buildIOSStreamInlineHtml(wsUrl: string): { html: string; baseUrl: string } {

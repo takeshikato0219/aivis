@@ -1,7 +1,7 @@
-import { Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showCommonAlert } from '@components/Alert/Alert';
 import { BaseLineService } from './baseLineService';
+import { getAuthData } from '@utils/authStorage';
 
 export interface LineSubscriptionStatus {
   isSubscribed: boolean;
@@ -11,8 +11,6 @@ export interface LineSubscriptionStatus {
 }
 
 export class LineSubscriptionService extends BaseLineService {
-  private baseUrl = 'https://api.line.me/v2/bot'; // LINE Official Account API base URL
-  private channelAccessToken = ''; // This should be configured in your environment
   private storageKey = '@line_subscription_status';
 
   /**
@@ -59,7 +57,7 @@ export class LineSubscriptionService extends BaseLineService {
       if (!profile?.userId) {
         throw new Error('Unable to get LINE user profile');
       }
-      const success = await this.sendSubscriptionMessage(profile.userId);
+      const success = true;
 
       if (success) {
         // Save subscription status to local storage
@@ -85,53 +83,14 @@ export class LineSubscriptionService extends BaseLineService {
   }
 
   /**
-   * Unsubscribe user from LINE Official Account
-   */
-  async unsubscribeFromOfficialAccount(): Promise<boolean> {
-    try {
-      const profile = await this.getCurrentUser();
-
-      if (!profile?.userId) {
-        throw new Error('Unable to get LINE user profile');
-      }
-
-      // In a real implementation, this would:
-      // 1. Remove user from subscription database
-      // 2. Stop sending notifications, etc.
-
-      const success = await this.sendUnsubscriptionMessage(profile.userId);
-
-      if (success) {
-        // Save unsubscription status to local storage
-        await this.saveSubscriptionStatus(profile.userId, false);
-
-        showCommonAlert({
-          title: 'Unsubscription Successful',
-          message: 'You have successfully unsubscribed from our LINE Official Account.',
-          buttons: [{ text: 'OK' }],
-        });
-      }
-
-      return success;
-    } catch (error: any) {
-      console.log('[LINE Subscription] Error unsubscribing:', error);
-      showCommonAlert({
-        title: 'Unsubscription Failed',
-        message: 'Unable to unsubscribe from LINE Official Account. Please try again.',
-        buttons: [{ text: 'OK' }],
-      });
-      return false;
-    }
-  }
-
-  /**
    * Private method to check if user is following the official account
    * In a real app, this would call your backend API
    */
   private async checkFollowerStatus(userId: string): Promise<boolean> {
     try {
       // Get stored subscription status
-      const storedStatus = await AsyncStorage.getItem(this.storageKey);
+      const { user } = await getAuthData();
+      const storedStatus = user.has_followed_bot;
 
       if (storedStatus) {
         const parsedStatus = JSON.parse(storedStatus);
@@ -172,108 +131,8 @@ export class LineSubscriptionService extends BaseLineService {
         timestamp: Date.now(),
       };
       await AsyncStorage.setItem(this.storageKey, JSON.stringify(statusData));
-      console.log('[LINE Subscription] Saved subscription status:', statusData);
     } catch (error) {
       console.log('[LINE Subscription] Error saving subscription status:', error);
-    }
-  }
-
-  /**
-   * Private method to send subscription message
-   * In a real app, this would call LINE Messaging API
-   */
-  private async sendSubscriptionMessage(userId: string): Promise<boolean> {
-    try {
-      console.log('[LINE Subscription] Sending subscription message to user:', userId);
-
-      // Mock implementation - in real app, call LINE Messaging API
-      // const response = await axios.post(`${this.baseUrl}/message/push`, {
-      //   to: userId,
-      //   messages: [{
-      //     type: 'text',
-      //     text: 'Welcome! You are now subscribed to our LINE Official Account.'
-      //   }]
-      // }, {
-      //   headers: {
-      //     'Authorization': `Bearer ${this.channelAccessToken}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      // });
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      return true;
-    } catch (error) {
-      console.log('[LINE Subscription] Error sending subscription message:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Private method to send unsubscription message
-   * In a real app, this would call LINE Messaging API
-   */
-  private async sendUnsubscriptionMessage(userId: string): Promise<boolean> {
-    try {
-      console.log('[LINE Subscription] Sending unsubscription message to user:', userId);
-
-      // Mock implementation - in real app, call LINE Messaging API
-      // const response = await axios.post(`${this.baseUrl}/message/push`, {
-      //   to: userId,
-      //   messages: [{
-      //     type: 'text',
-      //     text: 'You have unsubscribed from our LINE Official Account. We\'re sorry to see you go!'
-      //   }]
-      // }, {
-      //   headers: {
-      //     'Authorization': `Bearer ${this.channelAccessToken}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      // });
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      return true;
-    } catch (error) {
-      console.log('[LINE Subscription] Error sending unsubscription message:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get LINE Official Account QR Code URL
-   * This can be used to show QR code for users to scan and follow
-   */
-  getOfficialAccountQRUrl(): string {
-    // This would be your LINE Official Account's QR code URL
-    return `https://qr-official.line.me/gs/M/${this.channelId}/l.png`;
-  }
-
-  /**
-   * Open LINE Official Account in LINE app or browser
-   */
-  async openOfficialAccount() {
-    try {
-      const lineUrl = `line://ti/p/@${this.channelId}`;
-      const webUrl = `https://line.me/R/ti/p/${this.channelId}`;
-
-      const canOpenLine = await this.isLineAppInstalled();
-
-      if (canOpenLine) {
-        await Linking.openURL(lineUrl);
-      } else {
-        // Fallback to web URL
-        await Linking.openURL(webUrl);
-      }
-    } catch (error) {
-      console.log('[LINE Subscription] Error opening official account:', error);
-      showCommonAlert({
-        title: 'Error',
-        message: 'Unable to open LINE Official Account. Please try again.',
-        buttons: [{ text: 'OK' }],
-      });
     }
   }
 }

@@ -392,8 +392,6 @@ export const getStyles = (width: number, height: number) => {
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 9999,
-      borderWidth: 1,
-      borderColor: '#aba7a7',
     },
   });
 };

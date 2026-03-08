@@ -485,7 +485,7 @@ const FaceUpload: React.FC = () => {
   };
 
   const uploadFaces = async (allFaces: { position: string; imageUri: string }[]) => {
-    if (allFaces.length !== 5) {
+    if (allFaces.length !== 1) {
       Alert.alert(
         t('faceUpload.validationError') || 'Validation Error',
         t('faceUpload.mustHave5Images') || 'Must capture all 5 face positions before uploading'
@@ -633,11 +633,57 @@ const FaceUpload: React.FC = () => {
     if (!validateForm()) {
       return;
     }
-    const facePositions = ['center', 'left', 'right', 'up', 'down'];
-    const allFaces = images
-      .map((img, idx) => (img ? { position: facePositions[idx], imageUri: img } : null))
-      .filter((face): face is { position: string; imageUri: string } => !!face);
-    await uploadFaces(allFaces);
+    const imageIds: number[] = [];
+    const imageFiles: { uri: string; type: string; name: string }[] = [];
+    images.forEach((img, idx) => {
+      if (img.uri) {
+        imageIds.push(img.id!);
+        imageFiles.push({
+          uri: img.uri,
+          type: 'image/jpeg',
+          name: `${FACE_POSITION_TITLES[idx]?.key || 'center'}.jpg`,
+        });
+      }
+    });
+    const formData = new FormData();
+    formData.append('name', nameInput.value);
+    if (selectedRelationship) {
+      formData.append('relationship_type_id', selectedRelationship.id);
+    }
+    formData.append('image_ids', imageIds.join(','));
+    imageFiles.forEach((file) => formData.append('image_files', file as any));
+    try {
+      console.log(formData);
+      await faceService.uploadFaces(formData);
+      Alert.alert(
+        t('faceUpload.uploadSuccess') || 'Success',
+        t('faceUpload.uploadSuccessMessage') || 'Face data uploaded successfully!',
+        [
+          {
+            text: t('common.ok') || 'OK',
+            onPress: () => {
+              navigation.goBack();
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert(
+        t('faceUpload.uploadFailed') || 'Upload Failed',
+        t('faceUpload.uploadFailedMessage') || 'Failed to upload face data. Please try again.',
+        [
+          {
+            text: t('common.ok') || 'OK',
+            onPress: () => {
+              navigation.goBack();
+            },
+          },
+        ]
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const FACE_POSITION_TITLES = [
@@ -668,13 +714,22 @@ const FaceUpload: React.FC = () => {
     },
   ] as const;
 
-  const [images, setImages] = useState<(string | null)[]>([null, null, null, null, null]);
+  const [images, setImages] = useState<{ uri: string | null; id: number | null }[]>([
+    { uri: null, id: 1 },
+    { uri: null, id: 2 },
+    { uri: null, id: 3 },
+    { uri: null, id: 4 },
+    { uri: null, id: 5 },
+  ]);
 
   const handleImagePress = async (index: number) => {
     const result = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1 });
     if (result.assets && result.assets.length > 0) {
       const newImages = [...images];
-      newImages[index] = result.assets[0].uri || null;
+      newImages[index] = {
+        uri: result.assets[0].uri || null,
+        id: index + 1, // id là vị trí 1-5
+      };
       setImages(newImages);
       setChoosePhotoError(undefined);
     }
@@ -691,10 +746,10 @@ const FaceUpload: React.FC = () => {
               {index + 1}. {FACE_POSITION_TITLES[index]?.getTitle?.(t) || `Position ${index + 1}`}
             </Text>
             <TouchableOpacity style={styles.imageItem} onPress={() => handleImagePress(index)}>
-              {images[index] ? (
+              {images[index].uri ? (
                 <>
                   <Image
-                    source={{ uri: images[index]! }}
+                    source={{ uri: images[index].uri! }}
                     style={styles.imagePreview}
                     resizeMode="cover"
                   />
@@ -702,7 +757,7 @@ const FaceUpload: React.FC = () => {
                     style={styles.imageOverlay}
                     onPress={() => {
                       const newImages = [...images];
-                      newImages[index] = null;
+                      newImages[index] = { uri: null, id: index + 1 };
                       setImages(newImages);
                     }}
                   >
@@ -990,7 +1045,14 @@ const FaceUpload: React.FC = () => {
                   t('common.cancel') || 'Cancel',
                   t('faceUpload.cancelConfirm') || 'Are you sure you want to cancel?',
                   [
-                    { text: t('common.no') || 'No', style: 'cancel' },
+                    {
+                      text: t('common.cancel') || 'Cancel',
+                      style: 'cancel',
+                      onPress: () => {
+                        setIsProcessing(false);
+                        startScanning();
+                      },
+                    },
                     { text: t('common.yes') || 'Yes', onPress: () => navigation.goBack() },
                   ]
                 );
