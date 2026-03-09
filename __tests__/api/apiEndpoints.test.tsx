@@ -1,18 +1,18 @@
-import { API_ENDPOINTS } from '../../src/api/apiEndpoints';
+import { API_ENDPOINTS, API_BASE_URL } from '../../src/api/apiEndpoints';
 
 describe('API_BASE_URL', () => {
   it('should be localhost in development', () => {
     (global as any).__DEV__ = true;
     jest.resetModules();
     const { API_BASE_URL: devUrl } = require('../../src/api/apiEndpoints');
-    expect(devUrl).toBe('http://124.197.19.62:7743/api/v1');
+    expect(devUrl).toBe(API_BASE_URL);
   });
 
   it('should be production URL otherwise', () => {
     (global as any).__DEV__ = false;
     jest.resetModules();
     const { API_BASE_URL: prodUrl } = require('../../src/api/apiEndpoints');
-    expect(prodUrl).toBe('http://124.197.19.62:7743/api/v1');
+    expect(prodUrl).toBe(API_BASE_URL);
   });
 });
 

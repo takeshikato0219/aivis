@@ -84,6 +84,7 @@ describe('AuthStorage', () => {
         'accessToken',
         'refreshToken',
         'user',
+        'lineProfile',
       ]);
     });
   });

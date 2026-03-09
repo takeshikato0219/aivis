@@ -55,10 +55,13 @@ describe('bleSlice', () => {
     isConnected: boolean;
     connectedDeviceId: null;
     error: null;
-    wifiStatus: 0;
+    wifiStatus: number;
     wifiNetworks: any[];
-    wifiScanStatus: 0;
+    wifiScanStatus: number;
     criticalDisconnection: boolean;
+    authStatus: number;
+    isAuthenticated: boolean;
+    networkStatus: any;
   } = {
     devices: [],
     isScanning: false,
@@ -69,6 +72,9 @@ describe('bleSlice', () => {
     wifiNetworks: [],
     wifiScanStatus: WiFiScanStatus.IDLE,
     criticalDisconnection: false,
+    authStatus: 0,
+    isAuthenticated: false,
+    networkStatus: null,
   };
 
   describe('initial state', () => {
@@ -447,6 +453,9 @@ describe('bleSlice', () => {
       wifiNetworks: WiFiNetwork[];
       wifiScanStatus: 2;
       criticalDisconnection: boolean;
+      authStatus: number;
+      isAuthenticated: boolean;
+      networkStatus: any;
     } = {
       devices: [mockDevice1, mockDevice2],
       isScanning: true,
@@ -457,6 +466,9 @@ describe('bleSlice', () => {
       wifiNetworks: [mockWifiNetwork1, mockWifiNetwork2],
       wifiScanStatus: WiFiScanStatus.COMPLETED,
       criticalDisconnection: false,
+      authStatus: 0,
+      isAuthenticated: false,
+      networkStatus: null,
     };
 
     describe('resetBleState', () => {
