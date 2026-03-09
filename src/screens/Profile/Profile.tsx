@@ -81,9 +81,9 @@ const Profile = () => {
               )}
 
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>{user?.name || 'User Name'}</Text>
-                <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
-                <Text style={styles.userPhone}>{user?.phone || 'Phone not provided'}</Text>
+                <Text style={styles.userName}>{user?.name}</Text>
+                <Text style={styles.userEmail}>{user?.email}</Text>
+                <Text style={styles.userPhone}>{user?.phone}</Text>
               </View>
             </View>
 

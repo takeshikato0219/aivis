@@ -78,7 +78,6 @@ const CAMERA_LIST = [
   },
 ];
 const ICONS = [IconHome, IconPerson, IconSuspect, IconLive, IconBear, IconListFace];
-// Map index sang tên icon để truyền đi
 const ICON_NAMES = [
   'IconHome',
   'IconPerson',
@@ -171,6 +170,10 @@ const Detail = () => {
     navigation.navigate('SettingAI', {
       camera: camera,
     });
+  };
+
+  const goToFaceUpload = () => {
+    navigation.navigate('ListFace', { type: '' });
   };
 
   return (
@@ -281,11 +284,13 @@ const Detail = () => {
                 {idx > 0 && <ItemSeparator />}
                 <TouchableWithoutFeedback
                   onPress={
-                    idx === 3
+                    item.id === '4'
                       ? handleCameraPress
-                      : idx === 1
-                      ? () => handlePressCustomerReport(item.name, ICON_NAMES[idx])
-                      : () => handlePressNotification(item.name, ICON_NAMES[idx])
+                      : item.id === '2'
+                        ? () => handlePressCustomerReport(item.name, ICON_NAMES[idx])
+                        : item.id === '6'
+                          ? goToFaceUpload
+                          : () => handlePressNotification(item.name, ICON_NAMES[idx])
                   }
                 >
                   <ImageBackground source={item.frame} style={styles.rowFront} resizeMode="cover">
