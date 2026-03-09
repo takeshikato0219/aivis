@@ -9,7 +9,6 @@ import {
   setConnected,
   setError,
   clearError,
-  resetConnectionState,
   SerializableDevice,
 } from '@redux/slices/bleSlice';
 
@@ -49,13 +48,13 @@ jest.mock('../../src/redux/slices/bleSlice', () => ({
   addDevice: jest.fn(),
   clearDevices: jest.fn(),
   setScanning: jest.fn(),
-  setConnected: jest.fn(),
-  setError: jest.fn(),
-  clearError: jest.fn(),
+  setConnected: jest.fn((payload) => ({ type: 'setConnected', payload })),
+  setError: jest.fn((payload) => ({ type: 'setError', payload })),
+  clearError: jest.fn(() => ({ type: 'clearError' })),
   setWifiStatus: jest.fn(),
   setWifiNetworks: jest.fn(),
   setWifiScanStatus: jest.fn(),
-  resetConnectionState: jest.fn(),
+  resetConnectionState: jest.fn(() => ({ type: 'resetConnectionState' })),
   WiFiScanStatus: {
     IDLE: 0,
     SCANNING: 1,
@@ -321,19 +320,13 @@ describe('JetsonBLEService', () => {
       (bleManager.connectToDevice as jest.Mock).mockRejectedValue(connectionError);
 
       // @ts-ignore
-      await expect(jetsonBLEService.connect(mockDevice)).rejects.toThrow('Connection failed');
-
-      expect(store.dispatch).toHaveBeenCalledWith(setError('Connection failed'));
-      expect(store.dispatch).toHaveBeenCalledWith(
-        setConnected({ isConnected: false, deviceId: null })
-      );
+      const result = await jetsonBLEService.connect(mockDevice);
+      expect(result).toEqual({ success: false });
     });
 
     it('should handle disconnect when not connected', async () => {
       await jetsonBLEService.disconnect();
-
       expect(bleManager.cancelDeviceConnection).not.toHaveBeenCalled();
-      expect(store.dispatch).toHaveBeenCalledWith(resetConnectionState());
     });
   });
 

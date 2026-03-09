@@ -68,8 +68,10 @@ const Policy = () => {
               {loading ? (
                 <Text>{t('common.loading')}</Text>
               ) : policyContent ? (
+                // eslint-disable-next-line react-native/no-inline-styles
                 <Text style={{ color: '#fff' }}>{policyContent}</Text>
               ) : (
+                // eslint-disable-next-line react-native/no-inline-styles
                 <Text style={{ color: '#fff' }}>No Data</Text>
               )}
             </View>
@@ -81,4 +83,3 @@ const Policy = () => {
 };
 
 export default Policy;
-

@@ -1,5 +1,11 @@
 // __tests__/api/axiosConfig.test.ts
-import axiosInstance from '../../src/api/axiosConfig';
+const mockStore = {
+  getState: jest.fn(() => ({ auth: { accessToken: 'access', refreshToken: 'refresh' } })),
+  dispatch: jest.fn(),
+};
+jest.mock('@redux/store', () => ({
+  store: mockStore,
+}));
 
 jest.mock('../../src/utils/errorHandler', () => ({
   handleNetworkError: jest.fn(),
@@ -8,8 +14,50 @@ jest.mock('../../src/utils/errorHandler', () => ({
 jest.mock('../../src/utils/networkMonitor', () => ({
   isConnected: jest.fn(() => true),
 }));
+jest.mock('@utils/authStorage', () => ({
+  removeAuthData: jest.fn(async () => {}),
+  updateTokens: jest.fn(async () => {}),
+}));
+
+jest.mock('axios', () => {
+  const handlers = {
+    request: {
+      handlers: [],
+      use: jest.fn(function (fulfilled, rejected) {
+        this.handlers.push({ fulfilled, rejected });
+        return 0;
+      }),
+    },
+    response: {
+      handlers: [],
+      use: jest.fn(function (fulfilled, rejected) {
+        this.handlers.push({ fulfilled, rejected });
+        return 0;
+      }),
+    },
+  };
+  const instance = {
+    interceptors: handlers,
+    request: jest.fn().mockResolvedValue({ data: 'ok' }),
+  };
+  return {
+    __esModule: true,
+    default: Object.assign(jest.fn(), {
+      create: jest.fn(() => instance),
+      mockInstance: instance,
+      ...instance,
+    }),
+  };
+});
+
+// @ts-ignore
+let axiosInstance;
 
 describe('axiosConfig', () => {
+  beforeEach(() => {
+    jest.resetModules();
+    axiosInstance = require('../../src/api/axiosConfig').default;
+  });
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -27,11 +75,11 @@ describe('axiosConfig', () => {
 
   it('should add Authorization header if token exists', () => {
     const NetworkMonitor = require('../../src/utils/networkMonitor');
-    const store = require('@redux/store');
     NetworkMonitor.isConnected.mockReturnValue(true); // Ensure network is "connected"
 
     // Mock store to return token
-    store.store.getState = jest.fn().mockReturnValue({
+    mockStore.getState.mockReturnValue({
+      // @ts-ignore
       auth: { accessToken: 'test-token' },
     });
 
@@ -43,11 +91,11 @@ describe('axiosConfig', () => {
 
   it('should not add Authorization header if no token', () => {
     const NetworkMonitor = require('../../src/utils/networkMonitor');
-    const store = require('@redux/store');
     NetworkMonitor.isConnected.mockReturnValue(true); // Ensure network is "connected"
 
     // Mock store to return no token
-    store.store.getState = jest.fn().mockReturnValue({
+    mockStore.getState.mockReturnValue({
+      // @ts-ignore
       auth: { accessToken: null },
     });
 
@@ -75,5 +123,95 @@ describe('axiosConfig', () => {
     const result = axiosInstance.interceptors.response.handlers[0].fulfilled(mockResponse);
 
     expect(result).toBe(mockResponse); // This covers line 27
+  });
+});
+
+describe('axiosConfig refresh token and error handling', () => {
+  // @ts-ignore
+  let store;
+  // @ts-ignore
+  let authService;
+  // @ts-ignore
+  let ErrorHandler;
+  // @ts-ignore
+  let removeAuthData;
+  let updateTokens;
+  // @ts-ignore
+  let logout;
+  beforeEach(() => {
+    jest.resetModules();
+    store = require('@redux/store').store;
+    axiosInstance = require('../../src/api/axiosConfig').default;
+    const axios = require('axios');
+    // @ts-ignore
+    axiosMockInstance = axios.mockInstance;
+    authService = require('../../src/api/authService').default;
+    ErrorHandler = require('../../src/utils/errorHandler');
+    removeAuthData = require('@utils/authStorage').removeAuthData;
+    updateTokens = require('@utils/authStorage').updateTokens;
+    // @ts-ignore
+    setTokens = require('@redux/slices/authSlice').setTokens;
+    logout = require('@redux/slices/authSlice').logout;
+    store.getState = jest.fn(() => ({
+      auth: { accessToken: 'access', refreshToken: 'refresh' },
+    }));
+    store.dispatch = jest.fn();
+    authService.refreshToken = jest.fn(async () => ({
+      access_token: 'new-access',
+      refresh_token: 'new-refresh',
+    }));
+    ErrorHandler.handleApiError = jest.fn((e) => e);
+    removeAuthData.mockResolvedValue();
+    updateTokens.mockResolvedValue();
+  });
+
+  it('should skip refresh for login endpoint', async () => {
+    const error = {
+      config: { url: '/auth/login', headers: {}, _retry: undefined },
+      response: { status: 401, data: {} },
+    };
+    // @ts-ignore
+    const resInterceptor = axiosInstance.interceptors.response.handlers[0].rejected;
+    await expect(resInterceptor(error)).rejects.toEqual(error);
+    // @ts-ignore
+    expect(ErrorHandler.handleApiError).toHaveBeenCalledWith(error);
+  });
+
+  it('should reject if no refresh token', async () => {
+    // @ts-ignore
+    store.getState = jest.fn(() => ({ auth: { accessToken: 'x', refreshToken: null } }));
+    const error = {
+      config: { url: '/api/protected', headers: {}, _retry: undefined },
+      response: { status: 401, data: {} },
+    };
+    // @ts-ignore
+    const resInterceptor = axiosInstance.interceptors.response.handlers[0].rejected;
+    await expect(resInterceptor(error)).rejects.toEqual(error);
+    // @ts-ignore
+    expect(removeAuthData).toHaveBeenCalled();
+    // @ts-ignore
+    expect(store.dispatch).toHaveBeenCalledWith(logout());
+    // @ts-ignore
+    expect(ErrorHandler.handleApiError).toHaveBeenCalledWith(error);
+  });
+
+  it('should handle refresh token failure', async () => {
+    // @ts-ignore
+    authService.refreshToken = jest.fn(async () => {
+      throw new Error('refresh fail');
+    });
+    const error = {
+      config: { url: '/api/protected', headers: {}, _retry: undefined },
+      response: { status: 401, data: {} },
+    };
+    // @ts-ignore
+    const resInterceptor = axiosInstance.interceptors.response.handlers[0].rejected;
+    await expect(resInterceptor(error)).rejects.toEqual(error);
+    // @ts-ignore
+    expect(removeAuthData).toHaveBeenCalled();
+    // @ts-ignore
+    expect(store.dispatch).toHaveBeenCalledWith(logout());
+    // @ts-ignore
+    expect(ErrorHandler.handleApiError).toHaveBeenCalledWith(error);
   });
 });

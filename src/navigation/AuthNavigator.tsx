@@ -6,7 +6,7 @@ import { AuthStackParamList } from './types';
 import Login from '@screens/Login/Login';
 import Register from '@screens/Register/Register';
 import ForgotPassword from '@screens/ForgotPassword/ForgotPassword';
-import Policy from "@screens/Policy/Policy";
+import Policy from '@screens/Policy/Policy';
 
 const Stack = createStackNavigator<AuthStackParamList>();
 

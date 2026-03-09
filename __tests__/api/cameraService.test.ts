@@ -20,7 +20,7 @@ jest.mock('../../src/api/axiosConfig', () => ({
 
 // Mock API endpoints
 jest.mock('../../src/api/apiEndpoints', () => ({
-  API_BASE_URL: 'http://124.197.19.62:7743/api/v1',
+  API_BASE_URL: 'http://localhost',
   API_ENDPOINTS: {
     CAMERAS: '/cameras',
     FACILITIES: '/facilities',
@@ -71,11 +71,6 @@ describe('CameraService (API)', () => {
           name: mockRegisterData.name,
           status_id: mockRegisterData.status_id,
           description: mockRegisterData.description,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
         }
       );
       expect(result).toEqual(mockResponse);
@@ -89,12 +84,7 @@ describe('CameraService (API)', () => {
 
       expect(mockAxiosInstance.patch).toHaveBeenCalledWith(
         `${mockApiEndpoints.CAMERAS}/${minimalData.id}`,
-        {},
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
+        {}
       );
     });
 
@@ -111,11 +101,6 @@ describe('CameraService (API)', () => {
         `${mockApiEndpoints.CAMERAS}/${partialData.id}`,
         {
           name: partialData.name,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
         }
       );
     });
