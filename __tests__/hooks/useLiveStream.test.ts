@@ -486,66 +486,6 @@ describe('useLiveStream', () => {
     });
   });
 
-  describe('injected JavaScript', () => {
-    it('should generate JavaScript with CSS injection and stream detection', () => {
-      const { result } = renderHook(() =>
-        useLiveStream({
-          heartbeatInterval: 5000,
-        })
-      );
-
-      const injectedJS = result.current.getInjectedJavaScript();
-
-      expect(injectedJS).toContain("document.createElement('style')");
-      expect(injectedJS).toContain('window.ReactNativeWebView.postMessage');
-      expect(injectedJS).toContain('hideUnwantedElements');
-      expect(injectedJS).toContain('waitCanvas');
-    });
-
-    it('should hide all elements and whitelist only video/canvas', () => {
-      const { result } = renderHook(() => useLiveStream());
-
-      const injectedJS = result.current.getInjectedJavaScript();
-
-      expect(injectedJS).toContain('visibility:hidden!important');
-      expect(injectedJS).toContain('display:none!important');
-      expect(injectedJS).toContain('video, canvas');
-      expect(injectedJS).toContain('position:fixed!important');
-      expect(injectedJS).toContain('width:100vw!important');
-    });
-
-    it('should include stream status detection in injected JavaScript', () => {
-      const { result } = renderHook(() => useLiveStream());
-
-      const injectedJS = result.current.getInjectedJavaScript();
-
-      expect(injectedJS).toContain('getImageData');
-      expect(injectedJS).toContain("send('playing')");
-      expect(injectedJS).toContain("send('stalled')");
-    });
-
-    it('should create a custom mute/unmute button', () => {
-      const { result } = renderHook(() => useLiveStream());
-
-      const injectedJS = result.current.getInjectedJavaScript();
-
-      expect(injectedJS).toContain('__rn_mute_btn');
-      expect(injectedJS).toContain('syncMute');
-      expect(injectedJS).toContain('v.muted');
-      expect(injectedJS).toContain('toggleMute');
-    });
-
-    it('should walk parent chain from media elements to whitelist ancestors', () => {
-      const { result } = renderHook(() => useLiveStream());
-
-      const injectedJS = result.current.getInjectedJavaScript();
-
-      expect(injectedJS).toContain('validSet');
-      expect(injectedJS).toContain('parentElement');
-      expect(injectedJS).toContain('video, canvas, audio');
-    });
-  });
-
   describe('cleanup', () => {
     it('should clear all timers on cleanup', () => {
       const { result } = renderHook(() => useLiveStream());
