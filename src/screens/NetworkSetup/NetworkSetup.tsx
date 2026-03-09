@@ -255,6 +255,19 @@ const NetworkSetup: React.FC = () => {
     });
   };
 
+  let lanStatusContent: React.ReactNode;
+  if (lanStatusLoading) {
+    lanStatusContent = <ActivityIndicator />;
+  } else if (lanStatus === 'connected') {
+    lanStatusContent = (
+      <Text style={styles.textLanStyle}>{t('networkSetup.lanConnectionIsActive')}</Text>
+    );
+  } else if (lanStatus === 'disconnected') {
+    lanStatusContent = <Text style={styles.textLanStyle}>{t('networkSetup.noLanConnection')}</Text>;
+  } else {
+    lanStatusContent = null;
+  }
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
@@ -412,15 +425,8 @@ const NetworkSetup: React.FC = () => {
                     </Text>
                   </TouchableOpacity>
                   <View style={styles.tabContentCenter}>
-                    {lanStatusLoading ? (
-                      <ActivityIndicator />
-                    ) : lanStatus === 'connected' ? (
-                      <Text style={styles.textLanStyle}>
-                        {t('networkSetup.lanConnectionIsActive')}
-                      </Text>
-                    ) : lanStatus === 'disconnected' ? (
-                      <Text style={styles.textLanStyle}>{t('networkSetup.noLanConnection')}</Text>
-                    ) : null}
+                    {/* Extracted LAN status content */}
+                    {lanStatusContent}
                   </View>
                 </View>
               )}

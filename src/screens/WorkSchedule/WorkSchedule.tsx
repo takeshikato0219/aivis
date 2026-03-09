@@ -7,6 +7,8 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
+  StyleProp,
+  ViewStyle,
 } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,7 +19,6 @@ import { styles, CONTAINER_H_PADDING, CARD_PADDING } from './WorkSchedule.style'
 import IconClockWorkSchedule from '@assets/svg/icon-clock-workschedule.svg';
 import faceService, { Member } from '@api/faceService';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { StyleProp, ViewStyle } from 'react-native';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { WorkScheduleRouteProp } from '@navigation/types';
 import cameraService from '@api/cameraService';
@@ -45,10 +46,17 @@ const WEEKDAYS: Weekday[] = [
   { key: 'sun', label: '日' },
 ];
 
+// Move SaveButton to module scope
 interface SaveButtonProps {
   style?: StyleProp<ViewStyle>;
   onPress: () => void;
+  t: (key: string) => string;
 }
+const SaveButton = ({ style, onPress, t }: SaveButtonProps) => (
+  <Pressable style={[styles.button, style]} onPress={onPress}>
+    <Text style={styles.text}>{t('workSchedule.save')}</Text>
+  </Pressable>
+);
 
 export default function WorkSchedule() {
   const { t } = useTranslation();
@@ -91,13 +99,6 @@ export default function WorkSchedule() {
       }
     }
   };
-
-  // eslint-disable-next-line react/no-unstable-nested-components
-  const SaveButton = ({ style, onPress }: SaveButtonProps) => (
-    <Pressable style={[styles.button, style]} onPress={onPress}>
-      <Text style={styles.text}>{t('workSchedule.save')}</Text>
-    </Pressable>
-  );
 
   const sliderLength = useMemo(() => {
     const available = width - CONTAINER_H_PADDING * 2 - CARD_PADDING * 2;
@@ -236,10 +237,10 @@ export default function WorkSchedule() {
 
   const DropDownSaveButton = React.useCallback(
     (props: { style?: StyleProp<ViewStyle> }) => (
-      <SaveButton style={props.style} onPress={() => setOpenSelect2(false)} />
+      <SaveButton style={props.style} onPress={() => setOpenSelect2(false)} t={t} />
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [t]
   );
 
   return (

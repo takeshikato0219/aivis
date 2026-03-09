@@ -15,6 +15,44 @@ interface RadarScanProps {
   deviceDots?: DeviceDot[];
 }
 
+const BlinkingDot: React.FC<{ x: number; y: number; delay?: number }> = ({ x, y, delay = 0 }) => {
+  const opacityAnim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 600,
+          delay,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0.3,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    loop.start();
+    return () => loop.stop();
+  }, [opacityAnim, delay]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.deviceDot,
+        {
+          top: y - 6,
+          left: x - 6,
+          opacity: opacityAnim,
+        },
+      ]}
+    />
+  );
+};
+
 export const RadarScan: React.FC<RadarScanProps> = ({ deviceDots = [] }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
@@ -43,45 +81,6 @@ export const RadarScan: React.FC<RadarScanProps> = ({ deviceDots = [] }) => {
     const arc2 = `A ${r} ${r} 0 0 1 ${x2} ${y2}`;
     const close = 'Z';
     return `${move} ${arc1} ${arc2} ${close}`;
-  };
-
-  // eslint-disable-next-line react/no-unstable-nested-components
-  const BlinkingDot: React.FC<{ x: number; y: number; delay?: number }> = ({ x, y, delay = 0 }) => {
-    const opacityAnim = useRef(new Animated.Value(0.3)).current;
-
-    useEffect(() => {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(opacityAnim, {
-            toValue: 1,
-            duration: 600,
-            delay,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacityAnim, {
-            toValue: 0.3,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-
-      loop.start();
-      return () => loop.stop();
-    }, [opacityAnim, delay]);
-
-    return (
-      <Animated.View
-        style={[
-          styles.deviceDot,
-          {
-            top: y - 6,
-            left: x - 6,
-            opacity: opacityAnim,
-          },
-        ]}
-      />
-    );
   };
 
   const spin = rotateAnim.interpolate({

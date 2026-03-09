@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  ScrollView,
 } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -31,7 +32,6 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import { isName } from '@utils/validate';
 import { ListFaceRouteProp } from '@navigation/types';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { ScrollView } from 'react-native';
 
 type FacePosition = 'center' | 'left' | 'right' | 'up' | 'down';
 

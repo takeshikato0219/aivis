@@ -45,6 +45,33 @@ const ICON_MAP: Record<string, React.FC<any>> = {
   IconListFace,
 };
 
+interface VideoStateComponentProps {
+  videoUrl: string | null;
+  t: (key: string) => string;
+}
+const VideoStateComponent: React.FC<VideoStateComponentProps> = ({ videoUrl, t }) => (
+  <View style={styles.emptyState}>
+    {videoUrl ? (
+      <View style={styles.videoFullContainer}>
+        <Video
+          source={{ uri: videoUrl }}
+          style={styles.videoFullPlayer}
+          controls
+          resizeMode="cover"
+          paused={false}
+        />
+      </View>
+    ) : (
+      <>
+        <View style={styles.emptyIcon}>
+          <IconCCTV />
+        </View>
+        <Text style={styles.emptyText}>{t('listNotificationCamera.tapTheListBelowToView')}</Text>
+      </>
+    )}
+  </View>
+);
+
 const ListNotificationCamera = () => {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('2026-03-04');
@@ -111,30 +138,6 @@ const ListNotificationCamera = () => {
     },
   ];
 
-  // eslint-disable-next-line react/no-unstable-nested-components
-  const VideoStateComponent = ({ videoUrl }: { videoUrl: string | null }) => (
-    <View style={styles.emptyState}>
-      {videoUrl ? (
-        <View style={styles.videoFullContainer}>
-          <Video
-            source={{ uri: videoUrl }}
-            style={styles.videoFullPlayer}
-            controls
-            resizeMode="cover"
-            paused={false}
-          />
-        </View>
-      ) : (
-        <>
-          <View style={styles.emptyIcon}>
-            <IconCCTV />
-          </View>
-          <Text style={styles.emptyText}>{t('listNotificationCamera.tapTheListBelowToView')}</Text>
-        </>
-      )}
-    </View>
-  );
-
   const handleItemPress = (item: NotificationItem) => {
     if (item.videoUrl) {
       setSelectedVideo(item.videoUrl);
@@ -179,7 +182,7 @@ const ListNotificationCamera = () => {
         </View>
         <View style={styles.placeholder} />
       </View>
-      <VideoStateComponent videoUrl={selectedVideo} />
+      <VideoStateComponent videoUrl={selectedVideo} t={t} />
       <View style={styles.dateSectionWrapper}>
         <ImageBackground
           source={BackgroundNofication}

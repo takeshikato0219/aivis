@@ -13,7 +13,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useAppSelector } from '@redux/store';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppSetup } from '@hooks/useAppSetup';
 import { styles } from './Home.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,7 +35,6 @@ import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
 import { useErrorHandler } from '@hooks/useErrorHandler';
 import CameraIcon from '@assets/png/camera.png';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
-import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
 

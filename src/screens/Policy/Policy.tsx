@@ -3,8 +3,7 @@ import { View, StatusBar, Text, TouchableOpacity, ScrollView } from 'react-nativ
 import { styles } from './Policy.style';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackIcon from '@assets/svg/icon-back.svg';
-import { RouteProp, useRoute } from '@react-navigation/native';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import policyService from '@api/policyService';
 
@@ -44,6 +43,16 @@ const Policy = () => {
     if (type) fetchPolicy();
   }, [type]);
 
+  // Extracted policy content node
+  let policyContentNode: React.ReactNode;
+  if (loading) {
+    policyContentNode = <Text>{t('common.loading')}</Text>;
+  } else if (policyContent) {
+    policyContentNode = <Text style={styles.contentText}>{policyContent}</Text>;
+  } else {
+    policyContentNode = <Text style={styles.contentText}>No Data</Text>;
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
@@ -64,17 +73,7 @@ const Policy = () => {
             contentContainerStyle={styles.scrollViewPaddingBottom}
             showsVerticalScrollIndicator={false}
           >
-            <View>
-              {loading ? (
-                <Text>{t('common.loading')}</Text>
-              ) : policyContent ? (
-                // eslint-disable-next-line react-native/no-inline-styles
-                <Text style={{ color: '#fff' }}>{policyContent}</Text>
-              ) : (
-                // eslint-disable-next-line react-native/no-inline-styles
-                <Text style={{ color: '#fff' }}>No Data</Text>
-              )}
-            </View>
+            <View>{policyContentNode}</View>
           </ScrollView>
         </View>
       </SafeAreaView>

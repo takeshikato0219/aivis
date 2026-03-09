@@ -176,6 +176,13 @@ const Detail = () => {
     navigation.navigate('ListFace', { type: '' });
   };
 
+  const getCameraListItemPressHandler = (item: (typeof CAMERA_LIST)[number], idx: number) => {
+    if (item.id === '4') return handleCameraPress;
+    if (item.id === '2') return () => handlePressCustomerReport(item.name, ICON_NAMES[idx]);
+    if (item.id === '6') return goToFaceUpload;
+    return () => handlePressNotification(item.name, ICON_NAMES[idx]);
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
@@ -282,17 +289,7 @@ const Detail = () => {
             {CAMERA_LIST.map((item, idx) => (
               <View key={item.id}>
                 {idx > 0 && <ItemSeparator />}
-                <TouchableWithoutFeedback
-                  onPress={
-                    item.id === '4'
-                      ? handleCameraPress
-                      : item.id === '2'
-                        ? () => handlePressCustomerReport(item.name, ICON_NAMES[idx])
-                        : item.id === '6'
-                          ? goToFaceUpload
-                          : () => handlePressNotification(item.name, ICON_NAMES[idx])
-                  }
-                >
+                <TouchableWithoutFeedback onPress={getCameraListItemPressHandler(item, idx)}>
                   <ImageBackground source={item.frame} style={styles.rowFront} resizeMode="cover">
                     {/* eslint-disable-next-line react-native/no-inline-styles */}
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>

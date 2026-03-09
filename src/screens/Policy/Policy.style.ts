@@ -47,4 +47,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 10,
   },
+  contentText: {
+    color: '#fff',
+  },
 });

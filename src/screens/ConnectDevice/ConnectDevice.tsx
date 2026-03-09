@@ -222,7 +222,7 @@ const ConnectDevice: React.FC = () => {
                       style={styles.connectBtn}
                       onPress={() => {
                         if (item && item.id) {
-                          void goToPairCode(item);
+                          goToPairCode(item);
                         } else {
                           console.error('Invalid device selected for connection');
                           if (!alertShown) {

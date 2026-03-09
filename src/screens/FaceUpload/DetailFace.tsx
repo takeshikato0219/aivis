@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,8 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useInput } from '@hooks/useInput';
-import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
-import FaceDetection, { Face, FaceDetectionOptions } from '@react-native-ml-kit/face-detection';
+import { Camera } from 'react-native-vision-camera';
+import FaceDetection, { Face } from '@react-native-ml-kit/face-detection';
 import ImageResizer from '@bam.tech/react-native-image-resizer';
 import BackIcon from '@assets/svg/icon-back.svg';
 import TextInput from '@components/TextInput/TextInput';
@@ -97,12 +97,180 @@ const FACE_POSITIONS = [
   },
 ] as const;
 
+export const FaceFrameSVG: React.FC<{
+  isScanning: boolean;
+  scanProgress: number;
+  isPreparing: boolean;
+}> = ({ isScanning, scanProgress, isPreparing }) => {
+  let color: string;
+  if (isScanning) {
+    color = '#4CAF50';
+  } else if (isPreparing) {
+    color = '#FFFFFF';
+  } else {
+    color = '#FFFFFF';
+  }
+  const size = 250;
+  const strokeWidth = 4;
+  const cornerLength = 50;
+
+  return (
+    <Svg width={size} height={size * 1.3} viewBox={`0 0 ${size} ${size * 1.3}`}>
+      <Defs>
+        <LinearGradient id="scanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <Stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <Stop offset={`${scanProgress}%`} stopColor={color} stopOpacity="1" />
+          <Stop offset="100%" stopColor={color} stopOpacity="0.3" />
+        </LinearGradient>
+        <LinearGradient id="cornerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <Stop offset="0%" stopColor={color} stopOpacity="1" />
+          <Stop offset="100%" stopColor={color} stopOpacity="0.6" />
+        </LinearGradient>
+      </Defs>
+      {/* Top-left corner */}
+      <Path
+        d={`M ${strokeWidth / 2} ${cornerLength} L ${strokeWidth / 2} ${strokeWidth / 2} L ${cornerLength} ${strokeWidth / 2}`}
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Top-right corner */}
+      <Path
+        d={`M ${size - cornerLength} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${cornerLength}`}
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Bottom-left corner */}
+      <Path
+        d={`M ${strokeWidth / 2} ${size * 1.3 - cornerLength} L ${strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${cornerLength} ${size * 1.3 - strokeWidth / 2}`}
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Bottom-right corner */}
+      <Path
+        d={`M ${size - cornerLength} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - cornerLength}`}
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Scanning grid lines */}
+      {isScanning && (
+        <>
+          {[...Array(5)].map((_, i) => (
+            <Line
+              key={`h-${i}`}
+              x1={strokeWidth}
+              y1={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
+              x2={size - strokeWidth}
+              y2={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
+              stroke={color}
+              strokeWidth={0.5}
+              opacity={0.3}
+            />
+          ))}
+          {[...Array(4)].map((_, i) => (
+            <Line
+              key={`v-${i}`}
+              x1={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
+              y1={strokeWidth}
+              x2={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
+              y2={size * 1.3 - strokeWidth}
+              stroke={color}
+              strokeWidth={0.5}
+              opacity={0.3}
+            />
+          ))}
+        </>
+      )}
+      {/* Center dot */}
+      <Circle cx={size / 2} cy={size * 0.65} r={isScanning ? 6 : 8} fill={color} opacity={0.8} />
+    </Svg>
+  );
+};
+
+// Move PositionArrow outside of DetailFace
+export const PositionArrow: React.FC<{ position: string }> = ({ position }) => {
+  const getArrowStyle = () => {
+    const base = { position: 'absolute' as const };
+    switch (position) {
+      case 'left':
+        return { ...base, left: 30, top: '50%', marginTop: -30 };
+      case 'right':
+        return { ...base, right: 30, top: '50%', marginTop: -30 };
+      case 'up':
+        return { ...base, top: 80, left: '50%', marginLeft: -30 };
+      case 'down':
+        return { ...base, bottom: 180, left: '50%', marginLeft: -30 };
+      default:
+        return base;
+    }
+  };
+
+  const getRotation = () => {
+    switch (position) {
+      case 'left':
+        return '180deg';
+      case 'right':
+        return '0deg';
+      case 'up':
+        return '270deg';
+      case 'down':
+        return '90deg';
+      default:
+        return '0deg';
+    }
+  };
+
+  return (
+    <View style={[styles.arrow, getArrowStyle()]}>
+      <Text style={[styles.arrowText, { transform: [{ rotate: getRotation() }] }]}>→</Text>
+    </View>
+  );
+};
+
 const DetailFace = () => {
   // All hooks must be called at the top level, before any conditional logic or returns
   const navigation = useNavigation<DetailFaceNavigationProp>();
   const route = useRoute<DetailFaceRouteProp>();
   const { t } = useTranslation();
   const { memberId, relationships: routeRelationships } = route.params;
+
+  // Camera and animation refs for single face detection
+  const camera = React.useRef<Camera>(null);
+  const scanLineAnim = React.useRef(new Animated.Value(0)).current;
+  const particleAnim = React.useRef(new Animated.Value(0)).current;
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  const successAnim = React.useRef(new Animated.Value(0)).current;
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  const { hasPermission, requestPermission } = require('react-native-vision-camera');
+  const device = require('react-native-vision-camera').useCameraDevice('front');
+
+  // Timer refs
+  const prepareTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const scanTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Face detection options
+  const faceDetectionOptions = {
+    performanceMode: 'accurate' as const,
+    landmarkMode: 'none' as const,
+    contourMode: 'none' as const,
+    classificationMode: 'none' as const,
+    minFaceSize: Platform.OS === 'ios' ? 0.1 : 0.15,
+    trackingEnabled: false,
+  };
 
   const [member, setMember] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -150,173 +318,6 @@ const DetailFace = () => {
     validateFn: (v) => (v.trim() ? undefined : 'required'),
   });
 
-  const FaceFrameSVG: React.FC<{
-    isScanning: boolean;
-    scanProgress: number;
-    isPreparing: boolean;
-    // eslint-disable-next-line react/no-unstable-nested-components,@typescript-eslint/no-shadow
-  }> = ({ isScanning, scanProgress, isPreparing }) => {
-    const color = isScanning ? '#4CAF50' : isPreparing ? '#FFFFFF' : '#FFFFFF';
-    const size = 250;
-    const strokeWidth = 4;
-    const cornerLength = 50;
-
-    return (
-      <Svg width={size} height={size * 1.3} viewBox={`0 0 ${size} ${size * 1.3}`}>
-        <Defs>
-          <LinearGradient id="scanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={color} stopOpacity="0.3" />
-            <Stop offset={`${scanProgress}%`} stopColor={color} stopOpacity="1" />
-            <Stop offset="100%" stopColor={color} stopOpacity="0.3" />
-          </LinearGradient>
-          <LinearGradient id="cornerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={color} stopOpacity="1" />
-            <Stop offset="100%" stopColor={color} stopOpacity="0.6" />
-          </LinearGradient>
-        </Defs>
-
-        {/* Top-left corner */}
-        <Path
-          d={`M ${strokeWidth / 2} ${cornerLength} L ${strokeWidth / 2} ${strokeWidth / 2} L ${cornerLength} ${strokeWidth / 2}`}
-          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Top-right corner */}
-        <Path
-          d={`M ${size - cornerLength} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${cornerLength}`}
-          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Bottom-left corner */}
-        <Path
-          d={`M ${strokeWidth / 2} ${size * 1.3 - cornerLength} L ${strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${cornerLength} ${size * 1.3 - strokeWidth / 2}`}
-          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Bottom-right corner */}
-        <Path
-          d={`M ${size - cornerLength} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - cornerLength}`}
-          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Scanning grid lines */}
-        {isScanning && (
-          <>
-            {[...Array(5)].map((_, i) => (
-              <Line
-                key={`h-${i}`}
-                x1={strokeWidth}
-                y1={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
-                x2={size - strokeWidth}
-                y2={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
-                stroke={color}
-                strokeWidth={0.5}
-                opacity={0.3}
-              />
-            ))}
-            {[...Array(4)].map((_, i) => (
-              <Line
-                key={`v-${i}`}
-                x1={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
-                y1={strokeWidth}
-                x2={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
-                y2={size * 1.3 - strokeWidth}
-                stroke={color}
-                strokeWidth={0.5}
-                opacity={0.3}
-              />
-            ))}
-          </>
-        )}
-
-        {/* Center dot */}
-        <Circle cx={size / 2} cy={size * 0.65} r={isScanning ? 6 : 8} fill={color} opacity={0.8} />
-      </Svg>
-    );
-  };
-
-  // eslint-disable-next-line react/no-unstable-nested-components
-  const PositionArrow: React.FC<{ position: string }> = ({ position }) => {
-    const getArrowStyle = () => {
-      const base = { position: 'absolute' as const };
-      switch (position) {
-        case 'left':
-          return { ...base, left: 30, top: '50%', marginTop: -30 };
-        case 'right':
-          return { ...base, right: 30, top: '50%', marginTop: -30 };
-        case 'up':
-          return { ...base, top: 80, left: '50%', marginLeft: -30 };
-        case 'down':
-          return { ...base, bottom: 180, left: '50%', marginLeft: -30 };
-        default:
-          return base;
-      }
-    };
-
-    const getRotation = () => {
-      switch (position) {
-        case 'left':
-          return '180deg';
-        case 'right':
-          return '0deg';
-        case 'up':
-          return '270deg';
-        case 'down':
-          return '90deg';
-        default:
-          return '0deg';
-      }
-    };
-
-    return (
-      <View style={[styles.arrow, getArrowStyle()]}>
-        <Text style={[styles.arrowText, { transform: [{ rotate: getRotation() }] }]}>→</Text>
-      </View>
-    );
-  };
-
-  // Camera and animation refs for single face detection
-  const camera = useRef<Camera>(null);
-  const scanLineAnim = useRef(new Animated.Value(0)).current;
-  const particleAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const successAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  const { hasPermission, requestPermission } = useCameraPermission();
-  const device = useCameraDevice('front');
-
-  // Timer refs
-  const prepareTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const scanTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Face detection options
-  const faceDetectionOptions: FaceDetectionOptions = {
-    performanceMode: 'accurate',
-    landmarkMode: 'none',
-    contourMode: 'none',
-    classificationMode: 'none',
-    minFaceSize: Platform.OS === 'ios' ? 0.1 : 0.15,
-    trackingEnabled: false,
-  };
 
   const fetchMemberDetail = useCallback(async () => {
     if (!memberId || hasLoadedData) return;

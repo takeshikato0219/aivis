@@ -418,12 +418,15 @@ const DetectionZoneSetup: React.FC = () => {
     );
   };
 
-  const getZoneColor = () =>
-    zoneType === 'restricted'
-      ? 'rgba(255,0,0,0.3)'
-      : zoneType === 'entryExit'
-        ? 'rgba(0,255,0,0.3)'
-        : 'rgba(255,255,0,0.3)';
+  const getZoneColor = () => {
+    if (zoneType === 'restricted') {
+      return 'rgba(255,0,0,0.3)';
+    } else if (zoneType === 'entryExit') {
+      return 'rgba(0,255,0,0.3)';
+    } else {
+      return 'rgba(255,255,0,0.3)';
+    }
+  };
 
   const getEntryExitPolygons = () => {
     const [p1, p2] = entryExitPoints;
