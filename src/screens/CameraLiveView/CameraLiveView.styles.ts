@@ -66,6 +66,28 @@ export const getStyles = (width: number, height: number) => {
       fontSize: 16,
       marginTop: 12,
     },
+    errorOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 10,
+    },
+    reconnectingOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 9,
+    },
 
     errorContainer: {
       flex: 1,
@@ -141,6 +163,12 @@ export const getStyles = (width: number, height: number) => {
       fontSize: 16,
       fontWeight: FONTS.weights.medium,
       marginLeft: 8,
+    },
+    offlineIndicator: {
+      backgroundColor: 'rgba(255,255,255,0.15)',
+    },
+    offlineDot: {
+      backgroundColor: '#999',
     },
     bitrateIndicator: {
       flexDirection: 'row',
@@ -267,7 +295,7 @@ export const getStyles = (width: number, height: number) => {
       marginBottom: 6,
     },
     iconCircleActive: {
-      backgroundColor: '#EF4444',
+      backgroundColor: '#44ef52',
     },
     mainButtonText: {
       color: '#FFF',
@@ -352,6 +380,18 @@ export const getStyles = (width: number, height: number) => {
     hdStyle: {
       flexDirection: 'row',
       alignItems: 'center',
+    },
+    muteButton: {
+      position: 'absolute',
+      top: 7,
+      right: 60,
+      width: 34,
+      height: 34,
+      borderRadius: 22,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 9999,
     },
   });
 };

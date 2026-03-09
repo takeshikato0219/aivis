@@ -22,10 +22,13 @@ import ImageResizer from '@bam.tech/react-native-image-resizer';
 import BackIcon from '@assets/svg/icon-back.svg';
 import TextInput from '@components/TextInput/TextInput';
 import { styles } from './FaceUpload.styles';
-import faceService, { Member, MemberRelationship, MemberImage } from '@api/faceService';
+import faceService, { Member, MemberRelationship } from '@api/faceService';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS } from '@constants/theme';
 import { DetailFaceNavigationProp, DetailFaceRouteProp } from '@navigation/types';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
+import { useImagePicker } from '@hooks/useImagePicker';
+import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';
 
 // Face position titles for individual image editing
 const FACE_POSITION_TITLES = [
@@ -56,23 +59,62 @@ const FACE_POSITION_TITLES = [
   },
 ] as const;
 
+const FACE_POSITIONS = [
+  {
+    key: 'center',
+    label: 'Center',
+    instruction: 'Look straight at the camera',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'left',
+    label: 'Turn Left',
+    instruction: 'Slowly turn your head LEFT',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'right',
+    label: 'Turn Right',
+    instruction: 'Slowly turn your head RIGHT',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'up',
+    label: 'Look Up',
+    instruction: 'Slowly tilt your head UP',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+  {
+    key: 'down',
+    label: 'Look Down',
+    instruction: 'Slowly tilt your head DOWN',
+    scanDuration: 3000,
+    prepareTime: 2000,
+  },
+] as const;
+
 const DetailFace = () => {
+  // All hooks must be called at the top level, before any conditional logic or returns
   const navigation = useNavigation<DetailFaceNavigationProp>();
   const route = useRoute<DetailFaceRouteProp>();
   const { t } = useTranslation();
-  const { memberId } = route.params;
+  const { memberId, relationships: routeRelationships } = route.params;
 
   const [member, setMember] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [memberRelationships, setMemberRelationships] = useState<MemberRelationship[]>([]);
+  const [memberRelationships, setMemberRelationships] = useState<MemberRelationship[]>(
+    routeRelationships || []
+  );
   const [selectedRelationship, setSelectedRelationship] = useState<MemberRelationship | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [relationshipError, setRelationshipError] = useState<string>('');
   const [hasChanges, setHasChanges] = useState(false);
   const [hasLoadedData, setHasLoadedData] = useState(false);
-
-  // Single face detect modal states
   const [showSingleDetectModal, setShowSingleDetectModal] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
   const [isDetecting, setIsDetecting] = useState(false);
@@ -80,6 +122,13 @@ const DetailFace = () => {
   const [isPreparing, setIsPreparing] = useState(false);
   const [prepareProgress, setPrepareProgress] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [changedImageIds, setChangedImageIds] = useState<Set<string>>(new Set());
+  const [isSaveDisabled, setIsSaveDisabled] = useState(false);
+
+  // New: track which image index is being edited for upload
+  const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null);
+
+  const imagePicker = useImagePicker();
 
   // Reset loaded data when memberId changes
   useEffect(() => {
@@ -100,6 +149,147 @@ const DetailFace = () => {
   const nameInput = useInput({
     validateFn: (v) => (v.trim() ? undefined : 'required'),
   });
+
+  const FaceFrameSVG: React.FC<{
+    isScanning: boolean;
+    scanProgress: number;
+    isPreparing: boolean;
+    // eslint-disable-next-line react/no-unstable-nested-components,@typescript-eslint/no-shadow
+  }> = ({ isScanning, scanProgress, isPreparing }) => {
+    const color = isScanning ? '#4CAF50' : isPreparing ? '#FFFFFF' : '#FFFFFF';
+    const size = 250;
+    const strokeWidth = 4;
+    const cornerLength = 50;
+
+    return (
+      <Svg width={size} height={size * 1.3} viewBox={`0 0 ${size} ${size * 1.3}`}>
+        <Defs>
+          <LinearGradient id="scanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <Stop offset="0%" stopColor={color} stopOpacity="0.3" />
+            <Stop offset={`${scanProgress}%`} stopColor={color} stopOpacity="1" />
+            <Stop offset="100%" stopColor={color} stopOpacity="0.3" />
+          </LinearGradient>
+          <LinearGradient id="cornerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={color} stopOpacity="1" />
+            <Stop offset="100%" stopColor={color} stopOpacity="0.6" />
+          </LinearGradient>
+        </Defs>
+
+        {/* Top-left corner */}
+        <Path
+          d={`M ${strokeWidth / 2} ${cornerLength} L ${strokeWidth / 2} ${strokeWidth / 2} L ${cornerLength} ${strokeWidth / 2}`}
+          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Top-right corner */}
+        <Path
+          d={`M ${size - cornerLength} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${cornerLength}`}
+          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Bottom-left corner */}
+        <Path
+          d={`M ${strokeWidth / 2} ${size * 1.3 - cornerLength} L ${strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${cornerLength} ${size * 1.3 - strokeWidth / 2}`}
+          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Bottom-right corner */}
+        <Path
+          d={`M ${size - cornerLength} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - cornerLength}`}
+          stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Scanning grid lines */}
+        {isScanning && (
+          <>
+            {[...Array(5)].map((_, i) => (
+              <Line
+                key={`h-${i}`}
+                x1={strokeWidth}
+                y1={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
+                x2={size - strokeWidth}
+                y2={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
+                stroke={color}
+                strokeWidth={0.5}
+                opacity={0.3}
+              />
+            ))}
+            {[...Array(4)].map((_, i) => (
+              <Line
+                key={`v-${i}`}
+                x1={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
+                y1={strokeWidth}
+                x2={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
+                y2={size * 1.3 - strokeWidth}
+                stroke={color}
+                strokeWidth={0.5}
+                opacity={0.3}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Center dot */}
+        <Circle cx={size / 2} cy={size * 0.65} r={isScanning ? 6 : 8} fill={color} opacity={0.8} />
+      </Svg>
+    );
+  };
+
+  // eslint-disable-next-line react/no-unstable-nested-components
+  const PositionArrow: React.FC<{ position: string }> = ({ position }) => {
+    const getArrowStyle = () => {
+      const base = { position: 'absolute' as const };
+      switch (position) {
+        case 'left':
+          return { ...base, left: 30, top: '50%', marginTop: -30 };
+        case 'right':
+          return { ...base, right: 30, top: '50%', marginTop: -30 };
+        case 'up':
+          return { ...base, top: 80, left: '50%', marginLeft: -30 };
+        case 'down':
+          return { ...base, bottom: 180, left: '50%', marginLeft: -30 };
+        default:
+          return base;
+      }
+    };
+
+    const getRotation = () => {
+      switch (position) {
+        case 'left':
+          return '180deg';
+        case 'right':
+          return '0deg';
+        case 'up':
+          return '270deg';
+        case 'down':
+          return '90deg';
+        default:
+          return '0deg';
+      }
+    };
+
+    return (
+      <View style={[styles.arrow, getArrowStyle()]}>
+        <Text style={[styles.arrowText, { transform: [{ rotate: getRotation() }] }]}>→</Text>
+      </View>
+    );
+  };
 
   // Camera and animation refs for single face detection
   const camera = useRef<Camera>(null);
@@ -145,12 +335,12 @@ const DetailFace = () => {
             memberData.relationship?.id ?? memberData.relationship_type_id ?? '',
         });
 
-        // Find and set selected relationship
-        const relationships = await faceService.getMemberRelationships();
-        setMemberRelationships(relationships);
+        // Use relationships from route params
+        setMemberRelationships(routeRelationships || []);
 
-        const currentRelationship = relationships.find(
-          (r) => r.id === (memberData.relationship?.id || memberData.relationship_type_id)
+        const currentRelationship = (routeRelationships || []).find(
+          (r: MemberRelationship) =>
+            r.id === (memberData.relationship?.id || memberData.relationship_type_id)
         );
         if (currentRelationship) {
           setSelectedRelationship(currentRelationship);
@@ -165,7 +355,7 @@ const DetailFace = () => {
       setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memberId, t, hasLoadedData]);
+  }, [memberId, t, hasLoadedData, routeRelationships]);
 
   useFocusEffect(
     useCallback(() => {
@@ -228,6 +418,7 @@ const DetailFace = () => {
   }, [showSingleDetectModal, selectedImageIndex]);
 
   const handleSave = async () => {
+    setIsSaveDisabled(true);
     if (!member || !selectedRelationship) return;
 
     try {
@@ -236,8 +427,30 @@ const DetailFace = () => {
       const formData = new FormData();
       formData.append('name', nameInput.value.trim());
       formData.append('relationship_type_id', selectedRelationship.id);
+      const changedIds: string[] = [];
+      const imageFiles: any[] = [];
+      member.images.forEach((image, index) => {
+        if (
+          image &&
+          image.id &&
+          changedImageIds.has(image.id) &&
+          image.image_url &&
+          image.image_url.startsWith('file://')
+        ) {
+          changedIds.push(image.id);
+          const positionKey = FACE_POSITION_TITLES[index]?.key || 'center';
+          imageFiles.push({
+            uri: image.image_url,
+            type: 'image/jpeg',
+            name: `${positionKey}.jpg`,
+          });
+        }
+      });
+      formData.append('image_ids', changedIds.join(','));
+      imageFiles.forEach((file) => formData.append('image_files', file));
 
       await faceService.updateMember(member.id, formData);
+      fetchMemberDetail();
 
       Alert.alert(
         t('common.success') || 'Success',
@@ -245,16 +458,38 @@ const DetailFace = () => {
         [
           {
             text: t('common.ok') || 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              setChangedImageIds(new Set());
+            },
           },
         ]
       );
+      // After successful save
+      setIsSaveDisabled(true);
     } catch (error) {
       console.error('Failed to update member:', error);
       Alert.alert(t('common.error') || 'Error', 'Failed to update member details');
+      setIsSaveDisabled(false); // Re-enable if error
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(t('faceUpload.deleteMember'), t('faceUpload.deleteMemberConfirmation'), [
+      {
+        text: 'OK',
+        onPress: async () => {
+          if (member) {
+            const response = await faceService.deleteMemberFace(member.id);
+            if (response) navigation.goBack();
+          }
+        },
+      },
+      {
+        text: t('common.cancel'),
+      },
+    ]);
   };
 
   const handleRelationshipSelect = (relationship: MemberRelationship) => {
@@ -264,54 +499,34 @@ const DetailFace = () => {
   };
 
   // Handle image press to open single face detection modal
-  const handleImagePress = async (index: number, image: MemberImage) => {
-    if (!hasPermission) {
-      const granted = await requestPermission();
-      if (!granted) {
-        Alert.alert(
-          t('faceUpload.cameraPermission') || 'Camera Permission Required',
-          t('faceUpload.cameraPermissionDesc') || 'We need camera access to capture your face'
-        );
-        return;
+  const handleImagePress = (index: number) => {
+    setEditingImageIndex(index);
+    imagePicker.handleUploadPress();
+  };
+
+  useEffect(() => {
+    if (
+      editingImageIndex !== null &&
+      imagePicker.selectedImage &&
+      member &&
+      member.images &&
+      member.images[editingImageIndex]
+    ) {
+      const updatedImages = [...member.images];
+      updatedImages[editingImageIndex] = {
+        ...updatedImages[editingImageIndex],
+        image_url: imagePicker.selectedImage.uri,
+      };
+      setMember({ ...member, images: updatedImages });
+      setHasChanges(true);
+      if (updatedImages[editingImageIndex]?.id) {
+        setChangedImageIds((prev) => new Set(prev).add(updatedImages[editingImageIndex].id));
       }
+      setEditingImageIndex(null);
+      imagePicker.setSelectedImage(null);
     }
+  }, [editingImageIndex, imagePicker, member, imagePicker.selectedImage]);
 
-    // Reset all detection states before opening modal
-    setIsPreparing(false);
-    setIsDetecting(false);
-    setIsCapturing(false);
-    setPrepareProgress(0);
-    setDetectProgress(0);
-    console.log(image);
-    setSelectedImageIndex(index);
-    setShowSingleDetectModal(true);
-  };
-
-  // Handle close detect modal
-  const handleCloseDetectModal = () => {
-    // Stop all animations and processes first
-    stopSinglePrepare();
-    stopSingleScanning();
-
-    // Reset all animation values
-    fadeAnim.setValue(0);
-    scaleAnim.setValue(1);
-    scanLineAnim.setValue(0);
-    particleAnim.setValue(0);
-    pulseAnim.setValue(1);
-    successAnim.setValue(0);
-
-    // Close modal
-    setShowSingleDetectModal(false);
-    setSelectedImageIndex(-1);
-    setIsPreparing(false);
-    setIsDetecting(false);
-    setIsCapturing(false);
-    setPrepareProgress(0);
-    setDetectProgress(0);
-  };
-
-  // Get error message for incorrect face position
   const getPositionErrorMessage = (position: string): string => {
     switch (position) {
       case 'center':
@@ -551,6 +766,9 @@ const DetailFace = () => {
 
         setMember(updatedMember);
         setHasChanges(true);
+        if (updatedImages[selectedImageIndex]?.id) {
+          setChangedImageIds((prev) => new Set(prev).add(updatedImages[selectedImageIndex].id));
+        }
 
         // Success animation
         Animated.sequence([
@@ -623,44 +841,15 @@ const DetailFace = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('detailFace.detailFace') || 'Member Detail'}</Text>
-            <View style={styles.styleWidth} />
-          </View>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4CAF50" />
-            <Text style={styles.loadingText}>{t('common.loading') || 'Loading...'}</Text>
-          </View>
-        </SafeAreaView>
-      </View>
-    );
-  }
-
-  if (!member) {
-    return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('detailFace.detailFace') || 'Member Detail'}</Text>
-            <View style={styles.styleWidth} />
-          </View>
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>{t('common.notAvailable') || 'Member not found'}</Text>
-          </View>
-        </SafeAreaView>
-      </View>
-    );
-  }
+  const handleCloseDetectModal = () => {
+    setShowSingleDetectModal(false);
+    setSelectedImageIndex(-1);
+    setIsPreparing(false);
+    setIsDetecting(false);
+    setIsCapturing(false);
+    setPrepareProgress(0);
+    setDetectProgress(0);
+  };
 
   return (
     <View style={styles.container}>
@@ -731,57 +920,53 @@ const DetailFace = () => {
           {/* Images Section */}
           <View style={styles.detailSection}>
             <Text style={styles.detailSectionTitle}>{t('faceUpload.images') || 'Images'}</Text>
-            {(() => {
-              const images = member?.images || [];
-              if (images.length > 0) {
+            <View style={styles.imagesGrid}>
+              {[0, 1, 2, 3, 4].map((index) => {
+                const images = member?.images || [];
+                const image = images[index];
+                const positionTitle = FACE_POSITION_TITLES[index];
                 return (
-                  <>
-                    <View style={styles.imagesGrid}>
-                      {images.map((image, index) => {
-                        const positionTitle = FACE_POSITION_TITLES[index];
-                        return (
-                          <View key={image.id || index} style={styles.imageItemContainer}>
-                            <Text style={styles.imageTitle}>
-                              {index + 1}. {positionTitle?.getTitle(t) || `Position ${index + 1}`}
-                            </Text>
-                            <TouchableOpacity
-                              style={styles.imageItem}
-                              onPress={() => handleImagePress(index, image)}
-                            >
-                              <Image
-                                source={{ uri: image.image_url }}
-                                style={styles.imagePreview}
-                                resizeMode="cover"
-                              />
-                              <View style={styles.imageOverlay}>
-                                <Icon name="camera" size={20} color="#fff" />
-                                <Text style={styles.imageIndex}>{index + 1}</Text>
-                              </View>
-                            </TouchableOpacity>
-                          </View>
-                        );
-                      })}
-                    </View>
-                    <Text style={styles.imageNote}>
-                      {t('faceUpload.tapToEditImage') || 'Tap on image to edit'}
+                  <View key={image?.id || index} style={styles.imageItemContainer}>
+                    <Text style={styles.imageTitle}>
+                      {index + 1}. {positionTitle?.getTitle(t) || `Position ${index + 1}`}
                     </Text>
-                  </>
+                    <TouchableOpacity
+                      style={styles.imageItem}
+                      onPress={() => handleImagePress(index)}
+                    >
+                      {image && image.image_url ? (
+                        <Image
+                          source={{ uri: image.image_url }}
+                          style={styles.imagePreview}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.imageOverlay}>
+                          <Icon name="plus" size={32} color="#ccc" />
+                        </View>
+                      )}
+                      <View style={styles.imageOverlay}>
+                        <Icon name="pencil" size={20} color="#fff" />
+                        <Text style={styles.imageIndex}>{index + 1}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
                 );
-              } else {
-                return (
-                  <Text style={styles.detailValue}>
-                    {t('faceUpload.noImages') || 'No images available'}
-                  </Text>
-                );
-              }
-            })()}
+              })}
+            </View>
+            <Text style={styles.imageNote}>
+              {t('faceUpload.tapToEditImage') || 'Tap on image to edit'}
+            </Text>
           </View>
 
           {/* Save Button */}
           <TouchableOpacity
-            style={[styles.saveButton, (!hasChanges || isUpdating) && styles.saveButtonDisabled]}
+            style={[
+              styles.saveButton,
+              (!hasChanges || isUpdating || isSaveDisabled) && styles.saveButtonDisabled,
+            ]}
             onPress={handleSave}
-            disabled={!hasChanges || isUpdating}
+            disabled={!hasChanges || isUpdating || isSaveDisabled}
           >
             {isUpdating ? (
               <ActivityIndicator size="small" color="#fff" />
@@ -789,6 +974,16 @@ const DetailFace = () => {
               <>
                 <Icon name="content-save" size={20} color="#fff" />
                 <Text style={styles.saveButtonText}>{t('common.save') || 'Save'}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            {isUpdating ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Icon name="delete-circle" size={20} color="#fff" />
+                <Text style={styles.saveButtonText}>{t('common.delete')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -883,15 +1078,8 @@ const DetailFace = () => {
                 </Text>
               </View>
             ) : (
-              <Animated.View
-                style={[
-                  styles.absoluteFill,
-                  {
-                    opacity: fadeAnim,
-                    transform: [{ scale: scaleAnim }],
-                  },
-                ]}
-              >
+              <View style={styles.container}>
+                {/* Camera */}
                 <Camera
                   ref={camera}
                   style={styles.absoluteFill}
@@ -900,158 +1088,228 @@ const DetailFace = () => {
                   photo={true}
                 />
 
-                {/* Close Button */}
-                <View style={[styles.closeButton]}>
-                  <TouchableOpacity onPress={handleCloseDetectModal} disabled={isCapturing}>
-                    <Icon name="close" size={24} color={isCapturing ? '#666' : '#fff'} />
-                  </TouchableOpacity>
-                </View>
+                <View style={styles.overlay}>
+                  {/* Header */}
+                  <SafeAreaView edges={['top']}>
+                    <View style={styles.header}>
+                      <TouchableOpacity
+                        style={styles.closeButton}
+                        onPress={handleCloseDetectModal}
+                        disabled={isCapturing}
+                      >
+                        <Text style={styles.closeButtonText}>✕</Text>
+                      </TouchableOpacity>
 
-                {/* Face Frame */}
-                <View style={styles.faceFrameContainer}>
-                  <Animated.View
-                    style={[
-                      styles.faceFrame,
-                      // eslint-disable-next-line react-native/no-inline-styles
-                      {
-                        transform: [{ scale: pulseAnim }],
-                        borderColor: isDetecting ? '#4CAF50' : '#fff',
-                        borderWidth: isDetecting ? 3 : 2,
-                      },
-                    ]}
-                  >
-                    {/* Scan Line Animation */}
-                    {isDetecting && (
-                      <Animated.View
-                        style={[
-                          styles.scanLine,
-                          {
-                            transform: [
-                              {
-                                translateY: scanLineAnim.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [0, 325],
-                                }),
-                              },
-                            ],
-                          },
-                        ]}
-                      />
-                    )}
+                      <Text style={styles.title}>
+                        {selectedImageIndex >= 0 && FACE_POSITION_TITLES[selectedImageIndex]
+                          ? FACE_POSITION_TITLES[selectedImageIndex].getTitle(t)
+                          : t('faceUpload.editImage') || 'Edit Image'}
+                      </Text>
 
-                    {/* Particle Animation */}
-                    {isDetecting && (
-                      <View style={styles.scanParticles}>
-                        {Array.from({ length: 12 }).map((_, i) => (
-                          <Animated.View
-                            key={i}
-                            style={[
-                              styles.particle,
-                              {
-                                left: `${Math.random() * 100}%`,
-                                top: `${Math.random() * 100}%`,
-                                opacity: particleAnim.interpolate({
-                                  inputRange: [0, 0.5, 1],
-                                  outputRange: [0, 1, 0],
-                                }),
-                                transform: [
-                                  {
-                                    scale: particleAnim.interpolate({
-                                      inputRange: [0, 0.5, 1],
-                                      outputRange: [0.5, 1.5, 0.5],
-                                    }),
-                                  },
-                                ],
-                              },
-                            ]}
-                          />
-                        ))}
-                      </View>
-                    )}
-
-                    {/* Corner Indicators */}
-                    <View style={styles.cornerIndicators}>
-                      {/* eslint-disable-next-line react-native/no-inline-styles */}
-                      <View style={[styles.cornerDot, { top: -4, left: -4 }]} />
-                      {/* eslint-disable-next-line react-native/no-inline-styles */}
-                      <View style={[styles.cornerDot, { top: -4, right: -4 }]} />
-                      {/* eslint-disable-next-line react-native/no-inline-styles */}
-                      <View style={[styles.cornerDot, { bottom: -4, left: -4 }]} />
-                      {/* eslint-disable-next-line react-native/no-inline-styles */}
-                      <View style={[styles.cornerDot, { bottom: -4, right: -4 }]} />
+                      <View style={styles.styleWidth} />
                     </View>
+                  </SafeAreaView>
 
-                    {/* Success Badge */}
+                  <View style={styles.faceFrameContainer}>
                     <Animated.View
                       style={[
-                        styles.successOverlay,
+                        styles.faceFrame,
                         {
-                          opacity: successAnim,
+                          transform: [{ scale: scaleAnim }],
                         },
                       ]}
                     >
-                      <View style={styles.successBadge}>
-                        <Text style={styles.successText}>✓</Text>
-                      </View>
-                    </Animated.View>
-                  </Animated.View>
-                </View>
+                      {isPreparing && (
+                        <View style={styles.holdProgressRing}>
+                          <Svg width={270} height={351} viewBox="0 0 270 351">
+                            <Circle
+                              cx={135}
+                              cy={175.5}
+                              r={130}
+                              stroke="rgba(255, 255, 255, 0.2)"
+                              strokeWidth={4}
+                              fill="none"
+                            />
+                            <Circle
+                              cx={135}
+                              cy={175.5}
+                              r={130}
+                              stroke="#FFFFFF"
+                              strokeWidth={4}
+                              fill="none"
+                              strokeDasharray={2 * Math.PI * 130}
+                              strokeDashoffset={2 * Math.PI * 130 * (1 - prepareProgress / 100)}
+                              strokeLinecap="round"
+                              transform="rotate(-90 135 175.5)"
+                            />
+                          </Svg>
+                        </View>
+                      )}
 
-                {/* Position Title and Instructions */}
-                {selectedImageIndex >= 0 && FACE_POSITION_TITLES[selectedImageIndex] && (
-                  <View style={styles.instructionsContainer}>
-                    <Text style={styles.positionLabel}>
-                      {FACE_POSITION_TITLES[selectedImageIndex].getTitle(t)}
-                    </Text>
-                    <Text style={styles.instruction}>
-                      {FACE_POSITION_TITLES[selectedImageIndex].getInstruction(t)}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Progress Indicators */}
-                {isPreparing && (
-                  <View style={styles.holdProgressContainer}>
-                    <Text style={styles.holdProgressText}>
-                      {t('faceUpload.preparing') || 'Preparing...'} {Math.round(prepareProgress)}%
-                    </Text>
-                    <View style={styles.progressContainer}>
-                      <View style={styles.progressBar}>
+                      {/* Scanning Line */}
+                      {isDetecting && (
                         <Animated.View
                           style={[
-                            styles.progressFill,
+                            styles.scanLine,
                             {
-                              width: `${prepareProgress}%`,
+                              transform: [
+                                {
+                                  translateY: scanLineAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [-162.5, 162.5],
+                                  }),
+                                },
+                              ],
                             },
                           ]}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                )}
+                        >
+                          <View style={styles.scanLineGlow} />
+                        </Animated.View>
+                      )}
 
-                {isDetecting && (
-                  <View style={styles.scanProgressContainer}>
-                    <Text style={styles.scanProgressText}>
-                      {t('faceUpload.scanning') || 'Scanning...'} {Math.round(detectProgress)}%
-                    </Text>
-                    <View style={styles.miniProgressBar}>
+                      {/* Scanning Particles */}
+                      {isDetecting && (
+                        <Animated.View
+                          style={[
+                            styles.scanParticles,
+                            {
+                              opacity: particleAnim.interpolate({
+                                inputRange: [0, 0.5, 1],
+                                outputRange: [0.3, 1, 0.3],
+                              }),
+                            },
+                          ]}
+                        >
+                          {[...Array(8)].map((_, i) => (
+                            <View
+                              key={i}
+                              style={[
+                                styles.particle,
+                                {
+                                  left: `${i * 12.5 + 6}%`,
+                                  top: `${20 + Math.sin(i) * 30}%`,
+                                },
+                              ]}
+                            />
+                          ))}
+                        </Animated.View>
+                      )}
+
+                      <FaceFrameSVG
+                        isScanning={isDetecting}
+                        scanProgress={detectProgress}
+                        isPreparing={isPreparing}
+                      />
+
+                      {/* Corner Indicators with Pulse */}
+                      {isDetecting && (
+                        <Animated.View
+                          style={[
+                            styles.cornerIndicators,
+                            {
+                              transform: [{ scale: pulseAnim }],
+                            },
+                          ]}
+                        >
+                          {/* eslint-disable-next-line react-native/no-inline-styles */}
+                          <View style={[styles.cornerDot, { top: 10, left: 10 }]} />
+                          {/* eslint-disable-next-line react-native/no-inline-styles */}
+                          <View style={[styles.cornerDot, { top: 10, right: 10 }]} />
+                          {/* eslint-disable-next-line react-native/no-inline-styles */}
+                          <View style={[styles.cornerDot, { bottom: 10, left: 10 }]} />
+                          {/* eslint-disable-next-line react-native/no-inline-styles */}
+                          <View style={[styles.cornerDot, { bottom: 10, right: 10 }]} />
+                        </Animated.View>
+                      )}
+
+                      {/* Success Badge */}
                       <Animated.View
                         style={[
-                          styles.miniProgressFill,
+                          styles.successOverlay,
                           {
-                            width: `${detectProgress}%`,
+                            opacity: successAnim,
                           },
                         ]}
-                      />
-                    </View>
+                      >
+                        <View style={styles.successBadge}>
+                          <Text style={styles.successText}>✓</Text>
+                        </View>
+                      </Animated.View>
+                    </Animated.View>
+
+                    {/* Position Arrow */}
+                    {selectedImageIndex >= 0 &&
+                      FACE_POSITIONS[selectedImageIndex]?.key !== 'center' &&
+                      !isCapturing && (
+                        <PositionArrow position={FACE_POSITIONS[selectedImageIndex].key} />
+                      )}
                   </View>
-                )}
-              </Animated.View>
+
+                  {/* Instructions */}
+                  <Animated.View style={[styles.instructionsContainer, { opacity: fadeAnim }]}>
+                    {selectedImageIndex >= 0 && FACE_POSITIONS[selectedImageIndex] && (
+                      <>
+                        <Text style={styles.positionLabel}>
+                          {FACE_POSITIONS[selectedImageIndex].label.toUpperCase()}
+                        </Text>
+                        <Text style={styles.instruction}>
+                          {FACE_POSITIONS[selectedImageIndex].instruction}
+                        </Text>
+                      </>
+                    )}
+
+                    {/* Status */}
+                    {isPreparing && (
+                      <View style={styles.feedbackContainer}>
+                        <Text style={styles.feedbackText}>
+                          {t('faceUpload.getReady') || 'Get ready...'}
+                        </Text>
+                      </View>
+                    )}
+
+                    {isDetecting && (
+                      <View style={styles.scanProgressContainer}>
+                        <Text style={styles.scanProgressText}>
+                          {t('faceUpload.scanning') || 'Scanning'}: {Math.round(detectProgress)}%
+                        </Text>
+                        <View style={styles.miniProgressBar}>
+                          <View
+                            style={[styles.miniProgressFill, { width: `${detectProgress}%` }]}
+                          />
+                        </View>
+                      </View>
+                    )}
+                  </Animated.View>
+                </View>
+              </View>
             )}
           </View>
         </Modal>
       </SafeAreaView>
+      <ImagePickerModal
+        visible={imagePicker.showImagePicker}
+        slideAnim={imagePicker.slideAnim}
+        opacityAnim={imagePicker.opacityAnim}
+        onClose={() => {
+          imagePicker.closeModal();
+          setEditingImageIndex(null);
+        }}
+        onTakePhoto={() => {
+          imagePicker.closeModal();
+          if (!hasPermission) {
+            requestPermission();
+            return;
+          }
+          setIsPreparing(false);
+          setIsDetecting(false);
+          setIsCapturing(false);
+          setPrepareProgress(0);
+          setDetectProgress(0);
+          setSelectedImageIndex(editingImageIndex ?? -1);
+          setShowSingleDetectModal(true);
+        }}
+        onChooseFromLibrary={imagePicker.handleChooseFromLibrary}
+      />
     </View>
   );
 };

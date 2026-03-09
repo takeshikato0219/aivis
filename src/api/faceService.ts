@@ -112,6 +112,13 @@ class FaceService {
     });
     return response.data;
   }
+
+  async deleteMemberFace(memberId: string): Promise<{ success: boolean; message: string }> {
+    const response = await axiosInstance.delete<{ success: boolean; message: string }>(
+      `${API_ENDPOINTS.MEMBERS}/${memberId}`
+    );
+    return response.data;
+  }
 }
 
 export default new FaceService();

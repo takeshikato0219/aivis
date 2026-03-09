@@ -24,7 +24,8 @@
     "ok": "OK",
     "yes": "Yes",
     "no": "No",
-    "grantPermission": "Grant Permission"
+    "grantPermission": "Grant Permission",
+    "confirm": "Confirm"
   },
   "auth": {
     "login": "Login",
@@ -79,7 +80,9 @@
     "lineAndroidIntentError": "LINE app intent not available",
     "loginWithLineApp": "Login with LINE App",
     "loginWithBrowser": "Login with Browser (Web)",
-    "webLoginNotAvailable": "Web login requires additional setup. Please use LINE app for now."
+    "webLoginNotAvailable": "Web login requires additional setup. Please use LINE app for now.",
+    "termsOfUse": "Terms of Use",
+    "privacyPolicy": "Privacy Policy"
   },
   "home": {
     "title": "Welcome Back!",
@@ -156,7 +159,8 @@
     "safeMode": "Safe Mode",
     "releaseMode": "Release Mode",
     "securityMode": "Security Mode",
-    "textNotification": "Intrusion detection, immediate notification"
+    "textNotification": "Intrusion detection, immediate notification",
+    "doYouWantToSwitchMode": "Do you want to switch mode?"
   },
   "validate": {
     "emailRequired": "The email field is required.",
@@ -271,7 +275,12 @@
     "noWiFiAccessPointFound": "No WiFi access point found.",
     "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Select a connection method to setup your Jetson Orin camera.",
     "connectionLost": "Connection Lost",
-    "deviceDisconnectedPleaseReconnect": "Device has been disconnected. Please reconnect to continue."
+    "deviceDisconnectedPleaseReconnect": "Device has been disconnected. Please reconnect to continue.",
+    "bluetoothIsOff": "Bluetooth is off",
+    "pleaseTurnOnBluetoothToScanForNearbyCameras": "Please turn on Bluetooth to scan for nearby cameras.",
+    "unableToOpenSettings": "Unable to open settings",
+    "pleaseOpenBluetoothSettingsManually": "Please open Bluetooth settings manually.",
+    "openSettings": "Open settings"
   },
   "pairingCode": {
     "pairingCode": "Pairing Code",
@@ -299,12 +308,12 @@
     "manualConnection": "Manual connection",
     "loadingCamera": "Loading camera...",
     "deviceRegistration": "Device Registration",
-    "searchingForDevices": "Searching for devices...",
-    "bluetoothConnected": "Bluetooth connected",
+    "searchingForDevices": "Connecting...",
     "enterManualCode": "Enter manual code",
     "agentCode": "Agent Code",
     "cameraRegisteredSuccessfully": "Camera registered successfully",
-    "authenticationRequired": "Please login to register camera"
+    "authenticationRequired": "Please login to register camera",
+    "theCameraHasBeenRegistered": "The camera has been registered"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Enter the default password for the Jetson Orin's local hotspot:",
@@ -339,7 +348,10 @@
     "lineAuthRequired": "LINE Authentication Required",
     "lineAuthRequiredMessage": "To subscribe to our LINE Official Account, you need to authenticate with LINE first.",
     "cannotUnsubscribeMessage": "You need to be authenticated with LINE to unsubscribe.",
-    "loginWithLine": "Login with LINE"
+    "loginWithLine": "Login with LINE",
+    "failedToUpdateUserProfilePleaseTryAgain": "Failed to update user profile. Please try again.",
+    "LINEDisplayName": "LINE Display Name:",
+    "LINEUserID": "LINE User ID:"
   },
   "networkSetup": {
     "networkSetup": "Network Setup",
@@ -407,7 +419,9 @@
     "cellularNetwork": "Cellular Network",
     "cellular": "Cellular ({{generation}})",
     "done": "Done",
-    "idle": "Idle"
+    "idle": "Idle",
+    "lanConnectionIsActive": "LAN connection is active",
+    "noLanConnection": "No LAN connection"
   },
   "faceUpload": {
     "title": "Face Registration",
@@ -472,7 +486,22 @@
     "preparing": "Preparing...",
     "faceNotDetected": "Face Not Detected",
     "adjustPosition": "Please adjust your position and try again",
-    "captureFailed": "Failed to capture face"
+    "captureFailed": "Failed to capture face",
+    "deleteMember": "Delete Member",
+    "deleteMemberConfirmation": "Are you sure you want to delete this member?",
+    "center": "Center",
+    "lookStraightAtTheCamera": "Look straight at the camera",
+    "turnLeftFace": "Turn Left",
+    "slowlyTurnYourHeadLEFT": "Slowly turn your head LEFT",
+    "turnRightFace": "Turn Right",
+    "slowlyTurnYourHeadRIGHT": "Slowly turn your head RIGHT",
+    "lookUpFace": "Look Up",
+    "slowlyTiltYourHeadUP": "Slowly tilt your head UP",
+    "lookDownFace": "Look Down",
+    "slowlyTiltYourHeadDOWN": "Slowly tilt your head DOWN",
+    "selectPhoto": "Please select one photo from the library. For improved accuracy, please choose all 5 photos from different angles.",
+    "pleaseChooseAtLeastOneImage": "Please choose at least one image",
+    "pleaseEnterTheRequiredInformation": "Please enter the required information."
   },
   "liveStream": {
     "connectionSuccessful": "Connection Successful",
@@ -488,14 +517,71 @@
     "onlineAndReady": "Online and ready"
   },
   "settingAI": {
-    "settingAI": "Setting AI"
+    "settingAI": "Setting AI",
+    "detectionAreaSetup": "Detection Area Setup",
+    "operationSchedule": "Operation Schedule",
+    "aIDetectionRules": "AI Detection Rules",
+    "deleteCamera": "Delete Camera",
+    "doYouWantToDelete": "Do you want to delete?"
   },
   "listFace": {
     "listFace": "List Face",
     "noMembers": "No members found",
-    "addFirstMember": "Add your first member"
+    "addFirstMember": "Add your first member",
+    "selectFunction": "Select function",
+    "takePhoto": "Take photo",
+    "uploadPhotoFromLibrary": "Upload photo from library",
+    "close": "Close"
   },
   "detailFace": {
     "detailFace": "Detail Face"
+  },
+  "aiDetectionRules": {
+    "subtitle": "Set up automatic detection items using the camera's AI features.",
+    "warning": "Enabling AI detection features may increase battery consumption. It is recommended to turn off unnecessary items."
+  },
+  "workSchedule": {
+    "scheduleEnabled": "Enable/Disable Rule",
+    "repeat": "Repeat",
+    "activeTime": "AI Active time",
+    "save": "Save",
+    "saving": "Saving...",
+    "weekdays": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "selectFaceToApply": "Select face to apply",
+    "updateSuccessful": "Update successful",
+    "updateFailed": "Update failed"
+  },
+  "listDetectZone": {
+    "noneItem": "No detection zones set up yet",
+    "listDetectZone": "List Detect Zone"
+  },
+  "uploadDetectZone": {
+    "setupDetectZone": "Setup Detect Zone",
+    "setupZone": "Setup Zone",
+    "setupDetectionZone": "Setup detection zone",
+    "successTitle": "Success",
+    "successMessage": "Detection zone setup successful",
+    "failureTitle": "Failure",
+    "failureMessage": "Detection zone setup failed",
+    "setupRestrictedZone": "Setup restricted zone",
+    "setupEntryExit": "Setup Entry/Exit Tracking"
+  },
+  "detectionZone": {
+    "inGreenOutRed": "In: Green / Out: Red",
+    "successMessage": "Detection zone setup successful",
+    "failureMessage": "Detection zone setup failed",
+    "setupError": "Setup error",
+    "twoPointError": "The two points must not coincide with the edge of the frame. Please select a different position!"
+  },
+  "listNotificationCamera": {
+    "tapTheListBelowToView": "Tap the list below to view"
   }
 }

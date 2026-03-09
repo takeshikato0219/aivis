@@ -24,7 +24,8 @@
     "ok": "OK",
     "yes": "はい",
     "no": "いいえ",
-    "grantPermission": "権限を許可"
+    "grantPermission": "権限を許可",
+    "confirm": "確認"
   },
   "auth": {
     "login": "登錄",
@@ -79,7 +80,9 @@
     "lineAndroidIntentError": "LINEアプリのインテントが利用できません",
     "loginWithLineApp": "LINEアプリでログイン",
     "loginWithBrowser": "ブラウザでログイン（Web）",
-    "webLoginNotAvailable": "Webログインには追加設定が必要です。今はLINEアプリをご使用ください。"
+    "webLoginNotAvailable": "Webログインには追加設定が必要です。今はLINEアプリをご使用ください。",
+    "termsOfUse": "利用規約",
+    "privacyPolicy": "プライバシーポリシー"
   },
   "home": {
     "title": "お帰りなさい！",
@@ -197,7 +200,8 @@
     "safeMode": "安心モード",
     "releaseMode": "解除モード",
     "securityMode": "セキュリティモード",
-    "textNotification": "侵入 知 即時通知"
+    "textNotification": "侵入 知 即時通知",
+    "doYouWantToSwitchMode": "モードを切り替えますか？"
   },
   "validate": {
     "emailRequired": "メールアドレスを入力してください。",
@@ -312,7 +316,12 @@
     "noWiFiAccessPointFound": "Wi-Fiアクセスポイントが見つかりませんでした。",
     "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Jetson Orin カメラをセットアップするための接続方法を選択してください。",
     "connectionLost": "接続が切断されました",
-    "deviceDisconnectedPleaseReconnect": "デバイスとの接続が切断されました。続行するには再接続してください。"
+    "deviceDisconnectedPleaseReconnect": "デバイスとの接続が切断されました。続行するには再接続してください。",
+    "bluetoothIsOff": "Bluetoothがオフになっています",
+    "pleaseTurnOnBluetoothToScanForNearbyCameras": "近くのカメラをスキャンするためにBluetoothをオンにしてください。",
+    "unableToOpenSettings": "設定を開くことができません",
+    "pleaseOpenBluetoothSettingsManually": "Bluetoothの設定を手動で開いてください。",
+    "openSettings": "設定を開く"
   },
   "pairingCode": {
     "pairingCode": "ペアリングコード",
@@ -340,12 +349,12 @@
     "manualConnection": "手動で接続",
     "loadingCamera": "カメラを読み込み中...",
     "deviceRegistration": "デバイス登録",
-    "searchingForDevices": "デバイスを検索中...",
-    "bluetoothConnected": "Bluetooth接続中",
+    "searchingForDevices": "接続中...",
     "enterManualCode": "手動でコードを入力",
     "agentCode": "代理店コード",
     "cameraRegisteredSuccessfully": "カメラの登録が完了しました",
-    "authenticationRequired": "カメラを登録するにはログインしてください"
+    "authenticationRequired": "カメラを登録するにはログインしてください",
+    "theCameraHasBeenRegistered": "カメラの登録が完了しました"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Jetson Orinのローカルホットスポットのデフォルトパスワードを入力してください：",
@@ -380,7 +389,10 @@
     "lineAuthRequired": "LINE認証が必要です",
     "lineAuthRequiredMessage": "LINE公式アカウントを購読するには、まずLINEで認証する必要があります。",
     "cannotUnsubscribeMessage": "購読を解除するにはLINE認証が必要です。",
-    "loginWithLine": "LINEでログイン"
+    "loginWithLine": "LINEでログイン",
+    "failedToUpdateUserProfilePleaseTryAgain": "ユーザープロファイルの更新に失敗しました。もう一度お試しください。",
+    "LINEDisplayName": "LINE表示名：",
+    "LINEUserID": "LINEユーザーID："
   },
   "networkSetup": {
     "networkSetup": "ネットワーク設定",
@@ -448,7 +460,9 @@
     "cellularNetwork": "モバイルネットワーク",
     "cellular": "モバイル ({{generation}})",
     "done": "完了",
-    "idle": "待機中"
+    "idle": "待機中",
+    "lanConnectionIsActive": "LAN接続があります",
+    "noLanConnection": "LAN接続がありません"
   },
   "faceUpload": {
     "title": "顔登録",
@@ -513,7 +527,22 @@
     "preparing": "準備中...",
     "faceNotDetected": "顔が検出されません",
     "adjustPosition": "位置を調整してもう一度お試しください",
-    "captureFailed": "顔の撮影に失敗しました"
+    "captureFailed": "顔の撮影に失敗しました",
+    "deleteMember": "メンバーを削除",
+    "deleteMemberConfirmation": "このメンバーを削除してもよろしいですか？",
+    "center": "中央",
+    "lookStraightAtTheCamera": "カメラをまっすぐ見てください",
+    "turnLeftFace": "左を向く",
+    "slowlyTurnYourHeadLEFT": "ゆっくりと頭を左に向けてください",
+    "turnRightFace": "右を向く",
+    "slowlyTurnYourHeadRIGHT": "ゆっくりと頭を右に向けてください",
+    "lookUpFace": "上を見る",
+    "slowlyTiltYourHeadUP": "ゆっくりと頭を上に傾けてください",
+    "lookDownFace": "下を見る",
+    "slowlyTiltYourHeadDOWN": "ゆっくりと頭を下に傾けてください",
+    "selectPhoto": "ライブラリから写真を1枚選択してください。精度を高めたい場合は、5つの角度すべての写真を選択してください。",
+    "pleaseChooseAtLeastOneImage": "少なくとも1枚の画像を選択してください",
+    "pleaseEnterTheRequiredInformation": "必要な情報を入力してください。"
   },
   "liveStream": {
     "connectionSuccessful": "接続に成功しました",
@@ -529,14 +558,71 @@
     "onlineAndReady": "オンライン・準備完了"
   },
   "settingAI": {
-    "settingAI": "Al設定"
+    "settingAI": "Al設定",
+    "detectionAreaSetup": "検知エリア設定",
+    "operationSchedule": "稼働スケジュール",
+    "aIDetectionRules": "AI検知ルール",
+    "deleteCamera": "カメラを削除",
+    "doYouWantToDelete": "削除しますか？"
   },
   "listFace": {
     "listFace": "顔リスト",
     "noMembers": "メンバーが見つかりません",
-    "addFirstMember": "最初のメンバーを追加してください"
+    "addFirstMember": "最初のメンバーを追加してください",
+    "selectFunction": "機能を選択",
+    "takePhoto": "写真を撮る",
+    "uploadPhotoFromLibrary": "ライブラリから写真をアップロード",
+    "close": "閉じる"
   },
   "detailFace": {
     "detailFace": "詳細顔"
+  },
+  "aiDetectionRules": {
+    "subtitle": "カメラのAI機能による自動検知項目を設定します。",
+    "warning": "AI検知機能を有効にすると、バッテリー消費が増加する可 能性があります。不要な項目はオフにすることをお勧めし ます。"
+  },
+  "workSchedule": {
+    "scheduleEnabled": "ルールの有効化／無効化",
+    "repeat": "繰り返し",
+    "activeTime": "AI 知有効時間",
+    "save": "保存",
+    "saving": "保存中...",
+    "weekdays": {
+      "mon": "月",
+      "tue": "火",
+      "wed": "水",
+      "thu": "木",
+      "fri": "金",
+      "sat": "土",
+      "sun": "日"
+    },
+    "selectFaceToApply": "適用する顔を選択",
+    "updateSuccessful": "更新に成功しました",
+    "updateFailed": "更新に失敗しました"
+  },
+  "listDetectZone": {
+    "noneItem": "監視エリアがまだ設定されていません",
+    "listDetectZone": "検出エリア一覧"
+  },
+  "uploadDetectZone": {
+    "setupDetectZone": "検知エリア設定",
+    "setupZone": "ゾーン設定",
+    "setupDetectionZone": "検知エリア設定",
+    "successTitle": "成功",
+    "successMessage": "検知ゾーンの設定が成功しました",
+    "failureTitle": "失敗",
+    "failureMessage": "検知ゾーンの設定に失敗しました",
+    "setupRestrictedZone": "立ち入り禁止エリア",
+    "setupEntryExit": "出入り追跡の設定"
+  },
+  "detectionZone": {
+    "inGreenOutRed": "入: 緑 / 出: 赤",
+    "successMessage": "検知ゾーンの設定に成功しました",
+    "failureMessage": "検知ゾーンの設定に失敗しました",
+    "setupError": "設定エラー",
+    "twoPointError": "2つのポイントがフレームの端と一致してはいけません。別の位置を選択してください。"
+  },
+  "listNotificationCamera": {
+    "tapTheListBelowToView": "下のリストをタップして表示してください"
   }
 }

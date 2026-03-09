@@ -1,14 +1,13 @@
-import { buildStreamUrl, getStreamHTML } from '../../src/utils/streamUtils';
+import { buildStreamUrl, buildStreamHtmlUrl } from '../../src/utils/streamUtils';
 
 describe('streamUtils', () => {
   const mockBaseUrl = 'https://avisaitest-nginx001.wpstories.org';
 
   describe('buildStreamUrl', () => {
-    it('should return default stream URL when no rtspUrl is provided', () => {
+    it('should return empty string when no rtspUrl is provided', () => {
       const result = buildStreamUrl();
-      const expected = `${mockBaseUrl}/stream.html?src=camera&mode=webrtc,mse,hls,mjpeg`;
 
-      expect(result).toBe(expected);
+      expect(result).toBe('');
     });
 
     it('should return the URL as-is when it starts with http://', () => {
@@ -25,124 +24,71 @@ describe('streamUtils', () => {
       expect(result).toBe(httpsUrl);
     });
 
-    it('should wrap RTSP URL with base URL and encode it', () => {
+    it('should return empty string for RTSP URL', () => {
       const rtspUrl = 'rtsp://192.168.1.100:554/live';
       const result = buildStreamUrl(rtspUrl);
-      const expected = `${mockBaseUrl}/stream.html?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse,hls,mjpeg`;
 
-      expect(result).toBe(expected);
+      expect(result).toBe('');
     });
 
-    it('should handle RTSP URLs with special characters', () => {
-      const rtspUrl = 'rtsp://user:pass@192.168.1.100:554/live?param=value&other=test';
-      const result = buildStreamUrl(rtspUrl);
-      const expected = `${mockBaseUrl}/stream.html?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse,hls,mjpeg`;
+    it('should return empty string for undefined rtspUrl', () => {
+      const result = buildStreamUrl(undefined);
 
-      expect(result).toBe(expected);
-    });
-
-    it('should use custom base URL when provided', () => {
-      const customBaseUrl = 'https://custom-stream.example.com';
-      const rtspUrl = 'rtsp://camera.local/live';
-      const result = buildStreamUrl(rtspUrl, customBaseUrl);
-      const expected = `${customBaseUrl}/stream.html?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse,hls,mjpeg`;
-
-      expect(result).toBe(expected);
-    });
-
-    it('should use custom base URL for default stream when no rtspUrl provided', () => {
-      const customBaseUrl = 'https://custom-stream.example.com';
-      const result = buildStreamUrl(undefined, customBaseUrl);
-      const expected = `${customBaseUrl}/stream.html?src=camera&mode=webrtc,mse,hls,mjpeg`;
-
-      expect(result).toBe(expected);
+      expect(result).toBe('');
     });
 
     it('should handle empty string as rtspUrl', () => {
       const result = buildStreamUrl('');
-      const expected = `${mockBaseUrl}/stream.html?src=camera&mode=webrtc,mse,hls,mjpeg`;
 
-      expect(result).toBe(expected);
+      expect(result).toBe('');
     });
   });
 
-  describe('getStreamHTML', () => {
-    const mockStreamUrl = 'https://example.com/stream.html?src=test';
-
-    it('should return HTML string with stream URL in iframe', () => {
-      const result = getStreamHTML(mockStreamUrl);
-
-      expect(typeof result).toBe('string');
-      expect(result).toContain('<!DOCTYPE html>');
-      expect(result).toContain(`src="${mockStreamUrl}"`);
-      expect(result).toContain('<iframe');
-      expect(result).toContain('allow="camera; microphone; autoplay; fullscreen"');
-      expect(result).toContain('allowfullscreen');
-      expect(result).toContain('frameborder="0"');
+  describe('buildStreamHtmlUrl', () => {
+    it('should return empty string when no URL is provided', () => {
+      expect(buildStreamHtmlUrl()).toBe('');
+      expect(buildStreamHtmlUrl('')).toBe('');
     });
 
-    it('should include proper HTML structure', () => {
-      const result = getStreamHTML(mockStreamUrl);
+    it('should extract domain from wss:// URL and build stream.html URL', () => {
+      const wsUrl = `wss://avisaitest-nginx001.wpstories.org/api/ws?src=camera&token=abc123`;
+      const result = buildStreamHtmlUrl(wsUrl);
+      const expected = `${mockBaseUrl}/stream.html?src=camera&mode=webrtc,mse,hls,mjpeg&autoplay=true`;
 
-      expect(result).toContain('<html>');
-      expect(result).toContain('<head>');
-      expect(result).toContain('<body>');
-      expect(result).toContain('<meta charset="UTF-8">');
-      expect(result).toContain('<meta name="viewport"');
-      expect(result).toContain('<style>');
-      expect(result).toContain('<script>');
+      expect(result).toBe(expected);
     });
 
-    it('should include CSS styles for fullscreen display', () => {
-      const result = getStreamHTML(mockStreamUrl);
+    it('should extract domain from ws:// URL and build stream.html URL with http', () => {
+      const wsUrl = 'ws://localhost:8554/api/ws?src=mycam&token=xyz';
+      const result = buildStreamHtmlUrl(wsUrl);
 
-      expect(result).toContain('#stream-container');
-      expect(result).toContain('width: 100%');
-      expect(result).toContain('height: 100%');
-      expect(result).toContain('background: #000');
-      expect(result).toContain('object-fit: cover');
-      expect(result).toContain('border: none');
+      expect(result).toBe(
+        'http://localhost:8554/stream.html?src=mycam&mode=webrtc,mse,hls,mjpeg&autoplay=true'
+      );
     });
 
-    it('should include error handling script', () => {
-      const result = getStreamHTML(mockStreamUrl);
+    it('should default src to "camera" when src param is missing', () => {
+      const wsUrl = 'wss://example.com/api/ws?token=abc';
+      const result = buildStreamHtmlUrl(wsUrl);
 
-      expect(result).toContain("window.addEventListener('error'");
-      expect(result).toContain('e.preventDefault()');
-      expect(result).toContain("window.addEventListener('load'");
-      expect(result).toContain("console.log('Stream iframe loaded')");
+      expect(result).toBe(
+        'https://example.com/stream.html?src=camera&mode=webrtc,mse,hls,mjpeg&autoplay=true'
+      );
     });
 
-    it('should handle URLs with special characters', () => {
-      const specialUrl = 'https://example.com/stream.html?src=test&param=value&other=test%20space';
-      const result = getStreamHTML(specialUrl);
+    it('should encode special characters in src param', () => {
+      const wsUrl = 'wss://example.com/api/ws?src=camera/stream1&token=abc';
+      const result = buildStreamHtmlUrl(wsUrl);
 
-      expect(result).toContain(`src="${specialUrl}"`);
+      expect(result).toBe(
+        `https://example.com/stream.html?src=${encodeURIComponent('camera/stream1')}&mode=webrtc,mse,hls,mjpeg&autoplay=true`
+      );
     });
 
-    it('should include Content Security Policy meta tag', () => {
-      const result = getStreamHTML(mockStreamUrl);
+    it('should return empty string for invalid URL', () => {
+      const result = buildStreamHtmlUrl('not-a-valid-url');
 
-      expect(result).toContain('Content-Security-Policy');
-      expect(result).toContain('upgrade-insecure-requests');
-    });
-
-    it('should have proper iframe container structure', () => {
-      const result = getStreamHTML(mockStreamUrl);
-
-      expect(result).toContain('<div id="stream-container">');
-      expect(result).toContain('<iframe');
-      expect(result).toContain('</iframe>');
-      expect(result).toContain('</div>');
-    });
-
-    it('should include proper viewport meta tag for mobile', () => {
-      const result = getStreamHTML(mockStreamUrl);
-
-      expect(result).toContain('width=device-width');
-      expect(result).toContain('initial-scale=1.0');
-      expect(result).toContain('maximum-scale=1.0');
-      expect(result).toContain('user-scalable=no');
+      expect(result).toBe('');
     });
   });
 });

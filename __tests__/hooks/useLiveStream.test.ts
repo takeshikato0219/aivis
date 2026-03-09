@@ -486,45 +486,6 @@ describe('useLiveStream', () => {
     });
   });
 
-  describe('injected JavaScript', () => {
-    it('should generate JavaScript with correct heartbeat interval', () => {
-      const { result } = renderHook(() =>
-        useLiveStream({
-          heartbeatInterval: 5000,
-        })
-      );
-
-      const injectedJS = result.current.getInjectedJavaScript();
-
-      expect(injectedJS).toContain('heartbeatInterval = setInterval(sendHeartbeat, 5000)');
-      expect(injectedJS).toContain('window.onerror');
-      expect(injectedJS).toContain('window.ReactNativeWebView.postMessage');
-      expect(injectedJS).toContain('sendHeartbeat');
-      expect(injectedJS).toContain('monitorIframe');
-    });
-
-    it('should include error handling in injected JavaScript', () => {
-      const { result } = renderHook(() => useLiveStream());
-
-      const injectedJS = result.current.getInjectedJavaScript();
-
-      expect(injectedJS).toContain('window.onerror = function(msg, url, line, col, error)');
-      expect(injectedJS).toContain("console.error('Iframe error detected')");
-      expect(injectedJS).toContain("window.addEventListener('online'");
-      expect(injectedJS).toContain("window.addEventListener('offline'");
-    });
-
-    it('should include heartbeat monitoring in injected JavaScript', () => {
-      const { result } = renderHook(() => useLiveStream());
-
-      const injectedJS = result.current.getInjectedJavaScript();
-
-      expect(injectedJS).toContain('function sendHeartbeat()');
-      expect(injectedJS).toContain("type: 'heartbeat'");
-      expect(injectedJS).toContain('lastHeartbeatTime = Date.now()');
-    });
-  });
-
   describe('cleanup', () => {
     it('should clear all timers on cleanup', () => {
       const { result } = renderHook(() => useLiveStream());

@@ -1,6 +1,7 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
 import { Camera } from '@api/types/cameraTypes';
+import { MemberRelationship } from '@api/faceService';
 
 // ===== ROOT STACK =====
 export type RootStackParamList = {
@@ -15,6 +16,7 @@ export type AuthStackParamList = {
   ForgotPassword: undefined;
   ResetPassword: { token: string };
   VerifyEmail: { email: string };
+  Policy: { type: string };
 };
 
 // ===== APP STACK =====
@@ -37,8 +39,7 @@ export type AppStackParamList = {
   EditProfile: undefined;
   ChangePassword: undefined;
   DetectionZoneSetup: {
-    cameraId: string;
-    cameraSnapshot?: string;
+    camera: Camera;
   };
   ConnectDevice: undefined;
   PairingCode: {
@@ -57,11 +58,22 @@ export type AppStackParamList = {
   ConnectWifiHotspot: { wifi: any };
   NetworkSetup: { cameraAp: string };
   Setting: undefined;
-  FaceUpload: undefined;
+  FaceUpload: { type: string };
   ConnectionSuccessful: { cameraData: Camera };
-  SettingAI: { cameraData: Camera };
-  ListFace: undefined;
-  DetailFace: { memberId: string };
+  SettingAI: { camera: Camera };
+  ListFace: { type: string };
+  DetailFace: { memberId: string; relationships?: MemberRelationship[] };
+  AiDetectionRules: { camera: Camera };
+  WorkSchedule: {
+    camera: Camera;
+    ruleId: string;
+    title: string;
+  };
+  UploadDetectZone: {
+    camera: Camera;
+  };
+  ListNotificationCamera: { title: string; icon: string };
+  CustomerReport: { title: string; icon: string };
 };
 
 // ===== NAVIGATION PROPS =====
@@ -81,19 +93,11 @@ export type CameraLiveScreenNavigationProp = StackNavigationProp<AppStackParamLi
 export type CameraLiveScreenRouteProp = RouteProp<AppStackParamList, 'CameraLive'>;
 
 export type CameraSetupScreenNavigationProp = StackNavigationProp<AppStackParamList, 'CameraSetup'>;
-export type CameraSetupScreenRouteProp = RouteProp<AppStackParamList, 'CameraSetup'>;
-
-export type DetectionZoneSetupScreenNavigationProp = StackNavigationProp<
-  AppStackParamList,
-  'DetectionZoneSetup'
->;
-export type DetectionZoneSetupScreenRouteProp = RouteProp<AppStackParamList, 'DetectionZoneSetup'>;
 
 export type SetupCompleteScreenNavigationProp = StackNavigationProp<
   AppStackParamList,
   'SetupComplete'
 >;
-export type SetupCompleteScreenRouteProp = RouteProp<AppStackParamList, 'SetupComplete'>;
 
 export type ConnectDeviceScreenNavigationProp = CompositeNavigationProp<
   StackNavigationProp<AppStackParamList, 'ConnectDevice'>,
@@ -112,20 +116,17 @@ export type ConnectWifiHotspotRouteProp = RouteProp<AppStackParamList, 'ConnectW
 export type NetworkSetupNavigationProp = StackNavigationProp<AppStackParamList, 'NetworkSetup'>;
 export type NetworkSetupRouteProp = RouteProp<AppStackParamList, 'NetworkSetup'>;
 
-export type ConnectionSuccessfulScreenNavigationProp = StackNavigationProp<
-  AppStackParamList,
-  'ConnectionSuccessful'
->;
 export type ConnectionSuccessfulScreenRouteProp = RouteProp<
   AppStackParamList,
   'ConnectionSuccessful'
 >;
 
-export type SettingAIScreenNavigationProp = StackNavigationProp<AppStackParamList, 'SettingAI'>;
-export type SettingAIScreenRouteProp = RouteProp<AppStackParamList, 'SettingAI'>;
-
 export type DetailFaceNavigationProp = StackNavigationProp<AppStackParamList, 'DetailFace'>;
 export type DetailFaceRouteProp = RouteProp<AppStackParamList, 'DetailFace'>;
+
+export type WorkScheduleRouteProp = RouteProp<AppStackParamList, 'WorkSchedule'>;
+
+export type ListFaceRouteProp = RouteProp<AppStackParamList, 'ListFace'>;
 
 // ===== DECLARE GLOBAL =====
 declare global {

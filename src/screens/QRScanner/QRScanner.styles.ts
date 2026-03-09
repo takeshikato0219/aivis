@@ -268,6 +268,7 @@ export const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: 'rgba(0,255,170,0.3)',
+    marginTop: 10,
   },
   bluetoothIcon: {
     width: 56,
@@ -323,5 +324,11 @@ export const styles = StyleSheet.create({
     backgroundColor: COLORS['3E3E3E'],
     fontSize: isTablet() ? 25 : 19,
     height: isTablet() ? 70 : 56,
+  },
+  manualButtonDisabled: {
+    backgroundColor: '#BDBDBD',
+  },
+  manualButtonTextDisabled: {
+    color: '#888888',
   },
 });

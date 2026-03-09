@@ -23,18 +23,17 @@ export interface UseLiveStreamReturn {
   handleWebViewHttpError: (syntheticEvent: any) => void;
   handleManualRetry: () => void;
   handleWebViewMessage: (event: any) => void;
-  getInjectedJavaScript: () => string;
   cleanup: () => void;
 }
 
 const DEFAULT_CONFIG: Required<UseLiveStreamConfig> = {
   maxRetries: 5,
-  heartbeatInterval: 3000,
-  heartbeatTimeout: 10000,
+  heartbeatInterval: 10000,
+  heartbeatTimeout: 30000,
   retryBaseDelay: 2000,
   retryMaxDelay: 30000,
-  initialLoadingMin: 5000,
-  initialLoadingMax: 10000,
+  initialLoadingMin: 3000,
+  initialLoadingMax: 8000,
 };
 
 export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamReturn => {
@@ -88,16 +87,16 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   }, [heartbeatInterval, heartbeatTimeout]);
 
   const handleConnectionLost = useCallback(() => {
+    // Prevent multiple simultaneous calls
+    if (retryTimerRef.current) {
+      console.log('Retry already scheduled, skipping duplicate handleConnectionLost call');
+      return;
+    }
+
     // Clear heartbeat monitoring
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
-    }
-
-    // Clear existing retry timer
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
     }
 
     // Always set loading to false so overlays can show
@@ -124,6 +123,9 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
 
     // Schedule retry
     retryTimerRef.current = setTimeout(() => {
+      // Clear the timer ref so future handleConnectionLost calls can work
+      retryTimerRef.current = null;
+
       const newRetryCount = retryCountRef.current + 1;
       console.log(`Executing retry ${newRetryCount}/${maxRetries}`);
 
@@ -158,19 +160,21 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   }, [handleConnectionLost]);
 
   const handleWebViewLoad = useCallback(() => {
-    // Don't immediately set loading to false - wait for stream confirmation via heartbeat
-    // Only clear retry timers and start heartbeat monitoring
+    // Clear any pending retry timer on successful load
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
-      // Recovering from error - WebView loaded successfully
-      setConnectionStatus('connected');
-      setIsReconnecting(false);
     }
+
+    setConnectionStatus('connecting');
+    setIsLoading(true);
 
     // Reset retry count on successful load
     retryCountRef.current = 0;
     setRetryCount(0);
+
+    // Clear reconnecting state
+    setIsReconnecting(false);
 
     lastHeartbeatRef.current = Date.now();
     startHeartbeatMonitoring();
@@ -181,7 +185,6 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       setIsLoading((prev) => {
         if (prev && connectionStatus !== 'failed') {
           setConnectionStatus('connected');
-          setIsReconnecting(false);
           return false;
         }
         return prev;
@@ -238,240 +241,50 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
         const data = JSON.parse(event.nativeEvent.data);
 
         if (data.type === 'heartbeat') {
-          // Update last heartbeat time
           lastHeartbeatRef.current = Date.now();
-          // If still loading, mark as connected after receiving heartbeat
-          setIsLoading((prev) => {
-            if (prev) {
-              setConnectionStatus('connected');
-              setIsReconnecting(false);
-              retryCountRef.current = 0;
-              setRetryCount(0);
-              return false;
-            }
-            return prev;
-          });
-        } else if (data.type === 'streamReady' || data.type === 'playing') {
-          // Stream is confirmed playing
-          setIsLoading(false);
-          setConnectionStatus('connected');
-          setIsReconnecting(false);
-          retryCountRef.current = 0;
-          setRetryCount(0);
-          lastHeartbeatRef.current = Date.now();
-        } else if (data.type === 'streamError') {
-          // Stream error - trigger retry
-          console.warn('Stream error detected');
-          setIsLoading(false);
-          handleConnectionLost();
-        } else if (data.type === 'connection-lost') {
-          console.warn('Connection lost detected from WebView');
-          setIsLoading(false);
-          handleConnectionLost();
-        } else if (data.type === 'connection-restored') {
-          console.log('Connection restored');
-          setIsLoading(false);
-          setIsReconnecting(false);
-          retryCountRef.current = 0;
-          setRetryCount(0);
-          setConnectionStatus('connected');
-          lastHeartbeatRef.current = Date.now();
-        } else if (data.type === 'error') {
-          console.warn('WebView error:', data.message);
-          // Check if it's a connection-related error
-          if (
-            data.message &&
-            (data.message.includes('network') ||
-              data.message.includes('connection') ||
-              data.message.includes('failed') ||
-              data.message.includes('timeout'))
-          ) {
+          if (connectionStatus !== 'failed') {
+            setConnectionStatus('connected');
             setIsLoading(false);
-            handleConnectionLost();
+            setIsReconnecting(false);
           }
+          return;
         }
-      } catch (error) {
-        console.log('WebView message:', error);
+
+        if (data.type === 'playing' || data.type === 'connected') {
+          lastHeartbeatRef.current = Date.now();
+          setIsLoading(false);
+          setConnectionStatus('connected');
+          setIsReconnecting(false);
+          retryCountRef.current = 0;
+          setRetryCount(0);
+          return;
+        }
+
+        if (data.type === 'failed' || data.type === 'wsClose' || data.type === 'wsError') {
+          setIsLoading(false);
+          handleConnectionLost();
+          return;
+        }
+
+        if (data.type === 'error') {
+          // Có thể log error detail để debug RTC/MSE
+          console.warn('Player error:', data.message, data.detail);
+          setIsLoading(false);
+          handleConnectionLost();
+          return;
+        }
+
+        if (data.type === 'stalled') {
+          setIsLoading(false);
+          handleConnectionLost();
+          return;
+        }
+      } catch {
+        // ignore
       }
     },
-    [handleConnectionLost]
+    [handleConnectionLost, connectionStatus]
   );
-
-  const getInjectedJavaScript = useCallback((): string => {
-    return `
-      (function() {
-        // Log errors to React Native
-        window.onerror = function(msg, url, line, col, error) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'error',
-            message: msg,
-            url: url,
-            line: line
-          }));
-          return false;
-        };
-        
-        // Override console for debugging
-        const originalLog = console.log;
-        console.log = function(msg) {
-          originalLog(msg);
-          try {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'log',
-              message: String(msg)
-            }));
-          } catch(e) {}
-        };
-        
-        // Heartbeat monitoring
-        let heartbeatInterval = null;
-        let lastHeartbeatTime = Date.now();
-        let streamConfirmed = false;
-        
-        function sendHeartbeat() {
-          try {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'heartbeat',
-              timestamp: Date.now()
-            }));
-            lastHeartbeatTime = Date.now();
-          } catch(e) {
-            console.error('Failed to send heartbeat:', e);
-          }
-        }
-        
-        // Monitor video elements for stream status
-        function monitorVideoElements() {
-          const videos = document.querySelectorAll('video');
-          videos.forEach(function(video) {
-            video.addEventListener('playing', function() {
-              if (!streamConfirmed) {
-                streamConfirmed = true;
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'playing' }));
-              }
-            });
-            video.addEventListener('error', function() {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'streamError' }));
-            });
-            video.addEventListener('stalled', function() {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'stalled' }));
-            });
-            
-            // Check if video is already playing
-            if (!video.paused && video.readyState >= 2) {
-              if (!streamConfirmed) {
-                streamConfirmed = true;
-                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'playing' }));
-              }
-            }
-          });
-        }
-        
-        // Monitor iframe connection
-        function monitorIframe() {
-          const iframe = document.querySelector('iframe');
-          if (!iframe) {
-            console.warn('Iframe not found');
-            // Still send heartbeat to indicate page loaded
-            sendHeartbeat();
-            return;
-          }
-          
-          // Check if iframe is loaded
-          iframe.onload = function() {
-            console.log('Iframe loaded successfully');
-            sendHeartbeat();
-          };
-          
-          // Monitor iframe errors
-          iframe.onerror = function() {
-            console.error('Iframe error detected');
-            try {
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'connection-lost',
-                reason: 'iframe-error'
-              }));
-            } catch(e) {}
-          };
-          
-          // Try to access iframe content to check connection
-          try {
-            // Check if we can access iframe (may fail due to CORS)
-            const iframeWindow = iframe.contentWindow;
-            if (iframeWindow) {
-              // Iframe is accessible, connection seems OK
-              sendHeartbeat();
-            }
-          } catch(e) {
-            // CORS error is expected, but we can still monitor
-            console.log('Cannot access iframe content (CORS), but iframe exists');
-            sendHeartbeat();
-          }
-        }
-        
-        // Start monitoring when page loads
-        if (document.readyState === 'complete') {
-          monitorIframe();
-          monitorVideoElements();
-          // Send heartbeat every ${heartbeatInterval}ms
-          heartbeatInterval = setInterval(sendHeartbeat, ${heartbeatInterval});
-        } else {
-          window.addEventListener('load', function() {
-            monitorIframe();
-            monitorVideoElements();
-            heartbeatInterval = setInterval(sendHeartbeat, ${heartbeatInterval});
-          });
-        }
-        
-        // Timeout fallback - if no stream confirmed in 15 seconds, report error
-        setTimeout(function() {
-          if (!streamConfirmed) {
-            const videos = document.querySelectorAll('video');
-            let anyPlaying = false;
-            videos.forEach(function(video) {
-              if (!video.paused && video.readyState >= 2) {
-                anyPlaying = true;
-              }
-            });
-            
-            if (!anyPlaying && videos.length > 0) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'streamError', reason: 'timeout' }));
-            }
-          }
-        }, 15000);
-        
-        // Monitor network status
-        window.addEventListener('online', function() {
-          console.log('Network online');
-          try {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'connection-restored',
-              reason: 'network-online'
-            }));
-          } catch(e) {}
-        });
-        
-        window.addEventListener('offline', function() {
-          console.warn('Network offline');
-          try {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'connection-lost',
-              reason: 'network-offline'
-            }));
-          } catch(e) {}
-        });
-        
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', function() {
-          if (heartbeatInterval) {
-            clearInterval(heartbeatInterval);
-          }
-        });
-        
-        return true; // Required for injectedJavaScript
-      })();
-    `;
-  }, [heartbeatInterval]);
 
   const cleanup = useCallback(() => {
     if (retryTimerRef.current) {
@@ -557,7 +370,6 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     handleWebViewHttpError,
     handleManualRetry,
     handleWebViewMessage,
-    getInjectedJavaScript,
     cleanup,
   };
 };

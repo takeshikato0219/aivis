@@ -1,4 +1,4 @@
-import { StyleSheet, Platform, StatusBar } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { COLORS, FONTS } from '@constants/theme';
 import { isTablet, scale } from '@utils/responsive';
 
@@ -29,7 +29,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight || 0,
+    paddingTop: 10,
     height: 56,
   },
 
@@ -53,7 +53,6 @@ export const styles = StyleSheet.create({
     fontSize: isTablet() ? 35 : 20,
     fontWeight: FONTS.weights.medium,
     color: COLORS.background,
-    textAlign: 'center',
   },
 
   card: {
@@ -156,9 +155,9 @@ export const styles = StyleSheet.create({
   },
 
   rowFront: {
-    borderRadius: 12,
+    borderRadius: 22,
     padding: 16,
-    minHeight: 72,
+    minHeight: 70,
     marginHorizontal: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -166,6 +165,7 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
 
   rowBack: {

@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'http://124.197.19.62:7743/api/v1';
+export const API_BASE_URL = 'https://avis-api-dev.unlimited.io.vn/api/v1';
 
 export const API_ENDPOINTS = {
   // Authentication
@@ -15,16 +15,24 @@ export const API_ENDPOINTS = {
     CHANGE_PASSWORD: '/auth/change-password',
     GOOGLE_LOGIN: '/oauth/google/login',
     LINE_LOGIN: '/oauth/line/login',
+    LINE_LINK: '/oauth/line/link',
   },
   // Cameras
   CAMERAS: '/cameras',
   FACILITIES: '/facilities',
+  CAMERAS_DETECTION_TYPE: '/camerasdetection-types',
   // Face
   MEMBER_RELATIONSHIPS: '/member-relationships',
   MEMBERS: '/members',
 
   // Status Camera
   STATUSES: '/statuses',
+
+  // Rule Master List
+  RULES_MASTER: '/rules-master',
+
+  //policies
+  POLICIES: '/policies',
 };
 
 export type ApiEndpoints = typeof API_ENDPOINTS;

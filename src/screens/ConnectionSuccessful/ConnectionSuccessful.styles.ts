@@ -8,16 +8,17 @@ export const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#0A0E1A',
   },
   contentContainer: {
     paddingBottom: 20,
+    paddingTop: 20,
   },
   logoContainer: {
     alignItems: 'center',
   },
   successBadgeContainer: {
     alignItems: 'center',
-    paddingTop: 20,
     paddingBottom: 20,
   },
   successText: {
@@ -161,7 +162,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 20,
     borderRadius: 22,
-    marginTop: -30,
+    marginTop: 10,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.5)',
     shadowColor: '#000',
@@ -261,7 +262,6 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 20,
-    backgroundColor: '#0A0E1A',
   },
   primaryButton: {
     flexDirection: 'row',

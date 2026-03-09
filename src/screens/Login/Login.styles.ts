@@ -9,6 +9,7 @@ export const styles = StyleSheet.create({
   },
   keyboardView: {
     flex: 1,
+    marginBottom: 40,
   },
   scrollContent: {
     flexGrow: 1,
@@ -116,33 +117,27 @@ export const styles = StyleSheet.create({
     marginBottom: 5,
     fontSize: isTablet() ? 25 : 16,
   },
-  socialGoogleButton: {
-    backgroundColor: COLORS.background,
+  socialButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 10,
+  },
+  socialButton: {
+    flex: 1,
+    height: 48,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  socialGoogleButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   socialLineButton: {
-    backgroundColor: COLORS.background,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    marginVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    backgroundColor: '#06C755',
   },
   socialButtonContent: {
     flexDirection: 'row',
@@ -188,6 +183,11 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
   },
   webLoginButton: {
-    backgroundColor: '#00C300', // LINE green color
+    backgroundColor: '#00C300',
+  },
+  iconLineBottom: {
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

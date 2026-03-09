@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   StatusBar,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useAppSelector } from '@redux/store';
 import { useNavigation } from '@react-navigation/native';
@@ -34,6 +35,9 @@ import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
 import { useErrorHandler } from '@hooks/useErrorHandler';
 import CameraIcon from '@assets/png/camera.png';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import RNFS from 'react-native-fs';
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -55,6 +59,8 @@ const Home = () => {
   const [isLoadingCameras, setIsLoadingCameras] = useState(false);
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
   const [hasCamerasInAllTab, setHasCamerasInAllTab] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastFrameUris, setLastFrameUris] = useState<{ [cameraId: string]: string | null }>({});
 
   // USING COMMON HOOKS
   const { syncUserData } = useUserSync();
@@ -72,52 +78,55 @@ const Home = () => {
     }
   }, [isDrawerOpen, syncUserData]);
 
-  const fetchCameraList = async (append: boolean = false, facilityId: string | null = null) => {
-    if (!append) {
-      setIsLoadingCameras(true);
-    }
-
-    try {
-      const pageToFetch = append ? currentPageRef.current + 1 : 1;
-
-      const response = await cameraService.getCameras({
-        sort_by: 'created_at',
-        sort_order: 'desc',
-        page: pageToFetch,
-        per_page: 20,
-        facility_id: facilityId || undefined,
-      });
-      const newData = response.data || [];
-      if (facilityId === null) {
-        setHasCamerasInAllTab(newData.length > 0);
-      }
-
-      if (append) {
-        setCameraList((prev) => [...prev, ...newData]);
-        currentPageRef.current = pageToFetch;
-      } else {
-        setCameraList(newData);
-        currentPageRef.current = 1;
-        setHasMore(true);
-      }
-
-      if (response.total_pages !== undefined) {
-        setHasMore(pageToFetch < response.total_pages);
-      } else {
-        setHasMore(newData.length >= 20);
-      }
-    } catch (error: any) {
-      console.error('Error fetching camera list:', error);
-      handleError(error, false);
+  const fetchCameraList = useCallback(
+    async (append: boolean = false, facilityId: string | null = null) => {
       if (!append) {
-        setCameraList([]);
+        setIsLoadingCameras(true);
       }
-    } finally {
-      if (!append) {
-        setIsLoadingCameras(false);
+
+      try {
+        const pageToFetch = append ? currentPageRef.current + 1 : 1;
+
+        const response = await cameraService.getCameras({
+          sort_by: 'created_at',
+          sort_order: 'desc',
+          page: pageToFetch,
+          per_page: 20,
+          facility_id: facilityId || undefined,
+        });
+        const newData = response.data || [];
+        if (facilityId === null) {
+          setHasCamerasInAllTab(newData.length > 0);
+        }
+
+        if (append) {
+          setCameraList((prev) => [...prev, ...newData]);
+          currentPageRef.current = pageToFetch;
+        } else {
+          setCameraList(newData);
+          currentPageRef.current = 1;
+          setHasMore(true);
+        }
+
+        if (response.total_pages !== undefined) {
+          setHasMore(pageToFetch < response.total_pages);
+        } else {
+          setHasMore(newData.length >= 20);
+        }
+      } catch (error: any) {
+        console.error('Error fetching camera list:', error);
+        handleError(error, false);
+        if (!append) {
+          setCameraList([]);
+        }
+      } finally {
+        if (!append) {
+          setIsLoadingCameras(false);
+        }
       }
-    }
-  };
+    },
+    [handleError]
+  );
 
   const fetchWorkflowStatuses = async () => {
     try {
@@ -177,6 +186,46 @@ const Home = () => {
     navigation.navigate('ConnectDevice' as never);
   };
 
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchCameraList(false, selectedFacilityId);
+    setIsRefreshing(false);
+  }, [fetchCameraList, selectedFacilityId]);
+
+  // Load last frame URIs for all cameras
+  const loadLastFrames = useCallback(async (cameras: Camera[]) => {
+    const uris: { [cameraId: string]: string | null } = {};
+    for (const camera of cameras) {
+      try {
+        const savedPath = await AsyncStorage.getItem(`camera_last_frame_${camera.id}`);
+        if (savedPath) {
+          const exists = await RNFS.exists(savedPath);
+          if (exists) {
+            uris[camera.id] = `file://${savedPath}?t=${Date.now()}`;
+          } else {
+            uris[camera.id] = null;
+          }
+        } else {
+          uris[camera.id] = null;
+        }
+      } catch {
+        uris[camera.id] = null;
+      }
+    }
+    setLastFrameUris(uris);
+  }, []);
+
+  // Load last frames when cameraList changes or Home regains focus
+  useFocusEffect(
+    useCallback(() => {
+      if (cameraList.length > 0) {
+        loadLastFrames(cameraList);
+      } else {
+        setLastFrameUris({});
+      }
+    }, [cameraList, loadLastFrames])
+  );
+
   const renderCameraContent = () => {
     if (isLoadingCameras) {
       return (
@@ -192,6 +241,7 @@ const Home = () => {
           style={styles.cameraListScroll}
           contentContainerStyle={styles.paddingScrollView}
           showsVerticalScrollIndicator={true}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
           onScroll={({ nativeEvent }) => {
             const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
             const paddingToBottom = 20;
@@ -215,29 +265,34 @@ const Home = () => {
               statusText.toLowerCase().includes('online') ||
               statusText.toLowerCase().includes('オンライン');
 
+            const lastFrameUri = lastFrameUris[camera.id] || null;
+
             return (
-              <View style={styles.card} key={camera.id}>
-                <View style={styles.videoWrapper}>
-                  <Image source={RetangleImage} style={styles.cardImage} />
-                </View>
-                <View style={styles.cardBadge}>
-                  <View
-                    style={[
-                      styles.badgeDot,
-                      { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
-                    ]}
-                  />
-                  <Text style={styles.badgeText}>{statusText}</Text>
-                </View>
-                <TouchableOpacity onPress={() => goToDetail(camera)}>
+              <TouchableOpacity onPress={() => goToDetail(camera)} key={camera.id}>
+                <View style={styles.card}>
+                  <View style={styles.videoWrapper}>
+                    <Image
+                      source={lastFrameUri ? { uri: lastFrameUri, cache: 'reload' } : RetangleImage}
+                      style={styles.cardImage}
+                    />
+                  </View>
+                  <View style={styles.cardBadge}>
+                    <View
+                      style={[
+                        styles.badgeDot,
+                        { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
+                      ]}
+                    />
+                    <Text style={styles.badgeText}>{statusText}</Text>
+                  </View>
                   <View style={styles.rowCenter}>
                     <Text style={styles.cardText}>{camera.name}</Text>
                     <View style={styles.iconCircle}>
                       <MoveRightIconCircle />
                     </View>
                   </View>
-                </TouchableOpacity>
-              </View>
+                </View>
+              </TouchableOpacity>
             );
           })}
           {isLoadingMore && (
@@ -268,6 +323,13 @@ const Home = () => {
       </View>
     );
   };
+
+  // Add useFocusEffect to reload camera list when Home regains focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchCameraList(false, selectedFacilityId);
+    }, [selectedFacilityId, fetchCameraList])
+  );
 
   return (
     <View style={styles.wrapper}>

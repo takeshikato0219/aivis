@@ -359,8 +359,10 @@ const Login: React.FC = () => {
     }
   };
 
-  // Conditional container: ScrollView when screen is small or in landscape
-  // iPhone 7/8 has height ~667px, iPhone SE ~568px
+  const gotoPolicy = (type: string) => {
+    navigation.navigate('Policy', { type });
+  };
+
   const isSmallScreen = responsive.height < 700;
   const shouldUseScrollView = responsive.isLandscape || isSmallScreen;
   const Container = shouldUseScrollView ? ScrollView : View;
@@ -468,33 +470,33 @@ const Login: React.FC = () => {
                     isEnabled={isBiometricEnabled}
                   />
                 </View>
-                <View>
+                <View style={styles.socialButtonRow}>
                   <TouchableOpacity
-                    style={[styles.socialGoogleButton, isLoading && styles.disabledButton]}
+                    style={[
+                      styles.socialButton,
+                      styles.socialGoogleButton,
+                      isLoading && styles.disabledButton,
+                    ]}
                     onPress={handleGoogleLogin}
                     disabled={isLoading}
                     testID="google-login-button"
                   >
                     <View style={styles.socialButtonContent}>
                       <GoogleIconComponent />
-                      <Text style={[styles.socialButtonText, isLoading && styles.disabledText]}>
-                        {t('auth.signInWithGoogle')}
-                      </Text>
                     </View>
                   </TouchableOpacity>
-                </View>
-                <View>
                   <TouchableOpacity
-                    style={[styles.socialLineButton, isLoading && styles.disabledButton]}
+                    style={[
+                      styles.socialButton,
+                      styles.socialLineButton,
+                      isLoading && styles.disabledButton,
+                    ]}
                     onPress={handleLineLogin}
                     disabled={isLoading}
                     testID="line-login-button"
                   >
                     <View style={styles.socialButtonContent}>
                       <LineIconComponent />
-                      <Text style={[styles.socialButtonText, isLoading && styles.disabledText]}>
-                        {t('auth.signInWithLine')}
-                      </Text>
                     </View>
                   </TouchableOpacity>
                 </View>
@@ -507,6 +509,17 @@ const Login: React.FC = () => {
             <Text style={styles.registerButton}>{t('auth.dontHaveAnAccountYet')}</Text>
             <TouchableOpacity onPress={handleRegister}>
               <Text style={styles.labelStyleForgotText}>{t('auth.register')}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.styleCreateAcc}>
+            <TouchableOpacity onPress={() => gotoPolicy('terms')}>
+              <Text style={styles.labelStyleForgotText}>{t('auth.termsOfUse')}</Text>
+            </TouchableOpacity>
+            <View style={styles.iconLineBottom}>
+              <Text>-</Text>
+            </View>
+            <TouchableOpacity onPress={() => gotoPolicy('privacy')}>
+              <Text style={styles.labelStyleForgotText}>{t('auth.privacyPolicy')}</Text>
             </TouchableOpacity>
           </View>
         </View>

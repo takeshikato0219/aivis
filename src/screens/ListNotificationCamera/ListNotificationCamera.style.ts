@@ -1,0 +1,237 @@
+import { StyleSheet } from 'react-native';
+import { isTablet } from '@utils/responsive';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 40,
+    paddingBottom: 16,
+    backgroundColor: '#000',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  headerText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    marginLeft: 5,
+  },
+  placeholder: {
+    width: 32,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 16,
+    alignSelf: 'stretch',
+    width: 'auto',
+    marginBottom: 20,
+  },
+  emptyIcon: {
+    marginBottom: 16,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  dateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#161A21',
+    borderRadius: 64,
+    borderWidth: 2,
+    borderColor: '#252f3a',
+    marginHorizontal: 24,
+    width: 170,
+    alignSelf: 'flex-start',
+    shadowColor: '#273650',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 20,
+  },
+  dateIconBtn: {
+    paddingHorizontal: 8,
+  },
+  dateTextBtn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  dateText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  notificationList: {
+    flex: 1,
+  },
+  notificationItem: {
+    marginHorizontal: 16,
+    marginVertical: 4,
+    borderRadius: 8,
+    padding: 12,
+  },
+  itemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  textContent: {
+    flex: 1,
+    marginRight: 12,
+  },
+  notificationTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  notificationDate: {
+    color: '#666',
+    fontSize: 12,
+  },
+  thumbnailContainer: {
+    position: 'relative',
+  },
+  thumbnail: {
+    width: 80,
+    height: 60,
+    borderRadius: 6,
+    backgroundColor: '#333',
+  },
+  playButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -8 }, { translateY: -8 }],
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoPlaceholder: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  videoPlayer: {
+    width: '100%',
+    height: 260,
+    backgroundColor: '#000',
+    borderRadius: 8,
+  },
+  videoText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+  },
+  videoSubtext: {
+    color: '#666',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  videoFullContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+  videoFullPlayer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: '#000',
+    alignSelf: 'stretch',
+  },
+  buttonIcon: {
+    width: isTablet() ? 50 : 46,
+    height: isTablet() ? 50 : 46,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarModalContent: {
+    backgroundColor: '#222',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    width: '90%',
+    maxWidth: 400,
+  },
+  calendarStyle: {
+    borderRadius: 12,
+    width: '100%',
+  },
+  closeCalendarBtn: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    backgroundColor: '#2196f3',
+    borderRadius: 8,
+  },
+  closeCalendarText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  backgroundImage: {
+    flex: 1,
+    marginLeft: 15,
+    marginRight: 15,
+  },
+  contentAboveBg: {
+    flex: 1,
+    zIndex: 1,
+    backgroundColor: 'transparent',
+  },
+  noDataContainer: {
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  noDataText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  relativeContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  flex1: {
+    flex: 1,
+  },
+  dateSectionWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
+  imageStyle: {
+    width: '100%',
+    height: '100%',
+  },
+});

@@ -18,6 +18,7 @@ require_relative '../node_modules/react-native-permissions/scripts/setup'
 
 setup_permissions([
   'Camera',
+  'Microphone',
   'PhotoLibrary',
   'PhotoLibraryAddOnly'
 ])

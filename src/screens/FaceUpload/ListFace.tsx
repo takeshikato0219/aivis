@@ -1,14 +1,25 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  TouchableWithoutFeedback,
+  Animated,
+  Dimensions,
+} from 'react-native';
 import { styles } from './FaceUpload.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import faceService, { Member } from '@api/faceService';
+import faceService, { Member, MemberRelationship } from '@api/faceService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AppStackParamList } from '@navigation/types';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 const ListFace = () => {
   const navigation = useNavigation<StackNavigationProp<AppStackParamList>>();
@@ -16,12 +27,15 @@ const ListFace = () => {
 
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [relationships, setRelationships] = useState<MemberRelationship[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
   const fetchMembers = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await faceService.getMembers();
-      console.log(response);
       setMembers(response.data);
     } catch (error) {
       console.error('Failed to fetch members:', error);
@@ -30,27 +44,84 @@ const ListFace = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const fetchRelationships = async () => {
+      try {
+        const response = await faceService.getMemberRelationships();
+        setRelationships(response);
+      } catch (error) {
+        console.error('Failed to fetch relationships:', error);
+      }
+    };
+    fetchRelationships();
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       fetchMembers();
     }, [fetchMembers])
   );
 
-  const goToFaceUpload = () => {
-    navigation.navigate('FaceUpload' as never);
+  const openModal = () => {
+    setShowModal(true);
+    Animated.parallel([
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
-  const renderMemberItem = ({ item }: { item: Member }) => (
-    <TouchableOpacity
-      style={styles.memberItem}
-      onPress={() => navigation.navigate('DetailFace', { memberId: item.id })}
-    >
-      <View style={styles.memberContent}>
-        <Icon name="face-recognition" size={24} color="#00ADD4" />
-        <Text style={styles.memberName}>{item.name}</Text>
-      </View>
-      <Icon name="chevron-right" size={24} color="#888" />
-    </TouchableOpacity>
+  const closeModal = () => {
+    Animated.parallel([
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_HEIGHT,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowModal(false);
+    });
+  };
+
+  const handleTakePhoto = (type: string) => {
+    closeModal();
+    navigation.navigate('FaceUpload', { type: type });
+  };
+
+  const renderMemberItem = useCallback(
+    ({ item }: { item: Member }) => {
+      const relationship = relationships.find((rel) => rel.id === item.relationship_type_id);
+      return (
+        <TouchableOpacity
+          style={styles.memberItem}
+          onPress={() => navigation.navigate('DetailFace', { memberId: item.id, relationships })}
+        >
+          <View style={styles.memberContent}>
+            <Icon name="face-recognition" size={24} color="#00ADD4" />
+            <View>
+              <Text style={styles.memberName}>{item.name}</Text>
+              {relationship && (
+                <Text style={styles.memberRelationship}>{relationship.name_trans}</Text>
+              )}
+            </View>
+          </View>
+          <Icon name="chevron-right" size={24} color="#888" />
+        </TouchableOpacity>
+      );
+    },
+    [navigation, relationships]
   );
 
   return (
@@ -63,11 +134,70 @@ const ListFace = () => {
           <View style={styles.viewTitle}>
             <Text style={styles.headerTitle}>{t('listFace.listFace')}</Text>
           </View>
-          <TouchableOpacity onPress={goToFaceUpload}>
+          <TouchableOpacity onPress={openModal}>
             <Icon name="plus" size={30} color="#fff" />
           </TouchableOpacity>
         </View>
-
+        {showModal && (
+          <View style={styles.modalContainer} pointerEvents="box-none">
+            <TouchableWithoutFeedback onPress={closeModal}>
+              <Animated.View style={[styles.styleBackdrop, { opacity: opacityAnim }]} />
+            </TouchableWithoutFeedback>
+            <Animated.View
+              style={[styles.modalContent, { transform: [{ translateY: slideAnim }] }]}
+              pointerEvents="box-none"
+            >
+              {/* Drag indicator */}
+              <View style={styles.dragIndicator} />
+              {/* Header */}
+              <View style={styles.headerModal}>
+                <Text style={styles.titleModal}>{t('listFace.selectFunction')}</Text>
+                <TouchableOpacity onPress={closeModal}>
+                  <Icon name="close" size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
+              {/* Options */}
+              <View style={styles.styleOption}>
+                <TouchableOpacity
+                  style={styles.btnTakePhoto}
+                  onPress={() => handleTakePhoto('capture')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.viewTakePhoto}>
+                    <Icon name="camera" size={28} color="#00ADD4" />
+                  </View>
+                  <View style={styles.modalFlex}>
+                    <Text style={styles.textTakePhoto}>{t('listFace.takePhoto')}</Text>
+                  </View>
+                  <Icon name="chevron-right" size={24} color="#BBBBBB" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.btnUploadPhoto}
+                  onPress={() => handleTakePhoto('upload')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.viewBtnUploadPhoto}>
+                    <Icon name="image" size={28} color="#00ADD4" />
+                  </View>
+                  <View style={styles.modalFlex}>
+                    <Text style={styles.textUploadPhoto}>
+                      {t('listFace.uploadPhotoFromLibrary')}
+                    </Text>
+                  </View>
+                  <Icon name="chevron-right" size={24} color="#BBBBBB" />
+                </TouchableOpacity>
+              </View>
+              {/* Cancel Button */}
+              <View style={styles.viewCancel}>
+                <TouchableOpacity style={styles.btnCancel} onPress={closeModal} activeOpacity={0.7}>
+                  <Text style={styles.textCancel}>
+                    {t('register.cancel') || t('listFace.close')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </View>
+        )}
         {/* Members List */}
         <View style={styles.listContainer}>
           {isLoading ? (

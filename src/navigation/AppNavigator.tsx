@@ -27,6 +27,11 @@ import ConnectionSuccessful from '@screens/ConnectionSuccessful/ConnectionSucces
 import SettingAI from '@screens/SettingAI/SettingAI';
 import ListFace from '@screens/FaceUpload/ListFace';
 import DetailFace from '@screens/FaceUpload/DetailFace';
+import AiDetectionRules from '@screens/AiDetectionRules/AiDetectionRules';
+import WorkSchedule from '@screens/WorkSchedule/WorkSchedule';
+import UploadDetectZone from '@screens/DetectionZoneSetup/UploadDetectZone';
+import ListNotificationCamera from '@screens/ListNotificationCamera/ListNotificationCamera';
+import CustomerReport from '@screens/CustomerReport/CustomerReport';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -131,6 +136,7 @@ const AppNavigator = () => {
           component={DetectionZoneSetup}
           options={{
             headerShown: false,
+            gestureEnabled: false,
           }}
         />
         <Stack.Screen
@@ -148,15 +154,16 @@ const AppNavigator = () => {
           }}
         />
         <Stack.Screen
-          name="ConnectWifiHotspot"
-          component={ConnectWifiHotspot}
+          name="NetworkSetup"
+          component={NetworkSetup}
           options={{
             headerShown: false,
+            gestureEnabled: false,
           }}
         />
         <Stack.Screen
-          name="NetworkSetup"
-          component={NetworkSetup}
+          name="ConnectWifiHotspot"
+          component={ConnectWifiHotspot}
           options={{
             headerShown: false,
           }}
@@ -200,6 +207,41 @@ const AppNavigator = () => {
         <Stack.Screen
           name="DetailFace"
           component={DetailFace}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="AiDetectionRules"
+          component={AiDetectionRules}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="WorkSchedule"
+          component={WorkSchedule}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="UploadDetectZone"
+          component={UploadDetectZone}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ListNotificationCamera"
+          component={ListNotificationCamera}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="CustomerReport"
+          component={CustomerReport}
           options={{
             headerShown: false,
           }}

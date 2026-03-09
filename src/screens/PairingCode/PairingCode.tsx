@@ -9,6 +9,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -20,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import BackIcon from '@assets/svg/icon-back.svg';
 import ItemCodeBackground from '@assets/png/pairing-code.png';
 import { jetsonBLEService } from '@/services/jetsonBLEService';
+import { useJetsonBLE } from '@hooks/useJetsonBLE';
 
 const PairingCode: React.FC = () => {
   const navigation = useNavigation<PairingCodeScreenNavigationProp>();
@@ -28,17 +30,15 @@ const PairingCode: React.FC = () => {
   const isWifi = params?.isWifi;
   const defaultCode = params?.pairingCode || '';
   const { t } = useTranslation();
-  const [codes, setCodes] = useState(() =>
-    Array(6)
-      .fill('')
-      .map((_, idx) => defaultCode[idx]?.toUpperCase() || '')
-  );
+  const [code, setCode] = useState(() => defaultCode.toUpperCase());
 
   const inputRefs = useRef<Array<React.RefObject<TextInput | null>>>(
     Array.from({ length: 6 }, () => React.createRef<TextInput>())
   ).current;
 
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { connect } = useJetsonBLE();
 
   const handleGoBack = () => {
     void jetsonBLEService.disconnect();
@@ -48,28 +48,49 @@ const PairingCode: React.FC = () => {
   const handleChange = (i: number, v: string) => {
     v = v.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     if (v.length > 1) v = v.slice(0, 1);
-    const copy = [...codes];
-    copy[i] = v;
-    setCodes(copy);
-
+    let newCode = code.split('');
+    newCode[i] = v;
+    setCode(newCode.join('').slice(0, 6));
     if (v && i < 5) {
       inputRefs[i + 1]?.current?.focus();
     }
   };
 
-  const handleSubmit = () => {
-    if (codes.some((val) => !val)) {
+  const handleSubmit = async () => {
+    if (code.length !== 6) return;
+
+    setLoading(true);
+    setError('');
+
+    const result = await connect(device as any, code);
+    if (!result || !result.success) {
+      if (result?.reason === 'INVALID_PIN') {
+        setError('Incorrect PIN');
+      } else {
+        setError('Connection failed');
+      }
+
+      setLoading(false);
       return;
     }
-    setError('');
-    // Navigate to NetworkSetup with camera info
+
     navigation.navigate('NetworkSetup', {
       cameraAp: device?.name || device?.localName || 'BLE Camera',
     });
+
+    setLoading(false);
   };
 
   return (
     <View style={styles.container}>
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContent}>
+            <ActivityIndicator size="large" color="#38E9FF" />
+            <Text style={styles.loadingText}>{t('bluetoothScreen.connecting')}</Text>
+          </View>
+        </View>
+      )}
       <ImageBackground
         source={HomeBackgroundImage}
         style={styles.backgroundImage}
@@ -82,7 +103,7 @@ const PairingCode: React.FC = () => {
             <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
               <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('pairingCode.enterPairingCode')}</Text>
+            <Text style={styles.headerTitle}>{t('pairingCode.pairingCode')}</Text>
           </View>
 
           {/* Scrollable Content - takes remaining space */}
@@ -106,19 +127,20 @@ const PairingCode: React.FC = () => {
               <Text style={styles.instruction}>{t('pairingCode.alphanumericCode')}</Text>
 
               <View style={styles.codeInputsRow}>
-                {codes.map((value, idx) => (
+                {[0, 1, 2, 3, 4, 5].map((idx) => (
                   <TextInput
                     key={idx}
                     ref={inputRefs[idx]}
-                    value={value}
+                    value={code[idx] || ''}
                     maxLength={1}
                     style={styles.codeInput}
                     autoCapitalize="characters"
+                    keyboardType="numeric"
                     placeholder="-"
                     placeholderTextColor="#384150"
                     onChangeText={(v) => handleChange(idx, v)}
                     onKeyPress={(e) => {
-                      if (e.nativeEvent.key === 'Backspace' && !codes[idx] && idx > 0) {
+                      if (e.nativeEvent.key === 'Backspace' && !code[idx] && idx > 0) {
                         inputRefs[idx - 1]?.current?.focus();
                       }
                     }}
@@ -145,14 +167,21 @@ const PairingCode: React.FC = () => {
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.pairBtn, codes.some((val) => !val) && styles.pairBtnDisabled]}
+                  style={[
+                    styles.pairBtn,
+                    code.length !== 6 || code.split('').some((val) => !val)
+                      ? styles.pairBtnDisabled
+                      : null,
+                  ]}
                   onPress={handleSubmit}
-                  disabled={codes.some((val) => !val)}
+                  disabled={code.length !== 6 || code.split('').some((val) => !val)}
                 >
                   <Text
                     style={[
                       styles.pairBtnText,
-                      codes.some((val) => !val) && styles.pairBtnTextDisabled,
+                      code.length !== 6 || code.split('').some((val) => !val)
+                        ? styles.pairBtnTextDisabled
+                        : null,
                     ]}
                   >
                     {t('pairingCode.pairDevice')}

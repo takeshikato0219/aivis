@@ -15,8 +15,10 @@ export interface User {
   name: string;
   phone: string | null;
   line_user_id?: string | null;
+  line_display_name?: string | null;
   is_admin?: boolean;
   is_active?: boolean;
+  has_followed_bot?: boolean;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;

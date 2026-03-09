@@ -312,4 +312,11 @@ export const styles = StyleSheet.create({
     backgroundColor: '#2A3C58',
     width: '100%',
   },
+  colorRescan: {
+    color: COLORS.card,
+  },
+  textLanStyle: {
+    color: COLORS.card,
+    marginTop: 16,
+  },
 });

@@ -117,12 +117,6 @@ export const styles = StyleSheet.create({
   unsubscribeButton: {
     backgroundColor: '#FF6B6B',
   },
-  openAccountButton: {
-    backgroundColor: 'rgba(0, 173, 212, 0.8)',
-    borderWidth: 1,
-    borderColor: COLORS.background,
-    display: 'none',
-  },
   buttonText: {
     color: 'white',
     fontSize: 16,
@@ -145,5 +139,12 @@ export const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     marginLeft: 12,
+  },
+  lineStyle: {
+    color: '#FFF',
+    fontSize: 16,
+  },
+  marginLine: {
+    marginTop: 8,
   },
 });

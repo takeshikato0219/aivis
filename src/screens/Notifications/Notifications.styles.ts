@@ -1,4 +1,4 @@
-import { StyleSheet, Platform, StatusBar } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { COLORS, FONTS } from '@constants/theme';
 import { isTablet } from '@utils/responsive';
 
@@ -48,7 +48,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight || 0,
+    paddingTop: 10,
+    marginBottom: 10,
     height: 56,
   },
 

@@ -7,6 +7,9 @@ import {
   GetCamerasResponse,
   GetWorkflowStatusesResponse,
   StatusCamera,
+  LiveStreamUrlResponse,
+  RuleMasterListApiResponse,
+  WorkScheduleApiResponse,
 } from './types/cameraTypes';
 
 class CameraService {
@@ -18,16 +21,11 @@ class CameraService {
     const requestBody: Record<string, string> = {};
     if (data.name !== undefined) requestBody.name = data.name;
     if (data.status_id !== undefined) requestBody.status_id = data.status_id;
+    if (data.user_id !== undefined) requestBody.user_id = data.user_id;
     if (data.description !== undefined) requestBody.description = data.description;
-
     const response = await axiosInstance.patch<RegisterCameraResponse>(
       `${API_ENDPOINTS.CAMERAS}/${data.id}`,
-      requestBody,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
+      requestBody
     );
 
     return response.data;
@@ -59,6 +57,42 @@ class CameraService {
 
   async updateStatus(): Promise<StatusCamera> {
     const response = await axiosInstance.get<StatusCamera>(API_ENDPOINTS.STATUSES);
+    return response.data;
+  }
+
+  async getLiveStreamUrl(cameraId: string): Promise<LiveStreamUrlResponse> {
+    const response = await axiosInstance.get<LiveStreamUrlResponse>(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}/livestream`
+    );
+    return response.data;
+  }
+
+  async getRulesForCamera(cameraId: string): Promise<RuleMasterListApiResponse> {
+    const response = await axiosInstance.get(`${API_ENDPOINTS.CAMERAS}/${cameraId}/rules`);
+    return response.data;
+  }
+
+  async deleteCamera(cameraId: string): Promise<GetWorkflowStatusesResponse> {
+    const response = await axiosInstance.delete(`${API_ENDPOINTS.CAMERAS}/${cameraId}`);
+    return response.data;
+  }
+
+  async getWorkScheduleForRule(cameraId: string, ruleId: string): Promise<WorkScheduleApiResponse> {
+    const response = await axiosInstance.get(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}/rules/${ruleId}`
+    );
+    return response.data;
+  }
+
+  async updateWorkScheduleForRule(
+    cameraId: string,
+    ruleId: string,
+    scheduleData: { [key: string]: any }
+  ): Promise<WorkScheduleApiResponse> {
+    const response = await axiosInstance.patch(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}/rules/${ruleId}`,
+      scheduleData
+    );
     return response.data;
   }
 }

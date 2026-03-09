@@ -74,18 +74,6 @@ const Notifications = () => {
             </View>
           </View>
           <View style={styles.content}>
-            {/* Header */}
-            {/*<Card style={styles.headerCard} elevation={2}>*/}
-            {/*  <Card.Content>*/}
-            {/*    <Text variant="headlineSmall" style={styles.title}>*/}
-            {/*      Notifications*/}
-            {/*    </Text>*/}
-            {/*    <Text variant="bodyMedium" style={styles.subtitle}>*/}
-            {/*      {unreadCount} unread*/}
-            {/*    </Text>*/}
-            {/*  </Card.Content>*/}
-            {/*</Card>*/}
-
             <Divider />
 
             {/* List */}

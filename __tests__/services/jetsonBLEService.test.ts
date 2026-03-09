@@ -320,6 +320,7 @@ describe('JetsonBLEService', () => {
       const connectionError = new Error('Connection failed');
       (bleManager.connectToDevice as jest.Mock).mockRejectedValue(connectionError);
 
+      // @ts-ignore
       await expect(jetsonBLEService.connect(mockDevice)).rejects.toThrow('Connection failed');
 
       expect(store.dispatch).toHaveBeenCalledWith(setError('Connection failed'));

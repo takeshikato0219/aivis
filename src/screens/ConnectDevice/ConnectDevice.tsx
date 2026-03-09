@@ -9,6 +9,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -23,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import RotateCcwIcon from '@assets/svg/rotate-ccw.svg';
 import CctvIcon from '@assets/svg/cctv-icon.svg';
 import { useJetsonBLE } from '@hooks/useJetsonBLE';
+import { BleManager } from 'react-native-ble-plx';
 
 const getScanningText = (scanning: boolean, t: any) => {
   return scanning ? t('bluetoothScreen.scanningForDevices') : t('bluetoothScreen.scanFinished');
@@ -32,16 +35,63 @@ const getHintText = (t: any) => {
   return t('bluetoothScreen.makeSureYourCameraIsPoweredOn');
 };
 
+const RADAR_SIZE = 180;
+const RADAR_CENTER = RADAR_SIZE / 2;
+
+const getDeviceDots = (deviceCount: number) => {
+  return Array.from({ length: deviceCount }).map(() => {
+    const angle = Math.random() * 2 * Math.PI;
+    const radius = RADAR_CENTER * (0.3 + 0.65 * Math.random());
+    return {
+      x: RADAR_CENTER + radius * Math.cos(angle),
+      y: RADAR_CENTER + radius * Math.sin(angle),
+    };
+  });
+};
+
 const ConnectDevice: React.FC = () => {
   const navigation = useNavigation<ConnectDeviceScreenNavigationProp>();
-  const [isConnect, setConnect] = useState(false);
   const [alertShown, setAlertShown] = useState(false);
+  const manager = new BleManager();
 
-  const { devices, isScanning: scanning, startScan, stopScan, connect } = useJetsonBLE();
+  const { devices, isScanning: scanning, startScan, stopScan } = useJetsonBLE();
 
   const { t } = useTranslation();
 
+  const checkBluetooth = async () => {
+    const state = await manager.state();
+    if (state !== 'PoweredOn') {
+      Alert.alert(
+        t('bluetoothScreen.bluetoothIsOff'),
+        t('bluetoothScreen.pleaseTurnOnBluetoothToScanForNearbyCameras'),
+        [
+          {
+            text: t('bluetoothScreen.openSettings'),
+            onPress: () => openBluetoothSettings(),
+          },
+          { text: t('permission.cancel'), style: 'cancel' },
+        ]
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const openBluetoothSettings = () => {
+    if (Platform.OS === 'android') {
+      Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS');
+    } else if (Platform.OS === 'ios') {
+      Linking.openURL('App-Prefs:root=Bluetooth').catch(() => {
+        Alert.alert(
+          t('bluetoothScreen.unableToOpenSettings'),
+          t('bluetoothScreen.pleaseOpenBluetoothSettingsManually')
+        );
+      });
+    }
+  };
+
   useEffect(() => {
+    checkBluetooth();
     // Auto-scan when component mounts (only if not already scanning)
     if (!scanning) {
       void startScan();
@@ -51,39 +101,20 @@ const ConnectDevice: React.FC = () => {
       stopScan();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array to run only on mount
+  }, []);
 
-  const goToPairCode = async (device: SerializableDevice) => {
-    try {
-      setConnect(true);
-      setAlertShown(false);
-
-      // Use the hook's connect method instead of manual BLE connection
-      await connect(device);
-
-      setConnect(false);
-
-      // Navigate to PairingCode with device info
-      navigation.navigate('PairingCode', {
-        device: {
-          id: device.id,
-          name: device.name,
-          isConnectable: device.isConnectable,
-          localName: device.localName,
-          manufacturerData: device.manufacturerData,
-          serviceUUIDs: device.serviceUUIDs,
-        },
-        pairingCode: '',
-      });
-    } catch (err) {
-      setConnect(false);
-      if (!alertShown) {
-        setAlertShown(true);
-        Alert.alert(t('bluetoothScreen.connectionFailed'), String(err), [
-          { text: 'OK', onPress: () => setAlertShown(false) },
-        ]);
-      }
-    }
+  const goToPairCode = (device: SerializableDevice) => {
+    navigation.navigate('PairingCode', {
+      device: {
+        id: device.id,
+        name: device.name,
+        isConnectable: device.isConnectable,
+        localName: device.localName,
+        manufacturerData: device.manufacturerData,
+        serviceUUIDs: device.serviceUUIDs,
+      },
+      pairingCode: '',
+    });
   };
 
   const scanningText = getScanningText(scanning, t);
@@ -91,6 +122,8 @@ const ConnectDevice: React.FC = () => {
 
   const devicesFoundText =
     t('bluetoothScreen.devicesFound') + (scanning ? '' : ` (${devices.length})`);
+
+  const deviceDots = getDeviceDots(devices.length);
 
   return (
     <View style={styles.container}>
@@ -104,7 +137,7 @@ const ConnectDevice: React.FC = () => {
         <SafeAreaView style={styles.container} edges={['top']}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Home')}>
               <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{t('bluetoothScreen.connectDevice')}</Text>
@@ -123,25 +156,20 @@ const ConnectDevice: React.FC = () => {
 
           {/* Radar graphic */}
           <View style={styles.radarContainer}>
-            <RadarScan />
+            <RadarScan deviceDots={deviceDots} />
           </View>
-
-          {/* Loading Overlay */}
-          {isConnect && (
-            <View style={styles.loadingOverlay}>
-              <View style={styles.loadingContent}>
-                <ActivityIndicator size="large" color="#38E9FF" />
-                <Text style={styles.loadingText}>{t('bluetoothScreen.connecting')}</Text>
-              </View>
-            </View>
-          )}
 
           <Text style={styles.scanningText}>{scanningText}</Text>
           <Text style={styles.hintText}>{hintText}</Text>
           <View style={styles.devicesHeader}>
             <Text style={styles.devicesTitle}>{devicesFoundText}</Text>
             <TouchableOpacity
-              onPress={startScan}
+              onPress={async () => {
+                const isBluetoothOn = await checkBluetooth();
+                if (isBluetoothOn) {
+                  startScan();
+                }
+              }}
               disabled={scanning}
               style={styles.styleRotate}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -182,7 +210,7 @@ const ConnectDevice: React.FC = () => {
                       </View>
                       <View style={styles.deviceInfo}>
                         <Text style={styles.deviceName} numberOfLines={2} ellipsizeMode="tail">
-                          {item.name || t('bluetoothScreen.unknownDevice')} - {item.id.slice(-4)}
+                          {item.name || t('bluetoothScreen.unknownDevice')}
                         </Text>
                         <View style={styles.signalRow}>
                           <View style={styles.signalDot} />

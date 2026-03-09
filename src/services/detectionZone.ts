@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { API_BASE_URL } from '@api/apiEndpoints';
+import axiosInstance from '../api/axiosConfig';
+import { API_BASE_URL, API_ENDPOINTS } from '@api/apiEndpoints';
 
 export interface DetectionZoneCoordinates {
   topLeft: { x: number; y: number };
@@ -19,19 +19,72 @@ export interface DetectionZone {
   updatedAt: string;
 }
 
+export interface DetectionZoneResponse {
+  success: boolean;
+  message: string;
+  data: Array<{
+    id: string;
+    camera_id: string;
+    coordinates: Array<{ x: number; y: number }>;
+    created_at: string;
+    updated_at: string;
+  }>;
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+    is_truncated: boolean | null;
+  };
+}
+
+export interface ZoneType {
+  id: string;
+  code: string;
+  name: string;
+  name_ja: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  name_trans: string;
+}
+
 class DetectionZoneService {
-  private axiosInstance = axios.create({
+  private axiosInstance = axiosInstance.create({
     baseURL: API_BASE_URL,
     timeout: 10000,
   });
 
   /**
-   * Get all detection zones for a camera
+   * Get all detection zones for a camera with sorting, pagination, and authorization
    */
-  async getZones(cameraId: string): Promise<DetectionZone[]> {
+  async getZones(
+    cameraId: string,
+    zone_type_id: string,
+    options?: {
+      sort_by?: string;
+      sort_order?: string;
+      page?: number;
+      per_page?: number;
+    }
+  ): Promise<DetectionZoneResponse> {
     try {
-      const response = await this.axiosInstance.get(`/cameras/${cameraId}/detection-zones`);
-      return response.data.zones;
+      const { sort_by, sort_order, page, per_page } = options || {};
+      const response = await axiosInstance.get(
+        `${API_ENDPOINTS.CAMERAS}/${cameraId}/detection-zones`,
+        {
+          params: {
+            zone_type_id,
+            ...(sort_by && { sort_by }),
+            ...(sort_order && { sort_order }),
+            ...(page && { page }),
+            ...(per_page && { per_page }),
+          },
+        }
+      );
+      return response.data;
     } catch (error) {
       console.error('Error getting detection zones:', error);
       throw error;
@@ -44,17 +97,16 @@ class DetectionZoneService {
   async createZone(
     cameraId: string,
     zoneData: {
-      name: string;
-      coordinates: DetectionZoneCoordinates;
-      sensitivity?: number;
+      zone_type_id: string;
+      coordinates: Array<{ x: number; y: number }>;
     }
-  ): Promise<DetectionZone> {
+  ): Promise<any> {
     try {
-      const response = await this.axiosInstance.post(
-        `/cameras/${cameraId}/detection-zones`,
+      const response = await axiosInstance.post(
+        `${API_ENDPOINTS.CAMERAS}/${cameraId}/detection-zones`,
         zoneData
       );
-      return response.data.zone;
+      return response.data;
     } catch (error) {
       console.error('Error creating detection zone:', error);
       throw error;
@@ -62,129 +114,14 @@ class DetectionZoneService {
   }
 
   /**
-   * Update an existing detection zone
+   * Get zone types
    */
-  async updateZone(
-    cameraId: string,
-    zoneId: string,
-    zoneData: Partial<{
-      name: string;
-      coordinates: DetectionZoneCoordinates;
-      enabled: boolean;
-      sensitivity: number;
-    }>
-  ): Promise<DetectionZone> {
+  async getType(): Promise<{ success: boolean; message: string; data: ZoneType[]; meta: any }> {
     try {
-      const response = await this.axiosInstance.put(
-        `/cameras/${cameraId}/detection-zones/${zoneId}`,
-        zoneData
-      );
-      return response.data.zone;
+      const response = await axiosInstance.get(API_ENDPOINTS.CAMERAS_DETECTION_TYPE);
+      return response.data;
     } catch (error) {
-      console.error('Error updating detection zone:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete a detection zone
-   */
-  async deleteZone(cameraId: string, zoneId: string): Promise<boolean> {
-    try {
-      const response = await this.axiosInstance.delete(
-        `/cameras/${cameraId}/detection-zones/${zoneId}`
-      );
-      return response.data.success;
-    } catch (error) {
-      console.error('Error deleting detection zone:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Enable a detection zone
-   */
-  async enableZone(cameraId: string, zoneId: string): Promise<boolean> {
-    try {
-      const response = await this.axiosInstance.post(
-        `/cameras/${cameraId}/detection-zones/${zoneId}/enable`
-      );
-      return response.data.success;
-    } catch (error) {
-      console.error('Error enabling detection zone:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Disable a detection zone
-   */
-  async disableZone(cameraId: string, zoneId: string): Promise<boolean> {
-    try {
-      const response = await this.axiosInstance.post(
-        `/cameras/${cameraId}/detection-zones/${zoneId}/disable`
-      );
-      return response.data.success;
-    } catch (error) {
-      console.error('Error disabling detection zone:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get status of a detection zone
-   */
-  async getZoneStatus(
-    cameraId: string,
-    zoneId: string
-  ): Promise<{ enabled: boolean; sensitivity: number }> {
-    try {
-      const response = await this.axiosInstance.get(
-        `/cameras/${cameraId}/detection-zones/${zoneId}/status`
-      );
-      return response.data.status;
-    } catch (error) {
-      console.error('Error getting zone status:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Set sensitivity for a detection zone
-   */
-  async setZoneSensitivity(
-    cameraId: string,
-    zoneId: string,
-    sensitivity: number
-  ): Promise<boolean> {
-    try {
-      const response = await this.axiosInstance.post(
-        `/cameras/${cameraId}/detection-zones/${zoneId}/sensitivity`,
-        {
-          sensitivity,
-        }
-      );
-      return response.data.success;
-    } catch (error) {
-      console.error('Error setting zone sensitivity:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get detection history for a zone
-   */
-  async getZoneHistory(cameraId: string, zoneId: string, limit: number = 50): Promise<any[]> {
-    try {
-      const response = await this.axiosInstance.get(
-        `/cameras/${cameraId}/detection-zones/${zoneId}/history`,
-        {
-          params: { limit },
-        }
-      );
-      return response.data.history;
-    } catch (error) {
-      console.error('Error getting zone history:', error);
+      console.error('Error getting zone types:', error);
       throw error;
     }
   }
@@ -193,30 +130,3 @@ class DetectionZoneService {
 const detectionZoneService = new DetectionZoneService();
 
 export default detectionZoneService;
-
-// Legacy function for backward compatibility
-export const saveDetectionZone = async (cameraId: string, zone: DetectionZoneCoordinates) => {
-  try {
-    const token = '';
-    const response = await fetch(`${API_BASE_URL}/cameras/${cameraId}/detection-zone`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        cameraId,
-        coordinates: zone,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to save detection zone');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error saving detection zone:', error);
-    throw error;
-  }
-};

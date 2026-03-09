@@ -10,7 +10,6 @@ import {
   Linking,
   ImageBackground,
   ScrollView,
-  useWindowDimensions,
   Animated,
   Keyboard,
 } from 'react-native';
@@ -29,11 +28,6 @@ import RectangleIcon6 from '@assets/svg/rectangle-6.svg';
 import RectangleIcon7 from '@assets/svg/rectangle-7.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 import { useTranslation } from 'react-i18next';
-import { KeyboardIconComponent } from '@components/IconCustom/IconCustom';
-import { COLORS } from '@constants/theme';
-import TextInput from '@components/TextInput/TextInput';
-import { useInput } from '@hooks/useInput';
-import { isPassword } from '@utils/validate';
 import { useAppSelector } from '@redux/store';
 import cameraService from '@api/cameraService';
 import { jetsonBLEService } from '@/services/jetsonBLEService';
@@ -46,20 +40,19 @@ const QRScanner: React.FC = () => {
   const navigation = useNavigation<CameraSetupScreenNavigationProp>();
   const isFocused = useIsFocused();
   const device = useCameraDevice('back');
-  const window = useWindowDimensions();
-  const isLandscape = window.width > window.height;
-  const isSmallScreen = window.width < 600 || window.height < 600;
-  const shouldUseScrollView = isLandscape && isSmallScreen;
 
   const [isFlashOn, setIsFlashOn] = useState<boolean>(false);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('checking');
   const [shouldMountCamera, setShouldMountCamera] = useState<boolean>(false);
+  const [scanningEnabled, setScanningEnabled] = useState<boolean>(true); // New state to control scanning
+  const [scanResult, setScanResult] = useState<'idle' | 'success' | 'error'>('idle');
   const { t } = useTranslation();
   const { accessToken, isAuthenticated } = useAppSelector((state) => state.auth);
   const isProcessingRef = useRef<boolean>(false);
   const [idStatusCamera, setIdStatusCamera] = useState<string>('');
+  const [responseData, setResponseData] = useState<any>(null);
 
   useEffect(() => {
     (async () => {
@@ -69,9 +62,16 @@ const QRScanner: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const agentCodeInput = useInput({
-    validateFn: isPassword,
-  });
+  // Reset scanning state when screen is focused
+  useEffect(() => {
+    if (isFocused) {
+      setScanningEnabled(true);
+      setIsSearching(false);
+      setScannedData(null);
+      setScanResult('idle');
+      isProcessingRef.current = false;
+    }
+  }, [isFocused]);
 
   const checkPermissionStatus = async () => {
     try {
@@ -98,8 +98,8 @@ const QRScanner: React.FC = () => {
         await AsyncStorage.setItem(CAMERA_PERMISSION_KEY, 'blocked');
         setPermissionStatus('blocked');
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      console.log(error);
       setPermissionStatus('denied');
       Alert.alert(t('QRScan.cameraAccess'), t('QRScan.cameraAccessIsRequiredToScanTheQRCode'), [
         {
@@ -127,8 +127,19 @@ const QRScanner: React.FC = () => {
     }
   };
 
+  const resetScanningState = () => {
+    setIsSearching(false);
+    setScannedData(null);
+    setScanningEnabled(true);
+    setScanResult('idle');
+    isProcessingRef.current = false;
+  };
+
   const registerCamera = async (qrData: string) => {
     void jetsonBLEService.disconnect();
+
+    setScanningEnabled(false);
+
     if (isProcessingRef.current) {
       return;
     }
@@ -137,12 +148,16 @@ const QRScanner: React.FC = () => {
     if (!isAuthenticated || !accessToken) {
       setIsSearching(false);
       setScannedData(null);
+      setScanResult('error');
       Alert.alert(
         t('common.error') || 'Error',
         t('QRScan.authenticationRequired') || 'Please login to register camera',
         [
           {
             text: t('common.ok'),
+            onPress: () => {
+              resetScanningState();
+            },
           },
         ]
       );
@@ -161,47 +176,21 @@ const QRScanner: React.FC = () => {
         id,
         status_id: idStatusCamera,
       });
-
-      // Success - show alert and navigate
-      Alert.alert(
-        t('common.success'),
-        t('QRScan.cameraRegisteredSuccessfully') || 'Camera registered successfully',
-        [
-          {
-            text: t('common.ok'),
-            onPress: () => {
-              setIsSearching(false);
-              setScannedData(null);
-              isProcessingRef.current = false;
-              if (response.data) {
-                navigation.navigate('ConnectionSuccessful', {
-                  cameraData: response.data,
-                });
-              }
-            },
-          },
-        ]
-      );
+      setTimeout(() => {
+        setScanResult('success');
+        setResponseData(response.data);
+      }, 15000);
     } catch (error: any) {
       console.error('Error registering camera:', error);
       setIsSearching(false);
-      setScannedData(null);
       isProcessingRef.current = false;
-
-      // Extract error message from processed error
-      let errorMessage = t('common.error') || 'An error occurred';
-
-      if (error?.apiResponse?.message) {
-        errorMessage = error.apiResponse.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-
-      Alert.alert(t('common.error') || 'Error', errorMessage, [
+      setScanResult('error');
+      Alert.alert('', t('QRScan.theCameraHasBeenRegistered'), [
         {
           text: t('common.ok'),
+          onPress: () => {
+            resetScanningState();
+          },
         },
       ]);
     }
@@ -217,7 +206,14 @@ const QRScanner: React.FC = () => {
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: (codes) => {
-      if (codes.length > 0 && !scannedData && !isSearching && !isProcessingRef.current) {
+      // Only process QR codes if scanning is enabled and not already processing
+      if (
+        codes.length > 0 &&
+        !scannedData &&
+        !isSearching &&
+        !isProcessingRef.current &&
+        scanningEnabled
+      ) {
         const qrData = codes[0].value;
         if (qrData) {
           setScannedData(qrData);
@@ -229,7 +225,9 @@ const QRScanner: React.FC = () => {
   });
 
   const handleManualConnect = () => {
-    navigation.navigate('CameraSetup', { qrData: null });
+    navigation.navigate('ConnectionSuccessful', {
+      cameraData: responseData,
+    });
   };
 
   const handleBack = () => {
@@ -298,15 +296,16 @@ const QRScanner: React.FC = () => {
   );
 
   const BodyContent = (
-    <>
+    // eslint-disable-next-line react-native/no-inline-styles
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
       <View style={styles.centerContent}>
         <Animated.View style={[styles.qrFrameContainer]}>
           {shouldMountCamera && (
             <Camera
               style={StyleSheet.absoluteFill}
               device={device}
-              isActive={isFocused && shouldMountCamera}
-              codeScanner={codeScanner}
+              isActive={isFocused && shouldMountCamera && scanningEnabled}
+              codeScanner={scanningEnabled ? codeScanner : undefined}
               torch={isFlashOn ? 'on' : 'off'}
             />
           )}
@@ -314,9 +313,14 @@ const QRScanner: React.FC = () => {
           <RectangleIcon5 style={[styles.corner, styles.topRight]} />
           <RectangleIcon6 style={[styles.corner, styles.bottomLeft]} />
           <RectangleIcon7 style={[styles.corner, styles.bottomRight]} />
-          {!scannedData && !isSearching && (
+          {!scannedData && !isSearching && scanningEnabled && (
             <View style={styles.scanIndicator}>
               <Icon name="qrcode-scan" size={80} color="#00ADD4" />
+            </View>
+          )}
+          {!scanningEnabled && !isSearching && (
+            <View style={styles.scanIndicator}>
+              <Icon name="pause" size={80} color="#FFA500" />
             </View>
           )}
         </Animated.View>
@@ -324,7 +328,7 @@ const QRScanner: React.FC = () => {
         <TouchableOpacity
           style={[styles.flashButton, isFlashOn && styles.flashButtonActive]}
           onPress={() => setIsFlashOn(!isFlashOn)}
-          disabled={isSearching}
+          disabled={isSearching || !scanningEnabled}
         >
           <Icon name="flash" size={18} color="#FFF" />
           <Text style={styles.flashText}>Flash {isFlashOn ? 'on' : 'off'}</Text>
@@ -336,30 +340,32 @@ const QRScanner: React.FC = () => {
             <View style={styles.bluetoothIcon}>
               <Icon name="bluetooth" size={28} color="#00D9FF" />
             </View>
-            <Text style={styles.searchingText}>{t('QRScan.searchingForDevices')}</Text>
-            <Text style={styles.searchingSubtext}>{t('QRScan.bluetoothConnected')}</Text>
-            <ActivityIndicator size="small" color="#00D9FF" style={styles.btnSearch} />
+            <Text style={styles.searchingText}>
+              {scanResult === 'success'
+                ? t('QRScan.cameraRegisteredSuccessfully')
+                : t('QRScan.searchingForDevices')}
+            </Text>
+            {scanResult === 'success' ? null : (
+              <ActivityIndicator size="small" color="#00D9FF" style={styles.btnSearch} />
+            )}
           </View>
         ) : null}
-
-        <Text style={styles.styleAgentCodeText}>{t('QRScan.agentCode')}</Text>
-        <TextInput
-          value={agentCodeInput.value}
-          onChangeText={agentCodeInput.handleChange}
-          icon={KeyboardIconComponent}
-          secureTextEntry
-          placeholder={t('QRScan.enterManualCode')}
-          autoCapitalize="none"
-          autoComplete="password"
-          style={styles.input}
-          testID="password-input"
-          placeholderTextColor={COLORS.BBBBBB}
-        />
-        <TouchableOpacity style={styles.manualButton} onPress={handleManualConnect}>
-          <Text style={styles.manualButtonText}>{t('bluetoothScreen.connect')}</Text>
+        <TouchableOpacity
+          style={[styles.manualButton, scanResult !== 'success' && styles.manualButtonDisabled]}
+          onPress={handleManualConnect}
+          disabled={scanResult !== 'success'}
+        >
+          <Text
+            style={[
+              styles.manualButtonText,
+              scanResult !== 'success' && styles.manualButtonTextDisabled,
+            ]}
+          >
+            {t('bluetoothScreen.connect')}
+          </Text>
         </TouchableOpacity>
       </View>
-    </>
+    </ScrollView>
   );
 
   return (
@@ -374,16 +380,7 @@ const QRScanner: React.FC = () => {
           <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <SafeAreaView style={styles.overlay} edges={['top']}>
               {HeaderContent}
-              {shouldUseScrollView ? (
-                <ScrollView
-                  contentContainerStyle={styles.styleScrollView}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {BodyContent}
-                </ScrollView>
-              ) : (
-                <View style={styles.styleScrollView}>{BodyContent}</View>
-              )}
+              <View style={styles.styleScrollView}>{BodyContent}</View>
             </SafeAreaView>
           </TouchableWithoutFeedback>
         )}

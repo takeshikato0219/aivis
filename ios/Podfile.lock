@@ -2003,6 +2003,8 @@ PODS:
     - Yoga
   - react-native-netinfo (11.4.1):
     - React-Core
+  - react-native-orientation-locker (1.7.0):
+    - React-Core
   - react-native-record-screen (0.6.2):
     - boost
     - DoubleConversion
@@ -2118,7 +2120,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-video (6.18.0):
+  - react-native-video (6.19.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2136,7 +2138,7 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-video/Video (= 6.18.0)
+    - react-native-video/Video (= 6.19.0)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -2147,7 +2149,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-video/Fabric (6.18.0):
+  - react-native-video/Fabric (6.19.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2175,7 +2177,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-video/Video (6.18.0):
+  - react-native-video/Video (6.19.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2919,6 +2921,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - RNLiveAudioStream (1.1.1):
+    - React
   - RNLocalize (3.6.0):
     - boost
     - DoubleConversion
@@ -3184,6 +3188,7 @@ DEPENDENCIES:
   - "react-native-image-resizer (from `../node_modules/@bam.tech/react-native-image-resizer`)"
   - "react-native-line (from `../node_modules/@xmartlabs/react-native-line`)"
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
+  - react-native-orientation-locker (from `../node_modules/react-native-orientation-locker`)
   - react-native-record-screen (from `../node_modules/react-native-record-screen`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-video (from `../node_modules/react-native-video`)
@@ -3228,6 +3233,7 @@ DEPENDENCIES:
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
   - RNKeychain (from `../node_modules/react-native-keychain`)
+  - RNLiveAudioStream (from `../node_modules/react-native-live-audio-stream`)
   - RNLocalize (from `../node_modules/react-native-localize`)
   - "RNMLKitFaceDetection (from `../node_modules/@react-native-ml-kit/face-detection`)"
   - RNPermissions (from `../node_modules/react-native-permissions`)
@@ -3362,6 +3368,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@xmartlabs/react-native-line"
   react-native-netinfo:
     :path: "../node_modules/@react-native-community/netinfo"
+  react-native-orientation-locker:
+    :path: "../node_modules/react-native-orientation-locker"
   react-native-record-screen:
     :path: "../node_modules/react-native-record-screen"
   react-native-safe-area-context:
@@ -3450,6 +3458,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-google-signin/google-signin"
   RNKeychain:
     :path: "../node_modules/react-native-keychain"
+  RNLiveAudioStream:
+    :path: "../node_modules/react-native-live-audio-stream"
   RNLocalize:
     :path: "../node_modules/react-native-localize"
   RNMLKitFaceDetection:
@@ -3538,9 +3548,10 @@ SPEC CHECKSUMS:
   react-native-image-resizer: d4d8ea0caafcb7dd2f0189cc13f8d384941a0521
   react-native-line: 3c2b49a6981909eb8a405b2df2bf2fe15ecee4c7
   react-native-netinfo: f0a9899081c185db1de5bb2fdc1c88c202a059ac
+  react-native-orientation-locker: 5819fd23ca89cbac0d736fb4314745f62716d517
   react-native-record-screen: 8df104bc775b8e687dadb0207e5820903d57d8b1
   react-native-safe-area-context: 54d812805f3c4e08a4580ad086cbde1d8780c2e4
-  react-native-video: 7be878f72d62c9259f40e44c9318f45dc38fb58d
+  react-native-video: c129a091917b98995af609c78a357ed64264e64d
   react-native-view-shot: aac285cd08144be29c19ab659930172836f0067f
   react-native-webrtc: b5062b745a26c99835efdf0d6c027c9b2ee7ddbc
   react-native-webview: 8b9097e270a99ee8798449f191a7ea27c790fa1c
@@ -3582,9 +3593,10 @@ SPEC CHECKSUMS:
   RNGestureHandler: 927ba2c590c8973f24624f1c1279be08a22ec58d
   RNGoogleSignin: 545fbb4f7210aff29ff67f29f2be1c88f02c9a0f
   RNKeychain: 182d986f809280edd9444a557adc21845f7d1e6f
+  RNLiveAudioStream: 02584d52711b6b9f268cb371a4b1bdd76ab3e079
   RNLocalize: 000be4f69edb5cc1b3266379ba6e40ec77a54a3c
   RNMLKitFaceDetection: ef91f2a53dd30544805a4730bac4a91e3eae31dc
-  RNPermissions: af307049a8acd0153097b348b708b0f9ad53bdb2
+  RNPermissions: 4348d5de24695acb3be54b257b7ac28911a1f928
   RNScreens: 3693ec4bbc0065151b843269e50e9807644e9918
   RNSVG: 7da7ec33015df45de2516f43bb67ab85c58754bc
   RNVectorIcons: 6acc19c833be864e9c70894e101a587fe491150a
@@ -3593,6 +3605,6 @@ SPEC CHECKSUMS:
   VisionCamera: 3ea10c46a5c612f5f89fb46a54bef4a0de8b58a7
   Yoga: 8e01cef9947ca77f0477a098f0b32848a8e448c6
 
-PODFILE CHECKSUM: ccabfb1ae967b390ea12c519629cf01695fb0cd4
+PODFILE CHECKSUM: e03a9d769c6f42f8c58d1dd7c5dfd55d0cabbe83
 
 COCOAPODS: 1.16.2
