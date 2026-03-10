@@ -143,3 +143,111 @@ export interface StreamQuality {
   resolution: string;
   bitrate: number;
 }
+
+export interface CameraMode {
+  id: string;
+  name: string;
+  name_ja: string;
+  description: string;
+  description_ja: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  name_trans: string;
+  description_trans: string;
+}
+
+export interface CameraModesResponse {
+  success: boolean;
+  message: string;
+  data: CameraMode[];
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+    is_truncated: boolean | null;
+  };
+}
+
+export interface CameraDetailUser {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+}
+
+export interface CameraDetailFacility {
+  id: string;
+  name: string;
+  name_ja: string;
+  name_trans: string;
+}
+
+export interface CameraDetailStatus {
+  id: string;
+  name_trans: string;
+}
+
+export interface CameraDetailWorkflowStatus {
+  id: string;
+  status_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CameraDetailData {
+  id: string;
+  name: string;
+  serial: string;
+  location: string | null;
+  rtsp_url: string;
+  user_id: string;
+  facility_id: string;
+  status_id: string;
+  mode_id: string | null;
+  user: CameraDetailUser;
+  facility: CameraDetailFacility;
+  status: CameraDetailStatus;
+  workflow_status: CameraDetailWorkflowStatus[];
+  warehouse_entry_date: string;
+  warehouse_exit_date: string;
+  agency_info: any;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  bluetooth_password: string;
+  secret_key: string;
+  stream_secret_key: string;
+  cloudflare_tunnel_token: string;
+}
+
+export interface CameraDetailResponse {
+  success: boolean;
+  message: string;
+  data: CameraDetailData;
+}
+
+export interface CameraDetailApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    name: string;
+    serial: string;
+    bluetooth_password: string;
+    location: string;
+    rtsp_url: string;
+    user_id: string;
+    facility_id: string;
+    status_id: string;
+    mode_id: string;
+    description: string;
+    warehouse_entry_date: string;
+    warehouse_exit_date: string;
+    created_at: string;
+    updated_at: string;
+    deleted_at: string;
+  };
+}

@@ -39,6 +39,7 @@ import IconListFace from '@assets/svg/icon-list-face.svg';
 
 import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/types';
 import { COLORS } from '@constants/theme';
+import rulesService from '@api/rulesService';
 import cameraService from '@api/cameraService';
 
 const livingItem = {
@@ -58,6 +59,12 @@ const ICON_NAMES = [
   'IconListFace',
 ];
 
+const MODE_ICONS = [
+  { iconActive: IconWarningActive, iconUnActive: IconWarningUnActive },
+  { iconActive: IconSafeActive, iconUnActive: IconSafeUnActive },
+  { iconActive: IconUnlockActive, iconUnActive: IconUnlockUnActive },
+];
+
 const ItemSeparator = () => <View style={styles.itemSeparator} />;
 
 const Detail = () => {
@@ -66,38 +73,59 @@ const Detail = () => {
   const { t } = useTranslation();
   const camera = route.params?.camera;
   const title = camera?.name || 'Detail';
-  const filters = [
-    {
-      name: t('detail.alertMode'),
-      iconActive: IconWarningActive,
-      iconUnActive: IconWarningUnActive,
-    },
-    {
-      name: t('detail.safeMode'),
-      iconActive: IconSafeActive,
-      iconUnActive: IconSafeUnActive,
-    },
-    {
-      name: t('detail.releaseMode'),
-      iconActive: IconUnlockActive,
-      iconUnActive: IconUnlockUnActive,
-    },
-  ];
-
   const [activeIndex, setActiveIndex] = useState(0);
   const [lastFrameUri, setLastFrameUri] = useState<string | null>(null);
   const [rulesList, setRulesList] = useState<any[]>([]);
+  const [modes, setModes] = useState<any[]>([]);
+  const [detailModeId, setDetailModeId] = useState<string | null>(null);
 
   const getRulesMaster = useCallback(async () => {
     try {
-      const response = await cameraService.getRulesForCamera(camera.id);
+      const response = await rulesService.getRules({ facility_id: camera.facility_id });
       if (response.success) {
         setRulesList(response.data);
       }
     } catch (err) {
       console.warn('Failed to fetch rules:', err);
     }
-  }, [camera?.id]);
+  }, [camera?.facility_id]);
+
+  const getModes = useCallback(async () => {
+    try {
+      const response = await cameraService.getCameraModes();
+      if (response.success) {
+        setModes(response.data);
+        if (detailModeId) {
+          const foundIdx = response.data.findIndex((mode: any) => String(mode.id) === detailModeId);
+          if (foundIdx !== -1 && foundIdx !== activeIndex) {
+            setActiveIndex(foundIdx);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch modes:', err);
+    }
+  }, [detailModeId, activeIndex]);
+
+  const getDetail = useCallback(async () => {
+    try {
+      const response = await cameraService.getDetailCamera(camera.id);
+      if (response.success && response.data && typeof response.data.mode_id === 'string') {
+        setDetailModeId(response.data.mode_id);
+        // If modes are already loaded, find and set active index
+        if (modes.length > 0) {
+          const foundIdx = modes.findIndex(
+            (mode: any) => String(mode.id) === response.data.mode_id
+          );
+          if (foundIdx !== -1 && foundIdx !== activeIndex) {
+            setActiveIndex(foundIdx);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch camera detail:', err);
+    }
+  }, [camera.id, modes, activeIndex]);
 
   useFocusEffect(
     useCallback(() => {
@@ -120,7 +148,9 @@ const Detail = () => {
       };
       loadLastFrame();
       getRulesMaster();
-    }, [camera?.id, getRulesMaster])
+      getModes();
+      getDetail();
+    }, [camera?.id, getRulesMaster, getModes, getDetail])
   );
 
   const backgrounds = [CameraShopDetailBgPng, CameraHomeDetailBgPng, CameraFactoryDetailBgPng];
@@ -142,10 +172,9 @@ const Detail = () => {
     });
   };
 
-
   const mappedInitialList = rulesList.map((rule) => ({
     id: rule.id,
-    name: rule.name,
+    name: rule.rule_name,
     status: rule.is_active,
     counter: '5人',
   }));
@@ -185,6 +214,64 @@ const Detail = () => {
     if (idx === 1) return () => handlePressCustomerReport(item.name, ICON_NAMES[idx]);
     if (idx === CAMERA_LIST.length - 1) return goToFaceUpload;
     return () => handlePressNotification(item.name, ICON_NAMES[idx]);
+  };
+
+  const filters =
+    modes.length > 0
+      ? modes.map((mode, idx) => ({
+          name: mode.name_trans,
+          description: mode.description_trans,
+          iconActive: MODE_ICONS[idx]?.iconActive || IconWarningActive,
+          iconUnActive: MODE_ICONS[idx]?.iconUnActive || IconWarningUnActive,
+        }))
+      : [
+          {
+            name: t('detail.alertMode'),
+            description: t('detail.textNotification'),
+            iconActive: IconWarningActive,
+            iconUnActive: IconWarningUnActive,
+          },
+          {
+            name: t('detail.safeMode'),
+            description: t('detail.textNotification'),
+            iconActive: IconSafeActive,
+            iconUnActive: IconSafeUnActive,
+          },
+          {
+            name: t('detail.releaseMode'),
+            description: t('detail.textNotification'),
+            iconActive: IconUnlockActive,
+            iconUnActive: IconUnlockUnActive,
+          },
+        ];
+
+  const handleUpdateMode = async (modeId: string) => {
+    try {
+      const response = await cameraService.updateCamera(camera.id, modeId);
+      console.log(response);
+      getDetail();
+    } catch (err) {
+      console.warn('Failed to update camera mode:', err);
+    }
+  };
+
+  const handleTabPress = (idx: number, modeId: string) => {
+    if (activeIndex === idx) return;
+    Alert.alert(
+      t('common.confirm'),
+      t('detail.doYouWantToSwitchMode'),
+      [
+        {
+          text: t('common.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('common.ok'),
+          onPress: () => handleUpdateMode(modeId),
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
@@ -251,26 +338,7 @@ const Detail = () => {
               >
                 {filters.map((filter, idx) => {
                   const Icon = activeIndex === idx ? filter.iconActive : filter.iconUnActive;
-
-                  const handleTabPress = () => {
-                    if (activeIndex === idx) return;
-                    Alert.alert(
-                      t('common.confirm'),
-                      t('detail.doYouWantToSwitchMode'),
-                      [
-                        {
-                          text: t('common.cancel'),
-                          style: 'cancel',
-                        },
-                        {
-                          text: t('common.ok'),
-                          onPress: () => setActiveIndex(idx),
-                        },
-                      ],
-                      { cancelable: true }
-                    );
-                  };
-
+                  const modeId = modes[idx]?.id;
                   return (
                     <TouchableOpacity
                       key={filter.name}
@@ -279,11 +347,11 @@ const Detail = () => {
                         activeIndex === idx && styles.activeFilterBtn,
                         activeIndex === idx && styles.filterBtnActiveWarning,
                       ]}
-                      onPress={handleTabPress}
+                      onPress={() => handleTabPress(idx, modeId)}
                     >
                       <Icon />
                       <Text style={styles.filterText}>{filter.name}</Text>
-                      <Text style={styles.filterSmall}>{t('detail.textNotification')}</Text>
+                      <Text style={styles.filterSmall}>{filter.description}</Text>
                     </TouchableOpacity>
                   );
                 })}

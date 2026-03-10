@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useInput } from '@hooks/useInput';
-import { Camera } from 'react-native-vision-camera';
+import { Camera, useCameraPermission } from 'react-native-vision-camera';
 import FaceDetection, { Face } from '@react-native-ml-kit/face-detection';
 import ImageResizer from '@bam.tech/react-native-image-resizer';
 import BackIcon from '@assets/svg/icon-back.svg';
@@ -254,7 +254,7 @@ const DetailFace = () => {
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
-  const { hasPermission, requestPermission } = require('react-native-vision-camera');
+  const { hasPermission, requestPermission } = useCameraPermission();
   const device = require('react-native-vision-camera').useCameraDevice('front');
 
   // Timer refs
@@ -427,7 +427,7 @@ const DetailFace = () => {
       const formData = new FormData();
       formData.append('name', nameInput.value.trim());
       formData.append('relationship_type_id', selectedRelationship.id);
-      const changedIds: string[] = [];
+      const imageIndices: number[] = [];
       const imageFiles: any[] = [];
       member.images.forEach((image, index) => {
         if (
@@ -437,7 +437,7 @@ const DetailFace = () => {
           image.image_url &&
           image.image_url.startsWith('file://')
         ) {
-          changedIds.push(image.id);
+          imageIndices.push(index);
           const positionKey = FACE_POSITION_TITLES[index]?.key || 'center';
           imageFiles.push({
             uri: image.image_url,
@@ -446,9 +446,9 @@ const DetailFace = () => {
           });
         }
       });
-      formData.append('sort_orders', changedIds.join(','));
+      formData.append('sort_orders', imageIndices.join(','));
       imageFiles.forEach((file) => formData.append('images', file));
-
+      console.log(formData);
       await faceService.updateMember(member.id, formData);
       fetchMemberDetail();
 
@@ -937,20 +937,22 @@ const DetailFace = () => {
                       onPress={() => handleImagePress(index)}
                     >
                       {image?.image_url ? (
-                        <Image
-                          source={{ uri: image.image_url }}
-                          style={styles.imagePreview}
-                          resizeMode="cover"
-                        />
+                        <>
+                          <Image
+                            source={{ uri: image.image_url }}
+                            style={styles.imagePreview}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.imageOverlay}>
+                            <Icon name="pencil" size={20} color="#fff" />
+                            <Text style={styles.imageIndex}>{index + 1}</Text>
+                          </View>
+                        </>
                       ) : (
                         <View style={styles.imageOverlay}>
                           <Icon name="plus" size={32} color="#ccc" />
                         </View>
                       )}
-                      <View style={styles.imageOverlay}>
-                        <Icon name="pencil" size={20} color="#fff" />
-                        <Text style={styles.imageIndex}>{index + 1}</Text>
-                      </View>
                     </TouchableOpacity>
                   </View>
                 );

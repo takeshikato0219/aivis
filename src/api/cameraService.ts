@@ -10,6 +10,9 @@ import {
   LiveStreamUrlResponse,
   RuleMasterListApiResponse,
   WorkScheduleApiResponse,
+  CameraModesResponse,
+  CameraDetailResponse,
+  CameraDetailApiResponse,
 } from './types/cameraTypes';
 
 class CameraService {
@@ -92,6 +95,27 @@ class CameraService {
     const response = await axiosInstance.patch(
       `${API_ENDPOINTS.CAMERAS}/${cameraId}/rules/${ruleId}`,
       scheduleData
+    );
+    return response.data;
+  }
+
+  async getCameraModes(): Promise<CameraModesResponse> {
+    const response = await axiosInstance.get<CameraModesResponse>(`${API_ENDPOINTS.CAMERAS}/modes`);
+    return response.data;
+  }
+
+  async getDetailCamera(cameraId: string): Promise<CameraDetailResponse> {
+    const response = await axiosInstance.get<CameraDetailResponse>(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}`
+    );
+    return response.data;
+  }
+
+  async updateCamera(cameraId: string, modeId: string): Promise<any> {
+    const requestBody = { mode_id: modeId };
+    const response = await axiosInstance.patch<CameraDetailApiResponse>(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}`,
+      requestBody
     );
     return response.data;
   }
