@@ -59,44 +59,6 @@ const FACE_POSITION_TITLES = [
   },
 ] as const;
 
-const FACE_POSITIONS = [
-  {
-    key: 'center',
-    label: 'Center',
-    instruction: 'Look straight at the camera',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'left',
-    label: 'Turn Left',
-    instruction: 'Slowly turn your head LEFT',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'right',
-    label: 'Turn Right',
-    instruction: 'Slowly turn your head RIGHT',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'up',
-    label: 'Look Up',
-    instruction: 'Slowly tilt your head UP',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'down',
-    label: 'Look Down',
-    instruction: 'Slowly tilt your head DOWN',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-] as const;
-
 export const FaceFrameSVG: React.FC<{
   isScanning: boolean;
   scanProgress: number;
@@ -297,6 +259,44 @@ const DetailFace = () => {
   const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null);
 
   const imagePicker = useImagePicker();
+
+  const FACE_POSITIONS = [
+    {
+      key: 'center',
+      label: t('faceUpload.center'),
+      instruction: t('faceUpload.lookStraightAtTheCamera'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'left',
+      label: t('faceUpload.turnLeftFace'),
+      instruction: t('faceUpload.slowlyTurnYourHeadLEFT'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'right',
+      label: t('faceUpload.turnRightFace'),
+      instruction: t('faceUpload.slowlyTurnYourHeadRIGHT'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'up',
+      label: t('faceUpload.lookUpFace'),
+      instruction: t('faceUpload.slowlyTiltYourHeadUP'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'down',
+      label: t('faceUpload.lookDownFace'),
+      instruction: t('faceUpload.slowlyTiltYourHeadDOWN'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+  ] as const;
 
   // Reset loaded data when memberId changes
   useEffect(() => {
@@ -522,10 +522,10 @@ const DetailFace = () => {
       if (updatedImages[editingImageIndex]?.id) {
         setChangedImageIds((prev) => new Set(prev).add(updatedImages[editingImageIndex].id));
       }
-      setEditingImageIndex(null);
       imagePicker.setSelectedImage(null);
+      setEditingImageIndex(null);
     }
-  }, [editingImageIndex, imagePicker, member, imagePicker.selectedImage]);
+  }, [editingImageIndex, imagePicker.selectedImage, imagePicker, member]);
 
   const getPositionErrorMessage = (position: string): string => {
     switch (position) {
