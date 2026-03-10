@@ -30,7 +30,7 @@ export class LineAuthService extends BaseLineService {
       const loginOptions = {
         scopes: ['profile', 'openid', 'email'] as any,
         onlyWebLogin: !isLineInstalled,
-        botPrompt: 'aggressive' as any,
+        botPrompt: 'normal' as any,
       };
       const result = await Line.login(loginOptions);
       return {

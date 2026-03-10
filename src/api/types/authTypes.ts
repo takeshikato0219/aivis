@@ -28,6 +28,7 @@ export interface User {
   agency_code?: string | null;
   status?: string;
   type?: string;
+  line_notification_id?: string;
 }
 
 export interface ForgotPasswordResponse {

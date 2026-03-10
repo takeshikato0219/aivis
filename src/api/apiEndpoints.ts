@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'https://avis-api-dev.unlimited.io.vn/api/v1';
+export const API_BASE_URL = 'https://avis-api-dev.aivis-camera.ai/api/v1';
 
 export const API_ENDPOINTS = {
   // Authentication
@@ -33,6 +33,9 @@ export const API_ENDPOINTS = {
 
   //policies
   POLICIES: '/policies',
+
+  //notifications
+  NOTIFICATIONS: '/notifications',
 };
 
 export type ApiEndpoints = typeof API_ENDPOINTS;

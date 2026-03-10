@@ -258,6 +258,12 @@ export const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 18,
   },
+  cameraNameError: {
+    fontSize: 12,
+    color: 'red',
+    marginTop: 4,
+    lineHeight: 18,
+  },
   bottomSection: {
     paddingHorizontal: 20,
     paddingTop: 20,

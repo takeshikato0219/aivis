@@ -10,6 +10,7 @@ export interface MemberImage {
   id: string;
   image_path: string;
   image_url: string;
+  sort_order: number;
 }
 
 export interface MemberRelationship {

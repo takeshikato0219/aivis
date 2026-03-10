@@ -393,5 +393,9 @@ export const getStyles = (width: number, height: number) => {
       alignItems: 'center',
       zIndex: 9999,
     },
+    micIconRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
   });
 };

@@ -47,7 +47,7 @@ const Setting = () => {
   const loadSubscriptionStatus = useCallback(async () => {
     setIsLoadingStatus(true);
     try {
-      const isUserLoggedInWithLine = !!user?.line_user_id; // Check if user authenticated with LINE
+      const isUserLoggedInWithLine = !!user?.line_notification_id;
       if (isUserLoggedInWithLine) {
         const status = await LineSubscriptionService.checkSubscriptionStatus();
         setSubscriptionStatus(status);
@@ -60,7 +60,7 @@ const Setting = () => {
     } finally {
       setIsLoadingStatus(false);
     }
-  }, [user?.line_user_id]);
+  }, [user?.line_notification_id]);
 
   useEffect(() => {
     const loadLineProfile = async () => {
@@ -96,7 +96,7 @@ const Setting = () => {
     try {
       try {
         const response = await authService.linkLineAccount(userId);
-        console.log(response);
+        await setUserData(response.data.data);
       } catch (apiError: any) {
         console.error('linkLineAccount error:', apiError?.response?.data || apiError);
         return false;
@@ -152,18 +152,30 @@ const Setting = () => {
               text: t('lineSubscription.loginWithLine'),
               onPress: async () => {
                 try {
-                  const loginResult = await performSubscription();
-                  if (loginResult?.userId) {
-                    const updateSuccess = await updateUserWithLineId(lineProfile.userId);
-                    if (!updateSuccess) {
-                      Alert.alert(
-                        t('common.error'),
-                        t('lineSubscription.failedToUpdateUserProfilePleaseTryAgain')
-                      );
+                  const loginResult = await lineAuthService.signIn();
+                  if (loginResult) {
+                    if (loginResult.idToken) {
+                      const response = await performSubscription();
+                      if (response?.userId) {
+                        const updateSuccess = await updateUserWithLineId(response.userId);
+                        if (updateSuccess) {
+                          await loadSubscriptionStatus();
+                        } else {
+                          Alert.alert(
+                            t('common.error'),
+                            t('lineSubscription.failedToUpdateUserProfilePleaseTryAgain')
+                          );
+                          setIsSubscribing(false);
+                        }
+                      } else {
+                        Alert.alert(t('common.error'), t('lineSubscription.failedToGetUserId'));
+                        setIsSubscribing(false);
+                      }
+                    } else {
+                      Alert.alert(t('common.error'), t('lineSubscription.failedToGetIdToken'));
                       setIsSubscribing(false);
                     }
                   } else {
-                    Alert.alert(t('common.error'), t('lineSubscription.failedToGetIdToken'));
                     setIsSubscribing(false);
                   }
                 } catch (loginError) {
@@ -215,7 +227,7 @@ const Setting = () => {
   };
 
   const handleUnsubscribeFromLine = async () => {
-    if (!user?.line_user_id) {
+    if (!user?.line_notification_id) {
       Alert.alert(
         t('lineSubscription.lineAuthRequired'),
         t('lineSubscription.cannotUnsubscribeMessage')
@@ -237,6 +249,7 @@ const Setting = () => {
             dispatch(setUser(updatedUser));
             setLineProfile(null);
             await AsyncStorage.removeItem(LINE_PROFILE_KEY);
+            await loadSubscriptionStatus();
           } catch (error) {
             console.error('Error unsubscribing from LINE:', error);
           } finally {

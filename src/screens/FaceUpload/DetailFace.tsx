@@ -318,7 +318,6 @@ const DetailFace = () => {
     validateFn: (v) => (v.trim() ? undefined : 'required'),
   });
 
-
   const fetchMemberDetail = useCallback(async () => {
     if (!memberId || hasLoadedData) return;
 
@@ -447,8 +446,8 @@ const DetailFace = () => {
           });
         }
       });
-      formData.append('image_ids', changedIds.join(','));
-      imageFiles.forEach((file) => formData.append('image_files', file));
+      formData.append('sort_orders', changedIds.join(','));
+      imageFiles.forEach((file) => formData.append('images', file));
 
       await faceService.updateMember(member.id, formData);
       fetchMemberDetail();
@@ -924,7 +923,9 @@ const DetailFace = () => {
             <View style={styles.imagesGrid}>
               {[0, 1, 2, 3, 4].map((index) => {
                 const images = member?.images || [];
-                const image = images[index];
+
+                const image = images.find((img) => img.sort_order === index);
+
                 const positionTitle = FACE_POSITION_TITLES[index];
                 return (
                   <View key={image?.id || index} style={styles.imageItemContainer}>
@@ -935,7 +936,7 @@ const DetailFace = () => {
                       style={styles.imageItem}
                       onPress={() => handleImagePress(index)}
                     >
-                      {image && image.image_url ? (
+                      {image?.image_url ? (
                         <Image
                           source={{ uri: image.image_url }}
                           style={styles.imagePreview}

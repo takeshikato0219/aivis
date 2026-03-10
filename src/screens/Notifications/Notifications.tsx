@@ -1,57 +1,86 @@
-import React, { memo } from 'react';
-import { View, ScrollView, ImageBackground, TouchableOpacity } from 'react-native';
-import { Text, Card, List, Avatar, Divider } from 'react-native-paper';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  ImageBackground,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
+import { Text, Card, List } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppSetup } from '@hooks/useAppSetup';
 import { styles } from './Notifications.styles';
 import HomeBackgroundImage from '@assets/png/home-background.png';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import notificationsService, { Notification } from '@api/notificationsService';
+import { ScrollView } from 'react-native-gesture-handler';
 
-const LeftIcon = memo(({ icon }: { icon: string }) => <Avatar.Icon icon={icon} size={40} />);
+const PAGE_SIZE = 20;
 
-const RightTime = memo(({ time }: { time: string }) => (
-  <Text variant="bodySmall" style={styles.timeText}>
-    {time}
-  </Text>
-));
-
-const renderLeftIcon = (icon: string) => (props: any) => <LeftIcon {...props} icon={icon} />;
-const renderRightTime = (time: string) => (props: any) => <RightTime {...props} time={time} />;
-
-// =============================================
-// Main Screen
-// =============================================
 const Notifications = () => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   useAppSetup({ screenName: 'Notifications' });
 
-  const notifications = [
-    {
-      id: '1',
-      title: 'New message',
-      description: 'You have a new message',
-      time: '5 min ago',
-      icon: 'message',
-      unread: true,
-    },
-    {
-      id: '2',
-      title: 'Update available',
-      description: 'New version available',
-      time: '1 hour ago',
-      icon: 'system-update',
-      unread: true,
-    },
-    {
-      id: '3',
-      title: 'Welcome!',
-      description: 'Thanks for joining',
-      time: '2 days ago',
-      icon: 'celebration',
-      unread: false,
-    },
-  ];
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadNotifications = useCallback(async (pageToLoad = 1, isReload = false) => {
+    setLoading(true);
+    try {
+      const response = await notificationsService.getNotifications({
+        page: pageToLoad,
+        pageSize: PAGE_SIZE,
+      });
+      let newData = Array.isArray(response) ? response : [];
+      if (isReload) {
+        setNotifications(newData);
+      } else {
+        setNotifications((prev) => [...prev, ...newData]);
+      }
+      setHasMore(newData.length === PAGE_SIZE);
+      setPage(pageToLoad);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      if (isReload) setNotifications([]);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotifications(1, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleLoadMore = () => {
+    if (!loading && hasMore) {
+      loadNotifications(page + 1);
+    }
+  };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadNotifications(1, true);
+  }, [loadNotifications]);
+
+  const handleScroll = ({ nativeEvent }: { nativeEvent: any }) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    if (
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 20 &&
+      hasMore &&
+      !loading
+    ) {
+      handleLoadMore();
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -69,31 +98,43 @@ const Notifications = () => {
 
             <View style={styles.viewTitle}>
               <Text style={styles.headerTitle} numberOfLines={1}>
-                Notitications
+                {t('notifications.title')}
               </Text>
             </View>
           </View>
           <View style={styles.content}>
-            <Divider />
-
             {/* List */}
-            <ScrollView style={styles.scrollContent}>
-              {notifications.map((item) => (
-                <Card
-                  key={item.id}
-                  style={[styles.notificationCard, item.unread && styles.unreadCard]}
-                  elevation={0}
-                >
-                  <Card.Content>
-                    <List.Item
-                      title={item.title}
-                      description={item.description}
-                      left={renderLeftIcon(item.icon)}
-                      right={renderRightTime(item.time)}
-                    />
-                  </Card.Content>
-                </Card>
-              ))}
+            <ScrollView
+              style={styles.scrollContent}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+            >
+              {Array.isArray(notifications) && notifications.length > 0 ? (
+                notifications.map((item) => (
+                  <Card
+                    key={item.id}
+                    style={[styles.notificationCard, !item.is_seen && styles.unreadCard]}
+                    elevation={0}
+                  >
+                    <Card.Content>
+                      <List.Item
+                        title={item.message}
+                        description={item.sent_at ? new Date(item.sent_at).toLocaleString() : ''}
+                      />
+                    </Card.Content>
+                  </Card>
+                ))
+              ) : (
+                <View style={styles.noData}>
+                  <Text>{t('home.noData')}</Text>
+                </View>
+              )}
+              {loading && !refreshing && (
+                <View style={styles.loadingMoreContainer}>
+                  <ActivityIndicator />
+                </View>
+              )}
             </ScrollView>
           </View>
         </SafeAreaView>

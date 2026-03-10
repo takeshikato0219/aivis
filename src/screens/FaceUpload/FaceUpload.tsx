@@ -81,7 +81,7 @@ const FaceUpload: React.FC = () => {
   ] as const;
 
   interface FaceData {
-    position: FacePosition;
+    positionIndex: number;
     imageUri: string;
     timestamp: number;
     scanProgress: number;
@@ -410,7 +410,7 @@ const FaceUpload: React.FC = () => {
       // Check if exactly one face is detected and in correct position
       if (faces.length === 1 && validateFacePosition(faces[0], currentPosition.key)) {
         const faceData: FaceData = {
-          position: currentPosition.key,
+          positionIndex: currentPositionIndex,
           imageUri,
           timestamp: Date.now(),
           scanProgress: scanProgress,
@@ -484,11 +484,21 @@ const FaceUpload: React.FC = () => {
     }
   };
 
-  const uploadFaces = async (allFaces: { position: string; imageUri: string }[]) => {
-    if (allFaces.length !== 1) {
+  const uploadFaces = async (allFaces: { position: number; imageUri: string }[]) => {
+    if (allFaces.length < 1) {
       Alert.alert(
         t('faceUpload.validationError') || 'Validation Error',
-        t('faceUpload.mustHave5Images') || 'Must capture all 5 face positions before uploading'
+        t('faceUpload.mustHaveAtLeastOneImage') ||
+          'Must capture at least 1 face image before uploading',
+        [
+          {
+            text: t('common.retry') || 'Retry',
+            onPress: () => {
+              setIsProcessing(false);
+              startScanning();
+            },
+          },
+        ]
       );
       return;
     }
@@ -497,18 +507,20 @@ const FaceUpload: React.FC = () => {
 
     try {
       const formData = new FormData();
+      const imageIndices: number[] = [];
       formData.append('name', nameInput.value);
       if (selectedRelationship) {
         formData.append('relationship_type_id', selectedRelationship.id);
       }
-      allFaces.forEach((face) => {
+      for (const face of allFaces) {
+        imageIndices.push(face.position);
         formData.append('images', {
           uri: face.imageUri,
           type: 'image/jpeg',
           name: `${face.position}.jpg`,
-        } as any);
-      });
-
+        });
+      }
+      formData.append('sort_orders', imageIndices.join(','));
       await faceService.uploadFaces(formData);
       Alert.alert(
         t('faceUpload.uploadSuccess') || 'Success',
@@ -529,7 +541,15 @@ const FaceUpload: React.FC = () => {
         t('faceUpload.uploadFailedMessage') || 'Failed to upload face data. Please try again.',
         [
           {
-            text: t('common.ok') || 'OK',
+            text: t('common.retry') || 'Retry',
+            onPress: () => {
+              setIsUploading(false);
+              setIsProcessing(false);
+              startScanning();
+            },
+          },
+          {
+            text: t('common.cancel') || 'Cancel',
             onPress: () => {
               navigation.goBack();
             },
@@ -542,7 +562,9 @@ const FaceUpload: React.FC = () => {
   };
 
   const handleComplete = async (allFaces: FaceData[]) => {
-    await uploadFaces(allFaces.map(({ position, imageUri }) => ({ position, imageUri })));
+    await uploadFaces(
+      allFaces.map(({ positionIndex, imageUri }) => ({ position: positionIndex, imageUri }))
+    );
   };
 
   const stopAllScanning = () => {
@@ -607,7 +629,7 @@ const FaceUpload: React.FC = () => {
     }
 
     if (type !== 'capture') {
-      const hasAtLeastOneImage = images.some((img) => !!img);
+      const hasAtLeastOneImage = images.some((img) => img.uri);
       if (!hasAtLeastOneImage) {
         setChoosePhotoError(t('faceUpload.pleaseChooseAtLeastOneImage'));
         return false;
@@ -630,43 +652,43 @@ const FaceUpload: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!validateForm()) {
-      return;
-    }
-    const imageIds: number[] = [];
-    const imageFiles: { uri: string; type: string; name: string }[] = [];
-    images.forEach((img, idx) => {
-      if (img.uri) {
-        imageIds.push(img.id!);
-        imageFiles.push({
-          uri: img.uri,
-          type: 'image/jpeg',
-          name: `${FACE_POSITION_TITLES[idx]?.key || 'center'}.jpg`,
-        });
-      }
-    });
-    const formData = new FormData();
-    formData.append('name', nameInput.value);
-    if (selectedRelationship) {
-      formData.append('relationship_type_id', selectedRelationship.id);
-    }
-    formData.append('image_ids', imageIds.join(','));
-    imageFiles.forEach((file) => formData.append('image_files', file as any));
     try {
-      console.log(formData);
-      await faceService.uploadFaces(formData);
-      Alert.alert(
-        t('faceUpload.uploadSuccess') || 'Success',
-        t('faceUpload.uploadSuccessMessage') || 'Face data uploaded successfully!',
-        [
-          {
-            text: t('common.ok') || 'OK',
-            onPress: () => {
-              navigation.goBack();
+      if (!validateForm()) {
+        return;
+      }
+      setIsUploading(true);
+      const imageIndices: number[] = [];
+      const imageFiles: { uri: string; type: string; name: string}[] = [];
+      images.forEach((img, idx) => {
+        if (img.uri) {
+          imageIndices.push(idx);
+          imageFiles.push({
+            uri: img.uri,
+            type: 'image/jpeg',
+            name: `${FACE_POSITION_TITLES[idx]?.key || 'center'}.jpg`,
+          });
+        }
+      });
+      const formData = new FormData();
+      formData.append('name', nameInput.value);
+      if (selectedRelationship) {
+        formData.append('relationship_type_id', selectedRelationship.id);
+      }
+      formData.append('sort_orders', imageIndices.join(','));
+      imageFiles.forEach((file) => formData.append('images', file as any));
+      const response = await faceService.uploadFaces(formData);
+      if (response.success) {
+        Alert.alert(
+          t('faceUpload.uploadSuccess') || 'Success',
+          t('faceUpload.uploadSuccessMessage') || 'Face data uploaded successfully!',
+          [
+            {
+              text: t('common.ok') || 'OK',
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
+      setIsUploading(false);
     } catch (error) {
       console.error('Upload error:', error);
       Alert.alert(
@@ -728,7 +750,7 @@ const FaceUpload: React.FC = () => {
       const newImages = [...images];
       newImages[index] = {
         uri: result.assets[0].uri || null,
-        id: index + 1, // id là vị trí 1-5
+        id: index + 1,
       };
       setImages(newImages);
       setChoosePhotoError(undefined);
@@ -778,7 +800,7 @@ const FaceUpload: React.FC = () => {
       <TouchableOpacity
         style={styles.saveButtonChoosePhoto}
         onPress={handleSave}
-        disabled={isLoadingRelationships}
+        disabled={isUploading}
       >
         <Text style={styles.startButtonText}>{t('workSchedule.save')}</Text>
       </TouchableOpacity>
@@ -996,6 +1018,13 @@ const FaceUpload: React.FC = () => {
             </TouchableOpacity>
           </Modal>
         </SafeAreaView>
+        {/* Uploading Overlay */}
+        {isUploading && (
+          <View style={styles.uploadingOverlay}>
+            <ActivityIndicator size="large" color="#4CAF50" />
+            <Text style={styles.uploadingText}>{t('faceUpload.uploading')}</Text>
+          </View>
+        )}
       </View>
     );
   }

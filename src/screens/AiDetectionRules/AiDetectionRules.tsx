@@ -18,7 +18,6 @@ import cameraService from '@api/cameraService';
 export type AiRule = {
   id: string;
   title: string;
-  enabled: boolean;
 };
 
 type AiDetectionRulesStackParamList = {
@@ -38,7 +37,6 @@ export default function AiDetectionRules() {
     const mappedRules: AiRule[] = response.data.map((item: any) => ({
       id: item.id,
       title: item.name,
-      enabled: true,
     }));
     setRules(mappedRules);
   }, [camera?.id]);

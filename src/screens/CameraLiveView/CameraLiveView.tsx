@@ -38,6 +38,7 @@ import { StreamQuality } from '@api/types/cameraTypes';
 import { useLiveStream } from '@hooks/useLiveStream';
 import { useMic } from '@hooks/useMic';
 import { MicState } from '@redux/slices/streamSlice';
+import { checkMicPermission, requestMicPermission, openAppSettings } from '@utils/permissions';
 
 const STREAM_QUALITIES: StreamQuality[] = [
   { label: '流畅', value: 'low', resolution: '640x480', bitrate: 256 },
@@ -73,6 +74,8 @@ const CameraLiveView: React.FC = () => {
   const [timeExp, setTimeExp] = useState<string | null>(null);
   const [streamHtmlUrl, setStreamHtmlUrl] = useState('');
   const [micUrl, setMicUrl] = useState('');
+  const [isTalkingDelayed, setIsTalkingDelayed] = useState(false);
+  const [isMicProcessing, setIsMicProcessing] = useState(false);
 
   // useLiveStream hook — auto-retry, heartbeat, NetInfo monitoring
   const {
@@ -95,6 +98,18 @@ const CameraLiveView: React.FC = () => {
   });
 
   const isTalking = micState === MicState.STREAMING || micState === MicState.CONNECTING;
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isTalking) {
+      timer = setTimeout(() => setIsTalkingDelayed(true), 1000);
+    } else {
+      setIsTalkingDelayed(false);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isTalking]);
 
   // Derive error state from hook
   const webViewError = connectionStatus === 'failed';
@@ -314,8 +329,40 @@ const CameraLiveView: React.FC = () => {
   }, [t, captureFrameFromWebView]);
 
   const toggleTalk = useCallback(async () => {
-    await toggleMic();
-  }, [toggleMic]);
+    if (isMicProcessing) return; // Chặn click spam liên tục
+    setIsMicProcessing(true);
+    try {
+      const micPermission = await checkMicPermission();
+      if (micPermission === 'granted') {
+        await toggleMic();
+      } else if (micPermission === 'denied') {
+        const reqStatus = await requestMicPermission();
+        if (reqStatus === 'granted') {
+          await toggleMic();
+        } else if (reqStatus === 'blocked') {
+          Alert.alert(t('common.error'), t('cameraLive.micPermissionBlocked'), [
+            {
+              text: t('bluetoothScreen.openSettings'),
+              onPress: openAppSettings,
+            },
+            { text: t('common.cancel'), style: 'cancel' },
+          ]);
+        }
+      } else if (micPermission === 'blocked') {
+        Alert.alert(t('common.error'), t('cameraLive.micPermissionBlocked'), [
+          {
+            text: t('bluetoothScreen.openSettings'),
+            onPress: openAppSettings,
+          },
+          { text: t('common.cancel'), style: 'cancel' },
+        ]);
+      } else {
+        Alert.alert(t('common.error'), t('cameraLive.micPermissionUnavailable'));
+      }
+    } finally {
+      setIsMicProcessing(false);
+    }
+  }, [toggleMic, t, isMicProcessing]);
 
   const closeQualityModal = () => {
     setIsAnimating(false);
@@ -686,7 +733,14 @@ const CameraLiveView: React.FC = () => {
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.controlButton} onPress={toggleTalk}>
-                  <Icon name="microphone" size={22} color={isTalking ? '#EF4444' : '#FFF'} />
+                  {/* eslint-disable-next-line react-native/no-inline-styles */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {isTalking && !isTalkingDelayed ? (
+                      <ActivityIndicator size="small" color="#44ef52" />
+                    ) : (
+                      isTalkingDelayed && <Icon name="microphone" size={22} color="#44ef52" />
+                    )}
+                  </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -755,9 +809,15 @@ const CameraLiveView: React.FC = () => {
           <Text style={styles.mainButtonText}>{t('cameraLive.video')}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.mainButton} onPress={toggleTalk}>
-          <View style={[styles.iconCircle, isTalking && styles.iconCircleActive]}>
-            <Icon name="microphone" size={28} color="#FFF" />
+        <TouchableOpacity style={styles.mainButton} onPress={toggleTalk} disabled={isMicProcessing}>
+          <View style={[styles.iconCircle, isTalkingDelayed && styles.iconCircleActive]}>
+            <View style={styles.micIconRow}>
+              {isTalking && !isTalkingDelayed ? (
+                <ActivityIndicator size="small" color="#44ef52" />
+              ) : (
+                <Icon name="microphone" size={28} color="#FFF" />
+              )}
+            </View>
           </View>
           <Text style={styles.mainButtonText}>{t('cameraLive.call')}</Text>
         </TouchableOpacity>

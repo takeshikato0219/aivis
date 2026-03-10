@@ -66,13 +66,19 @@ export const styles = StyleSheet.create({
   viewTitle: {
     flex: 1,
     marginHorizontal: 14,
-    justifyContent: 'center',
   },
 
   headerTitle: {
     fontSize: isTablet() ? 35 : 20,
     fontWeight: FONTS.weights.medium,
     color: COLORS.background,
-    textAlign: 'center',
+  },
+  noData: {
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  loadingMoreContainer: {
+    alignItems: 'center',
+    padding: 16,
   },
 });

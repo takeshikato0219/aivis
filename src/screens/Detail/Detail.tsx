@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ImageBackground,
   Image,
-  TouchableWithoutFeedback,
   ScrollView,
   StatusBar,
   Alert,
@@ -40,43 +39,15 @@ import IconListFace from '@assets/svg/icon-list-face.svg';
 
 import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/types';
 import { COLORS } from '@constants/theme';
+import cameraService from '@api/cameraService';
 
 const livingItem = {
   id: '4',
   name: 'ライブカメラ',
-  status: 'Online',
+  status: true,
   counter: '5',
-  frame: {
-    uri: '',
-    backgroundColor: 'rgba(255,255,255,0.4)',
-  },
 };
 
-const INITIAL_LIST = [
-  { id: '1', name: '㷌宅人数', status: 'Online', counter: '1/2人' },
-  { id: '2', name: '本日の通行人', status: 'Offline', counter: '45人' },
-  { id: '3', name: '未登録検知', status: 'Online', counter: '5人' },
-  { id: '5', name: '生物検知', status: 'Online', counter: '5' },
-].map((item) => ({
-  ...item,
-  frame: {
-    uri: '',
-    backgroundColor: 'rgba(255,255,255,0.4)',
-  },
-}));
-
-const CAMERA_LIST = [
-  ...INITIAL_LIST.slice(0, 3),
-  livingItem,
-  ...INITIAL_LIST.slice(3),
-  {
-    id: '6',
-    name: '人物登録',
-    status: 'Online',
-    counter: '4人',
-    frame: { uri: '', backgroundColor: 'rgba(255,255,255,0.4)' },
-  },
-];
 const ICONS = [IconHome, IconPerson, IconSuspect, IconLive, IconBear, IconListFace];
 const ICON_NAMES = [
   'IconHome',
@@ -115,6 +86,18 @@ const Detail = () => {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [lastFrameUri, setLastFrameUri] = useState<string | null>(null);
+  const [rulesList, setRulesList] = useState<any[]>([]);
+
+  const getRulesMaster = useCallback(async () => {
+    try {
+      const response = await cameraService.getRulesForCamera(camera.id);
+      if (response.success) {
+        setRulesList(response.data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch rules:', err);
+    }
+  }, [camera?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -136,7 +119,8 @@ const Detail = () => {
         }
       };
       loadLastFrame();
-    }, [camera?.id])
+      getRulesMaster();
+    }, [camera?.id, getRulesMaster])
   );
 
   const backgrounds = [CameraShopDetailBgPng, CameraHomeDetailBgPng, CameraFactoryDetailBgPng];
@@ -158,6 +142,26 @@ const Detail = () => {
     });
   };
 
+
+  const mappedInitialList = rulesList.map((rule) => ({
+    id: rule.id,
+    name: rule.name,
+    status: rule.is_active,
+    counter: '5人',
+  }));
+
+  const CAMERA_LIST = [
+    ...mappedInitialList.slice(0, 3),
+    livingItem,
+    ...mappedInitialList.slice(3),
+    {
+      id: '6',
+      name: '人物登録',
+      status: true,
+      counter: '4人',
+    },
+  ];
+
   const handlePressNotification = (itemName: string, iconName: string) => {
     navigation.navigate('ListNotificationCamera', { title: itemName, icon: iconName });
   };
@@ -177,9 +181,9 @@ const Detail = () => {
   };
 
   const getCameraListItemPressHandler = (item: (typeof CAMERA_LIST)[number], idx: number) => {
-    if (item.id === '4') return handleCameraPress;
-    if (item.id === '2') return () => handlePressCustomerReport(item.name, ICON_NAMES[idx]);
-    if (item.id === '6') return goToFaceUpload;
+    if (idx === 3) return handleCameraPress;
+    if (idx === 1) return () => handlePressCustomerReport(item.name, ICON_NAMES[idx]);
+    if (idx === CAMERA_LIST.length - 1) return goToFaceUpload;
     return () => handlePressNotification(item.name, ICON_NAMES[idx]);
   };
 
@@ -289,24 +293,38 @@ const Detail = () => {
             {CAMERA_LIST.map((item, idx) => (
               <View key={item.id}>
                 {idx > 0 && <ItemSeparator />}
-                <TouchableWithoutFeedback onPress={getCameraListItemPressHandler(item, idx)}>
-                  <ImageBackground source={item.frame} style={styles.rowFront} resizeMode="cover">
+                <TouchableOpacity
+                  onPress={getCameraListItemPressHandler(item, idx)}
+                  disabled={!item.status}
+                >
+                  <ImageBackground
+                    style={[styles.rowFront, !item.status && styles.disableBackground]}
+                    resizeMode="cover"
+                  >
                     {/* eslint-disable-next-line react-native/no-inline-styles */}
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       {ICONS[idx] && (
                         // eslint-disable-next-line react-native/no-inline-styles
                         <View style={{ marginRight: 8 }}>
-                          {React.createElement(ICONS[idx], { width: 24, height: 24 })}
+                          {React.createElement(ICONS[idx], {
+                            width: 24,
+                            height: 24,
+                            style: !item.status ? styles.disableIcon : undefined,
+                          })}
                         </View>
                       )}
                       <View>
-                        <Text style={styles.filterText}>{item.name}</Text>
-                        <Text style={styles.filterText}>{item.counter}</Text>
+                        <Text style={[styles.filterText, !item.status && styles.disableText]}>
+                          {item.name}
+                        </Text>
+                        <Text style={[styles.filterText, !item.status && styles.disableText]}>
+                          {item.counter}
+                        </Text>
                       </View>
                     </View>
-                    <MoveRightIcon />
+                    <MoveRightIcon style={!item.status ? styles.disableIcon : undefined} />
                   </ImageBackground>
-                </TouchableWithoutFeedback>
+                </TouchableOpacity>
               </View>
             ))}
           </ScrollView>

@@ -37,6 +37,7 @@ class AuthService {
       status: data.status,
       type: data.type,
       has_followed_bot: data.has_followed_bot,
+      line_notification_id: data.line_notification_id,
     };
   }
 
@@ -108,12 +109,15 @@ class AuthService {
     phone?: string;
     line_user_id?: string;
     avatar?: any;
+    has_followed_bot?: any;
   }): Promise<User> {
     const formData = new FormData();
 
     if (data.name !== undefined) formData.append('name', data.name);
     if (data.email !== undefined) formData.append('email', data.email);
     if (data.phone !== undefined) formData.append('phone', data.phone);
+    if (data.has_followed_bot !== undefined)
+      formData.append('has_followed_bot', data.has_followed_bot);
     if (data.line_user_id !== undefined) formData.append('line_user_id', data.line_user_id);
 
     if (data.avatar) {

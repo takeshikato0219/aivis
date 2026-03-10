@@ -247,7 +247,9 @@
     "thereIsNoRecordingData": "There is no recording data",
     "video": "Video",
     "call": "Call",
-    "photo": "Photo"
+    "photo": "Photo",
+    "micPermissionBlocked": "Your mic has been blocked. Please enable mic permission in Settings to use the voice function.",
+    "micPermissionUnavailable": "Your mic is not ready. Please check your device settings to ensure the mic is available and try again."
   },
   "changePassword": {
     "changePasswordSuccess": "Password Changed",
@@ -583,5 +585,8 @@
   },
   "listNotificationCamera": {
     "tapTheListBelowToView": "Tap the list below to view"
+  },
+  "notifications": {
+    "title": "Notifications"
   }
 }

@@ -37,11 +37,19 @@ export interface UseMicResult {
 function buildStartMicJS(micUrl: string): string {
   return `
 (function() {
-  if (window.__micCleanup) { window.__micCleanup(); }
+
+  if (window.__micCleanup) {
+    window.__micCleanup();
+  }
 
   var wsUrl = ${JSON.stringify(micUrl)};
-  // Dùng WebSocket gốc (trước khi bị __wsPatched patch) để tránh bị stream manager close
+
+  wsUrl = wsUrl.includes('?') ? wsUrl + '&type=android' : wsUrl + '?type=android';
+
+  console.log('[MicWV] WS URL:', wsUrl);
+
   var RawWS = (window.__origWS || window.WebSocket);
+
   var ws = null;
   var recorder = null;
   var stream = null;
@@ -50,6 +58,7 @@ function buildStartMicJS(micUrl: string): string {
 
   var SILENCE_THRESHOLD = 0.015;
   var SILENCE_HOLD_MS = 400;
+
   var audioCtx = null;
   var analyser = null;
   var silenceTimer = null;
@@ -62,29 +71,45 @@ function buildStartMicJS(micUrl: string): string {
   }
 
   function cleanup() {
+    console.log('[MicWV] cleanup');
+
     stopped = true;
-    if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+
+    if (silenceTimer) {
+      clearTimeout(silenceTimer);
+      silenceTimer = null;
+    }
+
     if (recorder && recorder.state !== 'inactive') {
       try { recorder.stop(); } catch(e) {}
     }
+
     if (stream) {
-      stream.getTracks().forEach(function(t) { t.stop(); });
+      stream.getTracks().forEach(function(t) {
+        try { t.stop(); } catch(e) {}
+      });
     }
+
     if (audioCtx) {
       try { audioCtx.close(); } catch(e) {}
       audioCtx = null;
     }
+
     if (ws && ws.readyState <= 1) {
       try { ws.close(); } catch(e) {}
     }
+
     recorder = null;
     stream = null;
     ws = null;
+
     window.__micCleanup = null;
+
     postState('stopped');
   }
 
   window.__micCleanup = cleanup;
+
   postState('connecting');
 
   navigator.mediaDevices.getUserMedia({
@@ -92,111 +117,230 @@ function buildStartMicJS(micUrl: string): string {
       echoCancellation: true,
       noiseSuppression: true,
       autoGainControl: true,
-      channelCount: 1,
-      sampleRate: 8000,
+      channelCount: 1
     }
   })
   .then(function(s) {
-    if (stopped) { s.getTracks().forEach(function(t){ t.stop(); }); return; }
+
+    if (stopped) {
+      s.getTracks().forEach(function(t){ t.stop(); });
+      return;
+    }
+
     stream = s;
 
+    // Setup analyser để detect silence
     try {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      var source = audioCtx.createMediaStreamSource(s);
+
+      var source = audioCtx.createMediaStreamSource(stream);
+
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 512;
+
       source.connect(analyser);
+
     } catch(e) {
+      console.warn('[MicWV] analyser init failed');
       analyser = null;
     }
 
-    // Dùng RawWS để không bị __wsPatched track (stream manager sẽ không close WS này)
+    // Tạo websocket
     ws = new RawWS(wsUrl);
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = function() {
-      if (stopped) { ws.close(); return; }
 
-      var mimeType = 'audio/webm;codecs=opus';
-      try {
-        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mimeType)) {
-          recorder = new MediaRecorder(stream, { mimeType: mimeType, audioBitsPerSecond: 64000 });
-        } else {
-          mimeType = 'audio/webm';
-          recorder = new MediaRecorder(stream, { mimeType: mimeType, audioBitsPerSecond: 64000 });
-        }
-      } catch(e) {
-        postState('error', { error: 'MediaRecorder failed: ' + e.message });
-        cleanup();
+      console.log('[MicWV] WS connected');
+
+      if (stopped) {
+        ws.close();
         return;
       }
 
+      var mimeType = 'audio/webm;codecs=opus';
+
+      try {
+
+        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mimeType)) {
+
+          recorder = new MediaRecorder(stream, {
+            mimeType: mimeType,
+            audioBitsPerSecond: 64000
+          });
+
+        } else {
+
+          mimeType = 'audio/webm';
+
+          recorder = new MediaRecorder(stream, {
+            mimeType: mimeType,
+            audioBitsPerSecond: 64000
+          });
+
+        }
+
+      } catch(e) {
+
+        console.error('[MicWV] MediaRecorder failed', e);
+
+        postState('error', {
+          error: 'MediaRecorder failed: ' + e.message
+        });
+
+        cleanup();
+        return;
+
+      }
+
       recorder.ondataavailable = function(ev) {
+
         if (!ev.data || ev.data.size === 0) return;
+
         if (!ws || ws.readyState !== 1) return;
 
+        // Voice Activity Detection
         if (analyser) {
+
           var buf = new Uint8Array(analyser.fftSize);
+
           analyser.getByteTimeDomainData(buf);
+
           var sum = 0;
+
           for (var i = 0; i < buf.length; i++) {
+
             var val = (buf[i] - 128) / 128.0;
+
             sum += val * val;
+
           }
+
           var rms = Math.sqrt(sum / buf.length);
+
           if (rms > SILENCE_THRESHOLD) {
+
             isSpeaking = true;
-            if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+              silenceTimer = null;
+            }
+
           } else if (isSpeaking) {
+
             if (!silenceTimer) {
+
               silenceTimer = setTimeout(function() {
+
                 isSpeaking = false;
                 silenceTimer = null;
+
               }, SILENCE_HOLD_MS);
+
             }
+
           }
-          if (!isSpeaking && !silenceTimer) return;
+
+          if (!isSpeaking && !silenceTimer) {
+            return;
+          }
+
         }
 
         packetsSent++;
+
         ev.data.arrayBuffer().then(function(buf) {
-          if (ws && ws.readyState === 1) ws.send(buf);
+
+          if (ws && ws.readyState === 1) {
+
+            ws.send(buf);
+
+          }
+
         });
+
       };
 
-      recorder.onerror = function() {
-        postState('error', { error: 'MediaRecorder error' });
+      recorder.onerror = function(e) {
+
+        console.error('[MicWV] recorder error');
+
+        postState('error', {
+          error: 'MediaRecorder error'
+        });
+
         cleanup();
+
       };
 
       recorder.start(100);
+
+      console.log('[MicWV] recorder started');
+
       postState('streaming');
+
     };
 
     ws.onclose = function(ev) {
+
+      console.warn('[MicWV] WS closed', ev.code);
+
       if (!stopped) {
-        postState('error', { error: 'WS closed: code=' + ev.code });
+
+        postState('error', {
+          error: 'WS closed: code=' + ev.code
+        });
+
         cleanup();
+
       }
+
     };
+
     ws.onerror = function() {
+
+      console.error('[MicWV] WS error');
+
       if (!stopped) {
-        postState('error', { error: 'WS connection error' });
+
+        postState('error', {
+          error: 'WS connection error'
+        });
+
         cleanup();
+
       }
+
     };
+
     ws.onmessage = function(ev) {
+
       if (typeof ev.data === 'string') {
-        postState('ws_message', { message: ev.data.substring(0, 200) });
+
+        postState('ws_message', {
+          message: ev.data.substring(0, 200)
+        });
+
       }
+
     };
+
   })
   .catch(function(err) {
-    postState('error', { error: 'getUserMedia failed: ' + err.message });
+
+    console.error('[MicWV] getUserMedia failed', err);
+
+    postState('error', {
+      error: 'getUserMedia failed: ' + err.message
+    });
+
     cleanup();
+
   });
 
   true;
+
 })();
 `;
 }
@@ -345,7 +489,12 @@ class NativeMic {
 
   private _connectWS(url: string) {
     this.onStateChange?.(MicState.CONNECTING);
-    const ws = new WebSocket(url);
+    let wsUrl = url;
+    if (Platform.OS === 'ios') {
+      wsUrl = url.includes('?') ? url + '&type=ios' : url + '?type=ios';
+    }
+
+    const ws = new WebSocket(wsUrl);
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = () => {
