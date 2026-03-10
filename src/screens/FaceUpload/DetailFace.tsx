@@ -1,34 +1,34 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
   ActivityIndicator,
-  Modal,
+  Alert,
+  Animated,
   FlatList,
   Image,
-  Animated,
+  Modal,
   Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { useTranslation } from 'react-i18next';
-import { useInput } from '@hooks/useInput';
-import { Camera, useCameraPermission } from 'react-native-vision-camera';
-import FaceDetection, { Face } from '@react-native-ml-kit/face-detection';
-import ImageResizer from '@bam.tech/react-native-image-resizer';
-import BackIcon from '@assets/svg/icon-back.svg';
-import TextInput from '@components/TextInput/TextInput';
-import { styles } from './FaceUpload.styles';
-import faceService, { Member, MemberRelationship } from '@api/faceService';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { COLORS } from '@constants/theme';
-import { DetailFaceNavigationProp, DetailFaceRouteProp } from '@navigation/types';
-import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
-import { useImagePicker } from '@hooks/useImagePicker';
-import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import { useTranslation } from "react-i18next";
+import { useInput } from "@hooks/useInput";
+import { Camera, useCameraPermission } from "react-native-vision-camera";
+import FaceDetection, { Face } from "@react-native-ml-kit/face-detection";
+import ImageResizer from "@bam.tech/react-native-image-resizer";
+import BackIcon from "@assets/svg/icon-back.svg";
+import TextInput from "@components/TextInput/TextInput";
+import { styles } from "./FaceUpload.styles";
+import faceService, { Member, MemberRelationship } from "@api/faceService";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { COLORS } from "@constants/theme";
+import { DetailFaceNavigationProp, DetailFaceRouteProp } from "@navigation/types";
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from "react-native-svg";
+import { useImagePicker } from "@hooks/useImagePicker";
+import { ImagePickerModal } from "@components/ImagePickerModal/ImagePickerModal";
 
 // Face position titles for individual image editing
 const FACE_POSITION_TITLES = [
@@ -318,6 +318,16 @@ const DetailFace = () => {
     validateFn: (v) => (v.trim() ? undefined : 'required'),
   });
 
+  // Helper: Ensure images array always has 5 slots with correct sort_order
+  function ensureFiveImageSlots(images: any[] = []) {
+    return Array.from({ length: 5 }, (_, i) => {
+      const found = images.find((img) => img && img.sort_order === i);
+      return (
+        found || { sort_order: i, image_url: '', id: undefined }
+      );
+    });
+  }
+
   const fetchMemberDetail = useCallback(async () => {
     if (!memberId || hasLoadedData) return;
 
@@ -326,6 +336,8 @@ const DetailFace = () => {
       const memberData = await faceService.getMember(memberId);
 
       if (memberData) {
+        memberData.images = ensureFiveImageSlots(memberData.images);
+
         setMember(memberData);
         nameInput.setValue(memberData.name);
 
@@ -508,11 +520,10 @@ const DetailFace = () => {
     if (
       editingImageIndex !== null &&
       imagePicker.selectedImage &&
-      member &&
-      member.images &&
-      member.images[editingImageIndex]
+      member
     ) {
-      const updatedImages = [...member.images];
+      // Đảm bảo đủ 5 slot
+      const updatedImages = ensureFiveImageSlots(member.images);
       updatedImages[editingImageIndex] = {
         ...updatedImages[editingImageIndex],
         image_url: imagePicker.selectedImage.uri,
@@ -752,8 +763,8 @@ const DetailFace = () => {
       const positionKey = FACE_POSITION_TITLES[selectedImageIndex]?.key || 'center';
 
       if (faces.length === 1 && validateFacePosition(faces[0], positionKey)) {
-        // Update the image in member data
-        const updatedImages = [...member.images];
+        // Đảm bảo đủ 5 slot
+        const updatedImages = ensureFiveImageSlots(member.images);
         updatedImages[selectedImageIndex] = {
           ...updatedImages[selectedImageIndex],
           image_url: imageUri,
@@ -851,6 +862,8 @@ const DetailFace = () => {
     setDetectProgress(0);
   };
 
+  const [imageLoading, setImageLoading] = useState<boolean[]>([false, false, false, false, false]);
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -942,7 +955,26 @@ const DetailFace = () => {
                             source={{ uri: image.image_url }}
                             style={styles.imagePreview}
                             resizeMode="cover"
+                            onLoadStart={() => {
+                              setImageLoading((prev) => {
+                                const next = [...prev];
+                                next[index] = true;
+                                return next;
+                              });
+                            }}
+                            onLoadEnd={() => {
+                              setImageLoading((prev) => {
+                                const next = [...prev];
+                                next[index] = false;
+                                return next;
+                              });
+                            }}
                           />
+                          {imageLoading[index] && (
+                            <View style={[styles.imagePreview, { position: 'absolute', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.5)' }]}>
+                              <ActivityIndicator size="large" color="#000" />
+                            </View>
+                          )}
                           <View style={styles.imageOverlay}>
                             <Icon name="pencil" size={20} color="#fff" />
                             <Text style={styles.imageIndex}>{index + 1}</Text>

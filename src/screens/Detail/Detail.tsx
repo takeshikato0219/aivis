@@ -73,7 +73,7 @@ const Detail = () => {
   const { t } = useTranslation();
   const camera = route.params?.camera;
   const title = camera?.name || 'Detail';
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [lastFrameUri, setLastFrameUri] = useState<string | null>(null);
   const [rulesList, setRulesList] = useState<any[]>([]);
   const [modes, setModes] = useState<any[]>([]);
@@ -152,6 +152,16 @@ const Detail = () => {
       getDetail();
     }, [camera?.id, getRulesMaster, getModes, getDetail])
   );
+
+  // Đồng bộ activeIndex khi có đủ modes và detailModeId
+  React.useEffect(() => {
+    if (modes.length > 0 && detailModeId) {
+      const foundIdx = modes.findIndex((mode: any) => String(mode.id) === String(detailModeId));
+      if (foundIdx !== -1 && foundIdx !== activeIndex) {
+        setActiveIndex(foundIdx);
+      }
+    }
+  }, [modes, detailModeId, activeIndex]);
 
   const backgrounds = [CameraShopDetailBgPng, CameraHomeDetailBgPng, CameraFactoryDetailBgPng];
 
@@ -278,7 +288,7 @@ const Detail = () => {
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
       <ImageBackground
-        source={backgrounds[activeIndex]}
+        source={activeIndex !== null ? backgrounds[activeIndex] : backgrounds[0]}
         style={styles.backgroundImage}
         resizeMode="stretch"
         imageStyle={styles.imageStyle}
@@ -336,7 +346,7 @@ const Detail = () => {
                 style={styles.filterRow}
                 contentContainerStyle={styles.filterContent}
               >
-                {filters.map((filter, idx) => {
+                {activeIndex !== null && filters.map((filter, idx) => {
                   const Icon = activeIndex === idx ? filter.iconActive : filter.iconUnActive;
                   const modeId = modes[idx]?.id;
                   return (
