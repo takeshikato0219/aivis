@@ -16,19 +16,49 @@ import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import notificationsService, { Notification } from '@api/notificationsService';
 import { ScrollView } from 'react-native-gesture-handler';
+import rulesService from '@api/rulesService';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { AppStackParamList } from '@navigation/types';
+
+import IconHome from '@assets/svg/icon-home.svg';
+import IconPerson from '@assets/svg/icon-person.svg';
+import IconSuspect from '@assets/svg/icon-suspect.svg';
+import IconBear from '@assets/svg/icon-bear.svg';
 
 const PAGE_SIZE = 10;
 
 const Notifications = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<AppStackParamList>>();
   const { t } = useTranslation();
   useAppSetup({ screenName: 'Notifications' });
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [rules, setRules] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  const ruleIconMap: Record<string, { icon: any; iconName: string }> = {
+    home_return_count: { icon: IconHome, iconName: 'IconHome' },
+    daily_passerby: { icon: IconPerson, iconName: 'IconPerson' },
+    unregistered_detection: { icon: IconSuspect, iconName: 'IconSuspect' },
+    creature_detection: { icon: IconBear, iconName: 'IconBear' },
+  };
+
+  const defaultIcon = IconHome;
+  const defaultIconName = 'IconHome';
+
+  const getRulesMaster = async () => {
+    try {
+      const response = await rulesService.getRules();
+      if (response.success && Array.isArray(response.data)) {
+        setRules(response.data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch rules:', err);
+    }
+  };
 
   const loadNotifications = useCallback(async (pageToLoad = 1, isReload = false) => {
     setLoading(true);
@@ -68,6 +98,7 @@ const Notifications = () => {
 
   useEffect(() => {
     loadNotifications(1, true);
+    getRulesMaster();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -122,22 +153,44 @@ const Notifications = () => {
               scrollEventThrottle={16}
             >
               {Array.isArray(notifications) && notifications.length > 0 ? (
-                notifications.map((item, idx) => (
-                  <Card
-                    key={item.id ? `${item.id}-${idx}` : `notification-${idx}`}
-                    style={[styles.notificationCard, !item.is_seen && styles.unreadCard]}
-                    elevation={0}
-                    onPress={() => !item.is_seen && handleMarkAsRead(item.id)}
-                  >
-                    <Card.Content>
-                      <List.Item
-                        title={item.message}
-                        description={item.sent_at ? new Date(item.sent_at).toLocaleString() : ''}
-                        onPress={() => !item.is_seen && handleMarkAsRead(item.id)}
-                      />
-                    </Card.Content>
-                  </Card>
-                ))
+                notifications.map((item, idx) => {
+                  const matchedRule = rules.find((rule) => rule.id === item.rules_master_id);
+                  const isDailyPasserby = matchedRule && matchedRule.code === 'daily_passerby';
+                  // Get iconName from ruleIconMap if available
+                  const iconInfo =
+                    matchedRule && matchedRule.code && ruleIconMap[matchedRule.code]
+                      ? ruleIconMap[matchedRule.code]
+                      : { icon: defaultIcon, iconName: defaultIconName };
+                  const iconName = iconInfo.iconName;
+                  const itemName = matchedRule?.rule_name || item.message;
+                  const onPress = () => {
+                    if (!item.is_seen) handleMarkAsRead(item.id);
+                    if (isDailyPasserby) {
+                      navigation.navigate('CustomerReport', { title: itemName, icon: iconName });
+                    } else {
+                      navigation.navigate('ListNotificationCamera', {
+                        title: itemName,
+                        icon: iconName,
+                      });
+                    }
+                  };
+                  return (
+                    <Card
+                      key={item.id ? `${item.id}-${idx}` : `notification-${idx}`}
+                      style={[styles.notificationCard, !item.is_seen && styles.unreadCard]}
+                      elevation={0}
+                      onPress={onPress}
+                    >
+                      <Card.Content>
+                        <List.Item
+                          title={item.message}
+                          description={item.sent_at ? new Date(item.sent_at).toLocaleString() : ''}
+                          onPress={onPress}
+                        />
+                      </Card.Content>
+                    </Card>
+                  );
+                })
               ) : (
                 <View style={styles.noData}>
                   <Text>{t('home.noData')}</Text>
