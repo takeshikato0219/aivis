@@ -113,7 +113,7 @@ const FaceUpload: React.FC = () => {
   // Face detection options for static images
   const faceDetectionOptions: FaceDetectionOptions = {
     performanceMode: 'accurate',
-    landmarkMode: 'none',
+    landmarkMode: 'all',
     contourMode: 'none',
     classificationMode: 'none',
     minFaceSize: Platform.OS === 'ios' ? 0.1 : 0.15,
@@ -122,8 +122,12 @@ const FaceUpload: React.FC = () => {
 
   // Validate face position based on rotation angles
   const validateFacePosition = (face: Face, position: FacePosition): boolean => {
-    // ML Kit returns angles in degrees, not radians
-    // Normalize to -180 to 180 range
+    // ML Kit returns angles in degrees; requires landmarkMode: 'all' for non-center positions
+    const rotX = face.rotationX ?? 0;
+    const rotY = face.rotationY ?? 0;
+    if (rotX === 0 && rotY === 0 && position !== 'center') {
+      return false; // Angles not available, only center can pass
+    }
     const normalizeAngle = (angle: number) => {
       let normalized = angle % 360;
       if (normalized > 180) normalized -= 360;
@@ -131,8 +135,8 @@ const FaceUpload: React.FC = () => {
       return normalized;
     };
 
-    const rotationX = normalizeAngle(face.rotationX);
-    const rotationY = normalizeAngle(face.rotationY);
+    const rotationX = normalizeAngle(rotX);
+    const rotationY = normalizeAngle(rotY);
     const rotationThreshold = 15; // degrees
 
     switch (position) {
@@ -405,7 +409,43 @@ const FaceUpload: React.FC = () => {
       }
 
       // Detect faces in the captured image
-      const faces = await FaceDetection.detect(imageUri, faceDetectionOptions);
+      const allFaces = await FaceDetection.detect(imageUri, faceDetectionOptions);
+
+      // Filter faces to only those within the detection frame (center region of image)
+      // Only faces inside the frame count; faces outside trigger faceOutsideFrame validation
+      const faces = await new Promise<Face[]>((resolve) => {
+        Image.getSize(
+          imageUri,
+          (imgWidth, imgHeight) => {
+            // Frame region: center ~60% of image (maps to UI detection frame)
+            const marginX = imgWidth * 0.2;
+            const marginY = imgHeight * 0.2;
+            const frameLeft = marginX;
+            const frameTop = marginY;
+            const frameRight = imgWidth - marginX;
+            const frameBottom = imgHeight - marginY;
+
+            const facesInFrame = allFaces.filter((face) => {
+              const faceLeft = face.frame.left;
+              const faceTop = face.frame.top;
+              const faceRight = face.frame.left + face.frame.width;
+              const faceBottom = face.frame.top + face.frame.height;
+              return (
+                faceLeft >= frameLeft &&
+                faceTop >= frameTop &&
+                faceRight <= frameRight &&
+                faceBottom <= frameBottom
+              );
+            });
+            resolve(facesInFrame);
+          },
+          () => {
+            // When we cannot get image dimensions, do not assume faces are in frame
+            // Treat as empty to trigger faceOutsideFrame when allFaces.length > 0
+            resolve([]);
+          }
+        );
+      });
 
       // Check if exactly one face is detected and in correct position
       if (faces.length === 1 && validateFacePosition(faces[0], currentPosition.key)) {
@@ -458,7 +498,10 @@ const FaceUpload: React.FC = () => {
         let errorMessage = '';
 
         if (faces.length === 0) {
-          errorMessage = t('faceUpload.noFaceDetected');
+          errorMessage =
+            allFaces.length > 0
+              ? t('faceUpload.faceOutsideFrame')
+              : t('faceUpload.noFaceDetected');
         } else if (faces.length > 1) {
           errorMessage = t('faceUpload.multipleFacesDetected');
         } else if (faces.length === 1) {

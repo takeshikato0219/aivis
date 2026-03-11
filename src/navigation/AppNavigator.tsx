@@ -32,7 +32,7 @@ import WorkSchedule from '@screens/WorkSchedule/WorkSchedule';
 import UploadDetectZone from '@screens/DetectionZoneSetup/UploadDetectZone';
 import ListNotificationCamera from '@screens/ListNotificationCamera/ListNotificationCamera';
 import CustomerReport from '@screens/CustomerReport/CustomerReport';
-import Policy from "@screens/Policy/Policy";
+import Policy from '@screens/Policy/Policy';
 
 const Stack = createStackNavigator<AppStackParamList>();
 

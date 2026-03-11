@@ -33,8 +33,6 @@ import IconBlue from '@assets/svg/icon-blue.svg';
 import cameraService from '@api/cameraService';
 import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
 import { useErrorHandler } from '@hooks/useErrorHandler';
-import CameraIcon from '@assets/png/camera.png';
-import MoveRightIcon from '@assets/svg/vector-right.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
 import notificationsService from '@api/notificationsService';
@@ -439,14 +437,17 @@ const Home = () => {
             )}
 
             {renderCameraContent()}
-            <TouchableOpacity style={styles.manualButton} onPress={goToBluetoothScan}>
-              <View style={styles.viewAddCamera}>
-                <Image source={CameraIcon} />
-                <Text style={styles.manualButtonText}>{t('home.addCamera')}</Text>
-                <MoveRightIcon style={styles.positionButtonBottom} />
-              </View>
-            </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            style={styles.floatingButton}
+            onPress={goToBluetoothScan}
+            activeOpacity={0.8}
+          >
+            <View style={styles.centerButton}>
+              <Icon name="plus" size={32} color="#ccc" />
+              <Text style={styles.manualButtonText}>{t('home.addCamera')}</Text>
+            </View>
+          </TouchableOpacity>
           <DrawerMenu
             isOpen={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}

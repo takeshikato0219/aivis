@@ -18,6 +18,7 @@ import cameraService from '@api/cameraService';
 export type AiRule = {
   id: string;
   title: string;
+  code: string;
 };
 
 type AiDetectionRulesStackParamList = {
@@ -37,6 +38,7 @@ export default function AiDetectionRules() {
     const mappedRules: AiRule[] = response.data.map((item: any) => ({
       id: item.id,
       title: item.name,
+      code: item.code,
     }));
     setRules(mappedRules);
   }, [camera?.id]);
@@ -46,11 +48,12 @@ export default function AiDetectionRules() {
   }, [fetchRules]);
 
   const handleSetupClockSchedule = useCallback(
-    (ruleId: string, title: string) => {
+    (ruleId: string, title: string, code: string) => {
       (navigation as any).navigate('WorkSchedule', {
         camera: camera,
         ruleId,
         title,
+        code,
       });
     },
     [camera, navigation]
@@ -62,7 +65,7 @@ export default function AiDetectionRules() {
       return (
         <>
           <Pressable
-            onPress={() => handleSetupClockSchedule(item.id, item.title)}
+            onPress={() => handleSetupClockSchedule(item.id, item.title, item.code)}
             style={styles.row}
           >
             <View style={styles.left}>

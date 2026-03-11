@@ -36,6 +36,9 @@ export const API_ENDPOINTS = {
 
   //notifications
   NOTIFICATIONS: '/notifications',
+
+  //detections
+  DETECTIONS: '/detections',
 };
 
 export type ApiEndpoints = typeof API_ENDPOINTS;

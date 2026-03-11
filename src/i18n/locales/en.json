@@ -452,6 +452,7 @@
     "qualityScore": "Scan Quality",
     "faceDetectionError": "Face Detection Error",
     "noFaceDetected": "No face detected in the captured image. Please try again.",
+    "faceOutsideFrame": "Please position your face within the detection frame.",
     "multipleFacesDetected": "Multiple faces detected. Please ensure only one face is visible and try again.",
     "getReady": "Get ready...",
     "pleaseFaceTheCameraStraightAhead": "Please face the camera straight ahead.",
@@ -582,7 +583,9 @@
     "successMessage": "Detection zone setup successful",
     "failureMessage": "Detection zone setup failed",
     "setupError": "Setup error",
-    "twoPointError": "The two points must not coincide with the edge of the frame. Please select a different position!"
+    "twoPointError": "The two points must not coincide with the edge of the frame. Please select a different position!",
+    "endSetup": "End Setup?",
+    "doYouWantToEndTheSetupProcess": "Do you want to end the setup process?"
   },
   "listNotificationCamera": {
     "tapTheListBelowToView": "Tap the list below to view"

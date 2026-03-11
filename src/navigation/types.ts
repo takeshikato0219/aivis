@@ -68,6 +68,7 @@ export type AppStackParamList = {
     camera: Camera;
     ruleId: string;
     title: string;
+    code: string;
   };
   UploadDetectZone: {
     camera: Camera;

@@ -72,12 +72,28 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: -50,
+    position: 'relative',
+  },
+  frameOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+  },
+  frameOverlaySection: {
+    position: 'absolute',
+    backgroundColor: 'rgba(128, 128, 128, 0.6)',
   },
   faceFrame: {
     width: 250,
     height: 325,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#808080',
+    borderRadius: 4,
   },
   holdProgressRing: {
     position: 'absolute',

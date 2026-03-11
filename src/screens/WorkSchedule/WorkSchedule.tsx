@@ -69,6 +69,7 @@ export default function WorkSchedule() {
   const route = useRoute<WorkScheduleRouteProp>();
   const camera = route.params?.camera;
   const ruleId = route.params?.ruleId;
+  const code = route.params?.code;
 
   useEffect(() => {
     getSchedule();
@@ -269,32 +270,34 @@ export default function WorkSchedule() {
         </View>
 
         {/* Multiple select */}
-        <View style={styles.multipleSelectRow}>
-          <Text style={styles.sectionLabel}>{t('workSchedule.selectFaceToApply')}</Text>
-          <DropDownPicker
-            open={openSelect2}
-            value={select2Value}
-            items={select2Items}
-            setOpen={setOpenSelect2}
-            setValue={setSelect2Value}
-            setItems={setSelect2Items}
-            multiple={true}
-            mode="BADGE"
-            placeholder={t('workSchedule.selectFaceToApply')}
-            style={styles.styleMultipleSelectRow}
-            // eslint-disable-next-line react-native/no-inline-styles
-            placeholderStyle={{ color: '#fff' }}
-            badgeDotColors={['#2A9EC6']}
-            badgeColors={['#1d5cbb']}
-            // eslint-disable-next-line react-native/no-inline-styles
-            badgeTextStyle={{ color: '#fff' }}
-            zIndex={1000}
-            listMode="MODAL"
-            searchable={true}
-            searchPlaceholder={t('common.search')}
-            CloseIconComponent={DropDownSaveButton}
-          />
-        </View>
+        {code === 'home_return_count' || code === 'unregistered_detection' ? (
+          <View style={styles.multipleSelectRow}>
+            <Text style={styles.sectionLabel}>{t('workSchedule.selectFaceToApply')}</Text>
+            <DropDownPicker
+              open={openSelect2}
+              value={select2Value}
+              items={select2Items}
+              setOpen={setOpenSelect2}
+              setValue={setSelect2Value}
+              setItems={setSelect2Items}
+              multiple={true}
+              mode="BADGE"
+              placeholder={t('workSchedule.selectFaceToApply')}
+              style={styles.styleMultipleSelectRow}
+              // eslint-disable-next-line react-native/no-inline-styles
+              placeholderStyle={{ color: '#fff' }}
+              badgeDotColors={['#2A9EC6']}
+              badgeColors={['#1d5cbb']}
+              // eslint-disable-next-line react-native/no-inline-styles
+              badgeTextStyle={{ color: '#fff' }}
+              zIndex={1000}
+              listMode="MODAL"
+              searchable={true}
+              searchPlaceholder={t('common.search')}
+              CloseIconComponent={DropDownSaveButton}
+            />
+          </View>
+        ) : undefined}
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}

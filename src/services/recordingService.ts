@@ -24,9 +24,22 @@ class RecordingService {
 
   /**
    * Request necessary permissions for Android.
+   * On Android 13+ (API 33), WRITE_EXTERNAL_STORAGE is deprecated and always returns denied.
+   * The library saves to app-specific storage which doesn't require this permission.
+   * Gallery save permission is requested in CameraLiveView when stopping recording.
    */
   private async requestAndroidPermissions(): Promise<boolean> {
     if (Platform.OS !== 'android') {
+      return true;
+    }
+
+    const androidVersion =
+      typeof Platform.Version === 'number'
+        ? Platform.Version
+        : parseInt(String(Platform.Version), 10);
+
+    // Android 13+ (API 33): WRITE_EXTERNAL_STORAGE doesn't work, library uses app storage
+    if (androidVersion >= 33) {
       return true;
     }
 

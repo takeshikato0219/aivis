@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -80,6 +80,7 @@ const Detail = () => {
   const [modes, setModes] = useState<any[]>([]);
   const [detailModeId, setDetailModeId] = useState<string | null>(null);
   const [countFace, setCountFace] = useState<number>(0);
+  const [countDetection, setCountDetection] = useState<number>(0);
 
   const getRulesMaster = async () => {
     try {
@@ -108,6 +109,19 @@ const Detail = () => {
       console.warn('Failed to fetch modes:', err);
     }
   };
+
+  const getCountDetection = useCallback(async () => {
+    try {
+      const response = await cameraService.countDetections(camera.id);
+      if (response.success && typeof response.data === 'number') {
+        setCountDetection(response.data);
+      } else if (response.success && response.data && typeof response.data.count === 'number') {
+        setCountDetection(response.data.count);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch detection count:', err);
+    }
+  }, [camera.id]);
 
   const getDetail = async () => {
     try {
@@ -156,7 +170,7 @@ const Detail = () => {
     }, [camera.id])
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (modes.length > 0 && detailModeId) {
       const foundIdx = modes.findIndex((mode: any) => String(mode.id) === String(detailModeId));
       if (foundIdx !== -1 && foundIdx !== activeIndex) {
@@ -262,7 +276,13 @@ const Detail = () => {
 
   const CAMERA_LIST: CameraListItem[] = [
     ...cameraListWithIcons,
-    { ...livingItem, icon: IconLive, iconName: 'IconLive', handler: handleCameraPress },
+    {
+      ...livingItem,
+      icon: IconLive,
+      iconName: 'IconLive',
+      handler: handleCameraPress,
+      counter: `${countDetection}件`,
+    },
     {
       id: '6',
       name: '人物登録',
@@ -363,6 +383,17 @@ const Detail = () => {
       { cancelable: true }
     );
   };
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+    if (camera.id) {
+      getCountDetection();
+      intervalId = setInterval(getCountDetection, 2000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [camera.id, getCountDetection]);
 
   return (
     <View style={styles.container}>

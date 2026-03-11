@@ -221,9 +221,11 @@ const DetailFace = () => {
   const scanTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  // landmarkMode: 'all' required for ML Kit to return Euler angles (rotationX, rotationY)
+  // needed to validate left/right/up/down face positions
   const faceDetectionOptions = {
     performanceMode: 'accurate' as const,
-    landmarkMode: 'none' as const,
+    landmarkMode: 'all' as const,
     contourMode: 'none' as const,
     classificationMode: 'none' as const,
     minFaceSize: Platform.OS === 'ios' ? 0.1 : 0.15,
@@ -562,6 +564,11 @@ const DetailFace = () => {
   };
 
   const validateFacePosition = (face: Face, positionKey: string): boolean => {
+    const rotX = face.rotationX ?? 0;
+    const rotY = face.rotationY ?? 0;
+    if (rotX === 0 && rotY === 0 && positionKey !== 'center') {
+      return false;
+    }
     const normalizeAngle = (angle: number) => {
       let normalized = angle % 360;
       if (normalized > 180) normalized -= 360;
@@ -569,8 +576,8 @@ const DetailFace = () => {
       return normalized;
     };
 
-    const rotationX = normalizeAngle(face.rotationX);
-    const rotationY = normalizeAngle(face.rotationY);
+    const rotationX = normalizeAngle(rotX);
+    const rotationY = normalizeAngle(rotY);
     const rotationThreshold = 15;
 
     switch (positionKey) {
@@ -738,7 +745,38 @@ const DetailFace = () => {
         }
       }
 
-      const faces = await FaceDetection.detect(imageUri, faceDetectionOptions);
+      const allFaces = await FaceDetection.detect(imageUri, faceDetectionOptions);
+
+      // Filter faces to only those entirely within the detection frame (center ~60% of image)
+      const faces = await new Promise<Face[]>((resolve) => {
+        Image.getSize(
+          imageUri,
+          (imgWidth, imgHeight) => {
+            const marginX = imgWidth * 0.2;
+            const marginY = imgHeight * 0.2;
+            const frameLeft = marginX;
+            const frameTop = marginY;
+            const frameRight = imgWidth - marginX;
+            const frameBottom = imgHeight - marginY;
+
+            const facesInFrame = allFaces.filter((face) => {
+              const faceLeft = face.frame.left;
+              const faceTop = face.frame.top;
+              const faceRight = face.frame.left + face.frame.width;
+              const faceBottom = face.frame.top + face.frame.height;
+              return (
+                faceLeft >= frameLeft &&
+                faceTop >= frameTop &&
+                faceRight <= frameRight &&
+                faceBottom <= frameBottom
+              );
+            });
+            resolve(facesInFrame);
+          },
+          () => resolve([])
+        );
+      });
+
       const positionKey = FACE_POSITION_TITLES[selectedImageIndex]?.key || 'center';
 
       if (faces.length === 1 && validateFacePosition(faces[0], positionKey)) {
@@ -774,7 +812,10 @@ const DetailFace = () => {
         let errorMessage = '';
 
         if (faces.length === 0) {
-          errorMessage = t('faceUpload.noFaceDetected') || 'No face detected';
+          errorMessage =
+            allFaces.length > 0
+              ? t('faceUpload.faceOutsideFrame')
+              : t('faceUpload.noFaceDetected') || 'No face detected';
         } else if (faces.length > 1) {
           errorMessage = t('faceUpload.multipleFacesDetected') || 'Multiple faces detected';
         } else if (faces.length === 1) {

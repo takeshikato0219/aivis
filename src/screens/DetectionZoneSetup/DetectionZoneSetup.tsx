@@ -466,13 +466,30 @@ const DetectionZoneSetup: React.FC = () => {
 
   const INJECTED_JS = Platform.OS === 'ios' ? undefined : getInjectedStreamPlayerJS('android');
 
+  const handleGoback = () => {
+    showCommonAlert({
+      title: t('detectionZone.endSetup'),
+      message: t('detectionZone.doYouWantToEndTheSetupProcess'),
+      buttons: [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+        {
+          text: t('common.cancel'),
+          style: 'cancel',
+        },
+      ],
+    });
+  };
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backArea}
-            onPress={() => navigation.goBack()}
+            onPress={handleGoback}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Icon name="chevron-left" color="#FFFFFF" size={26} />

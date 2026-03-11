@@ -112,13 +112,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({ isOpen, onClose, avatarUrl }) =
       },
     },
     {
-      icon: '📹',
-      label: t('drawer.cameraList'),
-      onPress: () => {
-        onClose();
-      },
-    },
-    {
       icon: '⚙️',
       label: t('drawer.settings'),
       onPress: () => {

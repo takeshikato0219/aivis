@@ -14,6 +14,7 @@ import {
   Platform,
   AppState,
   AppStateStatus,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
@@ -76,6 +77,7 @@ const CameraLiveView: React.FC = () => {
   const [micUrl, setMicUrl] = useState('');
   const [isTalkingDelayed, setIsTalkingDelayed] = useState(false);
   const [isMicProcessing, setIsMicProcessing] = useState(false);
+  const [lastFrameBase64, setLastFrameBase64] = useState<string | null>(null);
 
   // useLiveStream hook — auto-retry, heartbeat, NetInfo monitoring
   const {
@@ -271,6 +273,27 @@ const CameraLiveView: React.FC = () => {
       `);
     });
   }, [webViewRef]);
+
+  // Capture last frame when stream has issues
+  useEffect(() => {
+    const captureLastFrame = async () => {
+      if (!isLive && lastFrameBase64 === null) {
+        const frame = await captureFrameFromWebView();
+        if (frame) {
+          setLastFrameBase64(frame);
+        }
+      }
+    };
+
+    captureLastFrame();
+  }, [isLive, lastFrameBase64, captureFrameFromWebView]);
+
+  // Clear last frame when stream becomes live again
+  useEffect(() => {
+    if (isLive && lastFrameBase64 !== null) {
+      setLastFrameBase64(null);
+    }
+  }, [isLive, lastFrameBase64]);
 
   const takeSnapshot = useCallback(async () => {
     try {
@@ -511,84 +534,99 @@ const CameraLiveView: React.FC = () => {
     return (
       <View style={styles.videoContainer}>
         {streamHtmlUrl ? (
-          <WebView
-            ref={webViewRef}
-            source={
-              Platform.OS === 'ios' && iosStreamSource
-                ? { html: iosStreamSource.html, baseUrl: iosStreamSource.baseUrl }
-                : { uri: streamHtmlUrl }
-            }
-            style={styles.videoContainer}
-            javaScriptEnabled
-            domStorageEnabled
-            mediaPlaybackRequiresUserAction={false}
-            allowsInlineMediaPlayback
-            allowsFullscreenVideo={false}
-            scrollEnabled={false}
-            bounces={false}
-            overScrollMode="never"
-            injectedJavaScript={INJECTED_JS}
-            allowsBackForwardNavigationGestures={false}
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            startInLoadingState={false}
-            originWhitelist={['*']}
-            mixedContentMode="always"
-            setBuiltInZoomControls={false}
-            setSupportMultipleWindows={false}
-            mediaCapturePermissionGrantType="grant"
-            {...(Platform.OS === 'ios' && {
-              allowsAirPlayForMediaPlayback: false,
-              dataDetectorTypes: 'none',
-              decelerationRate: 'normal',
-              useWebKit: true,
-            })}
-            onContentProcessDidTerminate={() => {
-              webViewRef.current?.reload();
-            }}
-            onLoad={handleWebViewLoad}
-            onError={onWebViewError}
-            onHttpError={onWebViewHttpError}
-            onMessage={(event) => {
-              try {
-                const data = JSON.parse(event.nativeEvent.data);
-                if (data.type === 'frameCaptured' && captureResolveRef.current) {
-                  captureResolveRef.current(data.data || '');
-                  return;
-                }
-                if (data.type === '__mic_state') {
-                  handleMicMessage(data);
-                  return;
-                }
-                if (data.type === 'needReload') {
-                  webViewRef.current?.reload();
-                  return;
-                }
-              } catch {
-                // ignore parse errors
+          <>
+            <WebView
+              ref={webViewRef}
+              source={
+                Platform.OS === 'ios' && iosStreamSource
+                  ? { html: iosStreamSource.html, baseUrl: iosStreamSource.baseUrl }
+                  : { uri: streamHtmlUrl }
               }
-              handleWebViewMessage(event);
-            }}
-          />
-        ) : (
+              style={styles.videoContainer}
+              javaScriptEnabled
+              domStorageEnabled
+              mediaPlaybackRequiresUserAction={false}
+              allowsInlineMediaPlayback
+              allowsFullscreenVideo={false}
+              scrollEnabled={false}
+              bounces={false}
+              overScrollMode="never"
+              injectedJavaScript={INJECTED_JS}
+              allowsBackForwardNavigationGestures={false}
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              startInLoadingState={false}
+              originWhitelist={['*']}
+              mixedContentMode="always"
+              setBuiltInZoomControls={false}
+              setSupportMultipleWindows={false}
+              mediaCapturePermissionGrantType="grant"
+              {...(Platform.OS === 'ios' && {
+                allowsAirPlayForMediaPlayback: false,
+                dataDetectorTypes: 'none',
+                decelerationRate: 'normal',
+                useWebKit: true,
+              })}
+              onContentProcessDidTerminate={() => {
+                webViewRef.current?.reload();
+              }}
+              onLoad={handleWebViewLoad}
+              onError={onWebViewError}
+              onHttpError={onWebViewHttpError}
+              onMessage={(event) => {
+                try {
+                  const data = JSON.parse(event.nativeEvent.data);
+                  if (data.type === 'frameCaptured' && captureResolveRef.current) {
+                    captureResolveRef.current(data.data || '');
+                    return;
+                  }
+                  if (data.type === '__mic_state') {
+                    handleMicMessage(data);
+                    return;
+                  }
+                  if (data.type === 'needReload') {
+                    webViewRef.current?.reload();
+                    return;
+                  }
+                } catch {
+                  // ignore parse errors
+                }
+                handleWebViewMessage(event);
+              }}
+            />
+            {/* Show last frame when stream is not live */}
+            {!isLive && lastFrameBase64 && (
+              <View
+                style={[
+                  styles.videoContainer,
+                  // eslint-disable-next-line react-native/no-inline-styles
+                  { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+                ]}
+              >
+                <Image
+                  source={{ uri: lastFrameBase64 }}
+                  style={styles.videoContainer}
+                  resizeMode="cover"
+                />
+              </View>
+            )}
+          </>
+        ) : null}
+
+        {!streamHtmlUrl || (isWebViewLoading && streamHtmlUrl) ? (
           <View style={[styles.videoContainer, styles.loadingOverlay]}>
             <ActivityIndicator size="small" color="#FFF" />
-            <Text style={styles.loadingText}>{t('bluetoothScreen.connecting')}</Text>
+            <Text style={styles.loadingText}>
+              {!streamHtmlUrl ? t('bluetoothScreen.connecting') : t('liveStream.loadingStream')}
+            </Text>
           </View>
-        )}
+        ) : null}
 
         {!isFullscreen && streamHtmlUrl && connectionStatus === 'connected' && !webViewError && (
           <TouchableOpacity style={styles.muteButton} onPress={toggleMute} activeOpacity={0.75}>
             <Icon name={isMuted ? 'volume-off' : 'volume-high'} size={22} color="#FFFFFF" />
           </TouchableOpacity>
         )}
-
-        {isWebViewLoading && streamHtmlUrl ? (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="small" color="#FFF" />
-            <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
-          </View>
-        ) : null}
 
         {isReconnecting && streamHtmlUrl ? (
           <View style={styles.reconnectingOverlay}>

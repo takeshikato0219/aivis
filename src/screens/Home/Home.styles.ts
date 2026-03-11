@@ -276,4 +276,28 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    height: 50,
+    borderRadius: 32,
+    backgroundColor: 'rgba(34, 62, 92, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  floatingButtonContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  floatingButtonIcon: {
+    width: 32,
+    height: 32,
+    tintColor: '#101820',
+  },
+  centerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 });
