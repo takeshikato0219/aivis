@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, StatusBar, Text, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  useWindowDimensions,
+  ActivityIndicator, // Added import
+} from 'react-native';
 import { styles } from './Policy.style';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import policyService from '@api/policyService';
+import RenderHTML from 'react-native-render-html';
 
 type PolicyParams = { type: 'privacy' | 'terms' };
 type PolicyRouteProp = RouteProp<{ Policy: PolicyParams }, 'Policy'>;
@@ -15,6 +24,7 @@ const Policy = () => {
   const route = useRoute<PolicyRouteProp>();
   const type = route.params?.type;
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
 
   let title = '';
   if (type === 'terms') title = t('auth.termsOfUse');
@@ -45,12 +55,16 @@ const Policy = () => {
 
   // Extracted policy content node
   let policyContentNode: React.ReactNode;
-  if (loading) {
-    policyContentNode = <Text>{t('common.loading')}</Text>;
-  } else if (policyContent) {
-    policyContentNode = <Text style={styles.contentText}>{policyContent}</Text>;
+  if (policyContent) {
+    policyContentNode = (
+      <RenderHTML
+        contentWidth={width}
+        source={{ html: policyContent }}
+        baseStyle={styles.contentText}
+      />
+    );
   } else {
-    policyContentNode = <Text style={styles.contentText}>No Data</Text>;
+    policyContentNode = <Text style={styles.contentText}>{t('home.noData')}</Text>;
   }
 
   return (
@@ -73,8 +87,14 @@ const Policy = () => {
             contentContainerStyle={styles.scrollViewPaddingBottom}
             showsVerticalScrollIndicator={false}
           >
-            <View>{policyContentNode}</View>
+            {!loading && <View>{policyContentNode}</View>}
           </ScrollView>
+          {loading && (
+            <View style={styles.uploadingOverlay} pointerEvents="auto">
+              <ActivityIndicator size="large" color="#4CAF50" />
+              <Text style={styles.uploadingText}>{t('faceUpload.uploading')}</Text>
+            </View>
+          )}
         </View>
       </SafeAreaView>
     </View>

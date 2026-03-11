@@ -74,6 +74,7 @@ export type AppStackParamList = {
   };
   ListNotificationCamera: { title: string; icon: string };
   CustomerReport: { title: string; icon: string };
+  Policy: { type: string };
 };
 
 // ===== NAVIGATION PROPS =====

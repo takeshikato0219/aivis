@@ -2033,6 +2033,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - react-native-render-html (6.3.4):
+    - React-Core
   - react-native-safe-area-context (5.6.2):
     - boost
     - DoubleConversion
@@ -3190,6 +3192,7 @@ DEPENDENCIES:
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-orientation-locker (from `../node_modules/react-native-orientation-locker`)
   - react-native-record-screen (from `../node_modules/react-native-record-screen`)
+  - react-native-render-html (from `../node_modules/react-native-render-html`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-video (from `../node_modules/react-native-video`)
   - react-native-view-shot (from `../node_modules/react-native-view-shot`)
@@ -3372,6 +3375,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-orientation-locker"
   react-native-record-screen:
     :path: "../node_modules/react-native-record-screen"
+  react-native-render-html:
+    :path: "../node_modules/react-native-render-html"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
   react-native-video:
@@ -3550,6 +3555,7 @@ SPEC CHECKSUMS:
   react-native-netinfo: f0a9899081c185db1de5bb2fdc1c88c202a059ac
   react-native-orientation-locker: 5819fd23ca89cbac0d736fb4314745f62716d517
   react-native-record-screen: 8df104bc775b8e687dadb0207e5820903d57d8b1
+  react-native-render-html: 984dfe2294163d04bf5fe25d7c9f122e60e05ebe
   react-native-safe-area-context: 54d812805f3c4e08a4580ad086cbde1d8780c2e4
   react-native-video: c129a091917b98995af609c78a357ed64264e64d
   react-native-view-shot: aac285cd08144be29c19ab659930172836f0067f

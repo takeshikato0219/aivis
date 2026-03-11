@@ -35,6 +35,8 @@ export const styles = StyleSheet.create({
   },
   notificationCard: {
     marginBottom: 8,
+    backgroundColor: '#181717',
+    borderRadius: 16,
   },
   unreadCard: {
     backgroundColor: COLORS.primary + '10',

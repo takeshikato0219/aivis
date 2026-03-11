@@ -258,4 +258,22 @@ export const styles = StyleSheet.create({
     width: '100%',
     position: 'relative',
   },
+  badgeContainer: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FF0000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeTextNoti: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
 });

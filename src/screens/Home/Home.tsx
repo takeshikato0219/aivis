@@ -37,6 +37,7 @@ import CameraIcon from '@assets/png/camera.png';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
+import notificationsService from '@api/notificationsService';
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -60,6 +61,7 @@ const Home = () => {
   const [hasCamerasInAllTab, setHasCamerasInAllTab] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastFrameUris, setLastFrameUris] = useState<{ [cameraId: string]: string | null }>({});
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // USING COMMON HOOKS
   const { syncUserData } = useUserSync();
@@ -185,6 +187,21 @@ const Home = () => {
     navigation.navigate('ConnectDevice' as never);
   };
 
+  const loadNotifications = useCallback(async () => {
+    try {
+      const response = await notificationsService.getNotifications({
+        is_seen: false,
+        user_id: user?.id,
+      });
+      const unread = response.meta.total;
+      setUnreadCount(unread);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      setUnreadCount(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await fetchCameraList(false, selectedFacilityId);
@@ -217,12 +234,13 @@ const Home = () => {
   // Load last frames when cameraList changes or Home regains focus
   useFocusEffect(
     useCallback(() => {
+      loadNotifications();
       if (cameraList.length > 0) {
         loadLastFrames(cameraList);
       } else {
         setLastFrameUris({});
       }
-    }, [cameraList, loadLastFrames])
+    }, [cameraList, loadLastFrames, loadNotifications])
   );
 
   const renderCameraContent = () => {
@@ -323,7 +341,6 @@ const Home = () => {
     );
   };
 
-  // Add useFocusEffect to reload camera list when Home regains focus
   useFocusEffect(
     useCallback(() => {
       fetchCameraList(false, selectedFacilityId);
@@ -360,7 +377,16 @@ const Home = () => {
                   onPress={() => navigation.navigate('Notifications' as never)}
                   style={styles.iconBtn}
                 >
-                  <BellIcon />
+                  <View>
+                    <BellIcon />
+                    {unreadCount > 0 && (
+                      <View style={styles.badgeContainer}>
+                        <Text style={styles.badgeTextNoti}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setIsDrawerOpen(true)} style={styles.iconBtn}>
                   <MenuIcon />

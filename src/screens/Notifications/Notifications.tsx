@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import notificationsService, { Notification } from '@api/notificationsService';
 import { ScrollView } from 'react-native-gesture-handler';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const Notifications = () => {
   const navigation = useNavigation();
@@ -37,7 +37,7 @@ const Notifications = () => {
         page: pageToLoad,
         pageSize: PAGE_SIZE,
       });
-      let newData = Array.isArray(response) ? response : [];
+      let newData = Array.isArray(response.data) ? response.data : [];
       if (isReload) {
         setNotifications(newData);
       } else {
@@ -54,6 +54,17 @@ const Notifications = () => {
       setRefreshing(false);
     }
   }, []);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationsService.updateNotificationSeen(id, true);
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, is_seen: true } : item))
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
 
   useEffect(() => {
     loadNotifications(1, true);
@@ -111,16 +122,18 @@ const Notifications = () => {
               scrollEventThrottle={16}
             >
               {Array.isArray(notifications) && notifications.length > 0 ? (
-                notifications.map((item) => (
+                notifications.map((item, idx) => (
                   <Card
-                    key={item.id}
+                    key={item.id ? `${item.id}-${idx}` : `notification-${idx}`}
                     style={[styles.notificationCard, !item.is_seen && styles.unreadCard]}
                     elevation={0}
+                    onPress={() => !item.is_seen && handleMarkAsRead(item.id)}
                   >
                     <Card.Content>
                       <List.Item
                         title={item.message}
                         description={item.sent_at ? new Date(item.sent_at).toLocaleString() : ''}
+                        onPress={() => !item.is_seen && handleMarkAsRead(item.id)}
                       />
                     </Card.Content>
                   </Card>

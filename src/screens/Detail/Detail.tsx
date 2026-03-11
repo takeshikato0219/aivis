@@ -41,6 +41,7 @@ import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/t
 import { COLORS } from '@constants/theme';
 import rulesService from '@api/rulesService';
 import cameraService from '@api/cameraService';
+import faceService from '@api/faceService';
 
 const livingItem = {
   id: '4',
@@ -78,8 +79,9 @@ const Detail = () => {
   const [rulesList, setRulesList] = useState<any[]>([]);
   const [modes, setModes] = useState<any[]>([]);
   const [detailModeId, setDetailModeId] = useState<string | null>(null);
+  const [countFace, setCountFace] = useState<number>(0);
 
-  const getRulesMaster = useCallback(async () => {
+  const getRulesMaster = async () => {
     try {
       const response = await rulesService.getRules({ facility_id: camera.facility_id });
       if (response.success) {
@@ -88,9 +90,9 @@ const Detail = () => {
     } catch (err) {
       console.warn('Failed to fetch rules:', err);
     }
-  }, [camera?.facility_id]);
+  };
 
-  const getModes = useCallback(async () => {
+  const getModes = async () => {
     try {
       const response = await cameraService.getCameraModes();
       if (response.success) {
@@ -105,9 +107,9 @@ const Detail = () => {
     } catch (err) {
       console.warn('Failed to fetch modes:', err);
     }
-  }, [detailModeId, activeIndex]);
+  };
 
-  const getDetail = useCallback(async () => {
+  const getDetail = async () => {
     try {
       const response = await cameraService.getDetailCamera(camera.id);
       if (response.success && response.data && typeof response.data.mode_id === 'string') {
@@ -125,7 +127,7 @@ const Detail = () => {
     } catch (err) {
       console.warn('Failed to fetch camera detail:', err);
     }
-  }, [camera.id, modes, activeIndex]);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -150,10 +152,10 @@ const Detail = () => {
       getRulesMaster();
       getModes();
       getDetail();
-    }, [camera?.id, getRulesMaster, getModes, getDetail])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [camera.id])
   );
 
-  // Đồng bộ activeIndex khi có đủ modes và detailModeId
   React.useEffect(() => {
     if (modes.length > 0 && detailModeId) {
       const foundIdx = modes.findIndex((mode: any) => String(mode.id) === String(detailModeId));
@@ -182,25 +184,6 @@ const Detail = () => {
     });
   };
 
-  const mappedInitialList = rulesList.map((rule) => ({
-    id: rule.id,
-    name: rule.rule_name,
-    status: rule.is_active,
-    counter: '5人',
-  }));
-
-  const CAMERA_LIST = [
-    ...mappedInitialList.slice(0, 3),
-    livingItem,
-    ...mappedInitialList.slice(3),
-    {
-      id: '6',
-      name: '人物登録',
-      status: true,
-      counter: '4人',
-    },
-  ];
-
   const handlePressNotification = (itemName: string, iconName: string) => {
     navigation.navigate('ListNotificationCamera', { title: itemName, icon: iconName });
   };
@@ -209,20 +192,117 @@ const Detail = () => {
     navigation.navigate('CustomerReport', { title: itemName, icon: iconName });
   };
 
+  const goToFaceUpload = () => {
+    navigation.navigate('ListFace', { type: '' });
+  };
+
+  type CameraListItem = {
+    id: any;
+    name: any;
+    status: any;
+    counter: string;
+    code?: string;
+    icon?: any;
+    iconName?: string;
+    handler?: any;
+  };
+
+  const defaultRuleConfigs = [
+    {
+      code: 'home_return_count',
+      icon: IconHome,
+      iconName: 'IconHome',
+      handler: handlePressNotification,
+    },
+    {
+      code: 'daily_passerby',
+      icon: IconPerson,
+      iconName: 'IconPerson',
+      handler: handlePressCustomerReport,
+    },
+    {
+      code: 'unregistered_detection',
+      icon: IconSuspect,
+      iconName: 'IconSuspect',
+      handler: handlePressNotification,
+    },
+    {
+      code: 'creature_detection',
+      icon: IconBear,
+      iconName: 'IconBear',
+      handler: handlePressNotification,
+    },
+  ];
+
+  const cameraListWithIcons = defaultRuleConfigs.map((config) => {
+    const rule = rulesList.find((r) => r.code === config.code);
+    if (rule) {
+      return {
+        id: rule.id,
+        name: rule.rule_name,
+        status: rule.is_active,
+        counter: '5人',
+        code: rule.code,
+        icon: config.icon,
+        iconName: config.iconName,
+        handler: config.handler,
+      };
+    }
+    return {
+      id: config.code,
+      name: '',
+      status: false,
+      counter: '',
+      code: config.code,
+      icon: config.icon,
+      iconName: config.iconName,
+      handler: config.handler,
+    };
+  });
+
+  const CAMERA_LIST: CameraListItem[] = [
+    ...cameraListWithIcons,
+    { ...livingItem, icon: IconLive, iconName: 'IconLive', handler: handleCameraPress },
+    {
+      id: '6',
+      name: '人物登録',
+      status: true,
+      counter: `${countFace}人`,
+      icon: IconListFace,
+      iconName: 'IconListFace',
+      handler: goToFaceUpload,
+    },
+  ];
+
+  const fetchMembers = useCallback(async () => {
+    try {
+      const response = await faceService.getMembers();
+      if (response.success) {
+        setCountFace(response.meta.total);
+      }
+    } catch (error) {
+      console.error('Failed to fetch members:', error);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchMembers();
+    }, [fetchMembers])
+  );
+
   const handleSetupDetectionZone = () => {
     navigation.navigate('SettingAI', {
       camera: camera,
     });
   };
 
-  const goToFaceUpload = () => {
-    navigation.navigate('ListFace', { type: '' });
-  };
-
-  const getCameraListItemPressHandler = (item: (typeof CAMERA_LIST)[number], idx: number) => {
+  const getCameraListItemPressHandler = (item: any, idx: number) => {
+    if (item.handler) {
+      if (item.handler === goToFaceUpload) return goToFaceUpload;
+      return () => item.handler(item.name, item.iconName);
+    }
     if (idx === 3) return handleCameraPress;
-    if (idx === 1) return () => handlePressCustomerReport(item.name, ICON_NAMES[idx]);
-    if (idx === CAMERA_LIST.length - 1) return goToFaceUpload;
     return () => handlePressNotification(item.name, ICON_NAMES[idx]);
   };
 
@@ -346,25 +426,26 @@ const Detail = () => {
                 style={styles.filterRow}
                 contentContainerStyle={styles.filterContent}
               >
-                {activeIndex !== null && filters.map((filter, idx) => {
-                  const Icon = activeIndex === idx ? filter.iconActive : filter.iconUnActive;
-                  const modeId = modes[idx]?.id;
-                  return (
-                    <TouchableOpacity
-                      key={filter.name}
-                      style={[
-                        styles.filterBtn,
-                        activeIndex === idx && styles.activeFilterBtn,
-                        activeIndex === idx && styles.filterBtnActiveWarning,
-                      ]}
-                      onPress={() => handleTabPress(idx, modeId)}
-                    >
-                      <Icon />
-                      <Text style={styles.filterText}>{filter.name}</Text>
-                      <Text style={styles.filterSmall}>{filter.description}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {activeIndex !== null &&
+                  filters.map((filter, idx) => {
+                    const Icon = activeIndex === idx ? filter.iconActive : filter.iconUnActive;
+                    const modeId = modes[idx]?.id;
+                    return (
+                      <TouchableOpacity
+                        key={filter.name}
+                        style={[
+                          styles.filterBtn,
+                          activeIndex === idx && styles.activeFilterBtn,
+                          activeIndex === idx && styles.filterBtnActiveWarning,
+                        ]}
+                        onPress={() => handleTabPress(idx, modeId)}
+                      >
+                        <Icon />
+                        <Text style={styles.filterText}>{filter.name}</Text>
+                        <Text style={styles.filterSmall}>{filter.description}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
               </ScrollView>
             </View>
             {/* Camera List */}
@@ -381,15 +462,26 @@ const Detail = () => {
                   >
                     {/* eslint-disable-next-line react-native/no-inline-styles */}
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      {ICONS[idx] && (
+                      {item.icon ? (
                         // eslint-disable-next-line react-native/no-inline-styles
                         <View style={{ marginRight: 8 }}>
-                          {React.createElement(ICONS[idx], {
+                          {React.createElement(item.icon, {
                             width: 24,
                             height: 24,
                             style: !item.status ? styles.disableIcon : undefined,
                           })}
                         </View>
+                      ) : (
+                        ICONS[idx] && (
+                          // eslint-disable-next-line react-native/no-inline-styles
+                          <View style={{ marginRight: 8 }}>
+                            {React.createElement(ICONS[idx], {
+                              width: 24,
+                              height: 24,
+                              style: !item.status ? styles.disableIcon : undefined,
+                            })}
+                          </View>
+                        )
                       )}
                       <View>
                         <Text style={[styles.filterText, !item.status && styles.disableText]}>

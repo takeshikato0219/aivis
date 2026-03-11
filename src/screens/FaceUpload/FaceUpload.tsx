@@ -658,7 +658,7 @@ const FaceUpload: React.FC = () => {
       }
       setIsUploading(true);
       const imageIndices: number[] = [];
-      const imageFiles: { uri: string; type: string; name: string}[] = [];
+      const imageFiles: { uri: string; type: string; name: string }[] = [];
       images.forEach((img, idx) => {
         if (img.uri) {
           imageIndices.push(idx);
@@ -684,6 +684,9 @@ const FaceUpload: React.FC = () => {
           [
             {
               text: t('common.ok') || 'OK',
+              onPress: () => {
+                navigation.goBack();
+              },
             },
           ]
         );

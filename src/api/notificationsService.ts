@@ -8,12 +8,18 @@ export interface Notification {
   rules_master_id: string;
   user_id: string;
   camera_id: string;
-  line_user_id: string;
+  line_user_id: string | null;
   message: string;
   is_seen: boolean;
   sent_at: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface NotificationResponse {
+  success: boolean;
+  message: string;
+  data: Notification;
 }
 
 export interface NotificationsResponse {
@@ -38,12 +44,11 @@ class NotificationsService {
     page?: number;
     per_page?: number;
     token?: string;
+    is_seen?: boolean;
+    user_id?: string;
     [key: string]: any;
   }): Promise<NotificationsResponse> {
     const headers: Record<string, string> = {};
-    if (params?.token) {
-      headers.Authorization = `Bearer ${params.token}`;
-    }
     if (params) {
       Object.keys(params).forEach((key) => {
         if (key !== 'token' && params[key] !== undefined) {
@@ -57,13 +62,23 @@ class NotificationsService {
         params: {
           sort_by: params?.sort_by || 'sent_at',
           sort_order: params?.sort_order || 'desc',
-          page: params?.page || 1,
-          per_page: params?.per_page || 10,
+          page: params?.page,
+          per_page: params?.per_page,
+          is_seen: params?.is_seen,
+          user_id: params?.user_id,
         },
         headers,
       }
     );
     return response.data;
+  }
+
+  async updateNotificationSeen(id: string, is_seen: boolean): Promise<Notification> {
+    const response = await axiosInstance.patch<NotificationResponse>(
+      `${API_ENDPOINTS.NOTIFICATIONS}/${id}`,
+      { is_seen }
+    );
+    return response.data.data;
   }
 }
 
