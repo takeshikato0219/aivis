@@ -372,7 +372,7 @@ const Home = () => {
               </View>
               <View style={styles.headerIcons}>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('Notifications' as never)}
+                  onPress={() => navigation.navigate('Notifications', { userId: user?.id })}
                   style={styles.iconBtn}
                 >
                   <View>

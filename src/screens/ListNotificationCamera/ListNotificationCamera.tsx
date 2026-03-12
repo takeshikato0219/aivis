@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import IconSuspect from '@assets/svg/icon-suspect.svg';
 import IconLive from '@assets/svg/icon-live.svg';
 import IconBear from '@assets/svg/icon-bear.svg';
 import IconListFace from '@assets/svg/icon-list-face.svg';
+import notificationsService, { Detection } from '@api/notificationsService';
 
 interface NotificationItem {
   id: string;
@@ -34,6 +35,7 @@ interface NotificationItem {
   time: string;
   thumbnail: string;
   videoUrl?: string;
+  imageUrl?: string;
 }
 
 const ICON_MAP: Record<string, React.FC<any>> = {
@@ -47,9 +49,10 @@ const ICON_MAP: Record<string, React.FC<any>> = {
 
 interface VideoStateComponentProps {
   videoUrl: string | null;
+  imageUrl: string | null;
   t: (key: string) => string;
 }
-const VideoStateComponent: React.FC<VideoStateComponentProps> = ({ videoUrl, t }) => (
+const VideoStateComponent: React.FC<VideoStateComponentProps> = ({ videoUrl, imageUrl, t }) => (
   <View style={styles.emptyState}>
     {videoUrl ? (
       <View style={styles.videoFullContainer}>
@@ -60,6 +63,10 @@ const VideoStateComponent: React.FC<VideoStateComponentProps> = ({ videoUrl, t }
           resizeMode="cover"
           paused={false}
         />
+      </View>
+    ) : imageUrl ? (
+      <View style={styles.videoFullContainer}>
+        <Image source={{ uri: imageUrl }} style={styles.videoFullPlayer} resizeMode="contain" />
       </View>
     ) : (
       <>
@@ -72,102 +79,89 @@ const VideoStateComponent: React.FC<VideoStateComponentProps> = ({ videoUrl, t }
   </View>
 );
 
+const mapDetectionToNotificationItem = (d: Detection): NotificationItem => {
+  const [datePart, timePart] = d.detected_at.split('T');
+  const time = timePart ? timePart.slice(0, 5) : '00:00'; // HH:MM
+  return {
+    id: d.id,
+    title: d.event_type || '',
+    date: datePart,
+    time,
+    thumbnail: d.image_url,
+    imageUrl: d.image_url,
+  };
+};
+
 const ListNotificationCamera = () => {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState('2026-03-04');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [listData, setListData] = useState<NotificationItem[]>([]);
   const navigation = useNavigation();
   const route = useRoute<RouteProp<AppStackParamList, 'ListNotificationCamera'>>();
   const { t } = useTranslation();
   const HeaderIcon = ICON_MAP[route.params?.icon] || Icon;
+  const eventType = route.params?.code;
+  const cameraId = route.params?.cameraId;
 
-  const mockData: NotificationItem[] = [
-    {
-      id: '1',
-      title: 'Tiêu đề thông báo',
-      date: '2026/03/04',
-      time: '14:20',
-      thumbnail: 'https://via.placeholder.com/80x60/333333/FFFFFF?text=Video',
-      videoUrl:
-        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    },
-    {
-      id: '2',
-      title: 'Tiêu đề thông báo',
-      date: '2026/03/04',
-      time: '14:20',
-      thumbnail: 'https://via.placeholder.com/80x60/333333/FFFFFF?text=Video',
-      videoUrl:
-        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    },
-    {
-      id: '3',
-      title: 'Tiêu đề thông báo',
-      date: '2026/03/04',
-      time: '14:20',
-      thumbnail: 'https://via.placeholder.com/80x60/333333/FFFFFF?text=Video',
-      videoUrl:
-        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    },
-    {
-      id: '4',
-      title: 'Tiêu đề thông báo',
-      date: '2026/03/04',
-      time: '14:20',
-      thumbnail: 'https://via.placeholder.com/80x60/333333/FFFFFF?text=Video',
-      videoUrl:
-        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    },
-    {
-      id: '5',
-      title: 'Tiêu đề thông báo',
-      date: '2026/03/04',
-      time: '14:20',
-      thumbnail: 'https://via.placeholder.com/80x60/333333/FFFFFF?text=Video',
-      videoUrl:
-        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    },
-    {
-      id: '6',
-      title: 'Tiêu đề thông báo',
-      date: '2026/03/04',
-      time: '14:20',
-      thumbnail: 'https://via.placeholder.com/80x60/333333/FFFFFF?text=Video',
-      videoUrl:
-        'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    },
-  ];
+  useEffect(() => {
+    handleList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraId, eventType]);
+
+  const handleList = async () => {
+    if (!cameraId || !eventType) return;
+    try {
+      const response = await notificationsService.getNotificationWithType(cameraId, eventType);
+      if (response.success && response.data) {
+        setListData(response.data.map(mapDetectionToNotificationItem));
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
 
   const handleItemPress = (item: NotificationItem) => {
     if (item.videoUrl) {
       setSelectedVideo(item.videoUrl);
+      setSelectedImage(null);
+    } else if (item.imageUrl) {
+      setSelectedImage(item.imageUrl);
+      setSelectedVideo(null);
     }
   };
 
-  const renderNotificationItem = ({ item }: { item: NotificationItem }) => (
-    <TouchableOpacity
-      style={styles.notificationItem}
-      onPress={() => handleItemPress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.itemContent}>
-        <View style={styles.textContent}>
-          <Text style={styles.notificationTitle}>{item.title}</Text>
-          <Text style={styles.notificationDate}>
-            {item.date} {item.time}
-          </Text>
-        </View>
-        <View style={styles.thumbnailContainer}>
-          <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} resizeMode="cover" />
-          <View style={styles.playButton}>
-            <Icon name="play" size={12} color="#fff" />
+  const renderNotificationItem = ({ item }: { item: NotificationItem }) => {
+    const hasVideo = !!item.videoUrl;
+
+    return (
+      <TouchableOpacity
+        style={styles.notificationItem}
+        onPress={() => handleItemPress(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.itemContent}>
+          <View style={styles.textContent}>
+            <Text style={styles.notificationTitle}>{item.title}</Text>
+            <Text style={styles.notificationDate}>
+              {item.date} {item.time}
+            </Text>
+          </View>
+          <View style={styles.thumbnailContainer}>
+            <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} resizeMode="cover" />
+            {hasVideo && (
+              <View style={styles.playButton}>
+                <Icon name="play" size={12} color="#fff" />
+              </View>
+            )}
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
-  const filteredData = mockData.filter((item) => item.date.replace(/\//g, '-') === selectedDate);
+  const filteredData = listData.filter((item) => item.date === selectedDate);
 
   return (
     <View style={styles.container}>
@@ -182,7 +176,7 @@ const ListNotificationCamera = () => {
         </View>
         <View style={styles.placeholder} />
       </View>
-      <VideoStateComponent videoUrl={selectedVideo} t={t} />
+      <VideoStateComponent videoUrl={selectedVideo} imageUrl={selectedImage} t={t} />
       <View style={styles.dateSectionWrapper}>
         <ImageBackground
           source={BackgroundNofication}
@@ -226,7 +220,7 @@ const ListNotificationCamera = () => {
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
                 <View style={styles.noDataContainer}>
-                  <Text style={styles.noDataText}>No data</Text>
+                  <Text style={styles.noDataText}>{t('home.noData')}</Text>
                 </View>
               }
             />
@@ -263,7 +257,7 @@ const ListNotificationCamera = () => {
                     style={styles.closeCalendarBtn}
                     onPress={() => setShowCalendarModal(false)}
                   >
-                    <Text style={styles.closeCalendarText}>Đóng</Text>
+                    <Text style={styles.closeCalendarText}>{t('listFace.close')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>

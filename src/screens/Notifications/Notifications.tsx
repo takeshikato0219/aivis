@@ -12,7 +12,7 @@ import { useAppSetup } from '@hooks/useAppSetup';
 import { styles } from './Notifications.styles';
 import HomeBackgroundImage from '@assets/png/home-background.png';
 import BackIcon from '@assets/svg/icon-back.svg';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import notificationsService, { Notification } from '@api/notificationsService';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -33,11 +33,13 @@ const Notifications = () => {
   useAppSetup({ screenName: 'Notifications' });
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const route = useRoute<RouteProp<AppStackParamList, 'Notifications'>>();
   const [rules, setRules] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const userId = route.params?.userId;
 
   const ruleIconMap: Record<string, { icon: any; iconName: string }> = {
     home_return_count: { icon: IconHome, iconName: 'IconHome' },
@@ -66,6 +68,7 @@ const Notifications = () => {
       const response = await notificationsService.getNotifications({
         page: pageToLoad,
         pageSize: PAGE_SIZE,
+        user_id: userId,
       });
       let newData = Array.isArray(response.data) ? response.data : [];
       if (isReload) {
@@ -83,6 +86,7 @@ const Notifications = () => {
       setLoading(false);
       setRefreshing(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleMarkAsRead = async (id: string) => {

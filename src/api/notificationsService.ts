@@ -37,6 +37,35 @@ export interface NotificationsResponse {
   };
 }
 
+// Thêm interface cho Detection và DetectionResponse theo mẫu JSON
+export interface Detection {
+  id: string;
+  user_id: string;
+  camera_id: string;
+  confidence: number;
+  image_url: string;
+  detected_at: string;
+  event_type: string;
+  camera_rules_id: string;
+  rules_master_id: string;
+  member_id: string;
+}
+
+export interface DetectionResponse {
+  success: boolean;
+  message: string;
+  data: Detection[];
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+    is_truncated: boolean;
+  };
+}
+
 class NotificationsService {
   async getNotifications(params?: {
     sort_by?: string;
@@ -79,6 +108,13 @@ class NotificationsService {
       { is_seen }
     );
     return response.data.data;
+  }
+
+  async getNotificationWithType(camera_id: string, event_type: string): Promise<DetectionResponse> {
+    const response = await axiosInstance.get<DetectionResponse>(`${API_ENDPOINTS.DETECTIONS}`, {
+      params: { camera_id, event_type },
+    });
+    return response.data;
   }
 }
 

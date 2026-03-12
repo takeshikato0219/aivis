@@ -499,9 +499,7 @@ const FaceUpload: React.FC = () => {
 
         if (faces.length === 0) {
           errorMessage =
-            allFaces.length > 0
-              ? t('faceUpload.faceOutsideFrame')
-              : t('faceUpload.noFaceDetected');
+            allFaces.length > 0 ? t('faceUpload.faceOutsideFrame') : t('faceUpload.noFaceDetected');
         } else if (faces.length > 1) {
           errorMessage = t('faceUpload.multipleFacesDetected');
         } else if (faces.length === 1) {

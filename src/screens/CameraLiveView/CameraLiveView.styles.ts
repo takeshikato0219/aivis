@@ -134,6 +134,8 @@ export const getStyles = (width: number, height: number) => {
       alignItems: 'flex-start',
       padding: 12,
       paddingTop: 8,
+      zIndex: 11,
+      elevation: 11,
     },
     topLeft: {
       flexDirection: 'row',

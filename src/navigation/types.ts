@@ -23,7 +23,7 @@ export type AuthStackParamList = {
 export type AppStackParamList = {
   Introduce: undefined;
   Home: undefined;
-  Notifications: undefined;
+  Notifications: { userId?: string };
   Detail: {
     camera: Camera;
   };
@@ -73,7 +73,7 @@ export type AppStackParamList = {
   UploadDetectZone: {
     camera: Camera;
   };
-  ListNotificationCamera: { title: string; icon: string };
+  ListNotificationCamera: { title: string; icon: string; code: string; cameraId: string };
   CustomerReport: { title: string; icon: string };
   Policy: { type: string };
 };

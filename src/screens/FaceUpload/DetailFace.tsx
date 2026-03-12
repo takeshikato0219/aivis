@@ -251,8 +251,6 @@ const DetailFace = () => {
   const [prepareProgress, setPrepareProgress] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
 
-  // ✅ FIX: Track changed indices by sort_order (index), NOT by image.id
-  // Lý do: ảnh mới upload từ thư viện chưa có id từ server → dùng index là đáng tin cậy hơn
   const [changedImageIndices, setChangedImageIndices] = useState<Set<number>>(new Set());
 
   const [isSaveDisabled, setIsSaveDisabled] = useState(false);

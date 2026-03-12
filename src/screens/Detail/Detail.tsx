@@ -47,7 +47,7 @@ const livingItem = {
   id: '4',
   name: 'ライブカメラ',
   status: true,
-  counter: '5',
+  counter: '1',
 };
 
 const ICONS = [IconHome, IconPerson, IconSuspect, IconLive, IconBear, IconListFace];
@@ -80,7 +80,7 @@ const Detail = () => {
   const [modes, setModes] = useState<any[]>([]);
   const [detailModeId, setDetailModeId] = useState<string | null>(null);
   const [countFace, setCountFace] = useState<number>(0);
-  const [countDetection, setCountDetection] = useState<number>(0);
+  const [countDetectionMap, setCountDetectionMap] = useState<Record<string, number>>({});
 
   const getRulesMaster = async () => {
     try {
@@ -113,10 +113,8 @@ const Detail = () => {
   const getCountDetection = useCallback(async () => {
     try {
       const response = await cameraService.countDetections(camera.id);
-      if (response.success && typeof response.data === 'number') {
-        setCountDetection(response.data);
-      } else if (response.success && response.data && typeof response.data.count === 'number') {
-        setCountDetection(response.data.count);
+      if (response.success && response.data && response.data.event_type) {
+        setCountDetectionMap(response.data.event_type);
       }
     } catch (err) {
       console.warn('Failed to fetch detection count:', err);
@@ -198,8 +196,13 @@ const Detail = () => {
     });
   };
 
-  const handlePressNotification = (itemName: string, iconName: string) => {
-    navigation.navigate('ListNotificationCamera', { title: itemName, icon: iconName });
+  const handlePressNotification = (itemName: string, iconName: string, code: string) => {
+    navigation.navigate('ListNotificationCamera', {
+      title: itemName,
+      icon: iconName,
+      code: code,
+      cameraId: camera.id,
+    });
   };
 
   const handlePressCustomerReport = (itemName: string, iconName: string) => {
@@ -250,12 +253,21 @@ const Detail = () => {
 
   const cameraListWithIcons = defaultRuleConfigs.map((config) => {
     const rule = rulesList.find((r) => r.code === config.code);
+    const count = countDetectionMap[config.code] ?? 0;
+    let counterText;
+    if (config.icon === IconHome) {
+      counterText = `${count}/${countFace}人`;
+    } else if (config.icon === IconBear) {
+      counterText = `${count}`;
+    } else {
+      counterText = `${count}人`;
+    }
     if (rule) {
       return {
         id: rule.id,
         name: rule.rule_name,
         status: rule.is_active,
-        counter: '5人',
+        counter: counterText,
         code: rule.code,
         icon: config.icon,
         iconName: config.iconName,
@@ -266,7 +278,7 @@ const Detail = () => {
       id: config.code,
       name: '',
       status: false,
-      counter: '',
+      counter: counterText,
       code: config.code,
       icon: config.icon,
       iconName: config.iconName,
@@ -281,7 +293,7 @@ const Detail = () => {
       icon: IconLive,
       iconName: 'IconLive',
       handler: handleCameraPress,
-      counter: `${countDetection}件`,
+      counter: '1人',
     },
     {
       id: '6',
@@ -320,10 +332,13 @@ const Detail = () => {
   const getCameraListItemPressHandler = (item: any, idx: number) => {
     if (item.handler) {
       if (item.handler === goToFaceUpload) return goToFaceUpload;
+      if (item.handler === handlePressNotification) {
+        return () => item.handler(item.name, item.iconName, item.code);
+      }
       return () => item.handler(item.name, item.iconName);
     }
     if (idx === 3) return handleCameraPress;
-    return () => handlePressNotification(item.name, ICON_NAMES[idx]);
+    return () => handlePressNotification(item.name, ICON_NAMES[idx], item.code);
   };
 
   const filters =
@@ -357,8 +372,7 @@ const Detail = () => {
 
   const handleUpdateMode = async (modeId: string) => {
     try {
-      const response = await cameraService.updateCamera(camera.id, modeId);
-      console.log(response);
+      await cameraService.updateCamera(camera.id, modeId);
       getDetail();
     } catch (err) {
       console.warn('Failed to update camera mode:', err);

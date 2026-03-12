@@ -199,8 +199,9 @@ const CameraLiveView: React.FC = () => {
 
   const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
 
-  const iosStreamSource = useMemo(() => {
-    if (Platform.OS !== 'ios' || !streamWsUrl) return null;
+  // Use inline HTML stream for both iOS and Android (fixes Android black screen)
+  const inlineStreamSource = useMemo(() => {
+    if (!streamWsUrl) return null;
     const result = buildIOSStreamInlineHtml(streamWsUrl);
     return result.html ? result : null;
   }, [streamWsUrl]);
@@ -538,8 +539,8 @@ const CameraLiveView: React.FC = () => {
             <WebView
               ref={webViewRef}
               source={
-                Platform.OS === 'ios' && iosStreamSource
-                  ? { html: iosStreamSource.html, baseUrl: iosStreamSource.baseUrl }
+                inlineStreamSource
+                  ? { html: inlineStreamSource.html, baseUrl: inlineStreamSource.baseUrl }
                   : { uri: streamHtmlUrl }
               }
               style={styles.videoContainer}
@@ -561,6 +562,9 @@ const CameraLiveView: React.FC = () => {
               setBuiltInZoomControls={false}
               setSupportMultipleWindows={false}
               mediaCapturePermissionGrantType="grant"
+              {...(Platform.OS === 'android' && {
+                androidLayerType: 'hardware',
+              })}
               {...(Platform.OS === 'ios' && {
                 allowsAirPlayForMediaPlayback: false,
                 dataDetectorTypes: 'none',
