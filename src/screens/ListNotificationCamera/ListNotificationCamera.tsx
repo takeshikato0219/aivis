@@ -30,7 +30,7 @@ import notificationsService, { Detection } from '@api/notificationsService';
 
 interface NotificationItem {
   id: string;
-  title: string;
+  notification_message: string;
   date: string;
   time: string;
   thumbnail: string;
@@ -84,7 +84,7 @@ const mapDetectionToNotificationItem = (d: Detection): NotificationItem => {
   const time = timePart ? timePart.slice(0, 5) : '00:00'; // HH:MM
   return {
     id: d.id,
-    title: d.event_type || '',
+    notification_message: d.notification_message || '',
     date: datePart,
     time,
     thumbnail: d.image_url,
@@ -95,12 +95,14 @@ const mapDetectionToNotificationItem = (d: Detection): NotificationItem => {
 const ListNotificationCamera = () => {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [listData, setListData] = useState<NotificationItem[]>([]);
   const navigation = useNavigation();
   const route = useRoute<RouteProp<AppStackParamList, 'ListNotificationCamera'>>();
   const { t } = useTranslation();
+  const [selectedDate, setSelectedDate] = useState(() => {
+    return route.params?.detected_at || new Date().toISOString().slice(0, 10);
+  });
   const HeaderIcon = ICON_MAP[route.params?.icon] || Icon;
   const eventType = route.params?.code;
   const cameraId = route.params?.cameraId;
@@ -108,12 +110,16 @@ const ListNotificationCamera = () => {
   useEffect(() => {
     handleList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cameraId, eventType]);
+  }, [cameraId, eventType, selectedDate]);
 
   const handleList = async () => {
     if (!cameraId || !eventType) return;
     try {
-      const response = await notificationsService.getNotificationWithType(cameraId, eventType);
+      const response = await notificationsService.getNotificationWithType(
+        cameraId,
+        eventType,
+        selectedDate
+      );
       if (response.success && response.data) {
         setListData(response.data.map(mapDetectionToNotificationItem));
       }
@@ -143,7 +149,7 @@ const ListNotificationCamera = () => {
       >
         <View style={styles.itemContent}>
           <View style={styles.textContent}>
-            <Text style={styles.notificationTitle}>{item.title}</Text>
+            <Text style={styles.notificationTitle}>{item.notification_message}</Text>
             <Text style={styles.notificationDate}>
               {item.date} {item.time}
             </Text>

@@ -49,6 +49,7 @@ export interface Detection {
   camera_rules_id: string;
   rules_master_id: string;
   member_id: string;
+  notification_message: string;
 }
 
 export interface DetectionResponse {
@@ -110,9 +111,17 @@ class NotificationsService {
     return response.data.data;
   }
 
-  async getNotificationWithType(camera_id: string, event_type: string): Promise<DetectionResponse> {
+  async getNotificationWithType(
+    camera_id: string,
+    event_type: string,
+    detected_at?: string
+  ): Promise<DetectionResponse> {
+    const params: Record<string, string> = { camera_id, event_type };
+    if (detected_at) {
+      params.detected_at = detected_at;
+    }
     const response = await axiosInstance.get<DetectionResponse>(`${API_ENDPOINTS.DETECTIONS}`, {
-      params: { camera_id, event_type },
+      params,
     });
     return response.data;
   }

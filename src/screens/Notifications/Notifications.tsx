@@ -170,11 +170,15 @@ const Notifications = () => {
                     if (isDailyPasserby) {
                       navigation.navigate('CustomerReport', { title: itemName, icon: iconName });
                     } else {
+                      const detectedAt = item.sent_at
+                        ? new Date(item.sent_at).toISOString().slice(0, 10)
+                        : undefined;
                       navigation.navigate('ListNotificationCamera', {
                         title: itemName,
                         icon: iconName,
                         code: matchedRule?.code || '',
                         cameraId: item.camera_id,
+                        detected_at: detectedAt,
                       });
                     }
                   };
