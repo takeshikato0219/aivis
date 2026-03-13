@@ -52,9 +52,13 @@ const shouldSkipRefresh = (url: string | undefined): boolean => {
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (!NetworkMonitor.isConnected()) throw new Error('No internet connection');
-    const state = store.getState();
-    const token = state.auth.accessToken;
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+
+    const isRefreshRequest = config.url?.includes(API_ENDPOINTS.AUTH.REFRESH_TOKEN);
+    if (!isRefreshRequest) {
+      const state = store.getState();
+      const token = state.auth.accessToken;
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+    }
 
     config.headers['Accept-Language'] = getCurrentLanguage();
 
@@ -94,6 +98,7 @@ axiosInstance.interceptors.response.use(
         failedQueue.push({ resolve, reject });
       })
         .then((token) => {
+          originalRequest._retry = true;
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${token}`;
             originalRequest.headers['Accept-Language'] = getCurrentLanguage();

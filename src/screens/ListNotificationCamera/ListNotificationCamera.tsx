@@ -187,25 +187,35 @@ const ListNotificationCamera = () => {
           <View style={styles.contentAboveBg}>
             <View style={styles.dateHeader}>
               <Pressable
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 onPress={() => {
                   const date = new Date(selectedDate);
                   date.setDate(date.getDate() - 1);
                   const newDate = date.toISOString().slice(0, 10);
                   setSelectedDate(newDate);
+                  setSelectedVideo(null);
+                  setSelectedImage(null);
                 }}
                 style={styles.dateIconBtn}
               >
                 <Icon name="chevron-left" size={16} color="#666" />
               </Pressable>
-              <Pressable onPress={() => setShowCalendarModal(true)} style={styles.dateTextBtn}>
+              <Pressable
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                onPress={() => setShowCalendarModal(true)}
+                style={styles.dateTextBtn}
+              >
                 <Text style={styles.dateText}>{selectedDate.replace(/-/g, '/')}</Text>
               </Pressable>
               <Pressable
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 onPress={() => {
                   const date = new Date(selectedDate);
                   date.setDate(date.getDate() + 1);
                   const newDate = date.toISOString().slice(0, 10);
                   setSelectedDate(newDate);
+                  setSelectedVideo(null);
+                  setSelectedImage(null);
                 }}
                 style={styles.dateIconBtn}
               >
@@ -236,6 +246,8 @@ const ListNotificationCamera = () => {
                     current={selectedDate}
                     onDayPress={(day: { dateString: string }) => {
                       setSelectedDate(day.dateString);
+                      setSelectedVideo(null);
+                      setSelectedImage(null);
                       setShowCalendarModal(false);
                     }}
                     markedDates={{

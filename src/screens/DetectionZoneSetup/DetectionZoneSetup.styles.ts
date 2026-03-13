@@ -6,6 +6,7 @@ export const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   safeArea: {
+    flex: 1,
     backgroundColor: '#000',
   },
   header: {
@@ -40,12 +41,11 @@ export const styles = StyleSheet.create({
     marginHorizontal: 15,
   },
   overlayContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
+    ...StyleSheet.absoluteFillObject,
   },
   gridOverlay: {
     ...StyleSheet.absoluteFill,
+    overflow: 'hidden',
   },
   gridLineVertical: {
     position: 'absolute',
@@ -204,6 +204,9 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     color: '#FCD34D',
     marginTop: 2,
+  },
+  svgOverlay: {
+    ...StyleSheet.absoluteFill,
   },
   webViewContainer: {
     flex: 1,

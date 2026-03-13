@@ -1,11 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  ImageBackground,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { View, ImageBackground, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, Card, List } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppSetup } from '@hooks/useAppSetup';
@@ -24,6 +18,7 @@ import IconHome from '@assets/svg/icon-home.svg';
 import IconPerson from '@assets/svg/icon-person.svg';
 import IconSuspect from '@assets/svg/icon-suspect.svg';
 import IconBear from '@assets/svg/icon-bear.svg';
+import LoadingComponent from '@components/Loading/Loading';
 
 const PAGE_SIZE = 10;
 
@@ -107,6 +102,7 @@ const Notifications = () => {
   }, []);
 
   const handleLoadMore = () => {
+    setRefreshing(true);
     if (!loading && hasMore) {
       loadNotifications(page + 1);
     }
@@ -114,6 +110,7 @@ const Notifications = () => {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    setLoading(true);
     loadNotifications(1, true);
   }, [loadNotifications]);
 
@@ -148,6 +145,7 @@ const Notifications = () => {
               </Text>
             </View>
           </View>
+          {loading && <LoadingComponent />}
           <View style={styles.content}>
             {/* List */}
             <ScrollView
@@ -175,6 +173,8 @@ const Notifications = () => {
                       navigation.navigate('ListNotificationCamera', {
                         title: itemName,
                         icon: iconName,
+                        code: matchedRule?.code || '',
+                        cameraId: item.camera_id,
                       });
                     }
                   };
@@ -200,14 +200,10 @@ const Notifications = () => {
                   <Text>{t('home.noData')}</Text>
                 </View>
               )}
-              {loading && !refreshing && (
-                <View style={styles.loadingMoreContainer}>
-                  <ActivityIndicator />
-                </View>
-              )}
             </ScrollView>
           </View>
         </SafeAreaView>
+        {refreshing && <LoadingComponent />}
       </ImageBackground>
     </View>
   );

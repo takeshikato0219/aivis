@@ -406,9 +406,9 @@ const DetectionZoneSetup: React.FC = () => {
   const renderGrid = () => {
     const v = [];
     const h = [];
-    for (let x = 0; x <= PREVIEW_WIDTH; x += GRID_SIZE)
+    for (let x = GRID_SIZE; x < PREVIEW_WIDTH; x += GRID_SIZE)
       v.push(<View key={`v-${x}`} style={[styles.gridLineVertical, { left: x }]} />);
-    for (let y = 0; y <= PREVIEW_HEIGHT; y += GRID_SIZE)
+    for (let y = GRID_SIZE; y < PREVIEW_HEIGHT; y += GRID_SIZE)
       h.push(<View key={`h-${y}`} style={[styles.gridLineHorizontal, { top: y }]} />);
     return (
       <>
@@ -485,7 +485,7 @@ const DetectionZoneSetup: React.FC = () => {
 
   return (
     <View style={styles.root}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backArea}
@@ -503,236 +503,228 @@ const DetectionZoneSetup: React.FC = () => {
             <Text style={styles.saveText}>{t('common.save')}</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
-
-      <View style={styles.body}>
-        <View style={styles.previewContainer}>
-          {streamHtmlUrl ? (
-            <WebView
-              ref={webViewRef}
-              source={
-                Platform.OS === 'ios'
-                  ? {
-                      html: buildIOSStreamInlineHtml(streamHtmlUrl).html,
-                      baseUrl: buildIOSStreamInlineHtml(streamHtmlUrl).baseUrl,
-                    }
-                  : { uri: streamHtmlUrl }
-              }
-              style={styles.cameraPreview}
-              containerStyle={styles.webViewContainer}
-              javaScriptEnabled
-              domStorageEnabled
-              mediaPlaybackRequiresUserAction={false}
-              allowsInlineMediaPlayback
-              allowsFullscreenVideo={false}
-              scrollEnabled={false}
-              bounces={false}
-              overScrollMode="never"
-              injectedJavaScript={INJECTED_JS}
-              allowsBackForwardNavigationGestures={false}
-              showsHorizontalScrollIndicator={false}
-              showsVerticalScrollIndicator={false}
-              startInLoadingState={false}
-              originWhitelist={['*']}
-              mixedContentMode="always"
-              setBuiltInZoomControls={false}
-              setSupportMultipleWindows={false}
-              {...(Platform.OS === 'ios' && {
-                allowsAirPlayForMediaPlayback: false,
-                dataDetectorTypes: 'none',
-                decelerationRate: 'normal',
-                useWebKit: true,
-              })}
-              onContentProcessDidTerminate={() => {
-                webViewRef.current?.reload();
-              }}
-              onLoadStart={() => {
-                setIsWebViewLoading(true);
-                setWebViewError(null);
-              }}
-              onLoadEnd={() => setIsWebViewLoading(false)}
-              onError={(syntheticEvent) => {
-                const { nativeEvent } = syntheticEvent;
-                setWebViewError(nativeEvent.description || 'Stream load failed');
-                setIsWebViewLoading(false);
-              }}
-              onHttpError={(syntheticEvent) => {
-                const { nativeEvent } = syntheticEvent;
-                setWebViewError(`HTTP ${nativeEvent.statusCode}`);
-                setIsWebViewLoading(false);
-              }}
-              onLayout={(e) => {
-                const { x, y, width, height } = e.nativeEvent.layout;
-                setLiveViewLayout({ x, y, width, height });
-              }}
-            />
-          ) : (
-            <View
-              style={[styles.cameraPreview, styles.loadingOverlay]}
-              onLayout={(e) => {
-                const { x, y, width, height } = e.nativeEvent.layout;
-                setLiveViewLayout({ x, y, width, height });
-              }}
-            >
-              <ActivityIndicator size="small" color="#FFF" />
-              <Text style={styles.loadingText}>{t('bluetoothScreen.connecting')}</Text>
-            </View>
-          )}
-
-          {streamHtmlUrl && !isWebViewLoading && !webViewError && (
-            <TouchableOpacity style={styles.muteButton} onPress={toggleMute} activeOpacity={0.75}>
-              <Icon name={isMuted ? 'volume-off' : 'volume-high'} size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
-
-          {isWebViewLoading && streamHtmlUrl ? (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="small" color="#FFF" />
-              <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
-            </View>
-          ) : null}
-
-          {/* Error overlay khi WebView bị lỗi */}
-          {webViewError && !isWebViewLoading ? (
-            <View style={styles.errorOverlay}>
-              <Text style={styles.errorText}>{webViewError}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          <View
-            style={[styles.overlayContainer, { width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT }]}
-            pointerEvents="box-none"
-          >
-            <View style={styles.gridOverlay} pointerEvents="none">
-              {renderGrid()}
-            </View>
-
-            {zoneType === 'entryExit' ? (
-              <>
-                <Svg
-                  // eslint-disable-next-line react-native/no-inline-styles
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    width: PREVIEW_WIDTH,
-                    height: PREVIEW_HEIGHT,
-                  }}
-                  pointerEvents="none"
-                >
-                  {(() => {
-                    const { left, right } = getEntryExitPolygons();
-                    const lc = isLeftIn ? 'rgba(255,0,0,0.25)' : 'rgba(0,255,0,0.25)';
-                    const rc = isLeftIn ? 'rgba(0,255,0,0.25)' : 'rgba(255,0,0,0.25)';
-                    return (
-                      <>
-                        {left.length > 2 && (
-                          <Polygon points={left.map((p) => `${p.x},${p.y}`).join(' ')} fill={lc} />
-                        )}
-                        {right.length > 2 && (
-                          <Polygon points={right.map((p) => `${p.x},${p.y}`).join(' ')} fill={rc} />
-                        )}
-                        <Line
-                          x1={entryExitPoints[0].x}
-                          y1={entryExitPoints[0].y}
-                          x2={entryExitPoints[1].x}
-                          y2={entryExitPoints[1].y}
-                          stroke="#00FF00"
-                          strokeWidth={4}
-                        />
-                      </>
-                    );
-                  })()}
-                </Svg>
-                {entryExitPoints.map((pt, idx) => (
-                  <View
-                    key={idx}
-                    // eslint-disable-next-line react-native/no-inline-styles
-                    style={{
-                      position: 'absolute',
-                      left: pt.x - 14,
-                      top: pt.y - 14,
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      backgroundColor: '#00FF00',
-                      borderWidth: 2,
-                      borderColor: '#FFF',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 10,
-                      transform: [{ scale: activeEntryExitPoint === idx ? 1.3 : 1 }],
-                    }}
-                    {...entryExitPanResponders[idx].panHandlers}
-                  >
-                    <View style={styles.lineStyle} />
-                  </View>
-                ))}
-                <TouchableOpacity
-                  style={styles.switchButton}
-                  onPress={() => setIsLeftIn((v) => !v)}
-                >
-                  <Icon name="swap-horizontal" size={20} color="#333" style={styles.marginIcon} />
-                  <Text style={styles.fontStyle}>
-                    {t('detectionZone.inGreenOutRed', 'In: Green / Out: Red')}
-                  </Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.zoneOverlay,
-                    {
-                      top: zone.topLeft.y,
-                      left: zone.topLeft.x,
-                      width: zone.topRight.x - zone.topLeft.x,
-                      height: zone.bottomLeft.y - zone.topLeft.y,
-                      backgroundColor: getZoneColor(),
-                    },
-                  ]}
-                />
-                {(Object.keys(zone) as (keyof DetectionZone)[]).map((corner) => {
-                  const c = zone[corner];
-                  return (
-                    <View
-                      key={corner}
-                      style={[
-                        styles.cornerHandle,
-                        {
-                          left: c.x - 14,
-                          top: c.y - 14,
-                          transform: [{ scale: activeCorner === corner ? 1.3 : 1 }],
-                        },
-                      ]}
-                      {...panResponders[corner].panHandlers}
-                    >
-                      <View style={styles.cornerInner} />
-                    </View>
-                  );
+        <View style={styles.body}>
+          <View style={styles.previewContainer}>
+            {streamHtmlUrl ? (
+              <WebView
+                ref={webViewRef}
+                source={
+                  Platform.OS === 'ios'
+                    ? {
+                        html: buildIOSStreamInlineHtml(streamHtmlUrl).html,
+                        baseUrl: buildIOSStreamInlineHtml(streamHtmlUrl).baseUrl,
+                      }
+                    : { uri: streamHtmlUrl }
+                }
+                style={styles.cameraPreview}
+                containerStyle={styles.webViewContainer}
+                javaScriptEnabled
+                domStorageEnabled
+                mediaPlaybackRequiresUserAction={false}
+                allowsInlineMediaPlayback
+                allowsFullscreenVideo={false}
+                scrollEnabled={false}
+                bounces={false}
+                overScrollMode="never"
+                injectedJavaScript={INJECTED_JS}
+                allowsBackForwardNavigationGestures={false}
+                showsHorizontalScrollIndicator={false}
+                showsVerticalScrollIndicator={false}
+                startInLoadingState={false}
+                originWhitelist={['*']}
+                mixedContentMode="always"
+                setBuiltInZoomControls={false}
+                setSupportMultipleWindows={false}
+                {...(Platform.OS === 'ios' && {
+                  allowsAirPlayForMediaPlayback: false,
+                  dataDetectorTypes: 'none',
+                  decelerationRate: 'normal',
+                  useWebKit: true,
                 })}
-              </>
+                onContentProcessDidTerminate={() => {
+                  webViewRef.current?.reload();
+                }}
+                onLoadStart={() => {
+                  setIsWebViewLoading(true);
+                  setWebViewError(null);
+                }}
+                onLoadEnd={() => setIsWebViewLoading(false)}
+                onError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  setWebViewError(nativeEvent.description || 'Stream load failed');
+                  setIsWebViewLoading(false);
+                }}
+                onHttpError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  setWebViewError(`HTTP ${nativeEvent.statusCode}`);
+                  setIsWebViewLoading(false);
+                }}
+                onLayout={(e) => {
+                  const { x, y, width, height } = e.nativeEvent.layout;
+                  setLiveViewLayout({ x, y, width, height });
+                }}
+              />
+            ) : (
+              <View
+                style={[styles.cameraPreview, styles.loadingOverlay]}
+                onLayout={(e) => {
+                  const { x, y, width, height } = e.nativeEvent.layout;
+                  setLiveViewLayout({ x, y, width, height });
+                }}
+              >
+                <ActivityIndicator size="small" color="#FFF" />
+                <Text style={styles.loadingText}>{t('bluetoothScreen.connecting')}</Text>
+              </View>
             )}
 
-            <View style={styles.rightButtons}>
-              {zoneType !== 'entryExit' && (
-                <View>
-                  <TouchableOpacity style={styles.roundButton} onPress={handleDrawRectangle}>
-                    <Icon name="selection-drag" size={22} color="#FFFFFF" />
+            {streamHtmlUrl && !isWebViewLoading && !webViewError && (
+              <TouchableOpacity style={styles.muteButton} onPress={toggleMute} activeOpacity={0.75}>
+                <Icon name={isMuted ? 'volume-off' : 'volume-high'} size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+
+            {isWebViewLoading && streamHtmlUrl ? (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="small" color="#FFF" />
+                <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
+              </View>
+            ) : null}
+
+            {/* Error overlay khi WebView bị lỗi */}
+            {webViewError && !isWebViewLoading ? (
+              <View style={styles.errorOverlay}>
+                <Text style={styles.errorText}>{webViewError}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            <View style={styles.overlayContainer} pointerEvents="box-none">
+              <View style={styles.gridOverlay} pointerEvents="none">
+                {renderGrid()}
+              </View>
+
+              {zoneType === 'entryExit' ? (
+                <>
+                  <Svg style={styles.svgOverlay} pointerEvents="none">
+                    {(() => {
+                      const { left, right } = getEntryExitPolygons();
+                      const lc = isLeftIn ? 'rgba(255,0,0,0.25)' : 'rgba(0,255,0,0.25)';
+                      const rc = isLeftIn ? 'rgba(0,255,0,0.25)' : 'rgba(255,0,0,0.25)';
+                      return (
+                        <>
+                          {left.length > 2 && (
+                            <Polygon
+                              points={left.map((p) => `${p.x},${p.y}`).join(' ')}
+                              fill={lc}
+                            />
+                          )}
+                          {right.length > 2 && (
+                            <Polygon
+                              points={right.map((p) => `${p.x},${p.y}`).join(' ')}
+                              fill={rc}
+                            />
+                          )}
+                          <Line
+                            x1={entryExitPoints[0].x}
+                            y1={entryExitPoints[0].y}
+                            x2={entryExitPoints[1].x}
+                            y2={entryExitPoints[1].y}
+                            stroke="#00FF00"
+                            strokeWidth={4}
+                          />
+                        </>
+                      );
+                    })()}
+                  </Svg>
+                  {entryExitPoints.map((pt, idx) => (
+                    <View
+                      key={idx}
+                      // eslint-disable-next-line react-native/no-inline-styles
+                      style={{
+                        position: 'absolute',
+                        left: pt.x - 14,
+                        top: pt.y - 14,
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: '#00FF00',
+                        borderWidth: 2,
+                        borderColor: '#FFF',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 10,
+                        transform: [{ scale: activeEntryExitPoint === idx ? 1.3 : 1 }],
+                      }}
+                      {...entryExitPanResponders[idx].panHandlers}
+                    >
+                      <View style={styles.lineStyle} />
+                    </View>
+                  ))}
+                  <TouchableOpacity
+                    style={styles.switchButton}
+                    onPress={() => setIsLeftIn((v) => !v)}
+                  >
+                    <Icon name="swap-horizontal" size={20} color="#333" style={styles.marginIcon} />
+                    <Text style={styles.fontStyle}>
+                      {t('detectionZone.inGreenOutRed', 'In: Green / Out: Red')}
+                    </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.roundButton} onPress={handleReset}>
-                    <Icon name="trash-can-outline" size={22} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
+                </>
+              ) : (
+                <>
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.zoneOverlay,
+                      {
+                        top: zone.topLeft.y,
+                        left: zone.topLeft.x,
+                        width: zone.topRight.x - zone.topLeft.x,
+                        height: zone.bottomLeft.y - zone.topLeft.y,
+                        backgroundColor: getZoneColor(),
+                      },
+                    ]}
+                  />
+                  {(Object.keys(zone) as (keyof DetectionZone)[]).map((corner) => {
+                    const c = zone[corner];
+                    return (
+                      <View
+                        key={corner}
+                        style={[
+                          styles.cornerHandle,
+                          {
+                            left: c.x - 14,
+                            top: c.y - 14,
+                            transform: [{ scale: activeCorner === corner ? 1.3 : 1 }],
+                          },
+                        ]}
+                        {...panResponders[corner].panHandlers}
+                      >
+                        <View style={styles.cornerInner} />
+                      </View>
+                    );
+                  })}
+                </>
               )}
+
+              <View style={styles.rightButtons}>
+                {zoneType !== 'entryExit' && (
+                  <View>
+                    <TouchableOpacity style={styles.roundButton} onPress={handleDrawRectangle}>
+                      <Icon name="selection-drag" size={22} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.roundButton} onPress={handleReset}>
+                      <Icon name="trash-can-outline" size={22} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         </View>
-      </View>
+      </SafeAreaView>
     </View>
   );
 };

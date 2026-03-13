@@ -48,9 +48,8 @@ export const useUserSync = () => {
         await setUserData(freshUserData);
       }
     } catch (error: any) {
+      // 401 is already handled by the axios interceptor (refresh + logout on failure)
       if (error?.response?.status === 401 || error?.apiStatusCode === 401) {
-        await removeAuthData();
-        dispatch(logout());
         return;
       }
     }

@@ -54,6 +54,7 @@ const CustomerReport = () => {
       </View>
       <View style={styles.dateHeader}>
         <Pressable
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           onPress={() => {
             const date = new Date(selectedDate);
             date.setDate(date.getDate() - 1);
@@ -68,6 +69,7 @@ const CustomerReport = () => {
           <Text style={styles.dateText}>{selectedDate.replace(/-/g, '/')}</Text>
         </Pressable>
         <Pressable
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           onPress={() => {
             const date = new Date(selectedDate);
             date.setDate(date.getDate() + 1);
