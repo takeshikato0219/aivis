@@ -109,6 +109,71 @@ const Setting = () => {
     }
   };
 
+  const loginAndSubscribe = async () => {
+    try {
+      const loginResult = await lineAuthService.signIn();
+      if (!loginResult) return false;
+      if (!loginResult.idToken) {
+        Alert.alert(t('common.error'), t('lineSubscription.failedToGetIdToken'));
+        return false;
+      }
+      const response = await performSubscription();
+      if (!response?.userId) {
+        Alert.alert(t('common.error'), t('lineSubscription.failedToGetUserId'));
+        return false;
+      }
+      const updateSuccess = await updateUserWithLineId(response.userId);
+      if (!updateSuccess) {
+        Alert.alert(
+          t('common.error'),
+          t('lineSubscription.failedToUpdateUserProfilePleaseTryAgain')
+        );
+        return false;
+      }
+      await loadSubscriptionStatus();
+      return true;
+    } catch (error) {
+      console.error('Error logging in with LINE:', error);
+      return false;
+    }
+  };
+
+  const showLineLoginAlert = () => {
+    Alert.alert(
+      t('lineSubscription.lineSdkLoginRequired'),
+      t('lineSubscription.lineSdkLoginRequiredMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('lineSubscription.loginWithLine'),
+          onPress: async () => {
+            setIsSubscribing(true);
+            await loginAndSubscribe();
+            setIsSubscribing(false);
+          },
+        },
+      ]
+    );
+  };
+
+  const showLineAuthAlert = () => {
+    Alert.alert(
+      t('lineSubscription.lineAuthRequired'),
+      t('lineSubscription.lineAuthRequiredMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('lineSubscription.loginWithLine'),
+          onPress: async () => {
+            setIsSubscribing(true);
+            await loginAndSubscribe();
+            setIsSubscribing(false);
+          },
+        },
+      ]
+    );
+  };
+
   const handleSubscribeToLine = async () => {
     setIsSubscribing(true);
     try {
@@ -116,81 +181,19 @@ const Setting = () => {
       if (isUserLoggedInWithLine) {
         const isLineLoggedIn = await checkLineLoginStatus();
         if (!isLineLoggedIn) {
-          Alert.alert(
-            t('lineSubscription.lineSdkLoginRequired'),
-            t('lineSubscription.lineSdkLoginRequiredMessage'),
-            [
-              { text: t('common.cancel'), style: 'cancel' },
-              {
-                text: t('lineSubscription.loginWithLine'),
-                onPress: async () => {
-                  try {
-                    const loginResult = await lineAuthService.signIn();
-                    if (loginResult) {
-                      await performSubscription();
-                    }
-                  } catch (loginError) {
-                    console.error('Error logging in with LINE:', loginError);
-                    setIsSubscribing(false);
-                  }
-                },
-              },
-            ]
-          );
+          showLineLoginAlert();
           setIsSubscribing(false);
           return;
         }
-
         await performSubscription();
       } else {
-        Alert.alert(
-          t('lineSubscription.lineAuthRequired'),
-          t('lineSubscription.lineAuthRequiredMessage'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            {
-              text: t('lineSubscription.loginWithLine'),
-              onPress: async () => {
-                try {
-                  const loginResult = await lineAuthService.signIn();
-                  if (loginResult) {
-                    if (loginResult.idToken) {
-                      const response = await performSubscription();
-                      if (response?.userId) {
-                        const updateSuccess = await updateUserWithLineId(response.userId);
-                        if (updateSuccess) {
-                          await loadSubscriptionStatus();
-                        } else {
-                          Alert.alert(
-                            t('common.error'),
-                            t('lineSubscription.failedToUpdateUserProfilePleaseTryAgain')
-                          );
-                          setIsSubscribing(false);
-                        }
-                      } else {
-                        Alert.alert(t('common.error'), t('lineSubscription.failedToGetUserId'));
-                        setIsSubscribing(false);
-                      }
-                    } else {
-                      Alert.alert(t('common.error'), t('lineSubscription.failedToGetIdToken'));
-                      setIsSubscribing(false);
-                    }
-                  } else {
-                    setIsSubscribing(false);
-                  }
-                } catch (loginError) {
-                  console.error('Error logging in with LINE:', loginError);
-                  setIsSubscribing(false);
-                }
-              },
-            },
-          ]
-        );
+        showLineAuthAlert();
         setIsSubscribing(false);
         return;
       }
     } catch (error) {
       console.error('Error subscribing to LINE:', error);
+    } finally {
       setIsSubscribing(false);
     }
   };
@@ -295,17 +298,19 @@ const Setting = () => {
             <View style={styles.section}>
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
-                {lineProfile && (
-                  <View style={styles.marginLine}>
+                <View style={styles.marginLine}>
+                  {lineProfile && (
                     <Text style={styles.lineStyle}>
                       {t('lineSubscription.LINEDisplayName')}
-                      {lineProfile.displayName}
+                      {user?.line_display_name}
                     </Text>
+                  )}
+                  {user?.line_notification_id && (
                     <Text style={styles.lineStyle}>
-                      {t('lineSubscription.LINEUserID')} {lineProfile.userId}
+                      {t('lineSubscription.LINEUserID')} {user.line_notification_id}
                     </Text>
-                  </View>
-                )}
+                  )}
+                </View>
                 {!subscriptionStatus?.isSubscribed ? (
                   <TouchableOpacity
                     style={[styles.lineButton, styles.subscribeButton]}
