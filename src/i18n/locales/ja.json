@@ -356,7 +356,8 @@
     "agentCode": "代理店コード",
     "cameraRegisteredSuccessfully": "カメラの登録が完了しました",
     "authenticationRequired": "カメラを登録するにはログインしてください",
-    "theCameraHasBeenRegistered": "カメラの登録が完了しました"
+    "theCameraHasBeenRegistered": "カメラの登録が完了しました",
+    "noQRData": "QRデータがスキャンされていません"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Jetson Orinのローカルホットスポットのデフォルトパスワードを入力してください：",

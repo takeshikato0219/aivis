@@ -33,15 +33,15 @@ export const styles = StyleSheet.create({
   previewContainer: {
     flex: 1,
     backgroundColor: '#000',
+    marginBottom: 16,
+    marginHorizontal: 15,
   },
   cameraPreview: {
     flex: 1,
     backgroundColor: '#000',
-    marginBottom: 10,
-    marginHorizontal: 15,
   },
   overlayContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   gridOverlay: {
     ...StyleSheet.absoluteFill,

@@ -36,6 +36,8 @@ import IconSuspect from '@assets/svg/icon-suspect.svg';
 import IconLive from '@assets/svg/icon-live.svg';
 import IconBear from '@assets/svg/icon-bear.svg';
 import IconListFace from '@assets/svg/icon-list-face.svg';
+import IconMark from '@assets/svg/face-mask-icon.svg';
+import IconGlove from '@assets/svg/gloves-icon.svg';
 
 import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/types';
 import { COLORS } from '@constants/theme';
@@ -58,6 +60,8 @@ const ICON_NAMES = [
   'IconLive',
   'IconBear',
   'IconListFace',
+  'IconMark',
+  'IconGlove',
 ];
 
 const MODE_ICONS = [
@@ -73,6 +77,7 @@ const Detail = () => {
   const route = useRoute<DetailScreenRouteProp>();
   const { t } = useTranslation();
   const camera = route.params?.camera;
+  const workflowStatuses = route.params?.workflowStatuses;
   const title = camera?.name || 'Detail';
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [lastFrameUri, setLastFrameUri] = useState<string | null>(null);
@@ -126,7 +131,6 @@ const Detail = () => {
       const response = await cameraService.getDetailCamera(camera.id);
       if (response.success && response.data && typeof response.data.mode_id === 'string') {
         setDetailModeId(response.data.mode_id);
-        // If modes are already loaded, find and set active index
         if (modes.length > 0) {
           const foundIdx = modes.findIndex(
             (mode: any) => String(mode.id) === response.data.mode_id
@@ -224,7 +228,7 @@ const Detail = () => {
     handler?: any;
   };
 
-  const defaultRuleConfigs = [
+  const defaultRuleConfigsFamily = [
     {
       code: 'home_return_count',
       icon: IconHome,
@@ -250,6 +254,91 @@ const Detail = () => {
       handler: handlePressNotification,
     },
   ];
+
+  const defaultRuleConfigsStore = [
+    {
+      code: 'visitor_count',
+      icon: IconHome,
+      iconName: 'IconHome',
+      handler: handlePressNotification,
+    },
+    {
+      code: 'customer_attribute_report',
+      icon: IconPerson,
+      iconName: 'IconPerson',
+      handler: handlePressCustomerReport,
+    },
+    {
+      code: 'suspicious_behavior_detection',
+      icon: IconSuspect,
+      iconName: 'IconSuspect',
+      handler: handlePressNotification,
+    },
+    {
+      code: '',
+      icon: IconBear,
+      iconName: 'IconBear',
+      handler: handlePressNotification,
+    },
+    {
+      code: 'attendance',
+      icon: '',
+      iconName: '',
+      handler: '',
+    },
+  ];
+
+  const defaultRuleConfigsEnterprise = [
+    {
+      code: '',
+      icon: IconHome,
+      iconName: 'IconHome',
+      handler: '',
+    },
+    {
+      code: 'enterprise_attendance',
+      icon: IconPerson,
+      iconName: 'IconPerson',
+      handler: '',
+    },
+    {
+      code: 'unexpected_incident',
+      icon: IconPerson,
+      iconName: 'IconPerson',
+      handler: '',
+    },
+    {
+      code: 'helmet_wearing',
+      icon: IconSuspect,
+      iconName: 'IconSuspect',
+      handler: '',
+    },
+    {
+      code: 'mask_wearing',
+      icon: IconMark,
+      iconName: 'IconMask',
+      handler: '',
+    },
+    {
+      code: 'glove_wearing',
+      icon: IconGlove,
+      iconName: 'IconGlove',
+      handler: '',
+    },
+  ];
+
+  const facilityId = camera?.facility_id ?? (camera as any)?.facility?.id;
+  const matchedWorkflow = workflowStatuses?.find((ws) => String(ws.id) === String(facilityId));
+  const workflowName = matchedWorkflow?.name ?? '';
+
+  const defaultRuleConfigs =
+    workflowName === 'Family'
+      ? defaultRuleConfigsFamily
+      : workflowName === 'Store'
+        ? defaultRuleConfigsStore
+        : workflowName === 'Enterprise'
+          ? defaultRuleConfigsEnterprise
+          : defaultRuleConfigsFamily;
 
   const cameraListWithIcons = defaultRuleConfigs.map((config) => {
     const rule = rulesList.find((r) => r.code === config.code);
@@ -286,15 +375,26 @@ const Detail = () => {
     };
   });
 
+  const iconLiveItem = {
+    ...livingItem,
+    icon: IconLive,
+    iconName: 'IconLive',
+    handler: handleCameraPress,
+    counter: '1人',
+  };
+  const creatureDetectionIdx = cameraListWithIcons.findIndex((item) => item.icon === IconBear);
+  let cameraListWithIconsWithLive;
+  if (creatureDetectionIdx !== -1) {
+    cameraListWithIconsWithLive = [
+      ...cameraListWithIcons.slice(0, creatureDetectionIdx),
+      iconLiveItem,
+      ...cameraListWithIcons.slice(creatureDetectionIdx),
+    ];
+  } else {
+    cameraListWithIconsWithLive = [...cameraListWithIcons, iconLiveItem];
+  }
   const CAMERA_LIST: CameraListItem[] = [
-    ...cameraListWithIcons,
-    {
-      ...livingItem,
-      icon: IconLive,
-      iconName: 'IconLive',
-      handler: handleCameraPress,
-      counter: '1人',
-    },
+    ...cameraListWithIconsWithLive,
     {
       id: '6',
       name: '人物登録',

@@ -38,6 +38,7 @@ class AuthService {
       type: data.type,
       has_followed_bot: data.has_followed_bot,
       line_notification_id: data.line_notification_id,
+      line_display_name: data.line_display_name,
     };
   }
 

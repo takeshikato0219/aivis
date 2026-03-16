@@ -148,6 +148,7 @@ const Home = () => {
 
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore) {
+      fetchWorkflowStatuses();
       setIsLoadingMore(true);
       fetchCameraList(true, selectedFacilityId).finally(() => {
         setIsLoadingMore(false);
@@ -178,6 +179,7 @@ const Home = () => {
   const goToDetail = (camera: Camera) => {
     navigation.navigate('Detail', {
       camera: camera,
+      workflowStatuses: workflowStatuses,
     });
   };
 

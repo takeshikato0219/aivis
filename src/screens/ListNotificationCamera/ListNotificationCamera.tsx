@@ -246,8 +246,8 @@ const ListNotificationCamera = () => {
               animationType="fade"
               onRequestClose={() => setShowCalendarModal(false)}
             >
-              <View style={styles.modalOverlay}>
-                <View style={styles.calendarModalContent}>
+              <Pressable style={styles.modalOverlay} onPress={() => setShowCalendarModal(false)}>
+                <Pressable style={styles.calendarModalContent} onPress={() => {}}>
                   <Calendar
                     current={selectedDate}
                     onDayPress={(day: { dateString: string }) => {
@@ -277,8 +277,8 @@ const ListNotificationCamera = () => {
                   >
                     <Text style={styles.closeCalendarText}>{t('listFace.close')}</Text>
                   </TouchableOpacity>
-                </View>
-              </View>
+                </Pressable>
+              </Pressable>
             </Modal>
           </View>
         </ImageBackground>

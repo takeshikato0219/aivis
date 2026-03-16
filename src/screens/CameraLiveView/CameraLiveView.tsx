@@ -16,7 +16,7 @@ import {
   AppStateStatus,
   Image,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import { check, request, RESULTS, PERMISSIONS } from 'react-native-permissions';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -197,6 +197,41 @@ const CameraLiveView: React.FC = () => {
     };
   }, [fetchLiveUrl, webViewRef]);
 
+  // Force video play when screen gains focus and stream is connected (fixes black screen on first load)
+  const forceVideoPlay = useCallback(() => {
+    webViewRef.current?.injectJavaScript(`
+      (function(){
+        var v = document.querySelector('video');
+        if (v && v.paused) v.play().catch(function(){});
+        true;
+      })();
+    `);
+  }, [webViewRef]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (connectionStatus === 'connected' && streamWsUrl && !webViewError) {
+        const t1 = setTimeout(forceVideoPlay, 300);
+        const t2 = setTimeout(forceVideoPlay, 1200);
+        return () => {
+          clearTimeout(t1);
+          clearTimeout(t2);
+        };
+      }
+    }, [connectionStatus, streamWsUrl, webViewError, forceVideoPlay])
+  );
+
+  // Retry force play when connection becomes live (handles race where video loads before WebView ready)
+  useEffect(() => {
+    if (!isLive || !streamWsUrl) return;
+    const t1 = setTimeout(forceVideoPlay, 500);
+    const t2 = setTimeout(forceVideoPlay, 2000);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [isLive, streamWsUrl, forceVideoPlay]);
+
   const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
 
   // Use inline HTML stream for both iOS and Android (fixes Android black screen)
@@ -338,7 +373,6 @@ const CameraLiveView: React.FC = () => {
             ? 'Photo library permission is required to save screenshots'
             : 'Storage permission is required to save screenshots'
         );
-        // Xóa file tạm
         await RNFS.unlink(tmpPath).catch(() => {});
         return;
       }
@@ -353,7 +387,7 @@ const CameraLiveView: React.FC = () => {
   }, [t, captureFrameFromWebView]);
 
   const toggleTalk = useCallback(async () => {
-    if (isMicProcessing) return; // Chặn click spam liên tục
+    if (isMicProcessing) return;
     setIsMicProcessing(true);
     try {
       const micPermission = await checkMicPermission();
@@ -537,6 +571,7 @@ const CameraLiveView: React.FC = () => {
         {streamHtmlUrl ? (
           <>
             <WebView
+              key={streamWsUrl || streamHtmlUrl || 'stream'}
               ref={webViewRef}
               source={
                 inlineStreamSource
@@ -546,6 +581,7 @@ const CameraLiveView: React.FC = () => {
               style={styles.videoContainer}
               javaScriptEnabled
               domStorageEnabled
+              cacheEnabled={false}
               mediaPlaybackRequiresUserAction={false}
               allowsInlineMediaPlayback
               allowsFullscreenVideo={false}
@@ -774,14 +810,19 @@ const CameraLiveView: React.FC = () => {
                   />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.controlButton} onPress={toggleTalk}>
-                  {/* eslint-disable-next-line react-native/no-inline-styles */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    {isTalking && !isTalkingDelayed ? (
-                      <ActivityIndicator size="small" color="#44ef52" />
-                    ) : (
-                      isTalkingDelayed && <Icon name="microphone" size={22} color="#44ef52" />
-                    )}
+                <TouchableOpacity
+                  style={styles.mainButton}
+                  onPress={toggleTalk}
+                  disabled={isMicProcessing}
+                >
+                  <View style={[styles.iconCircle, isTalkingDelayed && styles.iconCircleActive]}>
+                    <View style={styles.micIconRow}>
+                      {isTalking && !isTalkingDelayed ? (
+                        <ActivityIndicator size="small" color="#44ef52" />
+                      ) : (
+                        <Icon name="microphone" size={28} color="#FFF" />
+                      )}
+                    </View>
                   </View>
                 </TouchableOpacity>
 
@@ -805,7 +846,7 @@ const CameraLiveView: React.FC = () => {
     );
   }
 
-  // Render normal portrait mode
+  // Normal portrait mode
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -821,7 +862,6 @@ const CameraLiveView: React.FC = () => {
                 <Text style={styles.liveText}>{isLive ? 'Live' : 'Offline'}</Text>
               </View>
             </View>
-
             <View style={styles.hdStyle}>
               <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                 <Icon name="close" size={24} color="#FFF" />

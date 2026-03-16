@@ -285,10 +285,12 @@ const ConnectionSuccessful: React.FC = () => {
 
       <SafeAreaView edges={['bottom']} style={styles.bottomSection}>
         <TouchableOpacity
-          style={styles.primaryButton}
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={[styles.primaryButton, cameraNameError ? { opacity: 0.5 } : null]}
           onPress={() => {
             navigation.navigate('Home' as any);
           }}
+          disabled={!!cameraNameError}
         >
           <View style={styles.viewButtonBottom}>
             <Text style={styles.primaryButtonText}>{t('liveStream.startMonitoring')}</Text>
@@ -297,10 +299,12 @@ const ConnectionSuccessful: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.secondaryButton}
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={[styles.secondaryButton, cameraNameError ? { opacity: 0.5 } : null]}
           onPress={() => {
-            navigation.navigate('FaceUpload' as never);
+            (navigation as any).navigate('ListFace', { type: '' });
           }}
+          disabled={!!cameraNameError}
         >
           <View style={styles.viewButtonBottom}>
             <Text style={styles.secondaryButtonText}>{t('liveStream.faceSetup')}</Text>

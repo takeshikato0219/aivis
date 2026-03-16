@@ -1,6 +1,6 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
-import { Camera } from '@api/types/cameraTypes';
+import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
 import { MemberRelationship } from '@api/faceService';
 
 // ===== ROOT STACK =====
@@ -26,6 +26,7 @@ export type AppStackParamList = {
   Notifications: { userId?: string };
   Detail: {
     camera: Camera;
+    workflowStatuses: WorkflowStatus[];
   };
   CameraLive: {
     cameraId: string;
@@ -40,6 +41,9 @@ export type AppStackParamList = {
   ChangePassword: undefined;
   DetectionZoneSetup: {
     camera: Camera;
+    zoneType?: 'detection' | 'restricted' | 'entryExit';
+    typeId?: string;
+    liveUrl: string;
   };
   ConnectDevice: undefined;
   PairingCode: {

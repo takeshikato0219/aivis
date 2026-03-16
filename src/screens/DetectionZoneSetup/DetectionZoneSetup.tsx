@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,14 @@ import {
   PanResponder,
   ActivityIndicator,
   Platform,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import Orientation from 'react-native-orientation-locker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
+import { StackScreenProps } from '@react-navigation/stack';
+import { AppStackParamList } from '@navigation/types';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { styles } from './DetectionZoneSetup.styles';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +28,7 @@ import {
   buildIOSStreamInlineHtml,
 } from '@utils/streamUtils';
 import cameraService from '@api/cameraService';
+import { useLiveStream } from '@hooks/useLiveStream';
 
 const getScreenDims = () => {
   const { width, height } = Dimensions.get('window');
@@ -47,18 +52,9 @@ interface DetectionZone {
 
 const GRID_SIZE = 28;
 
-type DetectionZoneSetupParamList = {
-  DetectionZoneSetup: {
-    camera: any;
-    zoneType?: 'detection' | 'restricted' | 'entryExit';
-    typeId?: string;
-    liveUrl: string;
-  };
-};
+type Props = StackScreenProps<AppStackParamList, 'DetectionZoneSetup'>;
 
-const DetectionZoneSetup: React.FC = () => {
-  const navigation = useNavigation();
-  const route = useRoute<RouteProp<DetectionZoneSetupParamList, 'DetectionZoneSetup'>>();
+const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const { t } = useTranslation();
   const camera = route.params.camera;
   const zoneType = route.params.zoneType || 'detection';
@@ -83,13 +79,11 @@ const DetectionZoneSetup: React.FC = () => {
   ]);
   const [activeEntryExitPoint, setActiveEntryExitPoint] = useState<number | null>(null);
   const [isLeftIn, setIsLeftIn] = useState(true);
+  const [streamWsUrl, setStreamWsUrl] = useState<string>(route.params.liveUrl || '');
   const [streamHtmlUrl, setStreamHtmlUrl] = useState(() =>
     buildStreamHtmlUrl(route.params.liveUrl)
   );
   const [timeExp, setTimeExp] = useState<string | null>(null);
-  const [isWebViewLoading, setIsWebViewLoading] = useState(true);
-  const [webViewError, setWebViewError] = useState<string | null>(null);
-  const webViewRef = useRef<WebView>(null);
   const [liveViewLayout, setLiveViewLayout] = useState({
     x: 0,
     y: 0,
@@ -97,28 +91,33 @@ const DetectionZoneSetup: React.FC = () => {
     height: PREVIEW_HEIGHT,
   });
 
-  const [isMuted, setIsMuted] = useState(true);
+  const {
+    webViewRef,
+    isLoading: isWebViewLoading,
+    connectionStatus,
+    isReconnecting,
+    retryCount,
+    handleWebViewLoad,
+    handleWebViewError: onWebViewError,
+    handleWebViewHttpError: onWebViewHttpError,
+    handleManualRetry,
+    handleWebViewMessage,
+  } = useLiveStream({ maxRetries: 3, heartbeatTimeout: 15000 });
 
-  const toggleMute = useCallback(() => {
-    setIsMuted((prev) => {
-      const next = !prev;
-      webViewRef.current?.injectJavaScript(`
-      (function(){
-        var muted = ${next};
-        document.querySelectorAll('video').forEach(function(v){ v.muted = muted; });
-        true;
-      })();
-    `);
-      return next;
-    });
-  }, []);
+  const webViewError = connectionStatus === 'failed';
+  const isLive = connectionStatus === 'connected' && !!streamHtmlUrl && !isWebViewLoading;
 
   const fetchLiveUrl = useCallback(async () => {
-    const res = await cameraService.getLiveStreamUrl(camera.id);
-    if (res.success && res.data) {
-      const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
-      setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
-      setTimeExp(res.data.time_exp);
+    try {
+      const res = await cameraService.getLiveStreamUrl(camera.id);
+      if (res.success && res.data) {
+        setTimeExp(res.data.time_exp);
+        setStreamWsUrl(res.data.live_url);
+        const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
+        setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
+      }
+    } catch {
+      // handle error
     }
   }, [camera.id]);
 
@@ -130,6 +129,62 @@ const DetectionZoneSetup: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [timeExp, fetchLiveUrl]);
+
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        fetchLiveUrl().then(() => {
+          webViewRef.current?.reload();
+        });
+      }
+      appStateRef.current = nextAppState;
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [fetchLiveUrl, webViewRef]);
+
+  const forceVideoPlay = useCallback(() => {
+    webViewRef.current?.injectJavaScript(`
+      (function(){
+        var v = document.querySelector('video');
+        if (v && v.paused) v.play().catch(function(){});
+        true;
+      })();
+    `);
+  }, [webViewRef]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (connectionStatus === 'connected' && streamWsUrl && !webViewError) {
+        const t1 = setTimeout(forceVideoPlay, 300);
+        const t2 = setTimeout(forceVideoPlay, 1200);
+        return () => {
+          clearTimeout(t1);
+          clearTimeout(t2);
+        };
+      }
+    }, [connectionStatus, streamWsUrl, webViewError, forceVideoPlay])
+  );
+
+  useEffect(() => {
+    if (!isLive || !streamWsUrl) return;
+    const t1 = setTimeout(forceVideoPlay, 500);
+    const t2 = setTimeout(forceVideoPlay, 2000);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [isLive, streamWsUrl, forceVideoPlay]);
+
+  const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
+
+  const inlineStreamSource = useMemo(() => {
+    if (!streamWsUrl) return null;
+    const result = buildIOSStreamInlineHtml(streamWsUrl);
+    return result.html ? result : null;
+  }, [streamWsUrl]);
 
   useEffect(() => {
     fetchLiveUrl();
@@ -146,7 +201,6 @@ const DetectionZoneSetup: React.FC = () => {
     []
   );
 
-  // Clamp entryExitPoints to live view bounds when layout changes
   useEffect(() => {
     if (zoneType === 'entryExit' && liveViewLayout.width > 0 && liveViewLayout.height > 0) {
       const lx = liveViewLayout.x;
@@ -458,13 +512,9 @@ const DetectionZoneSetup: React.FC = () => {
   };
 
   const handleReconnect = async () => {
-    setWebViewError(null);
-    setIsWebViewLoading(true);
     await fetchLiveUrl();
-    webViewRef.current?.reload();
+    handleManualRetry();
   };
-
-  const INJECTED_JS = Platform.OS === 'ios' ? undefined : getInjectedStreamPlayerJS('android');
 
   const handleGoback = () => {
     showCommonAlert({
@@ -507,19 +557,18 @@ const DetectionZoneSetup: React.FC = () => {
           <View style={styles.previewContainer}>
             {streamHtmlUrl ? (
               <WebView
+                key={streamWsUrl || streamHtmlUrl || 'stream'}
                 ref={webViewRef}
                 source={
-                  Platform.OS === 'ios'
-                    ? {
-                        html: buildIOSStreamInlineHtml(streamHtmlUrl).html,
-                        baseUrl: buildIOSStreamInlineHtml(streamHtmlUrl).baseUrl,
-                      }
+                  inlineStreamSource
+                    ? { html: inlineStreamSource.html, baseUrl: inlineStreamSource.baseUrl }
                     : { uri: streamHtmlUrl }
                 }
                 style={styles.cameraPreview}
                 containerStyle={styles.webViewContainer}
                 javaScriptEnabled
                 domStorageEnabled
+                cacheEnabled={false}
                 mediaPlaybackRequiresUserAction={false}
                 allowsInlineMediaPlayback
                 allowsFullscreenVideo={false}
@@ -535,6 +584,10 @@ const DetectionZoneSetup: React.FC = () => {
                 mixedContentMode="always"
                 setBuiltInZoomControls={false}
                 setSupportMultipleWindows={false}
+                mediaCapturePermissionGrantType="grant"
+                {...(Platform.OS === 'android' && {
+                  androidLayerType: 'hardware',
+                })}
                 {...(Platform.OS === 'ios' && {
                   allowsAirPlayForMediaPlayback: false,
                   dataDetectorTypes: 'none',
@@ -544,24 +597,28 @@ const DetectionZoneSetup: React.FC = () => {
                 onContentProcessDidTerminate={() => {
                   webViewRef.current?.reload();
                 }}
-                onLoadStart={() => {
-                  setIsWebViewLoading(true);
-                  setWebViewError(null);
-                }}
-                onLoadEnd={() => setIsWebViewLoading(false)}
-                onError={(syntheticEvent) => {
-                  const { nativeEvent } = syntheticEvent;
-                  setWebViewError(nativeEvent.description || 'Stream load failed');
-                  setIsWebViewLoading(false);
-                }}
-                onHttpError={(syntheticEvent) => {
-                  const { nativeEvent } = syntheticEvent;
-                  setWebViewError(`HTTP ${nativeEvent.statusCode}`);
-                  setIsWebViewLoading(false);
+                onLoad={handleWebViewLoad}
+                onError={onWebViewError}
+                onHttpError={onWebViewHttpError}
+                onMessage={(event) => {
+                  try {
+                    const data = JSON.parse(event.nativeEvent.data);
+                    if (data.type === 'needReload') {
+                      webViewRef.current?.reload();
+                      return;
+                    }
+                  } catch {
+                    // ignore parse errors
+                  }
+                  handleWebViewMessage(event);
                 }}
                 onLayout={(e) => {
                   const { x, y, width, height } = e.nativeEvent.layout;
-                  setLiveViewLayout({ x, y, width, height });
+                  setLiveViewLayout((prev) =>
+                    prev.x === x && prev.y === y && prev.width === width && prev.height === height
+                      ? prev
+                      : { x, y, width, height }
+                  );
                 }}
               />
             ) : (
@@ -569,7 +626,11 @@ const DetectionZoneSetup: React.FC = () => {
                 style={[styles.cameraPreview, styles.loadingOverlay]}
                 onLayout={(e) => {
                   const { x, y, width, height } = e.nativeEvent.layout;
-                  setLiveViewLayout({ x, y, width, height });
+                  setLiveViewLayout((prev) =>
+                    prev.x === x && prev.y === y && prev.width === width && prev.height === height
+                      ? prev
+                      : { x, y, width, height }
+                  );
                 }}
               >
                 <ActivityIndicator size="small" color="#FFF" />
@@ -577,25 +638,31 @@ const DetectionZoneSetup: React.FC = () => {
               </View>
             )}
 
-            {streamHtmlUrl && !isWebViewLoading && !webViewError && (
-              <TouchableOpacity style={styles.muteButton} onPress={toggleMute} activeOpacity={0.75}>
-                <Icon name={isMuted ? 'volume-off' : 'volume-high'} size={22} color="#FFFFFF" />
-              </TouchableOpacity>
-            )}
-
-            {isWebViewLoading && streamHtmlUrl ? (
+            {!streamHtmlUrl || (isWebViewLoading && streamHtmlUrl) ? (
               <View style={styles.loadingOverlay}>
                 <ActivityIndicator size="small" color="#FFF" />
-                <Text style={styles.loadingText}>{t('liveStream.loadingStream')}</Text>
+                <Text style={styles.loadingText}>
+                  {!streamHtmlUrl ? t('bluetoothScreen.connecting') : t('liveStream.loadingStream')}
+                </Text>
               </View>
             ) : null}
 
-            {/* Error overlay khi WebView bị lỗi */}
-            {webViewError && !isWebViewLoading ? (
+            {isReconnecting && streamHtmlUrl ? (
+              <View style={styles.reconnectingOverlay}>
+                <ActivityIndicator size="small" color="#FFF" />
+                <Text style={styles.loadingText}>
+                  {t('liveStream.reconnecting') || 'Reconnecting...'} ({retryCount})
+                </Text>
+              </View>
+            ) : null}
+
+            {webViewError && !isWebViewLoading && streamHtmlUrl ? (
               <View style={styles.errorOverlay}>
-                <Text style={styles.errorText}>{webViewError}</Text>
+                <Text style={styles.errorText}>
+                  {t('networkSetup.connectionFailed') || 'Connection failed'}
+                </Text>
                 <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
-                  <Text style={styles.retryButtonText}>Retry</Text>
+                  <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
