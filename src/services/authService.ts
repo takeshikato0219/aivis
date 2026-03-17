@@ -136,7 +136,6 @@ class AuthService {
         'Content-Type': 'multipart/form-data',
       },
     });
-    console.log(response);
     const resData = response.data.data || response.data;
     return this.mapApiUserToUser(resData);
   }
@@ -177,9 +176,10 @@ class AuthService {
     return this.mapLoginResponse(response);
   }
 
-  async linkLineAccount(userId: string): Promise<any> {
+  async linkLineAccount(userId: string, lineName: string): Promise<any> {
     return axiosInstance.post(API_ENDPOINTS.AUTH.LINE_LINK, {
       line_user_id: userId,
+      line_display_name: lineName,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },

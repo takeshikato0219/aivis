@@ -18,7 +18,9 @@ import authService from '@/services/authService';
 import HomeBackgroundImage from '@assets/png/home-background.png';
 import { HomeScreenNavigationProp } from '@navigation/types';
 import BackIcon from '@assets/svg/icon-back.svg';
-import LineSubscriptionService, { LineSubscriptionStatus } from '@/services/lineSubscriptionService';
+import LineSubscriptionService, {
+  LineSubscriptionStatus,
+} from '@/services/lineSubscriptionService';
 import lineAuthService from '@/services/lineAuthService';
 import Line from '@xmartlabs/react-native-line';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -38,7 +40,6 @@ const Setting = () => {
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isUnsubscribing, setIsUnsubscribing] = useState(false);
-  const [lineProfile, setLineProfile] = useState<any>(null);
 
   const goBack = () => {
     navigation.goBack();
@@ -65,10 +66,7 @@ const Setting = () => {
   useEffect(() => {
     const loadLineProfile = async () => {
       try {
-        const storedProfile = await AsyncStorage.getItem(LINE_PROFILE_KEY);
-        if (storedProfile) {
-          setLineProfile(JSON.parse(storedProfile));
-        }
+        await AsyncStorage.getItem(LINE_PROFILE_KEY);
       } catch (e) {
         console.error('Failed to load LINE profile from storage', e);
       }
@@ -92,10 +90,10 @@ const Setting = () => {
     }
   };
 
-  const updateUserWithLineId = async (userId: string): Promise<boolean> => {
+  const updateUserWithLineId = async (userId: string, lineName: string): Promise<boolean> => {
     try {
       try {
-        const response = await authService.linkLineAccount(userId);
+        const response = await authService.linkLineAccount(userId, lineName);
         await setUserData(response.data.data);
       } catch (apiError: any) {
         console.error('linkLineAccount error:', apiError?.response?.data || apiError);
@@ -122,7 +120,7 @@ const Setting = () => {
         Alert.alert(t('common.error'), t('lineSubscription.failedToGetUserId'));
         return false;
       }
-      const updateSuccess = await updateUserWithLineId(response.userId);
+      const updateSuccess = await updateUserWithLineId(response.userId, response.displayName);
       if (!updateSuccess) {
         Alert.alert(
           t('common.error'),
@@ -204,7 +202,6 @@ const Setting = () => {
       if (success) {
         try {
           const profile = await Line.getProfile();
-          setLineProfile(profile);
           await AsyncStorage.setItem(LINE_PROFILE_KEY, JSON.stringify(profile));
           return profile;
         } catch (profileError) {
@@ -250,7 +247,6 @@ const Setting = () => {
             const updatedUser = await authService.updateProfile(updateData);
             await setUserData(updatedUser);
             dispatch(setUser(updatedUser));
-            setLineProfile(null);
             await AsyncStorage.removeItem(LINE_PROFILE_KEY);
             await loadSubscriptionStatus();
           } catch (error) {
@@ -299,7 +295,7 @@ const Setting = () => {
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
                 <View style={styles.marginLine}>
-                  {lineProfile && (
+                  {user?.line_display_name && (
                     <Text style={styles.lineStyle}>
                       {t('lineSubscription.LINEDisplayName')}
                       {user?.line_display_name}

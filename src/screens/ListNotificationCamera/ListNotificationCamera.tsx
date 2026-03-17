@@ -81,7 +81,7 @@ const VideoStateComponent: React.FC<VideoStateComponentProps> = ({ videoUrl, ima
 
 const mapDetectionToNotificationItem = (d: Detection): NotificationItem => {
   const [datePart, timePart] = d.detected_at.split('T');
-  const time = timePart ? timePart.slice(0, 5) : '00:00'; // HH:MM
+  const time = timePart ? timePart.slice(0, 5) : '00:00';
   return {
     id: d.id,
     notification_message: d.notification_message || '',

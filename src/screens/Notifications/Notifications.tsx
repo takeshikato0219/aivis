@@ -170,8 +170,9 @@ const Notifications = () => {
                     if (isDailyPasserby) {
                       navigation.navigate('CustomerReport', { title: itemName, icon: iconName });
                     } else {
-                      const detectedAt = item.sent_at
-                        ? new Date(item.sent_at).toISOString().slice(0, 10)
+                      const dateValue = item.sent_at || item.created_at;
+                      const detectedAt = dateValue
+                        ? new Date(dateValue).toISOString().slice(0, 10)
                         : undefined;
                       navigation.navigate('ListNotificationCamera', {
                         title: itemName,
@@ -192,7 +193,11 @@ const Notifications = () => {
                       <Card.Content>
                         <List.Item
                           title={item.message}
-                          description={item.sent_at ? new Date(item.sent_at).toLocaleString() : ''}
+                          description={
+                            item.sent_at || item.created_at
+                              ? new Date(item.sent_at || item.created_at).toLocaleString()
+                              : ''
+                          }
                           onPress={onPress}
                         />
                       </Card.Content>

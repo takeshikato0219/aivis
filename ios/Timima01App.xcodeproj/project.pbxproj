@@ -304,6 +304,8 @@
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
+					"-framework",
+					ReplayKit,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.timima01app;
 				PRODUCT_NAME = Timima01App;
@@ -337,6 +339,8 @@
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
+					"-framework",
+					ReplayKit,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.timima01app;
 				PRODUCT_NAME = Timima01App;

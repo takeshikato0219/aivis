@@ -21,7 +21,7 @@ export const API_ENDPOINTS = {
   // Cameras
   CAMERAS: '/cameras',
   FACILITIES: '/facilities',
-  CAMERAS_DETECTION_TYPE: '/camerasdetection-types',
+  CAMERAS_DETECTION_TYPE: '/cameras/detection-types',
   // Face
   MEMBER_RELATIONSHIPS: '/member-relationships',
   MEMBERS: '/members',

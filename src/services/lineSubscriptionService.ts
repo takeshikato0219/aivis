@@ -24,7 +24,7 @@ export class LineSubscriptionService extends BaseLineService {
       if (!profile?.userId) {
         return { isSubscribed: false };
       }
-      const isSubscribed = await this.checkFollowerStatus();
+      const isSubscribed = await this.checkFollowerStatus(profile.userId);
       return {
         isSubscribed,
         userId: profile.userId,
@@ -81,11 +81,30 @@ export class LineSubscriptionService extends BaseLineService {
    * Private method to check if user is following the official account
    * In a real app, this would call your backend API
    */
-  private async checkFollowerStatus(): Promise<boolean> {
+  /**
+   * Check if the stored follower status matches the given userId and isSubscribed is true
+   */
+  async checkFollowerStatus(userId: string): Promise<boolean> {
     try {
       const { user } = await getAuthData();
-      if (user.has_followed_bot) {
-        return user.has_followed_bot;
+      const stored = user.has_followed_bot;
+      if (!stored) {
+        console.log(
+          '[LINE Subscription] No stored status found for user:',
+          userId,
+          '- defaulting to not subscribed'
+        );
+        return false;
+      }
+      let parsed;
+      try {
+        parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
+      } catch (e) {
+        console.log('[LINE Subscription] Error parsing stored follower status:', e);
+        return false;
+      }
+      if (parsed.userId === userId && parsed.isSubscribed === true) {
+        return true;
       }
       return false;
     } catch (error) {

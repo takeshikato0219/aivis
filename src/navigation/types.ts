@@ -41,7 +41,7 @@ export type AppStackParamList = {
   ChangePassword: undefined;
   DetectionZoneSetup: {
     camera: Camera;
-    zoneType?: 'detection' | 'restricted' | 'entryExit';
+    zoneType?: 'detection' | 'restricted' | 'entry_exit';
     typeId?: string;
     liveUrl: string;
   };

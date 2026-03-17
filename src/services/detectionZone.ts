@@ -26,6 +26,7 @@ export interface DetectionZoneResponse {
     id: string;
     camera_id: string;
     coordinates: Array<{ x: number; y: number }>;
+    in_direction_point?: { x: number; y: number };
     created_at: string;
     updated_at: string;
   }>;
@@ -99,11 +100,33 @@ class DetectionZoneService {
     zoneData: {
       zone_type_id: string;
       coordinates: Array<{ x: number; y: number }>;
+      in_direction_point?: { x: number; y: number };
     }
   ): Promise<any> {
     try {
       const response = await axiosInstance.post(
         `${API_ENDPOINTS.CAMERAS}/${cameraId}/detection-zones`,
+        zoneData
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error creating detection zone:', error);
+      throw error;
+    }
+  }
+
+  async updateZone(
+    zoneId: string,
+    cameraId: string,
+    zoneData: {
+      zone_type_id: string;
+      coordinates: Array<{ x: number; y: number }>;
+      in_direction_point?: { x: number; y: number };
+    }
+  ): Promise<any> {
+    try {
+      const response = await axiosInstance.patch(
+        `${API_ENDPOINTS.CAMERAS}/${cameraId}/detection-zones/${zoneId}`,
         zoneData
       );
       return response.data;

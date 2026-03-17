@@ -38,5 +38,21 @@ target 'Timima01App' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Fix: react-native-record-screen uses RPScreenRecorder (ReplayKit) but podspec doesn't declare it
+    # Add ReplayKit to xcconfig so it persists across pod install
+    ['Pods-Timima01App.debug.xcconfig', 'Pods-Timima01App.release.xcconfig'].each do |config_name|
+      config_path = File.join(installer.sandbox.root, 'Target Support Files', 'Pods-Timima01App', config_name)
+      if File.exist?(config_path)
+        config_content = File.read(config_path)
+        unless config_content.include?('ReplayKit')
+          config_content = config_content.gsub(
+            /(OTHER_LDFLAGS = .+)/,
+            "\\1 -framework \"ReplayKit\""
+          )
+          File.write(config_path, config_content)
+        end
+      end
+    end
   end
 end

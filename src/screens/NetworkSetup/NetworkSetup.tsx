@@ -100,7 +100,10 @@ const NetworkSetup: React.FC = () => {
     }));
   };
 
-  const handleConnectLte = async () => {};
+  const handleConnectLte = async () => {
+    setSelectedWifi(null);
+    proceedToNextScreen();
+  };
 
   const scanWifi = async (isManualRescan: boolean = false) => {
     if (!bleConnected) {
@@ -245,6 +248,11 @@ const NetworkSetup: React.FC = () => {
       setConnecting(false);
       setProgress(0.33);
     }
+  };
+
+  const handleConnectLAN = () => {
+    setSelectedWifi(null);
+    proceedToNextScreen();
   };
 
   const handleBackToScan = async () => {
@@ -424,16 +432,23 @@ const NetworkSetup: React.FC = () => {
                       {lanStatusLoading ? t('networkSetup.scanning') : t('networkSetup.rescan')}
                     </Text>
                   </TouchableOpacity>
-                  <View style={styles.tabContentCenter}>
-                    {/* Extracted LAN status content */}
-                    {lanStatusContent}
-                  </View>
+                  <View style={styles.tabContentCenter}>{lanStatusContent}</View>
                 </View>
               )}
 
               {activeTab === 'lte' && (
                 <>
                   <Text style={styles.availableTitle}>{t('networkSetup.availableLte')}</Text>
+                  <TouchableOpacity
+                    style={styles.rescanButton}
+                    onPress={() => {}}
+                    disabled={lanStatusLoading}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={[styles.rescanText, styles.colorRescan]}>
+                      {lanStatusLoading ? t('networkSetup.scanning') : t('networkSetup.rescan')}
+                    </Text>
+                  </TouchableOpacity>
                   <View style={styles.networkItem}>
                     <View style={styles.networkLeftContent}>
                       <SimIcon width={24} height={24} />
@@ -554,9 +569,7 @@ const NetworkSetup: React.FC = () => {
                     styles.connectBtn,
                     (!lanConnected || lanStatusLoading) && styles.connectBtnDisabled,
                   ]}
-                  onPress={() => {
-                    /* handle LAN connect here if needed */
-                  }}
+                  onPress={handleConnectLAN}
                   disabled={!lanConnected || lanStatusLoading}
                 >
                   <Text

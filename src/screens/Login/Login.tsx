@@ -45,6 +45,8 @@ import { setAuthData } from '@utils/authStorage';
 import { disableBiometricLogin } from '@/services/biometricService';
 import lineAuthService from '@/services/lineAuthService';
 import googleAuthService from '@/services/googleAuthService';
+import authService from '@/services/authService';
+import Line from '@xmartlabs/react-native-line';
 
 const Login: React.FC = () => {
   const isFocused = useIsFocused();
@@ -353,9 +355,14 @@ const Login: React.FC = () => {
           id_token: lineUser.idToken ?? '',
         })
       ).unwrap();
+      const profile = await Line.getProfile();
+      if (profile) {
+        await authService.linkLineAccount(profile.userId, profile.displayName);
+      }
       await handleLoginSuccess(loginResult);
     } catch (err: any) {
       console.error('[Login] Error details:', err);
+      handleLoginError(err);
     }
   };
 

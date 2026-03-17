@@ -71,6 +71,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   };
 
   const [zone, setZone] = useState<DetectionZone>(INITIAL_ZONE);
+  const [existingZoneId, setExistingZoneId] = useState<string | null>(null);
   const [activeCorner, setActiveCorner] = useState<keyof DetectionZone | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [entryExitPoints, setEntryExitPoints] = useState([
@@ -202,7 +203,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   );
 
   useEffect(() => {
-    if (zoneType === 'entryExit' && liveViewLayout.width > 0 && liveViewLayout.height > 0) {
+    if (zoneType === 'entry_exit' && liveViewLayout.width > 0 && liveViewLayout.height > 0) {
       const lx = liveViewLayout.x;
       const ly = liveViewLayout.y;
       const lRight = lx + liveViewLayout.width;
@@ -343,20 +344,27 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const getZoneDetect = async () => {
     try {
       const response = await detectionZoneService.getZones(camera.id, typeId);
-      const coordinates = response.data[0]?.coordinates;
-      if (zoneType === 'entryExit') {
+      const zoneData = response.data[0];
+      const coordinates = zoneData?.coordinates;
+      if (zoneData?.id) {
+        setExistingZoneId(zoneData.id);
+      } else {
+        setExistingZoneId(null);
+      }
+      if (zoneType === 'entry_exit') {
         if (Array.isArray(coordinates) && coordinates.length >= 2) {
           setEntryExitPoints([
             { x: coordinates[0].x * PREVIEW_WIDTH, y: coordinates[0].y * PREVIEW_HEIGHT },
             { x: coordinates[1].x * PREVIEW_WIDTH, y: coordinates[1].y * PREVIEW_HEIGHT },
           ]);
         }
-        if (coordinates?.length === 3) {
+        const ic =
+          zoneData?.in_direction_point ?? (coordinates?.length === 3 ? coordinates[2] : null);
+        if (ic && Array.isArray(coordinates) && coordinates.length >= 2) {
           const p1 = { x: coordinates[0].x * PREVIEW_WIDTH, y: coordinates[0].y * PREVIEW_HEIGHT };
           const p2 = { x: coordinates[1].x * PREVIEW_WIDTH, y: coordinates[1].y * PREVIEW_HEIGHT };
-          const ic = { x: coordinates[2].x * PREVIEW_WIDTH, y: coordinates[2].y * PREVIEW_HEIGHT };
-          setEntryExitPoints([p1, p2]);
-          const side = (p2.x - p1.x) * (ic.y - p1.y) - (p2.y - p1.y) * (ic.x - p1.x);
+          const icPx = { x: ic.x * PREVIEW_WIDTH, y: ic.y * PREVIEW_HEIGHT };
+          const side = (p2.x - p1.x) * (icPx.y - p1.y) - (p2.y - p1.y) * (icPx.x - p1.x);
           setIsLeftIn(side < 0);
         }
       } else if (Array.isArray(coordinates) && coordinates.length === 4) {
@@ -376,7 +384,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   };
 
   const isEntryExitInvalid = () => {
-    if (zoneType !== 'entryExit') return false;
+    if (zoneType !== 'entry_exit') return false;
     const [p1, p2] = entryExitPoints;
     const isVertical = p1.x === p2.x;
     const isHorizontal = p1.y === p2.y;
@@ -401,9 +409,13 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     setIsSaving(true);
     try {
       let coords: { x: number; y: number }[];
-      if (zoneType === 'entryExit') {
+      let inDirectionPoint: { x: number; y: number } | undefined;
+      if (zoneType === 'entry_exit') {
         const { left, right } = getEntryExitPolygons();
         const inPoly = isLeftIn ? left : right;
+        const [p1, p2] = entryExitPoints;
+        const eps = 1e-6;
+        const eq = (a: Corner, b: Corner) => Math.abs(a.x - b.x) < eps && Math.abs(a.y - b.y) < eps;
         const frameCornersArr = [
           { x: liveViewLayout.x, y: liveViewLayout.y },
           { x: liveViewLayout.x + liveViewLayout.width, y: liveViewLayout.y },
@@ -413,22 +425,31 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
           },
           { x: liveViewLayout.x, y: liveViewLayout.y + liveViewLayout.height },
         ];
-        const ic =
-          frameCornersArr.find((c) => inPoly.some((p) => p.x === c.x && p.y === c.y)) ||
+        const pt =
+          inPoly.find((p) => !eq(p, p1) && !eq(p, p2)) ||
+          frameCornersArr.find((c) => inPoly.some((p) => eq(p, c))) ||
           frameCornersArr[0];
         coords = [
-          { x: entryExitPoints[0].x / PREVIEW_WIDTH, y: entryExitPoints[0].y / PREVIEW_HEIGHT },
-          { x: entryExitPoints[1].x / PREVIEW_WIDTH, y: entryExitPoints[1].y / PREVIEW_HEIGHT },
-          { x: ic.x / PREVIEW_WIDTH, y: ic.y / PREVIEW_HEIGHT },
+          { x: p1.x / PREVIEW_WIDTH, y: p1.y / PREVIEW_HEIGHT },
+          { x: p2.x / PREVIEW_WIDTH, y: p2.y / PREVIEW_HEIGHT },
         ];
+        inDirectionPoint = {
+          x: pt.x / PREVIEW_WIDTH,
+          y: pt.y / PREVIEW_HEIGHT,
+        };
       } else {
         const c = getZoneCoordinates();
         coords = [c.topLeft, c.topRight, c.bottomLeft, c.bottomRight];
       }
-      const response = await detectionZoneService.createZone(camera.id, {
+      const zonePayload = {
         zone_type_id: typeId,
         coordinates: coords,
-      });
+        ...(inDirectionPoint && { in_direction_point: inDirectionPoint }),
+      };
+      const response = existingZoneId
+        ? await detectionZoneService.updateZone(existingZoneId, camera.id, zonePayload)
+        : await detectionZoneService.createZone(camera.id, zonePayload);
+
       showCommonAlert({
         title: response.success
           ? t('common.success', 'Success')
@@ -475,7 +496,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const getZoneColor = () => {
     if (zoneType === 'restricted') {
       return 'rgba(255,0,0,0.3)';
-    } else if (zoneType === 'entryExit') {
+    } else if (zoneType === 'entry_exit') {
       return 'rgba(0,255,0,0.3)';
     } else {
       return 'rgba(255,255,0,0.3)';
@@ -672,7 +693,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
                 {renderGrid()}
               </View>
 
-              {zoneType === 'entryExit' ? (
+              {zoneType === 'entry_exit' ? (
                 <>
                   <Svg style={styles.svgOverlay} pointerEvents="none">
                     {(() => {
@@ -777,7 +798,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
               )}
 
               <View style={styles.rightButtons}>
-                {zoneType !== 'entryExit' && (
+                {zoneType !== 'entry_exit' && (
                   <View>
                     <TouchableOpacity style={styles.roundButton} onPress={handleDrawRectangle}>
                       <Icon name="selection-drag" size={22} color="#FFFFFF" />
