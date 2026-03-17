@@ -29,7 +29,7 @@ import {
   getInjectedStreamPlayerJS,
   buildIOSStreamInlineHtml,
 } from '@utils/streamUtils';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 interface CameraInfo {

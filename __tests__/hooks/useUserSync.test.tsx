@@ -1,11 +1,11 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useUserSync } from '@hooks/useUserSync';
-import authService from '@api/authService';
+import authService from '@/services/authService';
 import { setUser, logout } from '@redux/slices/authSlice';
 import { setUserData, removeAuthData } from '@utils/authStorage';
 
 // Mock authService
-jest.mock('@api/authService', () => ({
+jest.mock('@/services/authService', () => ({
   getMe: jest.fn(),
 }));
 

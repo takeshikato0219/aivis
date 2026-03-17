@@ -41,9 +41,9 @@ import IconGlove from '@assets/svg/gloves-icon.svg';
 
 import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/types';
 import { COLORS } from '@constants/theme';
-import rulesService from '@api/rulesService';
-import cameraService from '@api/cameraService';
-import faceService from '@api/faceService';
+import rulesService from '@/services/rulesService';
+import cameraService from '@/services/cameraService';
+import faceService from '@/services/faceService';
 
 const livingItem = {
   id: '4',

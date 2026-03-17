@@ -31,7 +31,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useImagePicker } from '@hooks/useImagePicker';
 import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';
 import BackIcon from '@assets/svg/icon-back.svg';
-import authService from '@api/authService';
+import authService from '@/services/authService';
 import { logout, setUser } from '@redux/slices/authSlice';
 import { removeAuthData, setUserData } from '@utils/authStorage';
 import { ShopIconComponent } from '@components/IconCustom/IconCustom';

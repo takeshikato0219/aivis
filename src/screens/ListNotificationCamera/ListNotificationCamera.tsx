@@ -26,7 +26,7 @@ import IconSuspect from '@assets/svg/icon-suspect.svg';
 import IconLive from '@assets/svg/icon-live.svg';
 import IconBear from '@assets/svg/icon-bear.svg';
 import IconListFace from '@assets/svg/icon-list-face.svg';
-import notificationsService, { Detection } from '@api/notificationsService';
+import notificationsService, { Detection } from '@/services/notificationsService';
 
 interface NotificationItem {
   id: string;

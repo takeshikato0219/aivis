@@ -1,7 +1,7 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
 import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
-import { MemberRelationship } from '@api/faceService';
+import { MemberRelationship } from '@/services/faceService';
 
 // ===== ROOT STACK =====
 export type RootStackParamList = {

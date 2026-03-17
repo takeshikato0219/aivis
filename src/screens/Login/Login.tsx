@@ -43,8 +43,8 @@ import LoginBackground from '@assets/svg/login-background.svg';
 import Logo from '@assets/svg/logo.svg';
 import { setAuthData } from '@utils/authStorage';
 import { disableBiometricLogin } from '@/services/biometricService';
-import lineAuthService from '@api/lineAuthService';
-import googleAuthService from '@api/googleAuthService';
+import lineAuthService from '@/services/lineAuthService';
+import googleAuthService from '@/services/googleAuthService';
 
 const Login: React.FC = () => {
   const isFocused = useIsFocused();

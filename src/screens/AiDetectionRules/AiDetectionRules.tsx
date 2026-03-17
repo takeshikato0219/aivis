@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { styles } from './AiDetectionRules.style';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import BackIcon from '@assets/svg/icon-back.svg';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 export type AiRule = {
   id: string;
   title: string;

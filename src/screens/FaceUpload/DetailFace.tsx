@@ -22,7 +22,7 @@ import ImageResizer from '@bam.tech/react-native-image-resizer';
 import BackIcon from '@assets/svg/icon-back.svg';
 import TextInput from '@components/TextInput/TextInput';
 import { styles } from './FaceUpload.styles';
-import faceService, { Member, MemberRelationship } from '@api/faceService';
+import faceService, { Member, MemberRelationship } from '@/services/faceService';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS } from '@constants/theme';
 import { DetailFaceNavigationProp, DetailFaceRouteProp } from '@navigation/types';

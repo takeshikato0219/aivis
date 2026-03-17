@@ -17,11 +17,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResponsive } from '@hooks/useResponsive';
 import { styles, CONTAINER_H_PADDING, CARD_PADDING } from './WorkSchedule.style';
 import IconClockWorkSchedule from '@assets/svg/icon-clock-workschedule.svg';
-import faceService, { Member } from '@api/faceService';
+import faceService, { Member } from '@/services/faceService';
 import DropDownPicker from 'react-native-dropdown-picker';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { WorkScheduleRouteProp } from '@navigation/types';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import { showCommonAlert } from '@components/Alert/Alert';
 
 type Weekday = {

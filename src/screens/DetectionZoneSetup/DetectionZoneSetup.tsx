@@ -27,7 +27,7 @@ import {
   getInjectedStreamPlayerJS,
   buildIOSStreamInlineHtml,
 } from '@utils/streamUtils';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import { useLiveStream } from '@hooks/useLiveStream';
 
 const getScreenDims = () => {

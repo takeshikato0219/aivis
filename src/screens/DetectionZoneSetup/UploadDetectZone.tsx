@@ -6,7 +6,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import detectionZoneService from '@/services/detectionZone';
 
 type SettingAIStackParamList = {

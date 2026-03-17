@@ -1,5 +1,5 @@
-import axiosInstance from './axiosConfig';
-import { API_ENDPOINTS } from './apiEndpoints';
+import axiosInstance from '@api/axiosConfig';
+import { API_ENDPOINTS } from '@api/apiEndpoints';
 import {
   RegisterCameraRequest,
   RegisterCameraResponse,
@@ -13,7 +13,7 @@ import {
   CameraModesResponse,
   CameraDetailResponse,
   CameraDetailApiResponse,
-} from './types/cameraTypes';
+} from '@api/types/cameraTypes';
 
 class CameraService {
   async registerCamera(data: RegisterCameraRequest): Promise<RegisterCameraResponse> {

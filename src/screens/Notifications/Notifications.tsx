@@ -8,9 +8,9 @@ import HomeBackgroundImage from '@assets/png/home-background.png';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import notificationsService, { Notification } from '@api/notificationsService';
+import notificationsService, { Notification } from '@/services/notificationsService';
 import { ScrollView } from 'react-native-gesture-handler';
-import rulesService from '@api/rulesService';
+import rulesService from '@/services/rulesService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AppStackParamList } from '@navigation/types';
 

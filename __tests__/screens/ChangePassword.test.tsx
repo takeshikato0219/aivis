@@ -1,14 +1,14 @@
 import { isPassword, isPasswordConfirm } from '../../src/utils/validate';
 
 // Mock authService for API testing
-jest.mock('@api/authService', () => ({
+jest.mock('@/services/authService', () => ({
   __esModule: true,
   default: {
     changePassword: jest.fn(),
   },
 }));
 
-import authService from '../../src/api/authService';
+import authService from '@/services/authService';
 
 describe('ChangePassword Logic Tests', () => {
   beforeEach(() => {

@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import policyService from '@api/policyService';
+import policyService from '@/services/policyService';
 import RenderHTML from 'react-native-render-html';
 
 type PolicyParams = { type: 'privacy' | 'terms' };

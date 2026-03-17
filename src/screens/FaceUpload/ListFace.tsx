@@ -15,7 +15,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import faceService, { Member, MemberRelationship } from '@api/faceService';
+import faceService, { Member, MemberRelationship } from '@/services/faceService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AppStackParamList } from '@navigation/types';
 

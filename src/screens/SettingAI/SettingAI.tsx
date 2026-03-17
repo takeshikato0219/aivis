@@ -9,7 +9,7 @@ import IconSettingZone from '@assets/svg/icon-setting-zone.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 import IconAISetting from '@assets/svg/icon-ai-setting.svg';
 import { showCommonAlert } from '@components/Alert/Alert';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 
 type SettingAIStackParamList = {
   SettingAI: { camera: any };

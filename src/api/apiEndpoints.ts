@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
     GOOGLE_LOGIN: '/oauth/google/login',
     LINE_LOGIN: '/oauth/line/login',
     LINE_LINK: '/oauth/line/link',
+    FCM_TOKEN: '/auth/fcm-token',
   },
   // Cameras
   CAMERAS: '/cameras',

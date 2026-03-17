@@ -26,7 +26,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { styles } from './FaceUpload.styles';
 import { useInput } from '@hooks/useInput';
 import TextInput from '@components/TextInput/TextInput';
-import faceService, { MemberRelationship } from '@api/faceService';
+import faceService, { MemberRelationship } from '@/services/faceService';
 import { COLORS } from '@constants/theme';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { isName } from '@utils/validate';

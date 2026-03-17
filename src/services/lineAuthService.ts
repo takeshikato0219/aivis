@@ -1,6 +1,6 @@
 import Line from '@xmartlabs/react-native-line';
 import { showCommonAlert } from '@components/Alert/Alert';
-import { BaseLineService } from './baseLineService';
+import { BaseLineService } from '@/services/baseLineService';
 
 export interface LineLoginResult {
   accessToken: string;

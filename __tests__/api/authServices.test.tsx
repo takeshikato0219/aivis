@@ -1,5 +1,5 @@
 // __tests__/api/authService.test.ts
-import AuthService from '../../src/api/authService';
+import AuthService from '@/services/authService';
 import { LoginRequest } from '@api/types/authTypes';
 import axiosInstance from '../../src/api/axiosConfig';
 import { API_ENDPOINTS } from '@api/apiEndpoints';

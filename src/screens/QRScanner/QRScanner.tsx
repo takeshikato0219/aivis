@@ -28,7 +28,7 @@ import RectangleIcon6 from '@assets/svg/rectangle-6.svg';
 import RectangleIcon7 from '@assets/svg/rectangle-7.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 import { useTranslation } from 'react-i18next';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import { jetsonBLEService } from '@/services/jetsonBLEService';
 
 const CAMERA_PERMISSION_KEY = '@camera_permission_status';

@@ -1,5 +1,5 @@
-import axiosInstance from './axiosConfig';
-import { API_ENDPOINTS } from './apiEndpoints';
+import axiosInstance from '@api/axiosConfig';
+import { API_ENDPOINTS } from '@api/apiEndpoints';
 import {
   ChangePasswordResponse,
   ForgotPasswordResponse,
@@ -111,6 +111,7 @@ class AuthService {
     line_user_id?: string;
     avatar?: any;
     has_followed_bot?: any;
+    device_token?: string;
   }): Promise<User> {
     const formData = new FormData();
 
@@ -120,6 +121,7 @@ class AuthService {
     if (data.has_followed_bot !== undefined)
       formData.append('has_followed_bot', data.has_followed_bot);
     if (data.line_user_id !== undefined) formData.append('line_user_id', data.line_user_id);
+    if (data.device_token !== undefined) formData.append('device_token', data.device_token);
 
     if (data.avatar) {
       formData.append('avatar', {
@@ -134,7 +136,7 @@ class AuthService {
         'Content-Type': 'multipart/form-data',
       },
     });
-
+    console.log(response);
     const resData = response.data.data || response.data;
     return this.mapApiUserToUser(resData);
   }

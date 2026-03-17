@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showCommonAlert } from '@components/Alert/Alert';
-import { BaseLineService } from './baseLineService';
+import { BaseLineService } from '@/services/baseLineService';
 import { getAuthData } from '@utils/authStorage';
 
 export interface LineSubscriptionStatus {

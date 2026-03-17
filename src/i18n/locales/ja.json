@@ -631,5 +631,13 @@
   },
   "listNotificationCamera": {
     "tapTheListBelowToView": "下のリストをタップして表示してください"
+  },
+  "pushNotification": {
+    "permissionTitle": "通知の許可",
+    "permissionMessage": "重要なイベントをお知らせするため、このアプリは通知を表示する許可が必要です。",
+    "allow": "許可する",
+    "deny": "拒否",
+    "channelName": "通知",
+    "defaultTitle": "通知"
   }
 }

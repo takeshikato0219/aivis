@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import authService from '@api/authService';
+import authService from '@/services/authService';
 import { LoginRequest, LoginResponse, SocialLoginRequest, User } from '@api/types/authTypes';
 
 // STATE

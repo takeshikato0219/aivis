@@ -1,6 +1,6 @@
 import axiosInstance from '../../src/api/axiosConfig';
 import { API_ENDPOINTS } from '../../src/api/apiEndpoints';
-import cameraService from '../../src/api/cameraService';
+import cameraService from '@/services/cameraService';
 import {
   RegisterCameraRequest,
   RegisterCameraResponse,

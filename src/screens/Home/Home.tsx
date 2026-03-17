@@ -30,12 +30,12 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useUserSync } from '@hooks/useUserSync';
 import CleanShotIcon from '@assets/svg/clean-shot.svg';
 import IconBlue from '@assets/svg/icon-blue.svg';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
 import { useErrorHandler } from '@hooks/useErrorHandler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
-import notificationsService from '@api/notificationsService';
+import notificationsService from '@/services/notificationsService';
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -61,14 +61,11 @@ const Home = () => {
   const [lastFrameUris, setLastFrameUris] = useState<{ [cameraId: string]: string | null }>({});
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // USING COMMON HOOKS
   const { syncUserData } = useUserSync();
   useAppSetup({ screenName: 'Home' });
 
-  // Initial load
   useEffect(() => {
     fetchWorkflowStatuses();
-    // Initial load will be handled by the filter change effect when statuses are loaded
   }, []);
 
   useEffect(() => {

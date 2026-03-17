@@ -23,7 +23,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNFS from 'react-native-fs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraLiveScreenNavigationProp, CameraLiveScreenRouteProp } from '@navigation/types';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import recordingService from '../../services/recordingService';
 import { getStyles } from './CameraLiveView.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';

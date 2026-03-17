@@ -53,7 +53,7 @@ jest.mock('@hooks/useInput', () => ({
 
 // Mock authService
 const mockForgotPassword = jest.fn();
-jest.mock('@api/authService', () => ({
+jest.mock('@/services/authService', () => ({
   __esModule: true,
   default: {
     forgotPassword: mockForgotPassword,

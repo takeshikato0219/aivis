@@ -4,7 +4,7 @@ import NetworkMonitor from '../utils/networkMonitor';
 import { API_BASE_URL, API_ENDPOINTS } from './apiEndpoints';
 import { store } from '@redux/store';
 import { getCurrentLanguage } from '@/i18n';
-import authService from './authService';
+import authService from '../services/authService';
 import { logout, setTokens } from '@redux/slices/authSlice';
 import { removeAuthData, updateTokens } from '@utils/authStorage';
 

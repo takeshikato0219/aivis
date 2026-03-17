@@ -593,5 +593,13 @@
   },
   "notifications": {
     "title": "Notifications"
+  },
+  "pushNotification": {
+    "permissionTitle": "Notification Permission",
+    "permissionMessage": "This app needs permission to display notifications so we can alert you about important events.",
+    "allow": "Allow",
+    "deny": "Deny",
+    "channelName": "Notifications",
+    "defaultTitle": "Notification"
   }
 }
