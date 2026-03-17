@@ -365,7 +365,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
           const p2 = { x: coordinates[1].x * PREVIEW_WIDTH, y: coordinates[1].y * PREVIEW_HEIGHT };
           const icPx = { x: ic.x * PREVIEW_WIDTH, y: ic.y * PREVIEW_HEIGHT };
           const side = (p2.x - p1.x) * (icPx.y - p1.y) - (p2.y - p1.y) * (icPx.x - p1.x);
-          setIsLeftIn(side < 0);
+          setIsLeftIn(side >= 0);
         }
       } else if (Array.isArray(coordinates) && coordinates.length === 4) {
         setZoneClamped({
@@ -412,23 +412,19 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
       let inDirectionPoint: { x: number; y: number } | undefined;
       if (zoneType === 'entry_exit') {
         const { left, right } = getEntryExitPolygons();
-        const inPoly = isLeftIn ? left : right;
+        const inPoly = isLeftIn ? right : left;
         const [p1, p2] = entryExitPoints;
         const eps = 1e-6;
         const eq = (a: Corner, b: Corner) => Math.abs(a.x - b.x) < eps && Math.abs(a.y - b.y) < eps;
-        const frameCornersArr = [
-          { x: liveViewLayout.x, y: liveViewLayout.y },
-          { x: liveViewLayout.x + liveViewLayout.width, y: liveViewLayout.y },
-          {
-            x: liveViewLayout.x + liveViewLayout.width,
-            y: liveViewLayout.y + liveViewLayout.height,
-          },
-          { x: liveViewLayout.x, y: liveViewLayout.y + liveViewLayout.height },
+        const lBottom = liveViewLayout.y + liveViewLayout.height;
+        const bottomCorners = [
+          { x: liveViewLayout.x, y: lBottom },
+          { x: liveViewLayout.x + liveViewLayout.width, y: lBottom },
         ];
         const pt =
+          bottomCorners.find((c) => inPoly.some((p) => eq(p, c))) ||
           inPoly.find((p) => !eq(p, p1) && !eq(p, p2)) ||
-          frameCornersArr.find((c) => inPoly.some((p) => eq(p, c))) ||
-          frameCornersArr[0];
+          bottomCorners[0];
         coords = [
           { x: p1.x / PREVIEW_WIDTH, y: p1.y / PREVIEW_HEIGHT },
           { x: p2.x / PREVIEW_WIDTH, y: p2.y / PREVIEW_HEIGHT },
