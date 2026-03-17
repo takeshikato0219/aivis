@@ -59,21 +59,27 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const typeId = route.params.typeId || '';
   const offset = 80;
 
-  const getInitialZone = useCallback((layout: { x: number; y: number; width: number; height: number }): DetectionZone => {
-    const cx = layout.x + layout.width / 2;
-    const cy = layout.y + layout.height / 2;
-    return {
-      topLeft: { x: cx - offset, y: cy - offset },
-      topRight: { x: cx + offset, y: cy - offset },
-      bottomLeft: { x: cx - offset, y: cy + offset },
-      bottomRight: { x: cx + offset, y: cy + offset },
-    };
-  }, [offset]);
+  const getInitialZone = useCallback(
+    (layout: { x: number; y: number; width: number; height: number }): DetectionZone => {
+      const cx = layout.x + layout.width / 2;
+      const cy = layout.y + layout.height / 2;
+      return {
+        topLeft: { x: cx - offset, y: cy - offset },
+        topRight: { x: cx + offset, y: cy - offset },
+        bottomLeft: { x: cx - offset, y: cy + offset },
+        bottomRight: { x: cx + offset, y: cy + offset },
+      };
+    },
+    [offset]
+  );
 
-  const getInitialEntryExitPoints = useCallback((layout: { x: number; y: number; width: number; height: number }) => [
-    { x: layout.x + layout.width / 2, y: layout.y + 1 },
-    { x: layout.x + layout.width / 2, y: layout.y + layout.height - layout.height * 0.15 },
-  ], []);
+  const getInitialEntryExitPoints = useCallback(
+    (layout: { x: number; y: number; width: number; height: number }) => [
+      { x: layout.x + layout.width / 2, y: layout.y + 1 },
+      { x: layout.x + layout.width / 2, y: layout.y + layout.height - 1 },
+    ],
+    []
+  );
 
   const [zone, setZone] = useState<DetectionZone>(() =>
     getInitialZone({ x: 0, y: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT })
@@ -216,7 +222,13 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     const prev = prevLayoutRef.current;
     const next = liveViewLayout;
     if (prev.width <= 0 || prev.height <= 0 || next.width <= 0 || next.height <= 0) return;
-    if (prev.x === next.x && prev.y === next.y && prev.width === next.width && prev.height === next.height) return;
+    if (
+      prev.x === next.x &&
+      prev.y === next.y &&
+      prev.width === next.width &&
+      prev.height === next.height
+    )
+      return;
 
     const scaleX = (px: number) => ((px - prev.x) / prev.width) * next.width + next.x;
     const scaleY = (py: number) => ((py - prev.y) / prev.height) * next.height + next.y;
@@ -231,10 +243,22 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
       };
       const { x: lx, y: ly, width: lw, height: lh } = next;
       return {
-        topLeft: { x: clampToNext(scaled.topLeft.x, lx, lx + lw), y: clampToNext(scaled.topLeft.y, ly, ly + lh) },
-        topRight: { x: clampToNext(scaled.topRight.x, lx, lx + lw), y: clampToNext(scaled.topRight.y, ly, ly + lh) },
-        bottomLeft: { x: clampToNext(scaled.bottomLeft.x, lx, lx + lw), y: clampToNext(scaled.bottomLeft.y, ly, ly + lh) },
-        bottomRight: { x: clampToNext(scaled.bottomRight.x, lx, lx + lw), y: clampToNext(scaled.bottomRight.y, ly, ly + lh) },
+        topLeft: {
+          x: clampToNext(scaled.topLeft.x, lx, lx + lw),
+          y: clampToNext(scaled.topLeft.y, ly, ly + lh),
+        },
+        topRight: {
+          x: clampToNext(scaled.topRight.x, lx, lx + lw),
+          y: clampToNext(scaled.topRight.y, ly, ly + lh),
+        },
+        bottomLeft: {
+          x: clampToNext(scaled.bottomLeft.x, lx, lx + lw),
+          y: clampToNext(scaled.bottomLeft.y, ly, ly + lh),
+        },
+        bottomRight: {
+          x: clampToNext(scaled.bottomRight.x, lx, lx + lw),
+          y: clampToNext(scaled.bottomRight.y, ly, ly + lh),
+        },
       };
     });
     setEntryExitPoints((pts) =>
