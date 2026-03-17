@@ -36,8 +36,6 @@ const getScreenDims = () => {
 };
 
 const { SCREEN_WIDTH, SCREEN_HEIGHT } = getScreenDims();
-const PREVIEW_WIDTH = SCREEN_WIDTH;
-const PREVIEW_HEIGHT = SCREEN_HEIGHT;
 
 interface Corner {
   x: number;
@@ -59,25 +57,33 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const camera = route.params.camera;
   const zoneType = route.params.zoneType || 'detection';
   const typeId = route.params.typeId || '';
-  const centerX = PREVIEW_WIDTH / 2;
-  const centerY = PREVIEW_HEIGHT / 2;
   const offset = 80;
 
-  const INITIAL_ZONE: DetectionZone = {
-    topLeft: { x: centerX - offset, y: centerY - offset },
-    topRight: { x: centerX + offset, y: centerY - offset },
-    bottomLeft: { x: centerX - offset, y: centerY + offset },
-    bottomRight: { x: centerX + offset, y: centerY + offset },
-  };
+  const getInitialZone = useCallback((layout: { x: number; y: number; width: number; height: number }): DetectionZone => {
+    const cx = layout.x + layout.width / 2;
+    const cy = layout.y + layout.height / 2;
+    return {
+      topLeft: { x: cx - offset, y: cy - offset },
+      topRight: { x: cx + offset, y: cy - offset },
+      bottomLeft: { x: cx - offset, y: cy + offset },
+      bottomRight: { x: cx + offset, y: cy + offset },
+    };
+  }, [offset]);
 
-  const [zone, setZone] = useState<DetectionZone>(INITIAL_ZONE);
+  const getInitialEntryExitPoints = useCallback((layout: { x: number; y: number; width: number; height: number }) => [
+    { x: layout.x + layout.width / 2, y: layout.y + 1 },
+    { x: layout.x + layout.width / 2, y: layout.y + layout.height - layout.height * 0.15 },
+  ], []);
+
+  const [zone, setZone] = useState<DetectionZone>(() =>
+    getInitialZone({ x: 0, y: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT })
+  );
   const [existingZoneId, setExistingZoneId] = useState<string | null>(null);
   const [activeCorner, setActiveCorner] = useState<keyof DetectionZone | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [entryExitPoints, setEntryExitPoints] = useState([
-    { x: PREVIEW_WIDTH / 2, y: 1 },
-    { x: PREVIEW_WIDTH / 2, y: PREVIEW_HEIGHT - PREVIEW_HEIGHT * 0.15 },
-  ]);
+  const [entryExitPoints, setEntryExitPoints] = useState<{ x: number; y: number }[]>(() =>
+    getInitialEntryExitPoints({ x: 0, y: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT })
+  );
   const [activeEntryExitPoint, setActiveEntryExitPoint] = useState<number | null>(null);
   const [isLeftIn, setIsLeftIn] = useState(true);
   const [streamWsUrl, setStreamWsUrl] = useState<string>(route.params.liveUrl || '');
@@ -88,9 +94,12 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const [liveViewLayout, setLiveViewLayout] = useState({
     x: 0,
     y: 0,
-    width: PREVIEW_WIDTH,
-    height: PREVIEW_HEIGHT,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
   });
+  const prevLayoutRef = useRef(liveViewLayout);
+  const liveViewLayoutRef = useRef(liveViewLayout);
+  liveViewLayoutRef.current = liveViewLayout;
 
   const {
     webViewRef,
@@ -201,6 +210,41 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     (v: number, min: number, max: number) => Math.max(min, Math.min(max, v)),
     []
   );
+
+  // Scale zone and entryExitPoints when liveViewLayout changes (e.g. from onLayout with actual dimensions)
+  useEffect(() => {
+    const prev = prevLayoutRef.current;
+    const next = liveViewLayout;
+    if (prev.width <= 0 || prev.height <= 0 || next.width <= 0 || next.height <= 0) return;
+    if (prev.x === next.x && prev.y === next.y && prev.width === next.width && prev.height === next.height) return;
+
+    const scaleX = (px: number) => ((px - prev.x) / prev.width) * next.width + next.x;
+    const scaleY = (py: number) => ((py - prev.y) / prev.height) * next.height + next.y;
+    const clampToNext = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+    setZone((z) => {
+      const scaled = {
+        topLeft: { x: scaleX(z.topLeft.x), y: scaleY(z.topLeft.y) },
+        topRight: { x: scaleX(z.topRight.x), y: scaleY(z.topRight.y) },
+        bottomLeft: { x: scaleX(z.bottomLeft.x), y: scaleY(z.bottomLeft.y) },
+        bottomRight: { x: scaleX(z.bottomRight.x), y: scaleY(z.bottomRight.y) },
+      };
+      const { x: lx, y: ly, width: lw, height: lh } = next;
+      return {
+        topLeft: { x: clampToNext(scaled.topLeft.x, lx, lx + lw), y: clampToNext(scaled.topLeft.y, ly, ly + lh) },
+        topRight: { x: clampToNext(scaled.topRight.x, lx, lx + lw), y: clampToNext(scaled.topRight.y, ly, ly + lh) },
+        bottomLeft: { x: clampToNext(scaled.bottomLeft.x, lx, lx + lw), y: clampToNext(scaled.bottomLeft.y, ly, ly + lh) },
+        bottomRight: { x: clampToNext(scaled.bottomRight.x, lx, lx + lw), y: clampToNext(scaled.bottomRight.y, ly, ly + lh) },
+      };
+    });
+    setEntryExitPoints((pts) =>
+      pts.map((pt) => ({
+        x: clamp(scaleX(pt.x), next.x, next.x + next.width),
+        y: clamp(scaleY(pt.y), next.y, next.y + next.height),
+      }))
+    );
+    prevLayoutRef.current = next;
+  }, [liveViewLayout, clamp]);
 
   useEffect(() => {
     if (zoneType === 'entry_exit' && liveViewLayout.width > 0 && liveViewLayout.height > 0) {
@@ -334,12 +378,15 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     })
   );
 
-  const getZoneCoordinates = () => ({
-    topLeft: { x: zone.topLeft.x / PREVIEW_WIDTH, y: zone.topLeft.y / PREVIEW_HEIGHT },
-    topRight: { x: zone.topRight.x / PREVIEW_WIDTH, y: zone.topRight.y / PREVIEW_HEIGHT },
-    bottomLeft: { x: zone.bottomLeft.x / PREVIEW_WIDTH, y: zone.bottomLeft.y / PREVIEW_HEIGHT },
-    bottomRight: { x: zone.bottomRight.x / PREVIEW_WIDTH, y: zone.bottomRight.y / PREVIEW_HEIGHT },
-  });
+  const getZoneCoordinates = () => {
+    const { x, y, width, height } = liveViewLayout;
+    return {
+      topLeft: { x: (zone.topLeft.x - x) / width, y: (zone.topLeft.y - y) / height },
+      topRight: { x: (zone.topRight.x - x) / width, y: (zone.topRight.y - y) / height },
+      bottomLeft: { x: (zone.bottomLeft.x - x) / width, y: (zone.bottomLeft.y - y) / height },
+      bottomRight: { x: (zone.bottomRight.x - x) / width, y: (zone.bottomRight.y - y) / height },
+    };
+  };
 
   const getZoneDetect = async () => {
     try {
@@ -351,30 +398,34 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
       } else {
         setExistingZoneId(null);
       }
+      const layout = liveViewLayoutRef.current;
       if (zoneType === 'entry_exit') {
         if (Array.isArray(coordinates) && coordinates.length >= 2) {
+          const { x: lx, y: ly, width: lw, height: lh } = layout;
           setEntryExitPoints([
-            { x: coordinates[0].x * PREVIEW_WIDTH, y: coordinates[0].y * PREVIEW_HEIGHT },
-            { x: coordinates[1].x * PREVIEW_WIDTH, y: coordinates[1].y * PREVIEW_HEIGHT },
+            { x: coordinates[0].x * lw + lx, y: coordinates[0].y * lh + ly },
+            { x: coordinates[1].x * lw + lx, y: coordinates[1].y * lh + ly },
           ]);
         }
         const ic =
           zoneData?.in_direction_point ?? (coordinates?.length === 3 ? coordinates[2] : null);
         if (ic && Array.isArray(coordinates) && coordinates.length >= 2) {
-          const p1 = { x: coordinates[0].x * PREVIEW_WIDTH, y: coordinates[0].y * PREVIEW_HEIGHT };
-          const p2 = { x: coordinates[1].x * PREVIEW_WIDTH, y: coordinates[1].y * PREVIEW_HEIGHT };
-          const icPx = { x: ic.x * PREVIEW_WIDTH, y: ic.y * PREVIEW_HEIGHT };
+          const { x: lx, y: ly, width: lw, height: lh } = layout;
+          const p1 = { x: coordinates[0].x * lw + lx, y: coordinates[0].y * lh + ly };
+          const p2 = { x: coordinates[1].x * lw + lx, y: coordinates[1].y * lh + ly };
+          const icPx = { x: ic.x * lw + lx, y: ic.y * lh + ly };
           const side = (p2.x - p1.x) * (icPx.y - p1.y) - (p2.y - p1.y) * (icPx.x - p1.x);
           setIsLeftIn(side >= 0);
         }
       } else if (Array.isArray(coordinates) && coordinates.length === 4) {
+        const { x: lx, y: ly, width: lw, height: lh } = layout;
         setZoneClamped({
-          topLeft: { x: coordinates[0].x * PREVIEW_WIDTH, y: coordinates[0].y * PREVIEW_HEIGHT },
-          topRight: { x: coordinates[1].x * PREVIEW_WIDTH, y: coordinates[1].y * PREVIEW_HEIGHT },
-          bottomLeft: { x: coordinates[2].x * PREVIEW_WIDTH, y: coordinates[2].y * PREVIEW_HEIGHT },
+          topLeft: { x: coordinates[0].x * lw + lx, y: coordinates[0].y * lh + ly },
+          topRight: { x: coordinates[1].x * lw + lx, y: coordinates[1].y * lh + ly },
+          bottomLeft: { x: coordinates[2].x * lw + lx, y: coordinates[2].y * lh + ly },
           bottomRight: {
-            x: coordinates[3].x * PREVIEW_WIDTH,
-            y: coordinates[3].y * PREVIEW_HEIGHT,
+            x: coordinates[3].x * lw + lx,
+            y: coordinates[3].y * lh + ly,
           },
         });
       }
@@ -425,13 +476,14 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
           bottomCorners.find((c) => inPoly.some((p) => eq(p, c))) ||
           inPoly.find((p) => !eq(p, p1) && !eq(p, p2)) ||
           bottomCorners[0];
+        const { x: lx, y: ly, width: lw, height: lh } = liveViewLayout;
         coords = [
-          { x: p1.x / PREVIEW_WIDTH, y: p1.y / PREVIEW_HEIGHT },
-          { x: p2.x / PREVIEW_WIDTH, y: p2.y / PREVIEW_HEIGHT },
+          { x: (p1.x - lx) / lw, y: (p1.y - ly) / lh },
+          { x: (p2.x - lx) / lw, y: (p2.y - ly) / lh },
         ];
         inDirectionPoint = {
-          x: pt.x / PREVIEW_WIDTH,
-          y: pt.y / PREVIEW_HEIGHT,
+          x: (pt.x - lx) / lw,
+          y: (pt.y - ly) / lh,
         };
       } else {
         const c = getZoneCoordinates();
@@ -462,7 +514,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     }
   };
 
-  const handleReset = () => setZoneClamped(INITIAL_ZONE);
+  const handleReset = () => setZoneClamped(getInitialZone(liveViewLayout));
   const handleDrawRectangle = () =>
     setZoneClamped({
       topLeft: { x: liveViewLayout.x, y: liveViewLayout.y },
@@ -477,9 +529,10 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const renderGrid = () => {
     const v = [];
     const h = [];
-    for (let x = GRID_SIZE; x < PREVIEW_WIDTH; x += GRID_SIZE)
+    const { x: lx, y: ly, width: lw, height: lh } = liveViewLayout;
+    for (let x = lx + GRID_SIZE; x < lx + lw; x += GRID_SIZE)
       v.push(<View key={`v-${x}`} style={[styles.gridLineVertical, { left: x }]} />);
-    for (let y = GRID_SIZE; y < PREVIEW_HEIGHT; y += GRID_SIZE)
+    for (let y = ly + GRID_SIZE; y < ly + lh; y += GRID_SIZE)
       h.push(<View key={`h-${y}`} style={[styles.gridLineHorizontal, { top: y }]} />);
     return (
       <>
