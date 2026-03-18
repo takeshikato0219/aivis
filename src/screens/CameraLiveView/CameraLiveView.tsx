@@ -53,6 +53,8 @@ const CameraLiveView: React.FC = () => {
   const route = useRoute<CameraLiveScreenRouteProp>();
   const videoContainerRef = useRef<View>(null);
   const captureResolveRef = useRef<((base64: string) => void) | null>(null);
+  const hasInitialStreamRef = useRef(false);
+  const prevStreamUrlRef = useRef<string>('');
   const { cameraId } = route.params;
   const { t } = useTranslation();
 
@@ -91,7 +93,7 @@ const CameraLiveView: React.FC = () => {
     handleWebViewHttpError: onWebViewHttpError,
     handleManualRetry,
     handleWebViewMessage,
-  } = useLiveStream({ maxRetries: 3, heartbeatTimeout: 15000 });
+  } = useLiveStream({ maxRetries: 5, heartbeatTimeout: 30000 });
 
   const { micState, toggleMic, stopMic, handleMicMessage } = useMic({
     micUrl: micUrl,
@@ -154,18 +156,21 @@ const CameraLiveView: React.FC = () => {
     }
   }, [isAnimating, showQualityModal, slideAnim, opacityAnim, height]);
 
+  const [fetchUrlError, setFetchUrlError] = useState(false);
   const fetchLiveUrl = useCallback(async () => {
+    setFetchUrlError(false);
     try {
       const res = await cameraService.getLiveStreamUrl(cameraId);
       if (res.success && res.data) {
         setTimeExp(res.data.time_exp);
         setStreamWsUrl(res.data.live_url);
-        setMicUrl(res.data.mic);
+        setMicUrl(res.data.mic || '');
         const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
         setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
       }
-    } catch {
-      // handle error
+    } catch (e) {
+      console.warn('getLiveStreamUrl failed:', e);
+      setFetchUrlError(true);
     }
   }, [cameraId]);
 
@@ -197,7 +202,6 @@ const CameraLiveView: React.FC = () => {
     };
   }, [fetchLiveUrl, webViewRef]);
 
-  // Force video play when screen gains focus and stream is connected (fixes black screen on first load)
   const forceVideoPlay = useCallback(() => {
     webViewRef.current?.injectJavaScript(`
       (function(){
@@ -211,30 +215,34 @@ const CameraLiveView: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       if (connectionStatus === 'connected' && streamWsUrl && !webViewError) {
-        const t1 = setTimeout(forceVideoPlay, 300);
-        const t2 = setTimeout(forceVideoPlay, 1200);
-        return () => {
-          clearTimeout(t1);
-          clearTimeout(t2);
-        };
+        const timers = [200, 500, 1200, 2500].map((ms) => setTimeout(forceVideoPlay, ms));
+        // eslint-disable-next-line @typescript-eslint/no-shadow
+        return () => timers.forEach((t) => clearTimeout(t));
       }
     }, [connectionStatus, streamWsUrl, webViewError, forceVideoPlay])
   );
 
-  // Retry force play when connection becomes live (handles race where video loads before WebView ready)
+  useEffect(() => {
+    const currentUrl = streamWsUrl || streamHtmlUrl;
+    if (!currentUrl) return;
+    if (hasInitialStreamRef.current && prevStreamUrlRef.current !== currentUrl) {
+      prevStreamUrlRef.current = currentUrl;
+      webViewRef.current?.reload();
+    } else if (!hasInitialStreamRef.current) {
+      hasInitialStreamRef.current = true;
+      prevStreamUrlRef.current = currentUrl;
+    }
+  }, [streamWsUrl, streamHtmlUrl, webViewRef]);
+
   useEffect(() => {
     if (!isLive || !streamWsUrl) return;
-    const t1 = setTimeout(forceVideoPlay, 500);
-    const t2 = setTimeout(forceVideoPlay, 2000);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
+    const timers = [500, 1500, 3000].map((ms) => setTimeout(forceVideoPlay, ms));
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    return () => timers.forEach((t) => clearTimeout(t));
   }, [isLive, streamWsUrl, forceVideoPlay]);
 
   const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
 
-  // Use inline HTML stream for both iOS and Android (fixes Android black screen)
   const inlineStreamSource = useMemo(() => {
     if (!streamWsUrl) return null;
     const result = buildIOSStreamInlineHtml(streamWsUrl);
@@ -310,25 +318,23 @@ const CameraLiveView: React.FC = () => {
     });
   }, [webViewRef]);
 
-  // Capture last frame when stream has issues
   useEffect(() => {
-    const captureLastFrame = async () => {
-      if (!isLive && lastFrameBase64 === null) {
-        const frame = await captureFrameFromWebView();
-        if (frame) {
-          setLastFrameBase64(frame);
-        }
-      }
-    };
+    if (!isLive || !streamHtmlUrl) return;
+    const interval = setInterval(async () => {
+      const frame = await captureFrameFromWebView();
+      if (frame) setLastFrameBase64(frame);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isLive, streamHtmlUrl, captureFrameFromWebView]);
 
-    captureLastFrame();
+  useEffect(() => {
+    if (!isLive && lastFrameBase64 === null) {
+      captureFrameFromWebView().then((frame) => frame && setLastFrameBase64(frame));
+    }
   }, [isLive, lastFrameBase64, captureFrameFromWebView]);
 
-  // Clear last frame when stream becomes live again
   useEffect(() => {
-    if (isLive && lastFrameBase64 !== null) {
-      setLastFrameBase64(null);
-    }
+    if (isLive && lastFrameBase64 !== null) setLastFrameBase64(null);
   }, [isLive, lastFrameBase64]);
 
   const takeSnapshot = useCallback(async () => {
@@ -563,7 +569,7 @@ const CameraLiveView: React.FC = () => {
   };
 
   // Determine if error overlay should show.
-  const showErrorOverlay = webViewError && !isWebViewLoading;
+  const showErrorOverlay = (webViewError && !isWebViewLoading) || fetchUrlError;
 
   const renderVideoPlayer = () => {
     return (
@@ -571,7 +577,7 @@ const CameraLiveView: React.FC = () => {
         {streamHtmlUrl ? (
           <>
             <WebView
-              key={streamWsUrl || streamHtmlUrl || 'stream'}
+              key={`stream-${cameraId}`}
               ref={webViewRef}
               source={
                 inlineStreamSource
@@ -653,12 +659,71 @@ const CameraLiveView: React.FC = () => {
           </>
         ) : null}
 
-        {!streamHtmlUrl || (isWebViewLoading && streamHtmlUrl) ? (
+        {!isLive && !isReconnecting && !showErrorOverlay && !lastFrameBase64 && !fetchUrlError ? (
           <View style={[styles.videoContainer, styles.loadingOverlay]}>
             <ActivityIndicator size="small" color="#FFF" />
             <Text style={styles.loadingText}>
-              {!streamHtmlUrl ? t('bluetoothScreen.connecting') : t('liveStream.loadingStream')}
+              {!streamHtmlUrl
+                ? t('bluetoothScreen.connecting')
+                : t('liveStream.loadingStream')}
             </Text>
+          </View>
+        ) : null}
+
+        {!isLive && !isReconnecting && !showErrorOverlay && lastFrameBase64 && !fetchUrlError ? (
+          <View style={styles.loadingIndicatorOverlay}>
+            <ActivityIndicator size="small" color="#FFF" />
+            <Text style={styles.loadingText}>
+              {!streamHtmlUrl
+                ? t('bluetoothScreen.connecting')
+                : t('liveStream.loadingStream')}
+            </Text>
+          </View>
+        ) : null}
+
+        {isReconnecting && !showErrorOverlay && !lastFrameBase64 && !fetchUrlError ? (
+          <View style={styles.reconnectingOverlay}>
+            <ActivityIndicator size="small" color="#FFF" />
+            <Text style={styles.loadingText}>
+              {`${t('liveStream.reconnecting') || 'Reconnecting...'} (${retryCount})`}
+            </Text>
+          </View>
+        ) : null}
+
+        {isReconnecting && !showErrorOverlay && lastFrameBase64 && !fetchUrlError ? (
+          <View style={styles.loadingIndicatorOverlay}>
+            <ActivityIndicator size="small" color="#FFF" />
+            <Text style={styles.loadingText}>
+              {`${t('liveStream.reconnecting') || 'Reconnecting...'} (${retryCount})`}
+            </Text>
+          </View>
+        ) : null}
+
+        {showErrorOverlay && !lastFrameBase64 ? (
+          <View style={styles.errorOverlay}>
+            <Text style={styles.errorText}>
+              {t('networkSetup.connectionFailed') || 'Connection failed'}
+            </Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => (fetchUrlError ? fetchLiveUrl() : handleReconnect())}
+            >
+              <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {showErrorOverlay && lastFrameBase64 ? (
+          <View style={styles.loadingIndicatorOverlay}>
+            <Text style={styles.errorText}>
+              {t('networkSetup.connectionFailed') || 'Connection failed'}
+            </Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => (fetchUrlError ? fetchLiveUrl() : handleReconnect())}
+            >
+              <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
+            </TouchableOpacity>
           </View>
         ) : null}
 
@@ -667,26 +732,6 @@ const CameraLiveView: React.FC = () => {
             <Icon name={isMuted ? 'volume-off' : 'volume-high'} size={22} color="#FFFFFF" />
           </TouchableOpacity>
         )}
-
-        {isReconnecting && streamHtmlUrl ? (
-          <View style={styles.reconnectingOverlay}>
-            <ActivityIndicator size="small" color="#FFF" />
-            <Text style={styles.loadingText}>
-              {t('liveStream.reconnecting') || 'Reconnecting...'} ({retryCount})
-            </Text>
-          </View>
-        ) : null}
-
-        {showErrorOverlay && streamHtmlUrl ? (
-          <View style={styles.errorOverlay}>
-            <Text style={styles.errorText}>
-              {t('networkSetup.connectionFailed') || 'Connection failed'}
-            </Text>
-            <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
-              <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
       </View>
     );
   };

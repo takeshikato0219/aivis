@@ -3006,7 +3006,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNReanimated (3.19.5):
+  - RNReanimated (4.2.2):
     - boost
     - DoubleConversion
     - fast_float
@@ -3033,11 +3033,11 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNReanimated/reanimated (= 3.19.5)
-    - RNReanimated/worklets (= 3.19.5)
+    - RNReanimated/reanimated (= 4.2.2)
+    - RNWorklets
     - SocketRocket
     - Yoga
-  - RNReanimated/reanimated (3.19.5):
+  - RNReanimated/reanimated (4.2.2):
     - boost
     - DoubleConversion
     - fast_float
@@ -3064,10 +3064,11 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNReanimated/reanimated/apple (= 3.19.5)
+    - RNReanimated/reanimated/apple (= 4.2.2)
+    - RNWorklets
     - SocketRocket
     - Yoga
-  - RNReanimated/reanimated/apple (3.19.5):
+  - RNReanimated/reanimated/apple (4.2.2):
     - boost
     - DoubleConversion
     - fast_float
@@ -3094,65 +3095,7 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - SocketRocket
-    - Yoga
-  - RNReanimated/worklets (3.19.5):
-    - boost
-    - DoubleConversion
-    - fast_float
-    - fmt
-    - glog
-    - hermes-engine
-    - RCT-Folly
-    - RCT-Folly/Fabric
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-hermes
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - RNReanimated/worklets/apple (= 3.19.5)
-    - SocketRocket
-    - Yoga
-  - RNReanimated/worklets/apple (3.19.5):
-    - boost
-    - DoubleConversion
-    - fast_float
-    - fmt
-    - glog
-    - hermes-engine
-    - RCT-Folly
-    - RCT-Folly/Fabric
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-hermes
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
+    - RNWorklets
     - SocketRocket
     - Yoga
   - RNScreens (4.18.0):
@@ -3299,6 +3242,95 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - RNWorklets (0.7.4):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - RNWorklets/worklets (= 0.7.4)
+    - SocketRocket
+    - Yoga
+  - RNWorklets/worklets (0.7.4):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - RNWorklets/worklets/apple (= 0.7.4)
+    - SocketRocket
+    - Yoga
+  - RNWorklets/worklets/apple (0.7.4):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - SocketRocket (0.7.1)
   - VisionCamera (4.7.3):
     - VisionCamera/Core (= 4.7.3)
@@ -3413,6 +3445,7 @@ DEPENDENCIES:
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
+  - RNWorklets (from `../node_modules/react-native-worklets`)
   - SocketRocket (~> 0.7.1)
   - VisionCamera (from `../node_modules/react-native-vision-camera`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
@@ -3653,6 +3686,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
     :path: "../node_modules/react-native-vector-icons"
+  RNWorklets:
+    :path: "../node_modules/react-native-worklets"
   VisionCamera:
     :path: "../node_modules/react-native-vision-camera"
   Yoga:
@@ -3782,14 +3817,15 @@ SPEC CHECKSUMS:
   RNMLKitFaceDetection: ef91f2a53dd30544805a4730bac4a91e3eae31dc
   RNNotifee: 4a6ee5c7deaf00e005050052d73ee6315dff7ec9
   RNPermissions: 215ea35c34610d8496ce0809619c2b861997193d
-  RNReanimated: ea20a4edf20b8bf4d8f0f2895179d96a16fdb514
+  RNReanimated: e362e783481d924973686e18ef46c17b35f22c83
   RNScreens: de996b48c82245c0b68c677da3334c2061e2a951
   RNSVG: 733e3d36693dd7d55f09728dda44a5105ca9622e
   RNVectorIcons: 96c832d9134dfee90ce0be7a1e0bf4c1e41a8d11
+  RNWorklets: d0114f9d0c47b1678c93ae8ed32e5c4948e5cca7
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   VisionCamera: 3ea10c46a5c612f5f89fb46a54bef4a0de8b58a7
   Yoga: 46ff53afcbeda2bae19c85b65e17487c3e3984dd
 
-PODFILE CHECKSUM: e8aa10e1cd4b3186adce2a9da4bbb586faf92e53
+PODFILE CHECKSUM: 7b38667d77f8d87507f7ca4135414e119a8d4fdb
 
 COCOAPODS: 1.16.2

@@ -9,6 +9,7 @@ import {
   Platform,
   AppState,
   AppStateStatus,
+  Image,
 } from 'react-native';
 import Orientation from 'react-native-orientation-locker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -92,6 +93,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   );
   const [activeEntryExitPoint, setActiveEntryExitPoint] = useState<number | null>(null);
   const [isLeftIn, setIsLeftIn] = useState(true);
+  // Dùng route.params.liveUrl cho lần đầu để hiển thị ngay (tránh chờ API), fetchLiveUrl chạy song song để refresh token
   const [streamWsUrl, setStreamWsUrl] = useState<string>(route.params.liveUrl || '');
   const [streamHtmlUrl, setStreamHtmlUrl] = useState(() =>
     buildStreamHtmlUrl(route.params.liveUrl)
@@ -106,6 +108,9 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const prevLayoutRef = useRef(liveViewLayout);
   const liveViewLayoutRef = useRef(liveViewLayout);
   liveViewLayoutRef.current = liveViewLayout;
+  const hasInitialStreamRef = useRef(false);
+  const [lastFrameBase64, setLastFrameBase64] = useState<string | null>(null);
+  const captureResolveRef = useRef<((base64: string) => void) | null>(null);
 
   const {
     webViewRef,
@@ -118,12 +123,58 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     handleWebViewHttpError: onWebViewHttpError,
     handleManualRetry,
     handleWebViewMessage,
-  } = useLiveStream({ maxRetries: 3, heartbeatTimeout: 15000 });
+  } = useLiveStream({ maxRetries: 5, heartbeatTimeout: 30000 });
 
   const webViewError = connectionStatus === 'failed';
   const isLive = connectionStatus === 'connected' && !!streamHtmlUrl && !isWebViewLoading;
 
+  const captureFrameFromWebView = useCallback((): Promise<string | null> => {
+    return new Promise((resolve) => {
+      if (!webViewRef.current) {
+        resolve(null);
+        return;
+      }
+      const timeout = setTimeout(() => resolve(null), 3000);
+      captureResolveRef.current = (base64: string) => {
+        clearTimeout(timeout);
+        captureResolveRef.current = null;
+        resolve(base64);
+      };
+      webViewRef.current.injectJavaScript(`
+        (function(){
+          try {
+            var video = document.querySelector('video');
+            var canvas = document.querySelector('canvas');
+            var c = document.createElement('canvas');
+            var ctx = c.getContext('2d');
+            if (video && video.readyState >= 2 && video.videoWidth > 0) {
+              c.width = video.videoWidth;
+              c.height = video.videoHeight;
+              ctx.drawImage(video, 0, 0, c.width, c.height);
+            } else if (canvas && canvas.width > 0) {
+              c.width = canvas.width;
+              c.height = canvas.height;
+              ctx.drawImage(canvas, 0, 0, c.width, c.height);
+            } else {
+              window.ReactNativeWebView.postMessage(JSON.stringify({type:'frameCaptured', data:''}));
+              return;
+            }
+            var dataUrl = c.toDataURL('image/jpeg', 0.8);
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'frameCaptured', data: dataUrl}));
+          } catch(e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'frameCaptured', data:''}));
+          }
+        })();
+        true;
+      `);
+    });
+  }, [webViewRef]);
+
+  const [fetchUrlError, setFetchUrlError] = useState(false);
+  const showErrorOverlay = (webViewError && !isWebViewLoading) || fetchUrlError;
+
   const fetchLiveUrl = useCallback(async () => {
+    setFetchUrlError(false);
     try {
       const res = await cameraService.getLiveStreamUrl(camera.id);
       if (res.success && res.data) {
@@ -132,8 +183,9 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
         const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
         setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
       }
-    } catch {
-      // handle error
+    } catch (e) {
+      console.warn('getLiveStreamUrl failed:', e);
+      setFetchUrlError(true);
     }
   }, [camera.id]);
 
@@ -174,24 +226,32 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   useFocusEffect(
     useCallback(() => {
       if (connectionStatus === 'connected' && streamWsUrl && !webViewError) {
-        const t1 = setTimeout(forceVideoPlay, 300);
-        const t2 = setTimeout(forceVideoPlay, 1200);
-        return () => {
-          clearTimeout(t1);
-          clearTimeout(t2);
-        };
+        const timers = [200, 500, 1200, 2500].map((ms) => setTimeout(forceVideoPlay, ms));
+        // eslint-disable-next-line @typescript-eslint/no-shadow
+        return () => timers.forEach((t) => clearTimeout(t));
       }
     }, [connectionStatus, streamWsUrl, webViewError, forceVideoPlay])
   );
 
+  // Reload WebView when stream URL changes (e.g. token refresh) - avoid remount with stable key
+  const prevStreamUrlRef = useRef<string>(streamWsUrl || streamHtmlUrl);
+  useEffect(() => {
+    const currentUrl = streamWsUrl || streamHtmlUrl;
+    if (!currentUrl) return;
+    if (hasInitialStreamRef.current && prevStreamUrlRef.current !== currentUrl) {
+      prevStreamUrlRef.current = currentUrl;
+      webViewRef.current?.reload();
+    } else if (!hasInitialStreamRef.current) {
+      hasInitialStreamRef.current = true;
+      prevStreamUrlRef.current = currentUrl;
+    }
+  }, [streamWsUrl, streamHtmlUrl, webViewRef]);
+
   useEffect(() => {
     if (!isLive || !streamWsUrl) return;
-    const t1 = setTimeout(forceVideoPlay, 500);
-    const t2 = setTimeout(forceVideoPlay, 2000);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
+    const timers = [500, 1500, 3000].map((ms) => setTimeout(forceVideoPlay, ms));
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    return () => timers.forEach((t) => clearTimeout(t));
   }, [isLive, streamWsUrl, forceVideoPlay]);
 
   const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
@@ -211,6 +271,21 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchLiveUrl]);
+
+  // Capture frame định kỳ khi live - lưu khung hình cuối trước khi bị gián đoạn
+  useEffect(() => {
+    if (!isLive || !streamHtmlUrl) return;
+    const interval = setInterval(async () => {
+      const frame = await captureFrameFromWebView();
+      if (frame) setLastFrameBase64(frame);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isLive, streamHtmlUrl, captureFrameFromWebView]);
+
+  // Xóa last frame khi stream live lại
+  useEffect(() => {
+    if (isLive && lastFrameBase64 !== null) setLastFrameBase64(null);
+  }, [isLive, lastFrameBase64]);
 
   const clamp = useCallback(
     (v: number, min: number, max: number) => Math.max(min, Math.min(max, v)),
@@ -651,7 +726,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
           <View style={styles.previewContainer}>
             {streamHtmlUrl ? (
               <WebView
-                key={streamWsUrl || streamHtmlUrl || 'stream'}
+                key={`stream-${camera.id}`}
                 ref={webViewRef}
                 source={
                   inlineStreamSource
@@ -701,6 +776,10 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
                       webViewRef.current?.reload();
                       return;
                     }
+                    if (data.type === 'frameCaptured' && captureResolveRef.current) {
+                      captureResolveRef.current(data.data || '');
+                      return;
+                    }
                   } catch {
                     // ignore parse errors
                   }
@@ -732,36 +811,20 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
               </View>
             )}
 
-            {!streamHtmlUrl || (isWebViewLoading && streamHtmlUrl) ? (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="small" color="#FFF" />
-                <Text style={styles.loadingText}>
-                  {!streamHtmlUrl ? t('bluetoothScreen.connecting') : t('liveStream.loadingStream')}
-                </Text>
+            {!isLive && lastFrameBase64 && (
+              <View style={[styles.cameraPreview, styles.lastFrameOverlay]}>
+                <Image
+                  source={{ uri: lastFrameBase64 }}
+                  style={styles.cameraPreview}
+                  resizeMode="cover"
+                />
               </View>
-            ) : null}
-
-            {isReconnecting && streamHtmlUrl ? (
-              <View style={styles.reconnectingOverlay}>
-                <ActivityIndicator size="small" color="#FFF" />
-                <Text style={styles.loadingText}>
-                  {t('liveStream.reconnecting') || 'Reconnecting...'} ({retryCount})
-                </Text>
-              </View>
-            ) : null}
-
-            {webViewError && !isWebViewLoading && streamHtmlUrl ? (
-              <View style={styles.errorOverlay}>
-                <Text style={styles.errorText}>
-                  {t('networkSetup.connectionFailed') || 'Connection failed'}
-                </Text>
-                <TouchableOpacity style={styles.retryButton} onPress={handleReconnect}>
-                  <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
+            )}
 
             <View style={styles.overlayContainer} pointerEvents="box-none">
+              {!isLive && !lastFrameBase64 && !fetchUrlError && (
+                <View style={styles.loadingBgOverlay} pointerEvents="none" />
+              )}
               <View style={styles.gridOverlay} pointerEvents="none">
                 {renderGrid()}
               </View>
@@ -882,6 +945,37 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
                   </View>
                 )}
               </View>
+              {!isLive && !isReconnecting && !showErrorOverlay && !fetchUrlError && (
+                <View style={styles.loadingIndicatorInOverlay} pointerEvents="none">
+                  <ActivityIndicator size="small" color="#FFF" />
+                  <Text style={styles.loadingText}>
+                    {!streamHtmlUrl
+                      ? t('bluetoothScreen.connecting')
+                      : t('liveStream.loadingStream')}
+                  </Text>
+                </View>
+              )}
+              {isReconnecting && !showErrorOverlay && !fetchUrlError && (
+                <View style={styles.loadingIndicatorInOverlay} pointerEvents="none">
+                  <ActivityIndicator size="small" color="#FFF" />
+                  <Text style={styles.loadingText}>
+                    {`${t('liveStream.reconnecting') || 'Reconnecting...'} (${retryCount})`}
+                  </Text>
+                </View>
+              )}
+              {showErrorOverlay ? (
+                <View style={styles.errorInOverlay} pointerEvents="box-none">
+                  <Text style={styles.errorText}>
+                    {t('networkSetup.connectionFailed') || 'Connection failed'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={() => (fetchUrlError ? fetchLiveUrl() : handleReconnect())}
+                  >
+                    <Text style={styles.retryButtonText}>{t('common.retry') || 'Retry'}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
           </View>
         </View>

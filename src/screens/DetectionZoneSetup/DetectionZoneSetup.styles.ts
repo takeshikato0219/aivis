@@ -42,6 +42,25 @@ export const styles = StyleSheet.create({
   },
   overlayContainer: {
     ...StyleSheet.absoluteFill,
+    zIndex: 15,
+  },
+  loadingBgOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#000',
+  },
+  lastFrameOverlay: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 5,
+  },
+  loadingIndicatorInOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorInOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   gridOverlay: {
     ...StyleSheet.absoluteFill,
@@ -103,7 +122,7 @@ export const styles = StyleSheet.create({
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -115,7 +134,7 @@ export const styles = StyleSheet.create({
   },
   reconnectingOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -133,7 +152,7 @@ export const styles = StyleSheet.create({
   },
   errorOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -212,7 +231,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
     overflow: 'hidden',
-    opacity: 0.99,
   },
   muteButton: {
     position: 'absolute',

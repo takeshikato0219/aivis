@@ -39,6 +39,12 @@ target 'Timima01App' do
       # :ccache_enabled => true
     )
 
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |bc|
+        bc.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
+      end
+    end
+
     # Fix: react-native-record-screen uses RPScreenRecorder (ReplayKit) but podspec doesn't declare it
     # Add ReplayKit to xcconfig so it persists across pod install
     ['Pods-Timima01App.debug.xcconfig', 'Pods-Timima01App.release.xcconfig'].each do |config_name|

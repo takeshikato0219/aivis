@@ -10,7 +10,10 @@ export interface UseLiveStreamConfig {
   retryMaxDelay?: number;
   initialLoadingMin?: number;
   initialLoadingMax?: number;
+  initialGracePeriod?: number;
 }
+
+export type StreamProtocol = 'mse' | 'hls' | 'mjpeg' | null;
 
 export interface UseLiveStreamReturn {
   webViewRef: RefObject<WebView | null>;
@@ -18,6 +21,7 @@ export interface UseLiveStreamReturn {
   connectionStatus: 'connecting' | 'connected' | 'failed';
   isReconnecting: boolean;
   retryCount: number;
+  streamProtocol: StreamProtocol;
   handleWebViewLoad: () => void;
   handleWebViewError: () => void;
   handleWebViewHttpError: (syntheticEvent: any) => void;
@@ -29,11 +33,12 @@ export interface UseLiveStreamReturn {
 const DEFAULT_CONFIG: Required<UseLiveStreamConfig> = {
   maxRetries: 5,
   heartbeatInterval: 10000,
-  heartbeatTimeout: 30000,
+  heartbeatTimeout: 45000,
   retryBaseDelay: 2000,
   retryMaxDelay: 30000,
   initialLoadingMin: 3000,
-  initialLoadingMax: 8000,
+  initialLoadingMax: 40000,
+  initialGracePeriod: 8000,
 };
 
 export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamReturn => {
@@ -45,13 +50,16 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     retryMaxDelay,
     initialLoadingMin,
     initialLoadingMax,
+    initialGracePeriod,
   } = { ...DEFAULT_CONFIG, ...config };
 
   const webViewRef = useRef<WebView>(null);
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const graceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastHeartbeatRef = useRef<number>(Date.now());
   const retryCountRef = useRef<number>(0);
+  const hasEverConnectedRef = useRef<boolean>(false);
   const handleConnectionLostRef = useRef<() => void>(() => {});
 
   const [isLoading, setIsLoading] = useState(true);
@@ -60,6 +68,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   );
   const [retryCount, setRetryCount] = useState(0);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [streamProtocol, setStreamProtocol] = useState<StreamProtocol>(null);
 
   // Keep retryCountRef in sync with state
   useEffect(() => {
@@ -160,37 +169,30 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   }, [handleConnectionLost]);
 
   const handleWebViewLoad = useCallback(() => {
-    // Clear any pending retry timer on successful load
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
     }
+    if (graceTimerRef.current) {
+      clearTimeout(graceTimerRef.current);
+      graceTimerRef.current = null;
+    }
 
     setConnectionStatus('connecting');
     setIsLoading(true);
-
-    // Reset retry count on successful load
-    retryCountRef.current = 0;
-    setRetryCount(0);
-
-    // Clear reconnecting state
+    setStreamProtocol(null);
     setIsReconnecting(false);
 
     lastHeartbeatRef.current = Date.now();
-    startHeartbeatMonitoring();
 
-    // Set a timeout to confirm connection after receiving first heartbeat
-    // If no heartbeat received within 3 seconds, consider it connected anyway
-    setTimeout(() => {
-      setIsLoading((prev) => {
-        if (prev && connectionStatus !== 'failed') {
-          setConnectionStatus('connected');
-          return false;
-        }
-        return prev;
-      });
-    }, 3000);
-  }, [startHeartbeatMonitoring, connectionStatus]);
+    // Delay heartbeat monitoring to give JS time to establish MSE/HLS connection.
+    // During grace period, jsReady/buffering messages from JS will keep resetting
+    // the heartbeat timestamp, preventing premature timeout.
+    graceTimerRef.current = setTimeout(() => {
+      graceTimerRef.current = null;
+      startHeartbeatMonitoring();
+    }, hasEverConnectedRef.current ? 2000 : initialGracePeriod);
+  }, [startHeartbeatMonitoring, initialGracePeriod]);
 
   const handleWebViewError = useCallback(() => {
     setIsLoading(false);
@@ -210,7 +212,6 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   const handleManualRetry = useCallback(() => {
     console.log('Manual retry triggered');
 
-    // Clear any existing timers
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
@@ -219,8 +220,11 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
     }
+    if (graceTimerRef.current) {
+      clearTimeout(graceTimerRef.current);
+      graceTimerRef.current = null;
+    }
 
-    // Reset retry count (both ref and state)
     retryCountRef.current = 0;
     setRetryCount(0);
     setIsLoading(true);
@@ -229,11 +233,11 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     lastHeartbeatRef.current = Date.now();
     webViewRef.current?.reload();
 
-    // Start heartbeat monitoring after a brief delay
-    setTimeout(() => {
+    graceTimerRef.current = setTimeout(() => {
+      graceTimerRef.current = null;
       startHeartbeatMonitoring();
-    }, 1000);
-  }, [startHeartbeatMonitoring]);
+    }, initialGracePeriod);
+  }, [startHeartbeatMonitoring, initialGracePeriod]);
 
   const handleWebViewMessage = useCallback(
     (event: any) => {
@@ -252,11 +256,18 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
 
         if (data.type === 'playing' || data.type === 'connected') {
           lastHeartbeatRef.current = Date.now();
+          hasEverConnectedRef.current = true;
           setIsLoading(false);
           setConnectionStatus('connected');
           setIsReconnecting(false);
           retryCountRef.current = 0;
           setRetryCount(0);
+          return;
+        }
+
+        // JS is alive and actively trying to connect — reset heartbeat to prevent timeout
+        if (data.type === 'jsReady' || data.type === 'buffering') {
+          lastHeartbeatRef.current = Date.now();
           return;
         }
 
@@ -267,7 +278,6 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
         }
 
         if (data.type === 'error') {
-          // Có thể log error detail để debug RTC/MSE
           console.warn('Player error:', data.message, data.detail);
           setIsLoading(false);
           handleConnectionLost();
@@ -275,8 +285,18 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
         }
 
         if (data.type === 'stalled') {
-          setIsLoading(false);
-          handleConnectionLost();
+          // Only trigger reconnection if we had a working connection before.
+          // During initial connection the video may stall briefly while buffering.
+          if (hasEverConnectedRef.current) {
+            setIsLoading(false);
+            handleConnectionLost();
+          }
+          return;
+        }
+
+        if (data.type === 'protocol' && data.protocol) {
+          lastHeartbeatRef.current = Date.now();
+          setStreamProtocol(data.protocol);
           return;
         }
       } catch {
@@ -295,18 +315,20 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
     }
+    if (graceTimerRef.current) {
+      clearTimeout(graceTimerRef.current);
+      graceTimerRef.current = null;
+    }
   }, []);
 
-  // Initial loading timeout - if no connection after initialLoadingMax, show retry
+  // Initial loading timeout — fires once per mount. If no connection after
+  // initialLoadingMax, trigger connection lost to begin retry cycle.
   useEffect(() => {
     const timer = setTimeout(() => {
-      // If still loading after max time, trigger connection lost to show retry
       setIsLoading((prevLoading) => {
-        if (prevLoading && connectionStatus === 'connecting') {
-          // No heartbeat received, consider it failed
+        if (prevLoading) {
           console.warn('Initial loading timeout - no connection established');
-          setConnectionStatus('failed');
-          setIsReconnecting(false);
+          handleConnectionLostRef.current();
           return false;
         }
         return prevLoading;
@@ -314,7 +336,8 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     }, initialLoadingMax);
 
     return () => clearTimeout(timer);
-  }, [initialLoadingMin, initialLoadingMax, connectionStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialLoadingMax]);
 
   // Network status monitoring - auto-retry when network is restored
   useEffect(() => {
@@ -323,20 +346,23 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     const unsubscribe = NetInfo.addEventListener((state) => {
       const isConnected = state.isConnected && state.isInternetReachable;
 
-      // Network restored - auto retry if currently failed or reconnecting
       if (isConnected && !wasConnected) {
         console.log('Network restored, attempting auto-retry');
-        // Reset retry count (both ref and state) and attempt to reconnect
         retryCountRef.current = 0;
         setRetryCount(0);
         setIsLoading(true);
         setConnectionStatus('connecting');
         setIsReconnecting(false);
-        // Small delay to ensure network is stable
         setTimeout(() => {
           webViewRef.current?.reload();
           lastHeartbeatRef.current = Date.now();
-          startHeartbeatMonitoring();
+          if (graceTimerRef.current) {
+            clearTimeout(graceTimerRef.current);
+          }
+          graceTimerRef.current = setTimeout(() => {
+            graceTimerRef.current = null;
+            startHeartbeatMonitoring();
+          }, initialGracePeriod);
         }, 500);
       }
 
@@ -352,7 +378,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     return () => {
       unsubscribe();
     };
-  }, [connectionStatus, startHeartbeatMonitoring]);
+  }, [connectionStatus, startHeartbeatMonitoring, initialGracePeriod]);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -365,6 +391,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     connectionStatus,
     isReconnecting,
     retryCount,
+    streamProtocol,
     handleWebViewLoad,
     handleWebViewError,
     handleWebViewHttpError,
