@@ -90,10 +90,10 @@ const Setting = () => {
     }
   };
 
-  const updateUserWithLineId = async (userId: string, lineName: string): Promise<boolean> => {
+  const updateUserWithLineId = async (userId: string): Promise<boolean> => {
     try {
       try {
-        const response = await authService.linkLineAccount(userId, lineName);
+        const response = await authService.linkLineAccount(userId);
         await setUserData(response.data.data);
       } catch (apiError: any) {
         console.error('linkLineAccount error:', apiError?.response?.data || apiError);
@@ -120,7 +120,7 @@ const Setting = () => {
         Alert.alert(t('common.error'), t('lineSubscription.failedToGetUserId'));
         return false;
       }
-      const updateSuccess = await updateUserWithLineId(response.userId, response.displayName);
+      const updateSuccess = await updateUserWithLineId(response.userId);
       if (!updateSuccess) {
         Alert.alert(
           t('common.error'),
@@ -295,7 +295,7 @@ const Setting = () => {
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
                 <View style={styles.marginLine}>
-                  {user?.line_display_name && (
+                  {user?.line_notification_id && (
                     <Text style={styles.lineStyle}>
                       {t('lineSubscription.LINEDisplayName')}
                       {user?.line_display_name}

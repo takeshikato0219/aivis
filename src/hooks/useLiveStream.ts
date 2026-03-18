@@ -48,7 +48,6 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     heartbeatTimeout,
     retryBaseDelay,
     retryMaxDelay,
-    initialLoadingMin,
     initialLoadingMax,
     initialGracePeriod,
   } = { ...DEFAULT_CONFIG, ...config };
@@ -188,10 +187,13 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     // Delay heartbeat monitoring to give JS time to establish MSE/HLS connection.
     // During grace period, jsReady/buffering messages from JS will keep resetting
     // the heartbeat timestamp, preventing premature timeout.
-    graceTimerRef.current = setTimeout(() => {
-      graceTimerRef.current = null;
-      startHeartbeatMonitoring();
-    }, hasEverConnectedRef.current ? 2000 : initialGracePeriod);
+    graceTimerRef.current = setTimeout(
+      () => {
+        graceTimerRef.current = null;
+        startHeartbeatMonitoring();
+      },
+      hasEverConnectedRef.current ? 2000 : initialGracePeriod
+    );
   }, [startHeartbeatMonitoring, initialGracePeriod]);
 
   const handleWebViewError = useCallback(() => {
@@ -336,7 +338,6 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     }, initialLoadingMax);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLoadingMax]);
 
   // Network status monitoring - auto-retry when network is restored

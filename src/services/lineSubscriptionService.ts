@@ -84,29 +84,10 @@ export class LineSubscriptionService extends BaseLineService {
   /**
    * Check if the stored follower status matches the given userId and isSubscribed is true
    */
-  async checkFollowerStatus(userId: string): Promise<boolean> {
+  async checkFollowerStatus(_userId: string): Promise<boolean> {
     try {
       const { user } = await getAuthData();
-      const stored = user.has_followed_bot;
-      if (!stored) {
-        console.log(
-          '[LINE Subscription] No stored status found for user:',
-          userId,
-          '- defaulting to not subscribed'
-        );
-        return false;
-      }
-      let parsed;
-      try {
-        parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
-      } catch (e) {
-        console.log('[LINE Subscription] Error parsing stored follower status:', e);
-        return false;
-      }
-      if (parsed.userId === userId && parsed.isSubscribed === true) {
-        return true;
-      }
-      return false;
+      return !!user.has_followed_bot;
     } catch (error) {
       console.log('[LINE Subscription] Error checking follower status:', error);
       return false;

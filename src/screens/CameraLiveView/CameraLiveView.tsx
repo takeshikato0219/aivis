@@ -663,9 +663,7 @@ const CameraLiveView: React.FC = () => {
           <View style={[styles.videoContainer, styles.loadingOverlay]}>
             <ActivityIndicator size="small" color="#FFF" />
             <Text style={styles.loadingText}>
-              {!streamHtmlUrl
-                ? t('bluetoothScreen.connecting')
-                : t('liveStream.loadingStream')}
+              {!streamHtmlUrl ? t('bluetoothScreen.connecting') : t('liveStream.loadingStream')}
             </Text>
           </View>
         ) : null}
@@ -674,9 +672,7 @@ const CameraLiveView: React.FC = () => {
           <View style={styles.loadingIndicatorOverlay}>
             <ActivityIndicator size="small" color="#FFF" />
             <Text style={styles.loadingText}>
-              {!streamHtmlUrl
-                ? t('bluetoothScreen.connecting')
-                : t('liveStream.loadingStream')}
+              {!streamHtmlUrl ? t('bluetoothScreen.connecting') : t('liveStream.loadingStream')}
             </Text>
           </View>
         ) : null}

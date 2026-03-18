@@ -357,7 +357,7 @@ const Login: React.FC = () => {
       ).unwrap();
       const profile = await Line.getProfile();
       if (profile) {
-        await authService.linkLineAccount(profile.userId, profile.displayName);
+        await authService.linkLineAccount(profile.userId);
       }
       await handleLoginSuccess(loginResult);
     } catch (err: any) {
