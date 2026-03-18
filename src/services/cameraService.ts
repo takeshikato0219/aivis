@@ -121,9 +121,7 @@ class CameraService {
   }
 
   async countDetections(cameraId: string): Promise<any> {
-    const response = await axiosInstance.get(`${API_ENDPOINTS.DETECTIONS}/count`, {
-      params: { camera_id: cameraId },
-    });
+    const response = await axiosInstance.get(`${API_ENDPOINTS.CAMERAS}/${cameraId}/stats/family`);
     return response.data;
   }
 }

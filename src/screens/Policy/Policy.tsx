@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   StatusBar,
@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   useWindowDimensions,
-  ActivityIndicator, // Added import
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { styles } from './Policy.style';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,14 +54,54 @@ const Policy = () => {
     if (type) fetchPolicy();
   }, [type]);
 
+  const contentWidth = useMemo(() => width - 48, [width]);
+
+  const tagsStyles = useMemo(
+    () => ({
+      p: { marginBottom: 12, color: '#fff' },
+      strong: { fontWeight: 'bold' as const, color: '#fff' },
+      b: { fontWeight: 'bold' as const, color: '#fff' },
+      em: { fontStyle: 'italic' as const, color: '#fff' },
+      i: { fontStyle: 'italic' as const, color: '#fff' },
+    }),
+    []
+  );
+
+  const fallbackFonts = useMemo(
+    () =>
+      Platform.select({
+        ios: {
+          serif: 'Georgia',
+          'sans-serif': 'Helvetica',
+          monospace: 'Courier',
+        },
+        android: {
+          serif: 'serif',
+          'sans-serif': 'sans-serif',
+          monospace: 'monospace',
+        },
+        default: {
+          serif: 'serif',
+          'sans-serif': 'sans-serif',
+          monospace: 'monospace',
+        },
+      }),
+    []
+  );
+
   // Extracted policy content node
   let policyContentNode: React.ReactNode;
   if (policyContent) {
     policyContentNode = (
       <RenderHTML
-        contentWidth={width}
+        contentWidth={contentWidth}
         source={{ html: policyContent }}
         baseStyle={styles.contentText}
+        enableCSSInlineProcessing
+        tagsStyles={tagsStyles}
+        fallbackFonts={fallbackFonts}
+        enableExperimentalGhostLinesPrevention
+        enableExperimentalBRCollapsing
       />
     );
   } else {

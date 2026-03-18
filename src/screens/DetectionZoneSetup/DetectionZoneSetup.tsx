@@ -93,7 +93,6 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   );
   const [activeEntryExitPoint, setActiveEntryExitPoint] = useState<number | null>(null);
   const [isLeftIn, setIsLeftIn] = useState(true);
-  // Dùng route.params.liveUrl cho lần đầu để hiển thị ngay (tránh chờ API), fetchLiveUrl chạy song song để refresh token
   const [streamWsUrl, setStreamWsUrl] = useState<string>(route.params.liveUrl || '');
   const [streamHtmlUrl, setStreamHtmlUrl] = useState(() =>
     buildStreamHtmlUrl(route.params.liveUrl)

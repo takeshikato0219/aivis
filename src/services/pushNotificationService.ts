@@ -93,32 +93,47 @@ class PushNotificationService {
   }
 
   /**
-   * Display notifications when receiving push notifications.
+   * Display notifications when receiving push notifications (foreground on both Android & iOS).
    */
   private async displayForegroundNotification(remoteMessage: any): Promise<void> {
-    if (Platform.OS !== 'android') return;
-
     try {
-      await notifee.createChannel({
-        id: ANDROID_CHANNEL_ID,
-        name: i18n.t('pushNotification.channelName'),
-        importance: AndroidImportance.HIGH,
-      });
-
       const title =
         remoteMessage.notification?.title ??
         remoteMessage.data?.title ??
         i18n.t('pushNotification.defaultTitle');
-      const body = remoteMessage.notification?.body ?? remoteMessage.data?.body ?? '';
+      const body =
+        remoteMessage.notification?.body ??
+        remoteMessage.data?.body ??
+        remoteMessage.data?.message ??
+        '';
 
-      await notifee.displayNotification({
+      const notificationPayload: Parameters<typeof notifee.displayNotification>[0] = {
         title,
         body,
-        android: {
+      };
+
+      if (Platform.OS === 'android') {
+        await notifee.createChannel({
+          id: ANDROID_CHANNEL_ID,
+          name: i18n.t('pushNotification.channelName'),
+          importance: AndroidImportance.HIGH,
+        });
+        notificationPayload.android = {
           channelId: ANDROID_CHANNEL_ID,
           pressAction: { id: 'default' },
-        },
-      });
+        };
+      } else {
+        notificationPayload.ios = {
+          foregroundPresentationOptions: {
+            banner: true,
+            list: true,
+            badge: true,
+            sound: true,
+          },
+        };
+      }
+
+      await notifee.displayNotification(notificationPayload);
     } catch (error) {
       console.error('[PushNotification] displayForegroundNotification error:', error);
     }

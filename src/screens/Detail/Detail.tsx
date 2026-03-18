@@ -85,7 +85,13 @@ const Detail = () => {
   const [modes, setModes] = useState<any[]>([]);
   const [detailModeId, setDetailModeId] = useState<string | null>(null);
   const [countFace, setCountFace] = useState<number>(0);
-  const [countDetectionMap, setCountDetectionMap] = useState<Record<string, number>>({});
+  const [countDetectionData, setCountDetectionData] = useState<{
+    animal_detection_count: number;
+    home_return_count: { current: number; total: number };
+    live_camera_count: number;
+    todays_passerby_count: number;
+    unregistered_detection_count: number;
+  } | null>(null);
 
   const getRulesMaster = async () => {
     try {
@@ -118,8 +124,8 @@ const Detail = () => {
   const getCountDetection = useCallback(async () => {
     try {
       const response = await cameraService.countDetections(camera.id);
-      if (response.success && response.data && response.data.event_type) {
-        setCountDetectionMap(response.data.event_type);
+      if (response.success && response.data) {
+        setCountDetectionData(response.data);
       }
     } catch (err) {
       console.warn('Failed to fetch detection count:', err);
@@ -342,14 +348,19 @@ const Detail = () => {
 
   const cameraListWithIcons = defaultRuleConfigs.map((config) => {
     const rule = rulesList.find((r) => r.code === config.code);
-    const count = countDetectionMap[config.code] ?? 0;
-    let counterText;
-    if (config.icon === IconHome) {
-      counterText = `${count}/${countFace}人`;
-    } else if (config.icon === IconBear) {
-      counterText = `${count}`;
+    const data = countDetectionData;
+    let counterText: string;
+    if (config.code === 'home_return_count') {
+      const hr = data?.home_return_count ?? { current: 0, total: 0 };
+      counterText = `${hr.current}/${hr.total}人`;
+    } else if (config.code === 'creature_detection') {
+      counterText = `${data?.animal_detection_count ?? 0}`;
+    } else if (config.code === 'daily_passerby') {
+      counterText = `${data?.todays_passerby_count ?? 0}人`;
+    } else if (config.code === 'unregistered_detection' && workflowName === 'Family') {
+      counterText = `${data?.unregistered_detection_count ?? 0}人`;
     } else {
-      counterText = `${count}人`;
+      counterText = '0人';
     }
     if (rule) {
       return {
@@ -380,7 +391,7 @@ const Detail = () => {
     icon: IconLive,
     iconName: 'IconLive',
     handler: handleCameraPress,
-    counter: '1人',
+    counter: `${countDetectionData?.live_camera_count ?? 0}人`,
   };
   const creatureDetectionIdx = cameraListWithIcons.findIndex((item) => item.icon === IconBear);
   let cameraListWithIconsWithLive;
@@ -499,10 +510,11 @@ const Detail = () => {
   };
 
   useEffect(() => {
+    getCountDetection();
     let intervalId: NodeJS.Timeout | null = null;
     if (camera.id) {
-      getCountDetection();
-      intervalId = setInterval(getCountDetection, 2000);
+      // getCountDetection();
+      intervalId = setInterval(getCountDetection, 5000);
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
