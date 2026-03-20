@@ -4,6 +4,7 @@ import { Platform, PermissionsAndroid } from 'react-native';
 import i18n from '@/i18n';
 import authService from '@/services/authService';
 import { store } from '@redux/store';
+import { emitCountDetectionEvent } from '@/services/countDetectionEventService';
 
 const ANDROID_CHANNEL_ID = 'fcm_default_channel';
 
@@ -93,10 +94,20 @@ class PushNotificationService {
   }
 
   /**
+   * Check if notification should be suppressed (silent/background data-only).
+   */
+  private shouldSuppressNotification(remoteMessage: any): boolean {
+    return !!remoteMessage?.data?.event_type;
+  }
+
+  /**
    * Display notifications when receiving push notifications (foreground on both Android & iOS).
    */
   private async displayForegroundNotification(remoteMessage: any): Promise<void> {
     try {
+      if (this.shouldSuppressNotification(remoteMessage)) {
+        return;
+      }
       const title =
         remoteMessage.notification?.title ??
         remoteMessage.data?.title ??
@@ -153,6 +164,14 @@ class PushNotificationService {
       this.unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
         console.log('[PushNotification] Foreground message:', remoteMessage);
         await this.displayForegroundNotification(remoteMessage);
+        if (remoteMessage?.data?.event_type) {
+          const eventType = remoteMessage.data.event_type;
+          const cameraId = remoteMessage.data.camera_id;
+          emitCountDetectionEvent({
+            event_type: String(eventType),
+            camera_id: cameraId != null ? String(cameraId) : undefined,
+          });
+        }
       });
 
       // Listen for notification opened (user tapped notification)

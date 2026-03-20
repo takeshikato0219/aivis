@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StatusBar,
@@ -15,6 +15,7 @@ import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import policyService from '@/services/policyService';
 import RenderHTML from 'react-native-render-html';
+import { policyRenderHtmlConfig } from './Policy.renderHtmlConfig';
 
 type PolicyParams = { type: 'privacy' | 'terms' };
 type PolicyRouteProp = RouteProp<{ Policy: PolicyParams }, 'Policy'>;
@@ -53,32 +54,6 @@ const Policy = () => {
     if (type) fetchPolicy();
   }, [type]);
 
-  const htmlStyles = useMemo(
-    () => ({
-      baseStyle: {
-        color: '#fff',
-        fontSize: 16,
-        lineHeight: 24,
-        fontFamily: 'System',
-      },
-      tagsStyles: {
-        body: { color: '#fff', fontSize: 16, lineHeight: 24 },
-        p: { color: '#fff', fontSize: 16, marginVertical: 8, lineHeight: 24 },
-        h1: { color: '#fff', fontSize: 32, fontWeight: '700', marginVertical: 24, lineHeight: 40 },
-        h2: { color: '#fff', fontSize: 28, fontWeight: '700', marginVertical: 20, lineHeight: 36 },
-        h3: { color: '#fff', fontSize: 22, fontWeight: '600', marginVertical: 16, lineHeight: 28 },
-        h4: { color: '#fff', fontSize: 18, fontWeight: '600', marginVertical: 12, lineHeight: 24 },
-        strong: { color: '#fff', fontWeight: '700' },
-        b: { color: '#fff', fontWeight: '700' },
-        a: { color: '#007bff', textDecorationLine: 'underline' },
-        li: { color: '#fff', fontSize: 16, marginVertical: 4, lineHeight: 24 },
-        ul: { color: '#fff', marginVertical: 8, paddingLeft: 20 },
-        ol: { color: '#fff', marginVertical: 8, paddingLeft: 20 },
-      },
-    }),
-    []
-  );
-
   // Extracted policy content node
   let policyContentNode: React.ReactNode;
   if (policyContent) {
@@ -86,9 +61,7 @@ const Policy = () => {
       <RenderHTML
         contentWidth={width}
         source={{ html: policyContent }}
-        baseStyle={htmlStyles.baseStyle}
-        // @ts-ignore
-        tagsStyles={htmlStyles.tagsStyles}
+        {...policyRenderHtmlConfig}
       />
     );
   } else {

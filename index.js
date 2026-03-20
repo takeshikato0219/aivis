@@ -10,9 +10,16 @@ import { name as appName } from './app.json';
 
 const ANDROID_CHANNEL_ID = 'fcm_default_channel';
 
+// Check if notification should be suppressed (silent/background data-only)
+const shouldSuppressNotification = (remoteMessage) => !!remoteMessage?.data?.event_type;
+
 // Background message handler - must be registered before App
 messaging().setBackgroundMessageHandler(async (remoteMessage) => {
   console.log('[PushNotification] Background message:', remoteMessage);
+
+  if (shouldSuppressNotification(remoteMessage)) {
+    return;
+  }
 
   if (Platform.OS === 'android' && !remoteMessage.notification) {
     try {

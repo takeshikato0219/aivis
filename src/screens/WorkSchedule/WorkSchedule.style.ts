@@ -276,10 +276,21 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(28, 44, 60, 0.55)',
     color: COLORS.card,
   },
-  select2Trigger: {
+  select2Row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: 'rgba(28, 44, 60, 0.55)',
+    borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    gap: 8,
+  },
+  select2Trigger: {
+    flex: 1,
+  },
+  select2ClearBtn: {
+    padding: 4,
   },
   button: {
     paddingHorizontal: 16,

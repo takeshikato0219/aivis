@@ -232,6 +232,7 @@ const modalStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0B0F14',
+    paddingTop: 10,
   },
   header: {
     flexDirection: 'row',

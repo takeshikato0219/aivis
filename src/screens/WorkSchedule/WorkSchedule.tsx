@@ -21,6 +21,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import { WorkScheduleRouteProp } from '@navigation/types';
 import cameraService from '@/services/cameraService';
 import { showCommonAlert } from '@components/Alert/Alert';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Weekday = {
   key: string;
@@ -151,6 +152,7 @@ export default function WorkSchedule() {
   }, []);
 
   const handleSave = async () => {
+    if (saving) return;
     setSaving(true);
     try {
       const member_ids = select2Value;
@@ -257,36 +259,47 @@ export default function WorkSchedule() {
         {code === 'home_return_count' || code === 'unregistered_detection' ? (
           <View style={styles.multipleSelectRow}>
             <Text style={styles.sectionLabel}>{t('workSchedule.selectFaceToApply')}</Text>
-            <TouchableOpacity
-              style={[styles.styleMultipleSelectRow, styles.select2Trigger]}
-              onPress={() => setOpenSelect2(true)}
-              activeOpacity={0.8}
-            >
-              {select2Value.length > 0 ? (
-                <View style={styles.memberChipRow}>
-                  {select2Value
-                    .map((id) => members.find((m) => m.id === id))
-                    .filter(Boolean)
-                    .map((m) => (
-                      <View key={m!.id} style={[styles.memberChip, styles.memberChipActive]}>
-                        <Text style={[styles.memberChipText, styles.memberChipTextActive]}>
-                          {m!.name}
-                        </Text>
-                      </View>
-                    ))}
-                </View>
-              ) : (
-                <Text
-                  style={[
-                    styles.dropDownPlaceholderStyleEnabled,
-                    // eslint-disable-next-line react-native/no-inline-styles
-                    { opacity: 0.7 },
-                  ]}
+            <View style={styles.select2Row}>
+              <TouchableOpacity
+                style={styles.select2Trigger}
+                onPress={() => setOpenSelect2(true)}
+                activeOpacity={0.8}
+              >
+                {select2Value.length > 0 ? (
+                  <View style={styles.memberChipRow}>
+                    {select2Value
+                      .map((id) => members.find((m) => m.id === id))
+                      .filter(Boolean)
+                      .map((m) => (
+                        <View key={m!.id} style={[styles.memberChip, styles.memberChipActive]}>
+                          <Text style={[styles.memberChipText, styles.memberChipTextActive]}>
+                            {m!.name}
+                          </Text>
+                        </View>
+                      ))}
+                  </View>
+                ) : (
+                  <Text
+                    style={[
+                      styles.dropDownPlaceholderStyleEnabled,
+                      // eslint-disable-next-line react-native/no-inline-styles
+                      { opacity: 0.7 },
+                    ]}
+                  >
+                    {t('workSchedule.selectFaceToApply')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              {select2Value.length > 0 && (
+                <TouchableOpacity
+                  style={styles.select2ClearBtn}
+                  onPress={() => setSelect2Value([])}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  {t('workSchedule.selectFaceToApply')}
-                </Text>
+                  <Icon name="close-circle" size={24} color="rgba(234,241,247,0.8)" />
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </View>
             {openSelect2 && (
               <GroupedMemberPicker
                 members={members}
@@ -387,9 +400,13 @@ export default function WorkSchedule() {
 
           {/* Save button */}
           <Pressable
-            onPress={handleSave}
+            onPress={saving ? undefined : handleSave}
             disabled={saving}
-            style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.9 }]}
+            style={({ pressed }) => [
+              styles.saveBtn,
+              saving && { backgroundColor: '#ccc' },
+              pressed && !saving && { opacity: 0.9 },
+            ]}
           >
             <Text style={styles.saveText}>{t('workSchedule.save')}</Text>
           </Pressable>

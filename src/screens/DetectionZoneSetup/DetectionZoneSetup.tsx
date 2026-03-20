@@ -546,6 +546,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     if (isEntryExitInvalid()) {
       showCommonAlert({
         title: t('detectionZone.setupError'),

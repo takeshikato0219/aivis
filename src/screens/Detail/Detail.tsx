@@ -1,16 +1,16 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ImageBackground,
+  Alert,
   Image,
+  ImageBackground,
   ScrollView,
   StatusBar,
-  Alert,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
@@ -20,37 +20,32 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import SettingsIcon from '@assets/svg/icon-setting.svg';
 import LogoDetail from '@assets/svg/logo-detail.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
-import IconWarningUnActive from '@assets/svg/icon-warning-unactive.svg';
-import IconWarningActive from '@assets/svg/icon-warning-active.svg';
-import IconSafeActive from '@assets/svg/icon-safe-active.svg';
-import IconSafeUnActive from '@assets/svg/icon-safe-unactive.svg';
-import IconUnlockActive from '@assets/svg/icon-lock-active.svg';
-import IconUnlockUnActive from '@assets/svg/icon-lock-unactive.svg';
 import RetangleImage from '@assets/png/rectangle-home.png';
-import CameraHomeDetailBgPng from '@assets/png/camera-home-detail-bg.png';
-import CameraFactoryDetailBgPng from '@assets/png/camera-factory-detail-bg.png';
-import CameraShopDetailBgPng from '@assets/png/camera-shop-detail-bg.png';
 import IconHome from '@assets/svg/icon-home.svg';
 import IconPerson from '@assets/svg/icon-person.svg';
 import IconSuspect from '@assets/svg/icon-suspect.svg';
 import IconLive from '@assets/svg/icon-live.svg';
 import IconBear from '@assets/svg/icon-bear.svg';
 import IconListFace from '@assets/svg/icon-list-face.svg';
-import IconMark from '@assets/svg/face-mask-icon.svg';
-import IconGlove from '@assets/svg/gloves-icon.svg';
 
 import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/types';
 import { COLORS } from '@constants/theme';
 import rulesService from '@/services/rulesService';
 import cameraService from '@/services/cameraService';
 import faceService from '@/services/faceService';
+import {
+  applyCountIncrement,
+  subscribeCountDetectionEvent,
+} from '@/services/countDetectionEventService';
 
-const livingItem = {
-  id: '4',
-  name: 'ライブカメラ',
-  status: true,
-  counter: '1',
-};
+import { MODE_BACKGROUNDS, MODE_ICONS, RULE_CONFIGS_BY_WORKFLOW } from './Detail.constants';
+import type {
+  CameraListItem,
+  CountDetectionData,
+  FilterItem,
+  RuleConfig,
+  WorkflowType,
+} from './Detail.types';
 
 const ICONS = [IconHome, IconPerson, IconSuspect, IconLive, IconBear, IconListFace];
 const ICON_NAMES = [
@@ -64,13 +59,54 @@ const ICON_NAMES = [
   'IconGlove',
 ];
 
-const MODE_ICONS = [
-  { iconActive: IconWarningActive, iconUnActive: IconWarningUnActive },
-  { iconActive: IconSafeActive, iconUnActive: IconSafeUnActive },
-  { iconActive: IconUnlockActive, iconUnActive: IconUnlockUnActive },
-];
+const LIVING_ITEM_BASE = { id: '4', name: 'ライブカメラ', status: true, counter: '1' };
 
 const ItemSeparator = () => <View style={styles.itemSeparator} />;
+
+const getWorkflowType = (workflowName: string): WorkflowType => {
+  if (workflowName === 'Store') return 'Store';
+  if (workflowName === 'Enterprise') return 'Enterprise';
+  return 'Family';
+};
+
+const getCounterText = (
+  code: string,
+  workflowType: WorkflowType,
+  data: CountDetectionData | null
+): string => {
+  if (!data) return '0人';
+  if (code === 'home_return_count') {
+    const hr = data.home_return_count ?? { current: 0, total: 0 };
+    return `${hr.current}/${hr.total}人`;
+  }
+  if (code === 'creature_detection') return `${data.creature_detection ?? 0}`;
+  if (code === 'daily_passerby') return `${data.daily_passerby ?? 0}人`;
+  if (code === 'unregistered_detection' && workflowType === 'Family') {
+    return `${data.unregistered_detection ?? 0}人`;
+  }
+  return '0人';
+};
+
+const buildRuleConfigs = (
+  workflowType: WorkflowType,
+  handlers: {
+    notification: (itemName: string, iconName: string, code: string) => void;
+    customerReport: (itemName: string, iconName: string) => void;
+  }
+): RuleConfig[] => {
+  const configs = RULE_CONFIGS_BY_WORKFLOW[workflowType];
+  return configs.map(({ code, icon, iconName, handlerType }) => ({
+    code,
+    icon,
+    iconName,
+    handler:
+      handlerType === 'notification'
+        ? (name: string, iconParam: string) => handlers.notification(name, iconParam, code)
+        : handlerType === 'customerReport'
+          ? (name: string, iconParam: string) => handlers.customerReport(name, iconParam)
+          : '',
+  }));
+};
 
 const Detail = () => {
   const navigation = useNavigation<DetailScreenNavigationProp>();
@@ -79,20 +115,48 @@ const Detail = () => {
   const camera = route.params?.camera;
   const workflowStatuses = route.params?.workflowStatuses;
   const title = camera?.name || 'Detail';
+
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [lastFrameUri, setLastFrameUri] = useState<string | null>(null);
   const [rulesList, setRulesList] = useState<any[]>([]);
   const [modes, setModes] = useState<any[]>([]);
   const [detailModeId, setDetailModeId] = useState<string | null>(null);
   const [countFace, setCountFace] = useState<number>(0);
-  const [countDetectionData, setCountDetectionData] = useState<{
-    animal_detection_count: number;
-    home_return_count: { current: number; total: number };
-    live_camera_count: number | string;
-    todays_passerby_count: number;
-    unregistered_detection_count: number;
-  } | null>(null);
+  const [countDetectionData, setCountDetectionData] = useState<CountDetectionData | null>(null);
   const [livePersonCount, setLivePersonCount] = useState<number | null>(null);
+
+  const facilityId = camera?.facility_id ?? (camera as any)?.facility?.id;
+  const matchedWorkflow = workflowStatuses?.find((ws) => String(ws.id) === String(facilityId));
+  const workflowName = matchedWorkflow?.name ?? '';
+  const workflowType = getWorkflowType(workflowName);
+
+  const handleCameraPress = () => {
+    navigation.navigate('CameraLive', {
+      cameraId: camera.id,
+      cameraName: camera.name,
+    });
+  };
+
+  const handlePressNotification = (itemName: string, iconName: string, code: string) => {
+    navigation.navigate('ListNotificationCamera', {
+      title: itemName,
+      icon: iconName,
+      code,
+      cameraId: camera.id,
+    });
+  };
+
+  const handlePressCustomerReport = (itemName: string, iconName: string) => {
+    navigation.navigate('CustomerReport', { title: itemName, icon: iconName });
+  };
+
+  const goToFaceUpload = () => {
+    navigation.navigate('ListFace', { type: '' });
+  };
+
+  const handleSetupDetectionZone = () => {
+    navigation.navigate('SettingAI', { camera });
+  };
 
   const getRulesMaster = async () => {
     try {
@@ -155,17 +219,14 @@ const Detail = () => {
   useFocusEffect(
     useCallback(() => {
       setLastFrameUri(null);
-
       const loadLastFrame = async () => {
         try {
           const savedPath = await AsyncStorage.getItem(`camera_last_frame_${camera?.id}`);
           if (savedPath) {
             const exists = await RNFS.exists(savedPath);
-            if (exists) {
-              setLastFrameUri(`file://${savedPath}?t=${Date.now()}`);
-            } else {
-              setLastFrameUri(null);
-            }
+            setLastFrameUri(exists ? `file://${savedPath}?t=${Date.now()}` : null);
+          } else {
+            setLastFrameUri(null);
           }
         } catch (err) {
           console.warn('Failed to load last frame:', err);
@@ -188,236 +249,68 @@ const Detail = () => {
     }
   }, [modes, detailModeId, activeIndex]);
 
-  const backgrounds = [CameraShopDetailBgPng, CameraHomeDetailBgPng, CameraFactoryDetailBgPng];
+  const ruleConfigs = buildRuleConfigs(workflowType, {
+    notification: handlePressNotification,
+    customerReport: handlePressCustomerReport,
+  });
 
-  const statusText =
-    camera?.status == null
-      ? 'Offline'
-      : typeof camera.status === 'object'
-        ? camera.status.name_trans
-        : camera.status || 'Online';
-
-  const isOnline =
-    statusText.toLowerCase().includes('online') || statusText.toLowerCase().includes('オンライン');
-
-  const handleCameraPress = () => {
-    navigation.navigate('CameraLive', {
-      cameraId: camera.id,
-      cameraName: camera.name,
-    });
-  };
-
-  const handlePressNotification = (itemName: string, iconName: string, code: string) => {
-    navigation.navigate('ListNotificationCamera', {
-      title: itemName,
-      icon: iconName,
-      code: code,
-      cameraId: camera.id,
-    });
-  };
-
-  const handlePressCustomerReport = (itemName: string, iconName: string) => {
-    navigation.navigate('CustomerReport', { title: itemName, icon: iconName });
-  };
-
-  const goToFaceUpload = () => {
-    navigation.navigate('ListFace', { type: '' });
-  };
-
-  type CameraListItem = {
-    id: any;
-    name: any;
-    status: any;
-    counter: string;
-    code?: string;
-    icon?: any;
-    iconName?: string;
-    handler?: any;
-  };
-
-  const defaultRuleConfigsFamily = [
-    {
-      code: 'home_return_count',
-      icon: IconHome,
-      iconName: 'IconHome',
-      handler: handlePressNotification,
-    },
-    {
-      code: 'daily_passerby',
-      icon: IconPerson,
-      iconName: 'IconPerson',
-      handler: handlePressCustomerReport,
-    },
-    {
-      code: 'unregistered_detection',
-      icon: IconSuspect,
-      iconName: 'IconSuspect',
-      handler: handlePressNotification,
-    },
-    {
-      code: 'creature_detection',
-      icon: IconBear,
-      iconName: 'IconBear',
-      handler: handlePressNotification,
-    },
-  ];
-
-  const defaultRuleConfigsStore = [
-    {
-      code: 'visitor_count',
-      icon: IconHome,
-      iconName: 'IconHome',
-      handler: handlePressNotification,
-    },
-    {
-      code: 'customer_attribute_report',
-      icon: IconPerson,
-      iconName: 'IconPerson',
-      handler: handlePressCustomerReport,
-    },
-    {
-      code: 'suspicious_behavior_detection',
-      icon: IconSuspect,
-      iconName: 'IconSuspect',
-      handler: handlePressNotification,
-    },
-    {
-      code: '',
-      icon: IconBear,
-      iconName: 'IconBear',
-      handler: handlePressNotification,
-    },
-    {
-      code: 'attendance',
-      icon: '',
-      iconName: '',
-      handler: '',
-    },
-  ];
-
-  const defaultRuleConfigsEnterprise = [
-    {
-      code: '',
-      icon: IconHome,
-      iconName: 'IconHome',
-      handler: '',
-    },
-    {
-      code: 'enterprise_attendance',
-      icon: IconPerson,
-      iconName: 'IconPerson',
-      handler: '',
-    },
-    {
-      code: 'unexpected_incident',
-      icon: IconPerson,
-      iconName: 'IconPerson',
-      handler: '',
-    },
-    {
-      code: 'helmet_wearing',
-      icon: IconSuspect,
-      iconName: 'IconSuspect',
-      handler: '',
-    },
-    {
-      code: 'mask_wearing',
-      icon: IconMark,
-      iconName: 'IconMask',
-      handler: '',
-    },
-    {
-      code: 'glove_wearing',
-      icon: IconGlove,
-      iconName: 'IconGlove',
-      handler: '',
-    },
-  ];
-
-  const facilityId = camera?.facility_id ?? (camera as any)?.facility?.id;
-  const matchedWorkflow = workflowStatuses?.find((ws) => String(ws.id) === String(facilityId));
-  const workflowName = matchedWorkflow?.name ?? '';
-
-  const defaultRuleConfigs =
-    workflowName === 'Family'
-      ? defaultRuleConfigsFamily
-      : workflowName === 'Store'
-        ? defaultRuleConfigsStore
-        : workflowName === 'Enterprise'
-          ? defaultRuleConfigsEnterprise
-          : defaultRuleConfigsFamily;
-
-  const cameraListWithIcons = defaultRuleConfigs.map((config) => {
+  const cameraListWithIcons: CameraListItem[] = ruleConfigs.map((config) => {
     const rule = rulesList.find((r) => r.code === config.code);
-    const data = countDetectionData;
-    let counterText: string;
-    if (config.code === 'home_return_count') {
-      const hr = data?.home_return_count ?? { current: 0, total: 0 };
-      counterText = `${hr.current}/${hr.total}人`;
-    } else if (config.code === 'creature_detection') {
-      counterText = `${data?.animal_detection_count ?? 0}`;
-    } else if (config.code === 'daily_passerby') {
-      counterText = `${data?.todays_passerby_count ?? 0}人`;
-    } else if (config.code === 'unregistered_detection' && workflowName === 'Family') {
-      counterText = `${data?.unregistered_detection_count ?? 0}人`;
-    } else {
-      counterText = '0人';
-    }
-    if (rule) {
-      return {
-        id: rule.id,
-        name: rule.rule_name,
-        status: rule.is_active,
-        counter: counterText,
-        code: rule.code,
-        icon: config.icon,
-        iconName: config.iconName,
-        handler: config.handler,
-      };
-    }
-    return {
-      id: config.code,
-      name: '',
-      status: false,
+    const counterText = getCounterText(config.code, workflowType, countDetectionData);
+    const baseItem = {
       counter: counterText,
       code: config.code,
       icon: config.icon,
       iconName: config.iconName,
       handler: config.handler,
     };
+    if (rule) {
+      return {
+        id: rule.id,
+        name: rule.rule_name,
+        status: rule.is_active,
+        ...baseItem,
+      };
+    }
+    return {
+      id: config.code,
+      name: '',
+      status: false,
+      ...baseItem,
+    };
   });
 
   const liveCameraWsUrl =
-    typeof countDetectionData?.live_camera_count === 'string' &&
-    countDetectionData.live_camera_count.startsWith('wss://')
-      ? countDetectionData.live_camera_count
+    typeof countDetectionData?.people_count_ws_url === 'string' &&
+    countDetectionData.people_count_ws_url.startsWith('wss://')
+      ? countDetectionData.people_count_ws_url
       : null;
 
   const displayLiveCount =
     livePersonCount !== null
       ? livePersonCount
-      : typeof countDetectionData?.live_camera_count === 'number'
-        ? countDetectionData.live_camera_count
+      : typeof countDetectionData?.people_count_ws_url === 'number'
+        ? countDetectionData.people_count_ws_url
         : 0;
 
-  const iconLiveItem = {
-    ...livingItem,
+  const iconLiveItem: CameraListItem = {
+    ...LIVING_ITEM_BASE,
     icon: IconLive,
     iconName: 'IconLive',
     handler: handleCameraPress,
     counter: `${displayLiveCount}人`,
   };
+
   const creatureDetectionIdx = cameraListWithIcons.findIndex((item) => item.icon === IconBear);
-  let cameraListWithIconsWithLive;
-  if (creatureDetectionIdx !== -1) {
-    cameraListWithIconsWithLive = [
-      ...cameraListWithIcons.slice(0, creatureDetectionIdx),
-      iconLiveItem,
-      ...cameraListWithIcons.slice(creatureDetectionIdx),
-    ];
-  } else {
-    cameraListWithIconsWithLive = [...cameraListWithIcons, iconLiveItem];
-  }
+  const cameraListWithIconsWithLive: CameraListItem[] =
+    creatureDetectionIdx !== -1
+      ? [
+          ...cameraListWithIcons.slice(0, creatureDetectionIdx),
+          iconLiveItem,
+          ...cameraListWithIcons.slice(creatureDetectionIdx),
+        ]
+      : [...cameraListWithIcons, iconLiveItem];
+
   const CAMERA_LIST: CameraListItem[] = [
     ...cameraListWithIconsWithLive,
     {
@@ -448,50 +341,55 @@ const Detail = () => {
     }, [fetchMembers])
   );
 
-  const handleSetupDetectionZone = () => {
-    navigation.navigate('SettingAI', {
-      camera: camera,
-    });
-  };
-
-  const getCameraListItemPressHandler = (item: any, idx: number) => {
+  const getCameraListItemPressHandler = (item: CameraListItem, idx: number) => {
     if (item.handler) {
       if (item.handler === goToFaceUpload) return goToFaceUpload;
-      if (item.handler === handlePressNotification) {
-        return () => item.handler(item.name, item.iconName, item.code);
+      if (item.handler === handleCameraPress) return handleCameraPress;
+      if (typeof item.handler === 'function') {
+        return () =>
+          (item.handler as (itemName: string, iconName: string) => void)(
+            item.name,
+            item.iconName ?? ''
+          );
       }
-      return () => item.handler(item.name, item.iconName);
     }
     if (idx === 3) return handleCameraPress;
-    return () => handlePressNotification(item.name, ICON_NAMES[idx], item.code);
+    return () => handlePressNotification(item.name, ICON_NAMES[idx], item.code ?? '');
   };
 
-  const filters =
+  const statusText =
+    camera?.status == null
+      ? 'Offline'
+      : typeof camera.status === 'object'
+        ? camera.status.name_trans
+        : camera.status || 'Online';
+
+  const filters: FilterItem[] =
     modes.length > 0
       ? modes.map((mode, idx) => ({
           name: mode.name_trans,
           description: mode.description_trans,
-          iconActive: MODE_ICONS[idx]?.iconActive || IconWarningActive,
-          iconUnActive: MODE_ICONS[idx]?.iconUnActive || IconWarningUnActive,
+          iconActive: MODE_ICONS[idx]?.iconActive ?? MODE_ICONS[0].iconActive,
+          iconUnActive: MODE_ICONS[idx]?.iconUnActive ?? MODE_ICONS[0].iconUnActive,
         }))
       : [
           {
             name: t('detail.alertMode'),
             description: t('detail.textNotification'),
-            iconActive: IconWarningActive,
-            iconUnActive: IconWarningUnActive,
+            iconActive: MODE_ICONS[0].iconActive,
+            iconUnActive: MODE_ICONS[0].iconUnActive,
           },
           {
             name: t('detail.safeMode'),
             description: t('detail.textNotification'),
-            iconActive: IconSafeActive,
-            iconUnActive: IconSafeUnActive,
+            iconActive: MODE_ICONS[1].iconActive,
+            iconUnActive: MODE_ICONS[1].iconUnActive,
           },
           {
             name: t('detail.releaseMode'),
             description: t('detail.textNotification'),
-            iconActive: IconUnlockActive,
-            iconUnActive: IconUnlockUnActive,
+            iconActive: MODE_ICONS[2].iconActive,
+            iconUnActive: MODE_ICONS[2].iconUnActive,
           },
         ];
 
@@ -510,30 +408,26 @@ const Detail = () => {
       t('common.confirm'),
       t('detail.doYouWantToSwitchMode'),
       [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('common.ok'),
-          onPress: () => handleUpdateMode(modeId),
-        },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.ok'), onPress: () => handleUpdateMode(modeId) },
       ],
       { cancelable: true }
     );
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      getCountDetection();
+    }, [getCountDetection])
+  );
+
   useEffect(() => {
-    getCountDetection();
-    let intervalId: NodeJS.Timeout | null = null;
-    if (camera.id) {
-      // getCountDetection();
-      intervalId = setInterval(getCountDetection, 5000);
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [camera.id, getCountDetection]);
+    return subscribeCountDetectionEvent((payload) => {
+      const cameraId = camera?.id != null ? String(camera.id) : undefined;
+      if (payload.camera_id && cameraId && payload.camera_id !== cameraId) return;
+      setCountDetectionData((prev) => applyCountIncrement(prev, payload.event_type));
+    });
+  }, [camera?.id]);
 
   useEffect(() => {
     if (!liveCameraWsUrl) {
@@ -553,18 +447,14 @@ const Detail = () => {
           // ignore parse errors
         }
       };
-      ws.onerror = () => {
-        ws?.close();
-      };
+      ws.onerror = () => ws?.close();
       ws.onclose = () => {
         ws = null;
       };
     };
     connect();
     return () => {
-      if (ws) {
-        ws.close();
-      }
+      ws?.close();
       setLivePersonCount(null);
     };
   }, [liveCameraWsUrl]);
@@ -573,7 +463,7 @@ const Detail = () => {
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
       <ImageBackground
-        source={activeIndex !== null ? backgrounds[activeIndex] : backgrounds[0]}
+        source={activeIndex !== null ? MODE_BACKGROUNDS[activeIndex] : MODE_BACKGROUNDS[0]}
         style={styles.backgroundImage}
         resizeMode="stretch"
         imageStyle={styles.imageStyle}
@@ -600,7 +490,7 @@ const Detail = () => {
             showsVerticalScrollIndicator={false}
           >
             <View>
-              <TouchableOpacity onPress={() => handleCameraPress()}>
+              <TouchableOpacity onPress={handleCameraPress}>
                 <View style={styles.card}>
                   <View style={styles.videoWrapper}>
                     <Image
@@ -612,7 +502,13 @@ const Detail = () => {
                     <View
                       style={[
                         styles.badgeDot,
-                        { backgroundColor: isOnline ? COLORS.FF0000 : COLORS.gray696969 },
+                        {
+                          backgroundColor:
+                            statusText.toLowerCase().includes('online') ||
+                            statusText.toLowerCase().includes('オンライン')
+                              ? COLORS.FF0000
+                              : COLORS.gray696969,
+                        },
                       ]}
                     />
                     <Text style={styles.badgeText}>{statusText}</Text>
@@ -655,7 +551,7 @@ const Detail = () => {
             </View>
             {/* Camera List */}
             {CAMERA_LIST.map((item, idx) => (
-              <View key={item.id}>
+              <View key={String(item.id)}>
                 {idx > 0 && <ItemSeparator />}
                 <TouchableOpacity
                   onPress={getCameraListItemPressHandler(item, idx)}
