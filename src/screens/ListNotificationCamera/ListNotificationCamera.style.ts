@@ -211,6 +211,11 @@ export const styles = StyleSheet.create({
     zIndex: 1,
     backgroundColor: 'transparent',
   },
+  loadMoreFooter: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   noDataContainer: {
     alignItems: 'center',
     marginTop: 32,

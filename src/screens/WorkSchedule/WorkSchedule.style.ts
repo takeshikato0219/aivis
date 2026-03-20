@@ -243,13 +243,11 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 8,
   },
   memberChip: {
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#2A9EC6',
     backgroundColor: '#F2F6FA',
@@ -277,6 +275,11 @@ export const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: 'rgba(28, 44, 60, 0.55)',
     color: COLORS.card,
+  },
+  select2Trigger: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
   button: {
     paddingHorizontal: 16,
@@ -313,5 +316,26 @@ export const styles = StyleSheet.create({
   dropDownBadgeTextStyleEnabled: {
     color: '#fff',
     opacity: 1,
+  },
+  listParentContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(234,241,247,0.16)',
+    backgroundColor: 'rgba(28, 44, 60, 0.8)',
+  },
+  listParentLabel: {
+    color: '#EAF1F7',
+    fontSize: scale(16),
+    fontWeight: '600',
+  },
+  listChildContainer: {
+    paddingVertical: 10,
+    paddingLeft: 32,
+    backgroundColor: 'rgba(28, 44, 60, 0.55)',
+  },
+  listChildLabel: {
+    color: 'rgba(234,241,247,0.9)',
+    fontSize: scale(15),
   },
 });

@@ -114,12 +114,15 @@ class NotificationsService {
   async getNotificationWithType(
     camera_id: string,
     event_type: string,
-    detected_at?: string
+    detected_at?: string,
+    pagination?: { page?: number; per_page?: number }
   ): Promise<DetectionResponse> {
-    const params: Record<string, string> = { camera_id, event_type };
+    const params: Record<string, string | number> = { camera_id, event_type };
     if (detected_at) {
       params.detected_at = detected_at;
     }
+    if (pagination?.page) params.page = pagination.page;
+    if (pagination?.per_page) params.per_page = pagination.per_page;
     const response = await axiosInstance.get<DetectionResponse>(`${API_ENDPOINTS.DETECTIONS}`, {
       params,
     });

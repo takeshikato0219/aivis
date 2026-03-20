@@ -88,10 +88,11 @@ const Detail = () => {
   const [countDetectionData, setCountDetectionData] = useState<{
     animal_detection_count: number;
     home_return_count: { current: number; total: number };
-    live_camera_count: number;
+    live_camera_count: number | string;
     todays_passerby_count: number;
     unregistered_detection_count: number;
   } | null>(null);
+  const [livePersonCount, setLivePersonCount] = useState<number | null>(null);
 
   const getRulesMaster = async () => {
     try {
@@ -386,12 +387,25 @@ const Detail = () => {
     };
   });
 
+  const liveCameraWsUrl =
+    typeof countDetectionData?.live_camera_count === 'string' &&
+    countDetectionData.live_camera_count.startsWith('wss://')
+      ? countDetectionData.live_camera_count
+      : null;
+
+  const displayLiveCount =
+    livePersonCount !== null
+      ? livePersonCount
+      : typeof countDetectionData?.live_camera_count === 'number'
+        ? countDetectionData.live_camera_count
+        : 0;
+
   const iconLiveItem = {
     ...livingItem,
     icon: IconLive,
     iconName: 'IconLive',
     handler: handleCameraPress,
-    counter: `${countDetectionData?.live_camera_count ?? 0}人`,
+    counter: `${displayLiveCount}人`,
   };
   const creatureDetectionIdx = cameraListWithIcons.findIndex((item) => item.icon === IconBear);
   let cameraListWithIconsWithLive;
@@ -520,6 +534,40 @@ const Detail = () => {
       if (intervalId) clearInterval(intervalId);
     };
   }, [camera.id, getCountDetection]);
+
+  useEffect(() => {
+    if (!liveCameraWsUrl) {
+      setLivePersonCount(null);
+      return;
+    }
+    let ws: WebSocket | null = null;
+    const connect = () => {
+      ws = new WebSocket(liveCameraWsUrl);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data?.type === 'person_count' && typeof data.person_count === 'number') {
+            setLivePersonCount(data.person_count);
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+      ws.onerror = () => {
+        ws?.close();
+      };
+      ws.onclose = () => {
+        ws = null;
+      };
+    };
+    connect();
+    return () => {
+      if (ws) {
+        ws.close();
+      }
+      setLivePersonCount(null);
+    };
+  }, [liveCameraWsUrl]);
 
   return (
     <View style={styles.container}>

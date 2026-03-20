@@ -565,6 +565,8 @@
       "sun": "Sun"
     },
     "selectFaceToApply": "Select face to apply",
+    "other": "Other",
+    "selectedCount": "{{count}} selected",
     "updateSuccessful": "Update successful",
     "updateFailed": "Update failed"
   },

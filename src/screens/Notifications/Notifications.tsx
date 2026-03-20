@@ -1,11 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  ImageBackground,
-  TouchableOpacity,
-  RefreshControl,
-  Platform,
-} from 'react-native';
+import { View, ImageBackground, TouchableOpacity, RefreshControl, Platform } from 'react-native';
 import { Text, Card, List } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppSetup } from '@hooks/useAppSetup';

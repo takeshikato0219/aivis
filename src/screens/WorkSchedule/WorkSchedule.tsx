@@ -7,8 +7,6 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
-  StyleProp,
-  ViewStyle,
 } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,8 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResponsive } from '@hooks/useResponsive';
 import { styles, CONTAINER_H_PADDING, CARD_PADDING } from './WorkSchedule.style';
 import IconClockWorkSchedule from '@assets/svg/icon-clock-workschedule.svg';
-import faceService, { Member } from '@/services/faceService';
-import DropDownPicker from 'react-native-dropdown-picker';
+import faceService, { Member, MemberRelationship } from '@/services/faceService';
+import { GroupedMemberPicker } from './GroupedMemberPicker';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { WorkScheduleRouteProp } from '@navigation/types';
 import cameraService from '@/services/cameraService';
@@ -46,25 +44,13 @@ const WEEKDAYS: Weekday[] = [
   { key: 'sun', label: '日' },
 ];
 
-// Move SaveButton to module scope
-interface SaveButtonProps {
-  style?: StyleProp<ViewStyle>;
-  onPress: () => void;
-  t: (key: string) => string;
-}
-const SaveButton = ({ style, onPress, t }: SaveButtonProps) => (
-  <Pressable style={[styles.button, style]} onPress={onPress}>
-    <Text style={styles.text}>{t('workSchedule.save')}</Text>
-  </Pressable>
-);
-
 export default function WorkSchedule() {
   const { t } = useTranslation();
   const { width } = useResponsive();
   const [members, setMembers] = useState<Member[]>([]);
+  const [relationships, setRelationships] = useState<MemberRelationship[]>([]);
   const [openSelect2, setOpenSelect2] = useState(false);
   const [select2Value, setSelect2Value] = useState<string[]>([]);
-  const [select2Items, setSelect2Items] = useState<{ label: string; value: string }[]>([]);
   const navigation = useNavigation();
   const route = useRoute<WorkScheduleRouteProp>();
   const camera = route.params?.camera;
@@ -155,13 +141,14 @@ export default function WorkSchedule() {
     }
   }, []);
 
-  const fetchRelationships = async () => {
+  const fetchRelationships = useCallback(async () => {
     try {
       const data = await faceService.getMemberRelationships();
+      setRelationships(data);
     } catch (error) {
       console.error('Failed to fetch member relationships:', error);
     }
-  };
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -235,22 +222,11 @@ export default function WorkSchedule() {
     }
   };
 
-  // Fetch members when component mounts
+  // Fetch members and relationships when component mounts
   useEffect(() => {
     fetchMembers();
-  }, [fetchMembers]);
-
-  useEffect(() => {
-    setSelect2Items(members.map((m) => ({ label: m.name, value: m.id })));
-  }, [members]);
-
-  const DropDownSaveButton = React.useCallback(
-    (props: { style?: StyleProp<ViewStyle> }) => (
-      <SaveButton style={props.style} onPress={() => setOpenSelect2(false)} t={t} />
-    ),
-
-    [t]
-  );
+    fetchRelationships();
+  }, [fetchMembers, fetchRelationships]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -281,29 +257,58 @@ export default function WorkSchedule() {
         {code === 'home_return_count' || code === 'unregistered_detection' ? (
           <View style={styles.multipleSelectRow}>
             <Text style={styles.sectionLabel}>{t('workSchedule.selectFaceToApply')}</Text>
-            <DropDownPicker
-              open={openSelect2}
-              value={select2Value}
-              items={select2Items}
-              setOpen={setOpenSelect2}
-              setValue={setSelect2Value}
-              setItems={setSelect2Items}
-              multiple={true}
-              mode="BADGE"
-              placeholder={t('workSchedule.selectFaceToApply')}
-              style={styles.styleMultipleSelectRow}
-              // eslint-disable-next-line react-native/no-inline-styles
-              placeholderStyle={{ color: '#fff' }}
-              badgeDotColors={['#2A9EC6']}
-              badgeColors={['#1d5cbb']}
-              // eslint-disable-next-line react-native/no-inline-styles
-              badgeTextStyle={{ color: '#fff' }}
-              zIndex={1000}
-              listMode="MODAL"
-              searchable={true}
-              searchPlaceholder={t('common.search')}
-              CloseIconComponent={DropDownSaveButton}
-            />
+            <TouchableOpacity
+              style={[styles.styleMultipleSelectRow, styles.select2Trigger]}
+              onPress={() => setOpenSelect2(true)}
+              activeOpacity={0.8}
+            >
+              {select2Value.length > 0 ? (
+                <View style={styles.memberChipRow}>
+                  {select2Value
+                    .map((id) => members.find((m) => m.id === id))
+                    .filter(Boolean)
+                    .map((m) => (
+                      <View key={m!.id} style={[styles.memberChip, styles.memberChipActive]}>
+                        <Text style={[styles.memberChipText, styles.memberChipTextActive]}>
+                          {m!.name}
+                        </Text>
+                      </View>
+                    ))}
+                </View>
+              ) : (
+                <Text
+                  style={[
+                    styles.dropDownPlaceholderStyleEnabled,
+                    // eslint-disable-next-line react-native/no-inline-styles
+                    { opacity: 0.7 },
+                  ]}
+                >
+                  {t('workSchedule.selectFaceToApply')}
+                </Text>
+              )}
+            </TouchableOpacity>
+            {openSelect2 && (
+              <GroupedMemberPicker
+                members={members}
+                relationships={relationships}
+                value={select2Value}
+                onChange={setSelect2Value}
+                placeholder={t('workSchedule.selectFaceToApply')}
+                onClose={() => setOpenSelect2(false)}
+                searchPlaceholder={t('common.search')}
+                saveButtonLabel={t('workSchedule.save')}
+                otherLabel={t('workSchedule.other')}
+                styles={{
+                  styleMultipleSelectRow: styles.styleMultipleSelectRow,
+                  listParentContainer: styles.listParentContainer,
+                  listParentLabel: styles.listParentLabel,
+                  listChildContainer: styles.listChildContainer,
+                  listChildLabel: styles.listChildLabel,
+                  button: styles.button,
+                  text: styles.text,
+                }}
+              />
+            )}
           </View>
         ) : undefined}
 

@@ -606,6 +606,8 @@
       "sun": "日"
     },
     "selectFaceToApply": "適用する顔を選択",
+    "other": "その他",
+    "selectedCount": "{{count}}件選択中",
     "updateSuccessful": "更新に成功しました",
     "updateFailed": "更新に失敗しました"
   },

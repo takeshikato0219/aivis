@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Modal,
   Pressable,
   ImageBackground,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import BackIcon from '@assets/svg/icon-back.svg';
@@ -27,6 +29,7 @@ import IconLive from '@assets/svg/icon-live.svg';
 import IconBear from '@assets/svg/icon-bear.svg';
 import IconListFace from '@assets/svg/icon-list-face.svg';
 import notificationsService, { Detection } from '@/services/notificationsService';
+import LoadingComponent from '@components/Loading/Loading';
 
 interface NotificationItem {
   id: string;
@@ -92,11 +95,18 @@ const mapDetectionToNotificationItem = (d: Detection): NotificationItem => {
   };
 };
 
+const PAGE_SIZE = 15;
+
 const ListNotificationCamera = () => {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [listData, setListData] = useState<NotificationItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
   const route = useRoute<RouteProp<AppStackParamList, 'ListNotificationCamera'>>();
   const { t } = useTranslation();
@@ -107,26 +117,61 @@ const ListNotificationCamera = () => {
   const eventType = route.params?.code;
   const cameraId = route.params?.cameraId;
 
+  const handleList = useCallback(
+    async (pageToLoad = 1, isReload = false) => {
+      if (!cameraId || !eventType) return;
+      if (isReload) {
+        setRefreshing(true);
+      } else if (pageToLoad === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      try {
+        const response = await notificationsService.getNotificationWithType(
+          cameraId,
+          eventType,
+          selectedDate,
+          { page: pageToLoad, per_page: PAGE_SIZE }
+        );
+        if (response.success && response.data) {
+          const newItems = response.data.map(mapDetectionToNotificationItem);
+          if (isReload || pageToLoad === 1) {
+            setListData(newItems);
+          } else {
+            setListData((prev) => [...prev, ...newItems]);
+          }
+          const meta = response.meta;
+          setHasMore(meta?.has_next ?? newItems.length === PAGE_SIZE);
+          setPage(pageToLoad);
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        if (isReload || pageToLoad === 1) setListData([]);
+        setHasMore(false);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+        setRefreshing(false);
+      }
+    },
+    [cameraId, eventType, selectedDate]
+  );
+
   useEffect(() => {
-    handleList();
+    handleList(1, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cameraId, eventType, selectedDate]);
 
-  const handleList = async () => {
-    if (!cameraId || !eventType) return;
-    try {
-      const response = await notificationsService.getNotificationWithType(
-        cameraId,
-        eventType,
-        selectedDate
-      );
-      if (response.success && response.data) {
-        setListData(response.data.map(mapDetectionToNotificationItem));
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+  const onRefresh = useCallback(() => {
+    handleList(1, true);
+  }, [handleList]);
+
+  const handleLoadMore = useCallback(() => {
+    if (!loading && !loadingMore && hasMore) {
+      handleList(page + 1, false);
     }
-  };
+  }, [loading, loadingMore, hasMore, page, handleList]);
 
   const handleItemPress = (item: NotificationItem) => {
     if (item.videoUrl) {
@@ -168,6 +213,15 @@ const ListNotificationCamera = () => {
   };
 
   const filteredData = listData.filter((item) => item.date === selectedDate);
+
+  const renderListFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.loadMoreFooter}>
+        <ActivityIndicator size="small" color="#2196f3" />
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -228,16 +282,25 @@ const ListNotificationCamera = () => {
                 <Icon name="chevron-right" size={16} color="#666" />
               </Pressable>
             </View>
+            {loading && page === 1 && <LoadingComponent />}
             <FlatList
               data={filteredData}
               renderItem={renderNotificationItem}
               keyExtractor={(item) => item.id}
               style={styles.notificationList}
               showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2196f3" />
+              }
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={renderListFooter}
               ListEmptyComponent={
-                <View style={styles.noDataContainer}>
-                  <Text style={styles.noDataText}>{t('home.noData')}</Text>
-                </View>
+                !loading ? (
+                  <View style={styles.noDataContainer}>
+                    <Text style={styles.noDataText}>{t('home.noData')}</Text>
+                  </View>
+                ) : null
               }
             />
             <Modal

@@ -204,7 +204,6 @@ const Home = () => {
       setUnreadCount(0);
       await appBadgeService.setBadgeCount(0);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   const handleRefresh = useCallback(async () => {
