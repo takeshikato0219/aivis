@@ -52,3 +52,29 @@
 # Android databinding
 -keep class androidx.databinding.** { *; }
 -dontwarn androidx.databinding.**
+
+# Preserve crash stack traces (Firebase Crashlytics)
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# Firebase Cloud Messaging (FCM) - required for release build / DeployGate
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-keep class io.invertase.firebase.** { *; }
+-dontwarn io.invertase.firebase.**
+-keep class com.google.firebase.messaging.FirebaseMessagingService { *; }
+-keep class com.google.firebase.messaging.RemoteMessage { *; }
+-keep class io.invertase.firebase.messaging.ReactNativeFirebaseMessagingService { *; }
+-keep class io.invertase.firebase.messaging.ReactNativeFirebaseMessagingHeadlessService { *; }
+-keep class io.invertase.firebase.messaging.ReactNativeFirebaseMessagingReceiver { *; }
+
+# ShortcutBadger (app icon badge)
+-keep class me.leolin.shortcutbadger.impl.** { <init>(...); }
+
+# Remove debug logs only - does not affect app logic
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+    public static *** w(...);
+}

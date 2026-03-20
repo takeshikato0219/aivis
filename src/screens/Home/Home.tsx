@@ -36,6 +36,7 @@ import { useErrorHandler } from '@hooks/useErrorHandler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
 import notificationsService from '@/services/notificationsService';
+import { appBadgeService } from '@/services/appBadgeService';
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -185,19 +186,26 @@ const Home = () => {
   };
 
   const loadNotifications = useCallback(async () => {
+    if (!user?.id) {
+      setUnreadCount(0);
+      await appBadgeService.setBadgeCount(0);
+      return;
+    }
     try {
       const response = await notificationsService.getNotifications({
         is_seen: false,
-        user_id: user?.id,
+        user_id: user.id,
       });
       const unread = response.meta.total;
       setUnreadCount(unread);
+      await appBadgeService.setBadgeCount(unread);
     } catch (error) {
       console.error('Error loading notifications:', error);
       setUnreadCount(0);
+      await appBadgeService.setBadgeCount(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);

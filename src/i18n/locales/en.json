@@ -249,7 +249,11 @@
     "call": "Call",
     "photo": "Photo",
     "micPermissionBlocked": "Your mic has been blocked. Please enable mic permission in Settings to use the voice function.",
-    "micPermissionUnavailable": "Your mic is not ready. Please check your device settings to ensure the mic is available and try again."
+    "micPermissionUnavailable": "Your mic is not ready. Please check your device settings to ensure the mic is available and try again.",
+    "photoLibraryPermissionIsRequiredToSaveScreenshots": "Photo library permission is required to save screenshots",
+    "storagePermissionIsRequiredToSaveScreenshots": "Storage permission is required to save screenshots",
+    "photoLibraryPermissionIsRequiredToSaveVideos": "Photo library permission is required to save videos",
+    "storagePermissionIsRequiredToSaveVideos": "Storage permission is required to save videos"
   },
   "changePassword": {
     "changePasswordSuccess": "Password Changed",

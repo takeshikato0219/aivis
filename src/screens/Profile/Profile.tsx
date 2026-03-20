@@ -11,6 +11,7 @@ import { HomeScreenNavigationProp } from '@navigation/types';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { logout } from '@redux/slices/authSlice';
 import { removeAuthData } from '@utils/authStorage';
+import { appBadgeService } from '@/services/appBadgeService';
 import BackIcon from '@assets/svg/icon-back.svg';
 
 const Profile = () => {
@@ -37,9 +38,11 @@ const Profile = () => {
   const handleLogout = async () => {
     try {
       await removeAuthData();
+      await appBadgeService.setBadgeCount(0);
       dispatch(logout());
     } catch (error) {
       console.error('Logout error:', error);
+      await appBadgeService.setBadgeCount(0);
       dispatch(logout());
     }
   };

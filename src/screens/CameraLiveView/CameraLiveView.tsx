@@ -376,8 +376,8 @@ const CameraLiveView: React.FC = () => {
         Alert.alert(
           t('common.error'),
           Platform.OS === 'ios'
-            ? 'Photo library permission is required to save screenshots'
-            : 'Storage permission is required to save screenshots'
+            ? t('cameraLive.photoLibraryPermissionIsRequiredToSaveScreenshots')
+            : t('cameraLive.storagePermissionIsRequiredToSaveScreenshots')
         );
         await RNFS.unlink(tmpPath).catch(() => {});
         return;
@@ -500,8 +500,8 @@ const CameraLiveView: React.FC = () => {
           Alert.alert(
             t('common.error'),
             Platform.OS === 'ios'
-              ? 'Photo library permission is required to save videos'
-              : 'Storage permission is required to save videos'
+              ? t('cameraLive.photoLibraryPermissionIsRequiredToSaveVideos')
+              : t('cameraLive.storagePermissionIsRequiredToSaveVideos')
           );
           return;
         }

@@ -7,7 +7,6 @@ import {
   ScrollView,
   useWindowDimensions,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { styles } from './Policy.style';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -54,38 +53,29 @@ const Policy = () => {
     if (type) fetchPolicy();
   }, [type]);
 
-  const contentWidth = useMemo(() => width - 48, [width]);
-
-  const tagsStyles = useMemo(
+  const htmlStyles = useMemo(
     () => ({
-      p: { marginBottom: 12, color: '#fff' },
-      strong: { fontWeight: 'bold' as const, color: '#fff' },
-      b: { fontWeight: 'bold' as const, color: '#fff' },
-      em: { fontStyle: 'italic' as const, color: '#fff' },
-      i: { fontStyle: 'italic' as const, color: '#fff' },
+      baseStyle: {
+        color: '#fff',
+        fontSize: 16,
+        lineHeight: 24,
+        fontFamily: 'System',
+      },
+      tagsStyles: {
+        body: { color: '#fff', fontSize: 16, lineHeight: 24 },
+        p: { color: '#fff', fontSize: 16, marginVertical: 8, lineHeight: 24 },
+        h1: { color: '#fff', fontSize: 32, fontWeight: '700', marginVertical: 24, lineHeight: 40 },
+        h2: { color: '#fff', fontSize: 28, fontWeight: '700', marginVertical: 20, lineHeight: 36 },
+        h3: { color: '#fff', fontSize: 22, fontWeight: '600', marginVertical: 16, lineHeight: 28 },
+        h4: { color: '#fff', fontSize: 18, fontWeight: '600', marginVertical: 12, lineHeight: 24 },
+        strong: { color: '#fff', fontWeight: '700' },
+        b: { color: '#fff', fontWeight: '700' },
+        a: { color: '#007bff', textDecorationLine: 'underline' },
+        li: { color: '#fff', fontSize: 16, marginVertical: 4, lineHeight: 24 },
+        ul: { color: '#fff', marginVertical: 8, paddingLeft: 20 },
+        ol: { color: '#fff', marginVertical: 8, paddingLeft: 20 },
+      },
     }),
-    []
-  );
-
-  const fallbackFonts = useMemo(
-    () =>
-      Platform.select({
-        ios: {
-          serif: 'Georgia',
-          'sans-serif': 'Helvetica',
-          monospace: 'Courier',
-        },
-        android: {
-          serif: 'serif',
-          'sans-serif': 'sans-serif',
-          monospace: 'monospace',
-        },
-        default: {
-          serif: 'serif',
-          'sans-serif': 'sans-serif',
-          monospace: 'monospace',
-        },
-      }),
     []
   );
 
@@ -94,14 +84,11 @@ const Policy = () => {
   if (policyContent) {
     policyContentNode = (
       <RenderHTML
-        contentWidth={contentWidth}
+        contentWidth={width}
         source={{ html: policyContent }}
-        baseStyle={styles.contentText}
-        enableCSSInlineProcessing
-        tagsStyles={tagsStyles}
-        fallbackFonts={fallbackFonts}
-        enableExperimentalGhostLinesPrevention
-        enableExperimentalBRCollapsing
+        baseStyle={htmlStyles.baseStyle}
+        // @ts-ignore
+        tagsStyles={htmlStyles.tagsStyles}
       />
     );
   } else {

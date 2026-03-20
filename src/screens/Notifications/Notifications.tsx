@@ -1,14 +1,21 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, ImageBackground, TouchableOpacity, RefreshControl } from 'react-native';
+import {
+  View,
+  ImageBackground,
+  TouchableOpacity,
+  RefreshControl,
+  Platform,
+} from 'react-native';
 import { Text, Card, List } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppSetup } from '@hooks/useAppSetup';
 import { styles } from './Notifications.styles';
 import HomeBackgroundImage from '@assets/png/home-background.png';
 import BackIcon from '@assets/svg/icon-back.svg';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import notificationsService, { Notification } from '@/services/notificationsService';
+import { appBadgeService } from '@/services/appBadgeService';
 import { ScrollView } from 'react-native-gesture-handler';
 import rulesService from '@/services/rulesService';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -90,6 +97,10 @@ const Notifications = () => {
       setNotifications((prev) =>
         prev.map((item) => (item.id === id ? { ...item, is_seen: true } : item))
       );
+      if (Platform.OS === 'ios') {
+        const currentBadge = await appBadgeService.getBadgeCount();
+        await appBadgeService.setBadgeCount(Math.max(0, currentBadge - 1));
+      }
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -100,6 +111,30 @@ const Notifications = () => {
     getRulesMaster();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const syncBadge = async () => {
+        if (!userId) {
+          await appBadgeService.setBadgeCount(0);
+          return;
+        }
+        try {
+          const res = await notificationsService.getNotifications({
+            is_seen: false,
+            user_id: userId,
+            per_page: 1,
+            page: 1,
+          });
+          const unread = res.meta?.total ?? 0;
+          await appBadgeService.setBadgeCount(unread);
+        } catch {
+          // ignore
+        }
+      };
+      syncBadge();
+    }, [userId])
+  );
 
   const handleLoadMore = () => {
     setRefreshing(true);

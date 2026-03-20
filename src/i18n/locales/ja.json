@@ -290,7 +290,11 @@
     "call": "通話",
     "photo": "写真",
     "micPermissionBlocked": "マイクがブロックされています。音声機能を使用するには、設定でマイクの権限を有効にしてください。",
-    "micPermissionUnavailable": "マイクがまだ使用できません。デバイスの設定を確認し、マイクが利用可能かどうかを確認してから再度お試しください。"
+    "micPermissionUnavailable": "マイクがまだ使用できません。デバイスの設定を確認し、マイクが利用可能かどうかを確認してから再度お試しください。",
+    "photoLibraryPermissionIsRequiredToSaveScreenshots": "スクリーンショットを保存するには写真ライブラリの許可が必要です",
+    "storagePermissionIsRequiredToSaveScreenshots": "スクリーンショットを保存するにはストレージの許可が必要です",
+    "photoLibraryPermissionIsRequiredToSaveVideos": "ビデオを保存するには写真ライブラリの許可が必要です",
+    "storagePermissionIsRequiredToSaveVideos": "ビデオを保存するにはストレージの許可が必要です"
   },
   "changePassword": {
     "changePasswordSuccess": "パスワード変更完了",

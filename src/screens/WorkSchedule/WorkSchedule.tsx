@@ -155,6 +155,14 @@ export default function WorkSchedule() {
     }
   }, []);
 
+  const fetchRelationships = async () => {
+    try {
+      const data = await faceService.getMemberRelationships();
+    } catch (error) {
+      console.error('Failed to fetch member relationships:', error);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -351,7 +359,8 @@ export default function WorkSchedule() {
                 values={[schedule.startMinute, schedule.endMinute]}
                 min={0}
                 max={1439}
-                step={5}
+                step={1}
+                onValuesChange={onChangeTime}
                 onValuesChangeFinish={onChangeTime}
                 sliderLength={sliderLength}
                 trackStyle={styles.sliderTrack}
