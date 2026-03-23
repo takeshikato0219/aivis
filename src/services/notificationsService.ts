@@ -87,7 +87,7 @@ class NotificationsService {
       });
     }
     const response = await axiosInstance.get<NotificationsResponse>(
-      `${API_ENDPOINTS.NOTIFICATIONS}/`,
+      `${API_ENDPOINTS.NOTIFICATIONS}`,
       {
         params: {
           sort_by: params?.sort_by || 'sent_at',

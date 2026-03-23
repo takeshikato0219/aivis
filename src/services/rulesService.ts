@@ -37,7 +37,7 @@ class RulesService {
     page?: number;
     per_page?: number;
   }): Promise<RulesResponse> {
-    const response = await axiosInstance.get<RulesResponse>(`${API_ENDPOINTS.RULES_MASTER}/`, {
+    const response = await axiosInstance.get<RulesResponse>(`${API_ENDPOINTS.RULES_MASTER}`, {
       params: {
         sort_by: 'sort_order',
         sort_order: 'asc',

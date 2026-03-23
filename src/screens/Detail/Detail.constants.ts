@@ -36,7 +36,7 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
       code: 'daily_passerby',
       icon: IconPerson,
       iconName: 'IconPerson',
-      handlerType: 'customerReport',
+      handlerType: 'notification',
     },
     {
       code: 'unregistered_detection',
@@ -52,7 +52,12 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
     },
   ],
   Store: [
-    { code: 'visitor_count', icon: IconHome, iconName: 'IconHome', handlerType: 'notification' },
+    {
+      code: 'visitor_count',
+      icon: IconHome,
+      iconName: 'IconHome',
+      handlerType: 'notification',
+    },
     {
       code: 'customer_attribute_report',
       icon: IconPerson,

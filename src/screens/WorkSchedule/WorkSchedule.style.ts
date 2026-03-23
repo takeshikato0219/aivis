@@ -343,6 +343,7 @@ export const styles = StyleSheet.create({
   listChildContainer: {
     paddingVertical: 10,
     paddingLeft: 32,
+    paddingRight: 16,
     backgroundColor: 'rgba(28, 44, 60, 0.55)',
   },
   listChildLabel: {

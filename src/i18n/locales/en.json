@@ -567,6 +567,7 @@
     "selectFaceToApply": "Select face to apply",
     "other": "Other",
     "selectedCount": "{{count}} selected",
+    "loadMore": "Load more",
     "updateSuccessful": "Update successful",
     "updateFailed": "Update failed"
   },

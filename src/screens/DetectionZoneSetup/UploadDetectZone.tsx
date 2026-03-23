@@ -79,15 +79,6 @@ export default function UploadDetectZone() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => handleSetupDetectionZone('restricted')}
-          >
-            <View style={styles.settingLeft}>
-              <Text style={styles.settingText}>{t('uploadDetectZone.setupRestrictedZone')}</Text>
-            </View>
-            <Icon name="chevron-right" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.settingItem}
             onPress={() => handleSetupDetectionZone('entry_exit')}
           >
             <View style={styles.settingLeft}>

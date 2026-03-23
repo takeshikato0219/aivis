@@ -49,6 +49,9 @@ export default function WorkSchedule() {
   const { t } = useTranslation();
   const { width } = useResponsive();
   const [members, setMembers] = useState<Member[]>([]);
+  const [membersPage, setMembersPage] = useState(1);
+  const [hasMoreMembers, setHasMoreMembers] = useState(false);
+  const [loadingMoreMembers, setLoadingMoreMembers] = useState(false);
   const [relationships, setRelationships] = useState<MemberRelationship[]>([]);
   const [openSelect2, setOpenSelect2] = useState(false);
   const [select2Value, setSelect2Value] = useState<string[]>([]);
@@ -133,14 +136,31 @@ export default function WorkSchedule() {
     setSchedule((p) => ({ ...p, startMinute, endMinute }));
   }, []);
 
-  const fetchMembers = useCallback(async () => {
+  const fetchMembers = useCallback(async (page = 1) => {
     try {
-      const response = await faceService.getMembers();
-      setMembers(response.data);
+      if (page === 1) {
+        const response = await faceService.getMembers({ page: 1, per_page: 20 });
+        setMembers(response.data);
+        setMembersPage(1);
+        setHasMoreMembers(response.meta?.has_next ?? false);
+      } else {
+        setLoadingMoreMembers(true);
+        const response = await faceService.getMembers({ page, per_page: 20 });
+        setMembers((prev) => [...prev, ...response.data]);
+        setMembersPage(page);
+        setHasMoreMembers(response.meta?.has_next ?? false);
+      }
     } catch (error) {
       console.error('Failed to fetch members:', error);
+    } finally {
+      setLoadingMoreMembers(false);
     }
   }, []);
+
+  const loadMoreMembers = useCallback(async () => {
+    if (loadingMoreMembers || !hasMoreMembers) return;
+    await fetchMembers(membersPage + 1);
+  }, [fetchMembers, membersPage, hasMoreMembers, loadingMoreMembers]);
 
   const fetchRelationships = useCallback(async () => {
     try {
@@ -311,6 +331,9 @@ export default function WorkSchedule() {
                 searchPlaceholder={t('common.search')}
                 saveButtonLabel={t('workSchedule.save')}
                 otherLabel={t('workSchedule.other')}
+                onLoadMore={loadMoreMembers}
+                hasMore={hasMoreMembers}
+                loadingMore={loadingMoreMembers}
                 styles={{
                   styleMultipleSelectRow: styles.styleMultipleSelectRow,
                   listParentContainer: styles.listParentContainer,
