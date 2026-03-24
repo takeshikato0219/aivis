@@ -30,6 +30,7 @@ import faceService, { MemberRelationship } from '@/services/faceService';
 import { COLORS } from '@constants/theme';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { isName } from '@utils/validate';
+import { getApiErrorDisplayMessage } from '@utils/errorHandler';
 import { ListFaceRouteProp } from '@navigation/types';
 import { launchImageLibrary } from 'react-native-image-picker';
 
@@ -390,7 +391,30 @@ const FaceUpload: React.FC = () => {
         flash: 'off',
       });
       let imageUri = photo.path.startsWith('file://') ? photo.path : `file://${photo.path}`;
+      let imgWidth: number | null = null;
+      let imgHeight: number | null = null;
+
       if (Platform.OS === 'ios') {
+        // Resize before detection: ImageResizer outputs normalized pixels (orientation applied).
+        // ML Kit often fails on raw camera images due to EXIF orientation - resize fixes this.
+        try {
+          const resizedImage = await ImageResizer.createResizedImage(
+            imageUri,
+            1920,
+            1920,
+            'JPEG',
+            100,
+            0,
+            undefined,
+            false
+          );
+          imageUri = resizedImage.uri;
+          imgWidth = resizedImage.width;
+          imgHeight = resizedImage.height;
+        } catch (resizeError) {
+          console.error('Image resize error:', resizeError);
+        }
+      } else {
         try {
           const resizedImage = await ImageResizer.createResizedImage(
             imageUri,
@@ -404,48 +428,133 @@ const FaceUpload: React.FC = () => {
           );
           imageUri = resizedImage.uri;
         } catch (resizeError) {
-          console.error('Image resize/normalize error:', resizeError);
+          console.error('Image resize error:', resizeError);
         }
       }
 
       // Detect faces in the captured image
       const allFaces = await FaceDetection.detect(imageUri, faceDetectionOptions);
 
-      // Filter faces to only those within the detection frame (center region of image)
-      // Only faces inside the frame count; faces outside trigger faceOutsideFrame validation
-      const faces = await new Promise<Face[]>((resolve) => {
-        Image.getSize(
-          imageUri,
-          (imgWidth, imgHeight) => {
-            // Frame region: center ~60% of image (maps to UI detection frame)
-            const marginX = imgWidth * 0.2;
-            const marginY = imgHeight * 0.2;
-            const frameLeft = marginX;
-            const frameTop = marginY;
-            const frameRight = imgWidth - marginX;
-            const frameBottom = imgHeight - marginY;
+      // Validation params per position (center stricter; left/right/up/down slightly lenient when turning)
+      const positionKey = currentPosition.key;
+      const FRAME_MARGIN = positionKey === 'center' ? 0.15 : 0.12; // center 70%; others 76%
+      const MIN_OVERLAP_RATIO = positionKey === 'center' ? 0.8 : 0.75; // center 80%; profile 75%
+      const MIN_FACE_RATIO = 0.1;
+      const MAX_FACE_RATIO = 0.9;
 
-            const facesInFrame = allFaces.filter((face) => {
-              const faceLeft = face.frame.left;
-              const faceTop = face.frame.top;
-              const faceRight = face.frame.left + face.frame.width;
-              const faceBottom = face.frame.top + face.frame.height;
-              return (
-                faceLeft >= frameLeft &&
-                faceTop >= frameTop &&
-                faceRight <= frameRight &&
-                faceBottom <= frameBottom
-              );
-            });
-            resolve(facesInFrame);
-          },
-          () => {
-            // When we cannot get image dimensions, do not assume faces are in frame
-            // Treat as empty to trigger faceOutsideFrame when allFaces.length > 0
-            resolve([]);
-          }
+      let faces: Face[];
+
+      const filterFacesInFrame = (
+        width: number,
+        height: number,
+        frameLeft: number,
+        frameTop: number,
+        frameRight: number,
+        frameBottom: number
+      ): Face[] => {
+        return allFaces.filter((face) => {
+          const fl = face.frame.left;
+          const ft = face.frame.top;
+          const fr = face.frame.left + face.frame.width;
+          const fb = face.frame.top + face.frame.height;
+          const overlapLeft = Math.max(fl, frameLeft);
+          const overlapTop = Math.max(ft, frameTop);
+          const overlapRight = Math.min(fr, frameRight);
+          const overlapBottom = Math.min(fb, frameBottom);
+          const overlapW = Math.max(0, overlapRight - overlapLeft);
+          const overlapH = Math.max(0, overlapBottom - overlapTop);
+          const overlapRatioW = overlapW / face.frame.width;
+          const overlapRatioH = overlapH / face.frame.height;
+          const enoughInFrame =
+            overlapRatioW >= MIN_OVERLAP_RATIO && overlapRatioH >= MIN_OVERLAP_RATIO;
+          if (!enoughInFrame) return false;
+          const faceSizeRatio = Math.max(face.frame.width / width, face.frame.height / height);
+          return faceSizeRatio >= MIN_FACE_RATIO && faceSizeRatio <= MAX_FACE_RATIO;
+        });
+      };
+
+      const runFilterWithDimensions = (width: number, height: number): Face[] => {
+        const marginX = width * FRAME_MARGIN;
+        const marginY = height * FRAME_MARGIN;
+        return filterFacesInFrame(
+          width,
+          height,
+          marginX,
+          marginY,
+          width - marginX,
+          height - marginY
         );
-      });
+      };
+
+      let usedWidth: number | null = null;
+      let usedHeight: number | null = null;
+
+      if (Platform.OS === 'ios') {
+        if (imgWidth != null && imgHeight != null) {
+          faces = runFilterWithDimensions(imgWidth, imgHeight);
+          if (faces.length === 0 && allFaces.length > 0) {
+            faces = runFilterWithDimensions(imgHeight, imgWidth);
+            if (faces.length > 0) {
+              usedWidth = imgHeight;
+              usedHeight = imgWidth;
+            } else {
+              usedWidth = imgWidth;
+              usedHeight = imgHeight;
+            }
+          } else if (faces.length > 0 || allFaces.length > 0) {
+            usedWidth = imgWidth;
+            usedHeight = imgHeight;
+          }
+        } else {
+          faces = [];
+        }
+      } else {
+        faces = await new Promise<Face[]>((resolve) => {
+          Image.getSize(
+            imageUri,
+            (w, h) => {
+              usedWidth = w;
+              usedHeight = h;
+              resolve(runFilterWithDimensions(w, h));
+            },
+            () => resolve([])
+          );
+        });
+      }
+
+      const getFrameRejectionReason = (): string | null => {
+        if (allFaces.length === 0 || allFaces.length > 1) return null;
+        if (usedWidth == null || usedHeight == null) return t('faceUpload.faceOutsideFrame');
+        const face = allFaces[0];
+        const marginX = usedWidth * FRAME_MARGIN;
+        const marginY = usedHeight * FRAME_MARGIN;
+        const frameLeft = marginX;
+        const frameTop = marginY;
+        const frameRight = usedWidth - marginX;
+        const frameBottom = usedHeight - marginY;
+        const fl = face.frame.left;
+        const ft = face.frame.top;
+        const fr = face.frame.left + face.frame.width;
+        const fb = face.frame.top + face.frame.height;
+        const overlapLeft = Math.max(fl, frameLeft);
+        const overlapTop = Math.max(ft, frameTop);
+        const overlapRight = Math.min(fr, frameRight);
+        const overlapBottom = Math.min(fb, frameBottom);
+        const overlapW = Math.max(0, overlapRight - overlapLeft);
+        const overlapH = Math.max(0, overlapBottom - overlapTop);
+        const overlapRatioW = overlapW / face.frame.width;
+        const overlapRatioH = overlapH / face.frame.height;
+        const enoughInFrame =
+          overlapRatioW >= MIN_OVERLAP_RATIO && overlapRatioH >= MIN_OVERLAP_RATIO;
+        if (!enoughInFrame) return t('faceUpload.faceOutsideFrame');
+        const faceSizeRatio = Math.max(
+          face.frame.width / usedWidth,
+          face.frame.height / usedHeight
+        );
+        if (faceSizeRatio < MIN_FACE_RATIO) return t('faceUpload.faceTooFar');
+        if (faceSizeRatio > MAX_FACE_RATIO) return t('faceUpload.faceTooClose');
+        return null;
+      };
 
       // Check if exactly one face is detected and in correct position
       if (faces.length === 1 && validateFacePosition(faces[0], currentPosition.key)) {
@@ -499,7 +608,9 @@ const FaceUpload: React.FC = () => {
 
         if (faces.length === 0) {
           errorMessage =
-            allFaces.length > 0 ? t('faceUpload.faceOutsideFrame') : t('faceUpload.noFaceDetected');
+            allFaces.length > 0
+              ? (getFrameRejectionReason() ?? t('faceUpload.faceOutsideFrame'))
+              : t('faceUpload.noFaceDetected');
         } else if (faces.length > 1) {
           errorMessage = t('faceUpload.multipleFacesDetected');
         } else if (faces.length === 1) {
@@ -577,26 +688,23 @@ const FaceUpload: React.FC = () => {
       );
     } catch (error) {
       console.error('Upload error:', error);
-      Alert.alert(
-        t('faceUpload.uploadFailed') || 'Upload Failed',
-        t('faceUpload.uploadFailedMessage') || 'Failed to upload face data. Please try again.',
-        [
-          {
-            text: t('common.retry') || 'Retry',
-            onPress: () => {
-              setIsUploading(false);
-              setIsProcessing(false);
-              startScanning();
-            },
+      const displayMessage = getApiErrorDisplayMessage(error);
+      Alert.alert(t('faceUpload.uploadFailed') || 'Upload Failed', displayMessage, [
+        {
+          text: t('common.retry') || 'Retry',
+          onPress: () => {
+            setIsUploading(false);
+            setIsProcessing(false);
+            startScanning();
           },
-          {
-            text: t('common.cancel') || 'Cancel',
-            onPress: () => {
-              navigation.goBack();
-            },
+        },
+        {
+          text: t('common.cancel') || 'Cancel',
+          onPress: () => {
+            navigation.goBack();
           },
-        ]
-      );
+        },
+      ]);
     } finally {
       setIsUploading(false);
     }
@@ -735,18 +843,12 @@ const FaceUpload: React.FC = () => {
       setIsUploading(false);
     } catch (error) {
       console.error('Upload error:', error);
-      Alert.alert(
-        t('faceUpload.uploadFailed') || 'Upload Failed',
-        t('faceUpload.uploadFailedMessage') || 'Failed to upload face data. Please try again.',
-        [
-          {
-            text: t('common.ok') || 'OK',
-            onPress: () => {
-              navigation.goBack();
-            },
-          },
-        ]
-      );
+      const displayMessage = getApiErrorDisplayMessage(error);
+      Alert.alert('', displayMessage, [
+        {
+          text: t('common.ok') || 'OK',
+        },
+      ]);
     } finally {
       setIsUploading(false);
     }

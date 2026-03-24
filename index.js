@@ -4,7 +4,7 @@
 
 import { AppRegistry, Platform } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
-import notifee, { AndroidImportance } from '@notifee/react-native';
+import notifee, { AndroidImportance, AndroidStyle } from '@notifee/react-native';
 import App from './App';
 import { name as appName } from './app.json';
 
@@ -28,14 +28,29 @@ messaging().setBackgroundMessageHandler(async (remoteMessage) => {
         name: 'Notifications',
         importance: AndroidImportance.HIGH,
       });
-      const title = remoteMessage.data?.title ?? 'Notification';
-      const body = remoteMessage.data?.body ?? '';
+      const title =
+        remoteMessage.notification?.title ?? remoteMessage.data?.title ?? 'Notification';
+      const body =
+        remoteMessage.notification?.body ??
+        remoteMessage.data?.body ??
+        remoteMessage.data?.message ??
+        '';
+      const imageUrl =
+        remoteMessage.data?.image_url ?? remoteMessage.data?.fcm_options?.image ?? '';
+
       await notifee.displayNotification({
         title,
         body,
         android: {
           channelId: ANDROID_CHANNEL_ID,
           pressAction: { id: 'default' },
+          ...(imageUrl && {
+            largeIcon: imageUrl,
+            style: {
+              type: AndroidStyle.BIGPICTURE,
+              picture: imageUrl,
+            },
+          }),
         },
       });
     } catch (e) {

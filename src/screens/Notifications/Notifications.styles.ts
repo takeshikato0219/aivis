@@ -33,6 +33,9 @@ export const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  scrollContentContainer: {
+    flexGrow: 1,
+  },
   notificationCard: {
     marginBottom: 8,
     backgroundColor: '#181717',

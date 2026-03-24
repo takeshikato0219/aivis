@@ -303,13 +303,15 @@ const Detail = () => {
 
   const creatureDetectionIdx = cameraListWithIcons.findIndex((item) => item.icon === IconBear);
   const cameraListWithIconsWithLive: CameraListItem[] =
-    creatureDetectionIdx !== -1
-      ? [
-          ...cameraListWithIcons.slice(0, creatureDetectionIdx),
-          iconLiveItem,
-          ...cameraListWithIcons.slice(creatureDetectionIdx),
-        ]
-      : [...cameraListWithIcons, iconLiveItem];
+    workflowType === 'Enterprise'
+      ? [iconLiveItem, ...cameraListWithIcons]
+      : creatureDetectionIdx !== -1
+        ? [
+            ...cameraListWithIcons.slice(0, creatureDetectionIdx),
+            iconLiveItem,
+            ...cameraListWithIcons.slice(creatureDetectionIdx),
+          ]
+        : [...cameraListWithIcons, iconLiveItem];
 
   const CAMERA_LIST: CameraListItem[] = [
     ...cameraListWithIconsWithLive,

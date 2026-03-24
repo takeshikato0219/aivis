@@ -499,6 +499,8 @@
     "faceDetectionError": "顔検出エラー",
     "noFaceDetected": "キャプチャした画像に顔が検出されませんでした。もう一度お試しください。",
     "faceOutsideFrame": "検出枠内に顔を配置してください。",
+    "faceTooClose": "カメラに近づきすぎています。もう少し離れてください。",
+    "faceTooFar": "カメラから遠すぎます。もう少し近づいてください。",
     "multipleFacesDetected": "複数の顔が検出されました。1人の顔だけが見えるようにして、もう一度お試しください。",
     "getReady": "準備してください...",
     "pleaseFaceTheCameraStraightAhead": "カメラをまっすぐ見てください。",

@@ -18,9 +18,7 @@ import authService from '@/services/authService';
 import HomeBackgroundImage from '@assets/png/home-background.png';
 import { HomeScreenNavigationProp } from '@navigation/types';
 import BackIcon from '@assets/svg/icon-back.svg';
-import LineSubscriptionService, {
-  LineSubscriptionStatus,
-} from '@/services/lineSubscriptionService';
+import LineSubscriptionService from '@/services/lineSubscriptionService';
 import lineAuthService from '@/services/lineAuthService';
 import Line from '@xmartlabs/react-native-line';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -36,10 +34,10 @@ const Setting = () => {
   const dispatch = useAppDispatch();
 
   // LINE Subscription state
-  const [subscriptionStatus, setSubscriptionStatus] = useState<LineSubscriptionStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isUnsubscribing, setIsUnsubscribing] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const goBack = () => {
     navigation.goBack();
@@ -50,18 +48,15 @@ const Setting = () => {
     try {
       const isUserLoggedInWithLine = !!user?.line_notification_id;
       if (isUserLoggedInWithLine) {
-        const status = await LineSubscriptionService.checkSubscriptionStatus();
-        setSubscriptionStatus(status);
-      } else {
-        setSubscriptionStatus(null);
+        setIsFollowing(!!user.has_followed_bot);
       }
     } catch (error) {
       console.error('Error loading subscription status:', error);
-      setSubscriptionStatus(null);
+      setIsFollowing(false);
     } finally {
       setIsLoadingStatus(false);
     }
-  }, [user?.line_notification_id]);
+  }, [user?.has_followed_bot, user?.line_notification_id]);
 
   useEffect(() => {
     const loadLineProfile = async () => {
@@ -207,9 +202,7 @@ const Setting = () => {
         } catch (profileError) {
           console.error('Error updating LINE profile info:', profileError);
         }
-        setSubscriptionStatus((prev) =>
-          prev ? { ...prev, isSubscribed: true } : { isSubscribed: true }
-        );
+        setIsFollowing(true);
         await loadSubscriptionStatus();
       }
     } catch (error) {
@@ -307,7 +300,7 @@ const Setting = () => {
                     </Text>
                   )}
                 </View>
-                {!subscriptionStatus?.isSubscribed ? (
+                {!isFollowing ? (
                   <TouchableOpacity
                     style={[styles.lineButton, styles.subscribeButton]}
                     onPress={handleSubscribeToLine}

@@ -23,6 +23,7 @@ jest.mock('@notifee/react-native', () => ({
   createChannel: jest.fn(),
   displayNotification: jest.fn(),
   AndroidImportance: { HIGH: 4 },
+  AndroidStyle: { BIGPICTURE: 'bigPicture' },
 }));
 jest.mock('react-native', () => ({
   Platform: { OS: 'android', Version: 33 },
@@ -35,6 +36,19 @@ jest.mock('react-native', () => ({
 jest.mock('@/i18n', () => ({ t: (key: string) => key }));
 jest.mock('@/services/authService', () => ({ updateProfile: jest.fn() }));
 jest.mock('@redux/store', () => ({ store: { getState: jest.fn() } }));
+jest.mock('react-native-fs', () => ({
+  CachesDirectoryPath: '/cache',
+  downloadFile: jest.fn(() => ({ promise: Promise.resolve({ statusCode: 200 }) })),
+  writeFile: jest.fn(() => Promise.resolve()),
+  unlink: jest.fn(() => Promise.resolve()),
+}));
+jest.mock('@bam.tech/react-native-image-resizer', () => ({
+  default: {
+    createResizedImage: jest.fn(() =>
+      Promise.resolve({ uri: 'file:///cache/img.jpg', path: '/cache/img.jpg' })
+    ),
+  },
+}));
 
 // Use messaging() to get the singleton mock
 const messaging = require('@react-native-firebase/messaging').default();
@@ -134,6 +148,45 @@ describe('pushNotificationService', () => {
       );
     });
 
+    it('should include image in notification when image_url in data', async () => {
+      Platform.OS = 'android';
+      const imageUrl = 'https://example.com/detection/image.webp';
+      const remoteMessage = {
+        notification: { title: 'TIMIMA', body: '【警告】未登録者が検知されました。' },
+        data: { image_url: imageUrl },
+      };
+      // @ts-ignore: Accessing private method for test coverage
+      await pushNotificationService.displayForegroundNotification(remoteMessage);
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          android: expect.objectContaining({
+            style: {
+              type: 'bigPicture',
+              picture: imageUrl,
+            },
+          }),
+        })
+      );
+    });
+
+    it('should use fcm_options.image when image_url not present', async () => {
+      Platform.OS = 'android';
+      const imageUrl = 'https://camera001-stream.unlimited.io.vn/detection/image.webp';
+      const remoteMessage = {
+        notification: { title: 'TIMIMA', body: 'Alert' },
+        data: { fcm_options: { image: imageUrl } },
+      };
+      // @ts-ignore: Accessing private method for test coverage
+      await pushNotificationService.displayForegroundNotification(remoteMessage);
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          android: expect.objectContaining({
+            style: expect.objectContaining({ picture: imageUrl }),
+          }),
+        })
+      );
+    });
+
     it('should handle error gracefully', async () => {
       Platform.OS = 'android';
       notifee.createChannel.mockRejectedValue(new Error('fail'));
@@ -143,13 +196,38 @@ describe('pushNotificationService', () => {
       expect(notifee.createChannel).toHaveBeenCalled();
     });
 
-    it('should not call notifee on iOS', async () => {
+    it('should display notification with iOS config when on iOS', async () => {
       Platform.OS = 'ios';
       const remoteMessage = { notification: { title: 'title', body: 'body' }, data: {} };
       // @ts-ignore: Accessing private method for test coverage
       await pushNotificationService.displayForegroundNotification(remoteMessage);
-      expect(notifee.createChannel).not.toHaveBeenCalled();
-      expect(notifee.displayNotification).not.toHaveBeenCalled();
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'title',
+          body: 'body',
+          ios: expect.objectContaining({
+            foregroundPresentationOptions: expect.any(Object),
+          }),
+        })
+      );
+    });
+
+    it('should include image attachment on iOS when image_url in data (converts webp to jpeg)', async () => {
+      Platform.OS = 'ios';
+      const imageUrl = 'https://example.com/image.webp';
+      const remoteMessage = {
+        notification: { title: 'title', body: 'body' },
+        data: { image_url: imageUrl },
+      };
+      // @ts-ignore: Accessing private method for test coverage
+      await pushNotificationService.displayForegroundNotification(remoteMessage);
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ios: expect.objectContaining({
+            attachments: [{ url: expect.any(String), typeHint: 'public.jpeg' }],
+          }),
+        })
+      );
     });
   });
 

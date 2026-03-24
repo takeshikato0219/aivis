@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, ImageBackground, TouchableOpacity, RefreshControl, Platform } from 'react-native';
+import { View, ImageBackground, TouchableOpacity, Platform } from 'react-native';
 import { Text, Card, List } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppSetup } from '@hooks/useAppSetup';
@@ -10,7 +10,7 @@ import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navig
 import { useTranslation } from 'react-i18next';
 import notificationsService, { Notification } from '@/services/notificationsService';
 import { appBadgeService } from '@/services/appBadgeService';
-import { ScrollView } from 'react-native-gesture-handler';
+import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import rulesService from '@/services/rulesService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AppStackParamList } from '@navigation/types';
@@ -34,6 +34,7 @@ const Notifications = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const userId = route.params?.userId;
 
@@ -59,7 +60,12 @@ const Notifications = () => {
   };
 
   const loadNotifications = useCallback(async (pageToLoad = 1, isReload = false) => {
-    setLoading(true);
+    const isLoadMore = !isReload && pageToLoad > 1;
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const response = await notificationsService.getNotifications({
         page: pageToLoad,
@@ -80,6 +86,7 @@ const Notifications = () => {
       setHasMore(false);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,8 +138,7 @@ const Notifications = () => {
   );
 
   const handleLoadMore = () => {
-    setRefreshing(true);
-    if (!loading && hasMore) {
+    if (!loading && !loadingMore && hasMore) {
       loadNotifications(page + 1);
     }
   };
@@ -148,7 +154,8 @@ const Notifications = () => {
     if (
       layoutMeasurement.height + contentOffset.y >= contentSize.height - 20 &&
       hasMore &&
-      !loading
+      !loading &&
+      !loadingMore
     ) {
       handleLoadMore();
     }
@@ -174,11 +181,12 @@ const Notifications = () => {
               </Text>
             </View>
           </View>
-          {loading && <LoadingComponent />}
+          {loading && !refreshing && <LoadingComponent />}
           <View style={styles.content}>
             {/* List */}
             <ScrollView
               style={styles.scrollContent}
+              contentContainerStyle={styles.scrollContentContainer}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
               onScroll={handleScroll}
               scrollEventThrottle={16}
@@ -186,7 +194,7 @@ const Notifications = () => {
               {Array.isArray(notifications) && notifications.length > 0 ? (
                 notifications.map((item, idx) => {
                   const matchedRule = rules.find((rule) => rule.id === item.rules_master_id);
-                  const isDailyPasserby = matchedRule && matchedRule.code === 'daily_passerby';
+                  const isDailyPasserby = matchedRule && matchedRule.code === 'customer_attribute_report';
                   // Get iconName from ruleIconMap if available
                   const iconInfo =
                     matchedRule && matchedRule.code && ruleIconMap[matchedRule.code]
@@ -238,10 +246,10 @@ const Notifications = () => {
                   <Text>{t('home.noData')}</Text>
                 </View>
               )}
+              {loadingMore && <LoadingComponent />}
             </ScrollView>
           </View>
         </SafeAreaView>
-        {refreshing && <LoadingComponent />}
       </ImageBackground>
     </View>
   );

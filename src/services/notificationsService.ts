@@ -90,7 +90,7 @@ class NotificationsService {
       `${API_ENDPOINTS.NOTIFICATIONS}`,
       {
         params: {
-          sort_by: params?.sort_by || 'sent_at',
+          sort_by: params?.sort_by || 'created_at',
           sort_order: params?.sort_order || 'desc',
           page: params?.page,
           per_page: params?.per_page,

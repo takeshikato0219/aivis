@@ -458,6 +458,8 @@
     "faceDetectionError": "Face Detection Error",
     "noFaceDetected": "No face detected in the captured image. Please try again.",
     "faceOutsideFrame": "Please position your face within the detection frame.",
+    "faceTooClose": "Move back - your face is too close to the camera.",
+    "faceTooFar": "Move closer - your face is too far from the camera.",
     "multipleFacesDetected": "Multiple faces detected. Please ensure only one face is visible and try again.",
     "getReady": "Get ready...",
     "pleaseFaceTheCameraStraightAhead": "Please face the camera straight ahead.",

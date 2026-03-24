@@ -13,6 +13,9 @@ import IconUnlockUnActive from '@assets/svg/icon-lock-unactive.svg';
 import CameraShopDetailBgPng from '@assets/png/camera-shop-detail-bg.png';
 import CameraHomeDetailBgPng from '@assets/png/camera-home-detail-bg.png';
 import CameraFactoryDetailBgPng from '@assets/png/camera-factory-detail-bg.png';
+import IconAttendance from '@assets/svg/attendance-icon.svg';
+import IconBan from '@assets/svg/ban-sign-icon.svg';
+import IconHelmet from '@assets/svg/helmet-icon.svg';
 import type { WorkflowType } from './Detail.types';
 
 export type RuleHandlerType = 'notification' | 'customerReport' | 'none';
@@ -71,54 +74,54 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
       handlerType: 'notification',
     },
     {
-      code: '',
-      icon: IconBear,
-      iconName: 'IconBear',
+      code: 'access_prohibition_detection',
+      icon: IconBan,
+      iconName: 'IconBan',
       handlerType: 'notification',
     },
     {
       code: 'attendance',
-      icon: IconBear,
-      iconName: 'IconBear',
-      handlerType: 'none',
+      icon: IconAttendance,
+      iconName: 'IconAttendance',
+      handlerType: 'notification',
     },
   ],
   Enterprise: [
     {
-      code: '',
-      icon: IconHome,
-      iconName: 'IconHome',
-      handlerType: 'none',
-    },
-    {
       code: 'enterprise_attendance',
-      icon: IconPerson,
-      iconName: 'IconPerson',
-      handlerType: 'none',
+      icon: IconAttendance,
+      iconName: 'IconAttendance',
+      handlerType: 'notification',
     },
     {
       code: 'unexpected_incident',
       icon: IconPerson,
       iconName: 'IconPerson',
-      handlerType: 'none',
+      handlerType: 'notification',
     },
     {
       code: 'helmet_wearing',
-      icon: IconSuspect,
-      iconName: 'IconSuspect',
-      handlerType: 'none',
+      icon: IconHelmet,
+      iconName: 'IconHelmet',
+      handlerType: 'notification',
     },
     {
       code: 'mask_wearing',
       icon: IconMark,
       iconName: 'IconMask',
-      handlerType: 'none',
+      handlerType: 'notification',
     },
     {
       code: 'glove_wearing',
       icon: IconGlove,
       iconName: 'IconGlove',
-      handlerType: 'none',
+      handlerType: 'notification',
+    },
+    {
+      code: 'restricted_area_intrusion',
+      icon: IconBan,
+      iconName: 'IconBan',
+      handlerType: 'notification',
     },
   ],
 };

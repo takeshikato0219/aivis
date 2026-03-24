@@ -1,6 +1,8 @@
 import messaging from '@react-native-firebase/messaging';
-import notifee, { AndroidImportance } from '@notifee/react-native';
+import notifee, { AndroidImportance, AndroidStyle } from '@notifee/react-native';
 import { Platform, PermissionsAndroid } from 'react-native';
+import RNFS from 'react-native-fs';
+import ImageResizer from '@bam.tech/react-native-image-resizer';
 import i18n from '@/i18n';
 import authService from '@/services/authService';
 import { store } from '@redux/store';
@@ -101,6 +103,42 @@ class PushNotificationService {
   }
 
   /**
+   * Get image URI for notification. On iOS, WebP is not supported by UNNotificationAttachment,
+   * so we download and convert to JPEG. Returns original URL if conversion fails or on Android.
+   */
+  private async getNotificationImageUri(imageUrl: string): Promise<string> {
+    if (!imageUrl) return '';
+    const isWebp =
+      imageUrl.toLowerCase().includes('.webp') || imageUrl.toLowerCase().includes('format=webp');
+    if (Platform.OS !== 'ios' || !isWebp) {
+      return imageUrl;
+    }
+    try {
+      const cacheDir = RNFS.CachesDirectoryPath;
+      const tempPath = `${cacheDir}/notification_img_${Date.now()}.webp`;
+      const { promise } = RNFS.downloadFile({ fromUrl: imageUrl, toFile: tempPath });
+      await promise;
+      const resized = await ImageResizer.createResizedImage(
+        tempPath,
+        1200,
+        1200,
+        'JPEG',
+        85,
+        0,
+        undefined,
+        false,
+        {}
+      );
+      await RNFS.unlink(tempPath).catch(() => {});
+      const path = resized.path.startsWith('file://') ? resized.path.slice(7) : resized.path;
+      return path;
+    } catch (err) {
+      console.warn('[PushNotification] Failed to convert webp for iOS, using URL:', err);
+      return imageUrl;
+    }
+  }
+
+  /**
    * Display notifications when receiving push notifications (foreground on both Android & iOS).
    */
   private async displayForegroundNotification(remoteMessage: any): Promise<void> {
@@ -117,6 +155,9 @@ class PushNotificationService {
         remoteMessage.data?.body ??
         remoteMessage.data?.message ??
         '';
+      const imageUrl =
+        remoteMessage.data?.image_url ?? remoteMessage.data?.fcm_options?.image ?? '';
+      const imageUri = imageUrl ? await this.getNotificationImageUri(imageUrl) : '';
 
       const notificationPayload: Parameters<typeof notifee.displayNotification>[0] = {
         title,
@@ -141,6 +182,14 @@ class PushNotificationService {
             badge: true,
             sound: true,
           },
+          ...(imageUri && {
+            attachments: [
+              {
+                url: imageUri,
+                typeHint: 'public.jpeg',
+              },
+            ],
+          }),
         };
       }
 
