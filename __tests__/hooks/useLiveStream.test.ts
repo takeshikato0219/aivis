@@ -63,44 +63,50 @@ describe('useLiveStream', () => {
 
   describe('initial loading', () => {
     it('should set loading to false after initial loading timeout when no connection', async () => {
-      const { result } = renderHook(() => useLiveStream());
+      const { result } = renderHook(() => useLiveStream({ initialLoadingMax: 10000 }));
 
       expect(result.current.isLoading).toBe(true);
 
-      // Fast-forward past initial loading max (10000ms) - no heartbeat, triggers failed
+      // Fast-forward past initial loading max — no heartbeat/connected message, triggers retry/failed
       act(() => {
         jest.advanceTimersByTime(10000);
       });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
-        expect(result.current.connectionStatus).toBe('failed');
+        // First connection-lost schedules retry, not final failed (until max retries)
+        expect(result.current.isReconnecting).toBe(true);
+        expect(result.current.connectionStatus).toBe('connecting');
       });
     });
 
     it('should not override loading state if WebView loads first', async () => {
-      const { result } = renderHook(() => useLiveStream());
+      const { result } = renderHook(() => useLiveStream({ initialLoadingMax: 50000 }));
 
-      // Simulate WebView loading - uses 3000ms timeout before setting connected
       act(() => {
         result.current.handleWebViewLoad();
       });
 
-      // Advance past 3000ms timeout in handleWebViewLoad
+      // Connected + not loading only after heartbeat/playing messages (not on load alone)
+      const heartbeatEvent = {
+        nativeEvent: {
+          data: JSON.stringify({ type: 'heartbeat', timestamp: Date.now() }),
+        },
+      };
       act(() => {
-        jest.advanceTimersByTime(3000);
+        result.current.handleWebViewMessage(heartbeatEvent);
       });
 
       expect(result.current.isLoading).toBe(false);
       expect(result.current.connectionStatus).toBe('connected');
 
-      // Fast-forward past initial loading time
+      // Initial-loading timeout should not fire before 50s; state stays stable
       act(() => {
         jest.advanceTimersByTime(10000);
       });
 
-      // Loading state should remain false
       expect(result.current.isLoading).toBe(false);
+      expect(result.current.connectionStatus).toBe('connected');
     });
   });
 
@@ -113,9 +119,15 @@ describe('useLiveStream', () => {
           result.current.handleWebViewLoad();
         });
 
-        // handleWebViewLoad uses 3000ms timeout before setting connected
+        expect(result.current.connectionStatus).toBe('connecting');
+        expect(result.current.isLoading).toBe(true);
+
         act(() => {
-          jest.advanceTimersByTime(3000);
+          result.current.handleWebViewMessage({
+            nativeEvent: {
+              data: JSON.stringify({ type: 'heartbeat', timestamp: Date.now() }),
+            },
+          });
         });
 
         expect(result.current.isLoading).toBe(false);
@@ -131,13 +143,13 @@ describe('useLiveStream', () => {
           result.current.handleWebViewLoad();
         });
 
-        // Advance time to trigger heartbeat check
+        // Heartbeat interval starts after initialGracePeriod (default 8000ms)
         act(() => {
-          jest.advanceTimersByTime(3000); // Default heartbeat interval
+          jest.advanceTimersByTime(8000);
         });
 
-        // Should not trigger connection lost yet (heartbeat timeout is 10000ms)
-        expect(result.current.connectionStatus).toBe('connected');
+        // Still connecting until a heartbeat/playing message marks connected
+        expect(result.current.connectionStatus).toBe('connecting');
       });
 
       it('should clear pending retry timers', () => {
@@ -427,7 +439,7 @@ describe('useLiveStream', () => {
   });
 
   describe('heartbeat monitoring', () => {
-    it('should detect heartbeat timeout', () => {
+    it('should detect heartbeat timeout', async () => {
       const { result } = renderHook(() =>
         useLiveStream({
           heartbeatInterval: 1000,
@@ -435,17 +447,19 @@ describe('useLiveStream', () => {
         })
       );
 
-      // Load WebView to start heartbeat monitoring
       act(() => {
         result.current.handleWebViewLoad();
       });
 
-      // Advance time past heartbeat timeout
+      // Monitoring starts after initialGracePeriod; lastHeartbeat resets then.
+      // Need grace (8000ms) + enough interval ticks so timeSinceLastHeartbeat > 3000
       act(() => {
-        jest.advanceTimersByTime(4000); // > 3000ms timeout
+        jest.advanceTimersByTime(8000 + 4000);
       });
 
-      expect(result.current.isReconnecting).toBe(true);
+      await waitFor(() => {
+        expect(result.current.isReconnecting).toBe(true);
+      });
     });
 
     it('should reset heartbeat on WebView messages', () => {

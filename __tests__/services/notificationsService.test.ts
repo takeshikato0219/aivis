@@ -58,15 +58,20 @@ describe('NotificationsService', () => {
       const result = await NotificationsService.getNotifications({ page: 1, per_page: 10 });
       expect(result).toEqual(mockResponse.data);
       expect(axiosInstance.get).toHaveBeenCalledWith(
-        '/mock/notifications/',
+        '/mock/notifications',
         expect.objectContaining({
           params: expect.objectContaining({
-            sort_by: 'sent_at',
+            sort_by: 'created_at',
             sort_order: 'desc',
             page: 1,
             per_page: 10,
+            is_seen: undefined,
+            user_id: undefined,
           }),
-          headers: expect.any(Object),
+          headers: expect.objectContaining({
+            'X-Param-page': '1',
+            'X-Param-per_page': '10',
+          }),
         })
       );
     });
@@ -80,8 +85,16 @@ describe('NotificationsService', () => {
         is_seen: true,
       });
       expect(axiosInstance.get).toHaveBeenCalledWith(
-        '/mock/notifications/',
+        '/mock/notifications',
         expect.objectContaining({
+          params: expect.objectContaining({
+            sort_by: 'created_at',
+            sort_order: 'desc',
+            page: 2,
+            per_page: 5,
+            is_seen: true,
+            user_id: 'u2',
+          }),
           headers: expect.objectContaining({
             'X-Param-page': '2',
             'X-Param-per_page': '5',

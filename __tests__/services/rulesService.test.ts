@@ -54,7 +54,7 @@ describe('RulesService', () => {
     const result = await RulesService.getRules();
     expect(result).toEqual(mockResponse.data);
     expect(axiosInstance.get).toHaveBeenCalledWith(
-      '/mock/rules/',
+      '/mock/rules',
       expect.objectContaining({
         params: expect.objectContaining({
           sort_by: 'sort_order',
@@ -71,9 +71,14 @@ describe('RulesService', () => {
     const params = { facility_id: 'F2', page: 2, per_page: 5 };
     await RulesService.getRules(params);
     expect(axiosInstance.get).toHaveBeenCalledWith(
-      '/mock/rules/',
+      '/mock/rules',
       expect.objectContaining({
-        params: expect.objectContaining(params),
+        params: expect.objectContaining({
+          ...params,
+          sort_by: 'sort_order',
+          sort_order: 'asc',
+          // page and per_page will be overwritten by ...params if present
+        }),
       })
     );
   });

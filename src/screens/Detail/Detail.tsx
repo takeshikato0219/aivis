@@ -212,6 +212,7 @@ const Detail = () => {
   const getCountDetection = useCallback(async () => {
     try {
       const response = await cameraService.countDetections(camera.id);
+      2;
       if (response.success && response.data) {
         setCountDetectionData(response.data);
       }
