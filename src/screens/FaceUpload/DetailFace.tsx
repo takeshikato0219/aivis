@@ -264,6 +264,7 @@ const DetailFace = () => {
       key: 'center',
       label: t('faceUpload.center'),
       instruction: t('faceUpload.lookStraightAtTheCamera'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
       scanDuration: 3000,
       prepareTime: 2000,
     },
@@ -271,6 +272,7 @@ const DetailFace = () => {
       key: 'left',
       label: t('faceUpload.turnLeftFace'),
       instruction: t('faceUpload.slowlyTurnYourHeadLEFT'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
       scanDuration: 3000,
       prepareTime: 2000,
     },
@@ -278,6 +280,7 @@ const DetailFace = () => {
       key: 'right',
       label: t('faceUpload.turnRightFace'),
       instruction: t('faceUpload.slowlyTurnYourHeadRIGHT'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
       scanDuration: 3000,
       prepareTime: 2000,
     },
@@ -285,6 +288,7 @@ const DetailFace = () => {
       key: 'up',
       label: t('faceUpload.lookUpFace'),
       instruction: t('faceUpload.slowlyTiltYourHeadUP'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
       scanDuration: 3000,
       prepareTime: 2000,
     },
@@ -292,6 +296,7 @@ const DetailFace = () => {
       key: 'down',
       label: t('faceUpload.lookDownFace'),
       instruction: t('faceUpload.slowlyTiltYourHeadDOWN'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
       scanDuration: 3000,
       prepareTime: 2000,
     },
@@ -1414,6 +1419,9 @@ const DetailFace = () => {
                   <Animated.View style={[styles.instructionsContainer, { opacity: fadeAnim }]}>
                     {selectedImageIndex >= 0 && FACE_POSITIONS[selectedImageIndex] && (
                       <>
+                        <Text style={styles.instruction}>
+                          {FACE_POSITIONS[selectedImageIndex].memo}
+                        </Text>
                         <Text style={styles.positionLabel}>
                           {FACE_POSITIONS[selectedImageIndex].label.toUpperCase()}
                         </Text>

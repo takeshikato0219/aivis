@@ -512,7 +512,8 @@
     "selectPhoto": "Please select one photo from the library. For improved accuracy, please choose all 5 photos from different angles.",
     "pleaseChooseAtLeastOneImage": "Please choose at least one image",
     "pleaseEnterTheRequiredInformation": "Please enter the required information.",
-    "pleaseProvideAll5PhotosInTheCorrectPositionsToImproveRecognitionAccuracy": "Please provide all 5 photos in the correct positions to improve recognition accuracy."
+    "pleaseProvideAll5PhotosInTheCorrectPositionsToImproveRecognitionAccuracy": "Please provide all 5 photos in the correct positions to improve recognition accuracy.",
+    "pleaseAlignYourFaceWithinTheRectangle": "Please align your face within the rectangle."
   },
   "liveStream": {
     "connectionSuccessful": "Connection Successful",

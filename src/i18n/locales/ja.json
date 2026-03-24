@@ -553,7 +553,8 @@
     "selectPhoto": "ライブラリから写真を1枚選択してください。精度を高めたい場合は、5つの角度すべての写真を選択してください。",
     "pleaseChooseAtLeastOneImage": "少なくとも1枚の画像を選択してください",
     "pleaseEnterTheRequiredInformation": "必要な情報を入力してください。",
-    "pleaseProvideAll5PhotosInTheCorrectPositionsToImproveRecognitionAccuracy": "認識精度を高めるために、正しい位置で5枚すべての写真を提供してください。"
+    "pleaseProvideAll5PhotosInTheCorrectPositionsToImproveRecognitionAccuracy": "認識精度を高めるために、正しい位置で5枚すべての写真を提供してください。",
+    "pleaseAlignYourFaceWithinTheRectangle": "顔を四角い枠の中に合わせてください。"
   },
   "liveStream": {
     "connectionSuccessful": "接続に成功しました",
