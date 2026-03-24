@@ -16,6 +16,7 @@ import CameraFactoryDetailBgPng from '@assets/png/camera-factory-detail-bg.png';
 import IconAttendance from '@assets/svg/attendance-icon.svg';
 import IconBan from '@assets/svg/ban-sign-icon.svg';
 import IconHelmet from '@assets/svg/helmet-icon.svg';
+import IconVip from '@assets/svg/vip-label-icon.svg';
 import type { WorkflowType } from './Detail.types';
 
 export type RuleHandlerType = 'notification' | 'customerReport' | 'none';
@@ -59,6 +60,12 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
       code: 'visitor_count',
       icon: IconHome,
       iconName: 'IconHome',
+      handlerType: 'notification',
+    },
+    {
+      code: 'vip_customer_detection',
+      icon: IconVip,
+      iconName: 'IconVip',
       handlerType: 'notification',
     },
     {
@@ -108,7 +115,7 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
     {
       code: 'mask_wearing',
       icon: IconMark,
-      iconName: 'IconMask',
+      iconName: 'IconMark',
       handlerType: 'notification',
     },
     {

@@ -22,11 +22,19 @@ jest.mock('@react-native-firebase/messaging', () => {
 jest.mock('@notifee/react-native', () => ({
   createChannel: jest.fn(),
   displayNotification: jest.fn(),
+  onForegroundEvent: jest.fn(() => jest.fn()),
+  getInitialNotification: jest.fn(() => Promise.resolve(null)),
   AndroidImportance: { HIGH: 4 },
   AndroidStyle: { BIGPICTURE: 'bigPicture' },
+  EventType: { PRESS: 1 },
 }));
 jest.mock('react-native', () => ({
-  Platform: { OS: 'android', Version: 33 },
+  Platform: {
+    OS: 'android',
+    Version: 33,
+    select: (obj: { android?: any; ios?: any; default?: any }) =>
+      obj.android ?? obj.ios ?? obj.default,
+  },
   PermissionsAndroid: {
     request: jest.fn(),
     PERMISSIONS: { POST_NOTIFICATIONS: 'POST_NOTIFICATIONS' },
@@ -48,6 +56,35 @@ jest.mock('@bam.tech/react-native-image-resizer', () => ({
       Promise.resolve({ uri: 'file:///cache/img.jpg', path: '/cache/img.jpg' })
     ),
   },
+}));
+jest.mock('@/services/notificationsService', () => ({
+  default: {
+    getNotificationById: jest.fn(() => Promise.resolve(null)),
+    updateNotificationSeen: jest.fn(() => Promise.resolve({})),
+  },
+}));
+jest.mock('@/services/rulesService', () => ({
+  default: {
+    getRules: jest.fn(() => Promise.resolve({ data: [] })),
+  },
+}));
+jest.mock('@/services/appBadgeService', () => ({
+  appBadgeService: {
+    getBadgeCount: jest.fn(() => Promise.resolve(0)),
+    setBadgeCount: jest.fn(() => Promise.resolve()),
+  },
+}));
+jest.mock('@navigation/navigationRef', () => ({
+  navigationRef: {
+    isReady: jest.fn(() => true),
+    dispatch: jest.fn(),
+  },
+}));
+jest.mock('@react-navigation/native', () => ({
+  CommonActions: {
+    navigate: jest.fn((params: object) => ({ type: 'NAVIGATE', payload: params })),
+  },
+  createNavigationContainerRef: jest.fn(() => ({ isReady: () => true, dispatch: jest.fn() })),
 }));
 
 // Use messaging() to get the singleton mock

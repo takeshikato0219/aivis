@@ -45,6 +45,18 @@ const WEEKDAYS: Weekday[] = [
   { key: 'sun', label: '日' },
 ];
 
+const RULE_CODES_WITH_FACE_MEMBER_SELECT = new Set([
+  'home_return_count',
+  'unregistered_detection',
+  'vip_customer_detection',
+  'access_prohibition_detection',
+  'attendance',
+  'restricted_area_intrusion',
+  'enterprise_attendance',
+  'helmet_wearing',
+  'mask_wearing',
+]);
+
 export default function WorkSchedule() {
   const { t } = useTranslation();
   const { width } = useResponsive();
@@ -249,7 +261,7 @@ export default function WorkSchedule() {
     fetchMembers();
     fetchRelationships();
   }, [fetchMembers, fetchRelationships]);
-
+  console.log(code);
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" />
@@ -276,7 +288,7 @@ export default function WorkSchedule() {
         </View>
 
         {/* Multiple select */}
-        {code === 'home_return_count' || code === 'unregistered_detection' ? (
+        {code && RULE_CODES_WITH_FACE_MEMBER_SELECT.has(code) ? (
           <View style={styles.multipleSelectRow}>
             <Text style={styles.sectionLabel}>{t('workSchedule.selectFaceToApply')}</Text>
             <View style={styles.select2Row}>

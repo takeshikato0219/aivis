@@ -304,7 +304,6 @@ const DetailFace = () => {
     setOriginalData(null);
     setSelectedRelationship(null);
     setHasChanges(false);
-    // ✅ Reset changed indices khi đổi member
     setChangedImageIndices(new Set());
   }, [memberId]);
 
@@ -375,7 +374,6 @@ const DetailFace = () => {
 
     const hasNameChanged = nameInput.value.trim() !== originalData.name;
     const hasRelationshipChanged = selectedRelationship.id !== originalData.relationship_type_id;
-    // ✅ Cũng check changedImageIndices
     const hasImageChanged = changedImageIndices.size > 0;
     const newHasChanges = hasNameChanged || hasRelationshipChanged || hasImageChanged;
 

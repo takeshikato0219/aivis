@@ -27,6 +27,12 @@ import IconSuspect from '@assets/svg/icon-suspect.svg';
 import IconLive from '@assets/svg/icon-live.svg';
 import IconBear from '@assets/svg/icon-bear.svg';
 import IconListFace from '@assets/svg/icon-list-face.svg';
+import IconBan from '@assets/svg/ban-sign-icon.svg';
+import IconAttendance from '@assets/svg/attendance-icon.svg';
+import IconHelmet from '@assets/svg/helmet-icon.svg';
+import IconMark from '@assets/svg/face-mask-icon.svg';
+import IconGlove from '@assets/svg/gloves-icon.svg';
+import IconVip from '@assets/svg/vip-label-icon.svg';
 
 import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/types';
 import { COLORS } from '@constants/theme';
@@ -47,7 +53,20 @@ import type {
   WorkflowType,
 } from './Detail.types';
 
-const ICONS = [IconHome, IconPerson, IconSuspect, IconLive, IconBear, IconListFace];
+const ICONS = [
+  IconHome,
+  IconPerson,
+  IconSuspect,
+  IconLive,
+  IconBear,
+  IconListFace,
+  IconMark,
+  IconGlove,
+  IconBan,
+  IconAttendance,
+  IconHelmet,
+  IconVip,
+];
 const ICON_NAMES = [
   'IconHome',
   'IconPerson',
@@ -57,6 +76,10 @@ const ICON_NAMES = [
   'IconListFace',
   'IconMark',
   'IconGlove',
+  'IconBan',
+  'IconAttendance',
+  'IconHelmet',
+  'IconVip',
 ];
 
 const LIVING_ITEM_BASE = { id: '4', name: 'ライブカメラ', status: true, counter: '1' };

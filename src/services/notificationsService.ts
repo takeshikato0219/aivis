@@ -103,6 +103,17 @@ class NotificationsService {
     return response.data;
   }
 
+  async getNotificationById(id: string): Promise<Notification | null> {
+    try {
+      const response = await axiosInstance.patch<NotificationResponse>(
+        `${API_ENDPOINTS.NOTIFICATIONS}/${id}`
+      );
+      return response.data.data ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async updateNotificationSeen(id: string, is_seen: boolean): Promise<Notification> {
     const response = await axiosInstance.patch<NotificationResponse>(
       `${API_ENDPOINTS.NOTIFICATIONS}/${id}`,

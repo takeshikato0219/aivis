@@ -30,6 +30,12 @@ import IconBear from '@assets/svg/icon-bear.svg';
 import IconListFace from '@assets/svg/icon-list-face.svg';
 import notificationsService, { Detection } from '@/services/notificationsService';
 import LoadingComponent from '@components/Loading/Loading';
+import IconMark from '@assets/svg/face-mask-icon.svg';
+import IconGlove from '@assets/svg/gloves-icon.svg';
+import IconBan from '@assets/svg/ban-sign-icon.svg';
+import IconAttendance from '@assets/svg/attendance-icon.svg';
+import IconHelmet from '@assets/svg/helmet-icon.svg';
+import IconVip from '@assets/svg/vip-label-icon.svg';
 
 interface NotificationItem {
   id: string;
@@ -48,6 +54,12 @@ const ICON_MAP: Record<string, React.FC<any>> = {
   IconLive,
   IconBear,
   IconListFace,
+  IconMark,
+  IconGlove,
+  IconBan,
+  IconAttendance,
+  IconHelmet,
+  IconVip,
 };
 
 interface VideoStateComponentProps {
@@ -103,7 +115,7 @@ const ListNotificationCamera = () => {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [listData, setListData] = useState<NotificationItem[]>([]);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -142,7 +154,7 @@ const ListNotificationCamera = () => {
             setListData((prev) => [...prev, ...newItems]);
           }
           const meta = response.meta;
-          setHasMore(meta?.has_next ?? newItems.length === PAGE_SIZE);
+          setHasMore(meta != null ? pageToLoad < meta.total_pages : false);
           setPage(pageToLoad);
         }
       } catch (error) {
@@ -168,10 +180,10 @@ const ListNotificationCamera = () => {
   }, [handleList]);
 
   const handleLoadMore = useCallback(() => {
-    if (!loading && !loadingMore && hasMore) {
+    if (!loading && !loadingMore && hasMore && listData.length > 0) {
       handleList(page + 1, false);
     }
-  }, [loading, loadingMore, hasMore, page, handleList]);
+  }, [loading, loadingMore, hasMore, page, handleList, listData.length]);
 
   const handleItemPress = (item: NotificationItem) => {
     if (item.videoUrl) {

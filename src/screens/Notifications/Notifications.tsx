@@ -194,7 +194,8 @@ const Notifications = () => {
               {Array.isArray(notifications) && notifications.length > 0 ? (
                 notifications.map((item, idx) => {
                   const matchedRule = rules.find((rule) => rule.id === item.rules_master_id);
-                  const isDailyPasserby = matchedRule && matchedRule.code === 'customer_attribute_report';
+                  const isDailyPasserby =
+                    matchedRule && matchedRule.code === 'customer_attribute_report';
                   // Get iconName from ruleIconMap if available
                   const iconInfo =
                     matchedRule && matchedRule.code && ruleIconMap[matchedRule.code]
