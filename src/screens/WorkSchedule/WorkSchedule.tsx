@@ -33,6 +33,8 @@ type ScheduleConfig = {
   repeatDays: string[];
   startMinute: number;
   endMinute: number;
+  checkoutStartMinute: number;
+  checkoutEndMinute: number;
 };
 
 const WEEKDAYS: Weekday[] = [
@@ -45,9 +47,62 @@ const WEEKDAYS: Weekday[] = [
   { key: 'sun', label: '日' },
 ];
 
+function rangesOverlapInclusive(
+  aStart: number,
+  aEnd: number,
+  bStart: number,
+  bEnd: number
+): boolean {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+type AttendanceValidationMessageKey =
+  | 'workSchedule.updateFailed'
+  | 'workSchedule.attendanceRangesIdentical'
+  | 'workSchedule.attendanceRangesOverlap'
+  | 'workSchedule.attendanceCheckoutEndsBeforeWorkStart';
+
+function getAttendanceValidationMessageKey(
+  ws: number,
+  we: number,
+  cs: number,
+  ce: number
+): AttendanceValidationMessageKey | null {
+  if (ws >= we || cs >= ce) return 'workSchedule.updateFailed';
+  if (ws === cs && we === ce) return 'workSchedule.attendanceRangesIdentical';
+  if (rangesOverlapInclusive(ws, we, cs, ce)) return 'workSchedule.attendanceRangesOverlap';
+  if (ce < ws) return 'workSchedule.attendanceCheckoutEndsBeforeWorkStart';
+  return null;
+}
+
+function minuteToTimeString(min: number): string {
+  const clampedMin = Math.max(0, Math.min(min, 1439));
+  const hh = Math.floor(clampedMin / 60)
+    .toString()
+    .padStart(2, '0');
+  const mm = (clampedMin % 60).toString().padStart(2, '0');
+  return `${hh}:${mm}:00`;
+}
+
+const WEEKDAY_KEY_TO_NUM: Record<string, number> = {
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+  sun: 7,
+};
+
+const SCHEDULE_DEFAULTS = {
+  workStartMin: 6 * 60,
+  workEndMin: 18 * 60,
+  checkoutStartMin: 18 * 60,
+  checkoutEndMin: 19 * 60,
+} as const;
+
 const RULE_CODES_WITH_FACE_MEMBER_SELECT = new Set([
   'home_return_count',
-  'unregistered_detection',
   'vip_customer_detection',
   'access_prohibition_detection',
   'attendance',
@@ -72,6 +127,7 @@ export default function WorkSchedule() {
   const camera = route.params?.camera;
   const ruleId = route.params?.ruleId;
   const code = route.params?.code;
+  const isAttendanceRule = code === 'attendance' || code === 'enterprise_attendance';
 
   useEffect(() => {
     getSchedule();
@@ -91,11 +147,29 @@ export default function WorkSchedule() {
         const [hh, mm] = timeStr.split(':').map(Number);
         return hh * 60 + mm;
       }
+      const startMinute =
+        data.start_time != null && data.start_time !== ''
+          ? timeToMinutes(data.start_time)
+          : SCHEDULE_DEFAULTS.workStartMin;
+      const endMinute =
+        data.end_time != null && data.end_time !== ''
+          ? timeToMinutes(data.end_time)
+          : SCHEDULE_DEFAULTS.workEndMin;
+      const checkoutStart =
+        data.checkout_start_time != null && data.checkout_start_time !== ''
+          ? timeToMinutes(data.checkout_start_time)
+          : SCHEDULE_DEFAULTS.checkoutStartMin;
+      const checkoutEnd =
+        data.checkout_end_time != null && data.checkout_end_time !== ''
+          ? timeToMinutes(data.checkout_end_time)
+          : SCHEDULE_DEFAULTS.checkoutEndMin;
       setSchedule({
         enabled: data.is_active,
         repeatDays,
-        startMinute: timeToMinutes(data.start_time),
-        endMinute: timeToMinutes(data.end_time),
+        startMinute,
+        endMinute,
+        checkoutStartMinute: checkoutStart,
+        checkoutEndMinute: checkoutEnd,
       });
       if (Array.isArray(data.member_ids)) {
         setSelect2Value(data.member_ids);
@@ -113,10 +187,12 @@ export default function WorkSchedule() {
     repeatDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
     startMinute: 6 * 60,
     endMinute: 18 * 60,
+    checkoutStartMinute: 17 * 60,
+    checkoutEndMinute: 19 * 60,
   });
   const [saving, setSaving] = useState(false);
 
-  const timeRangeText = useMemo(() => {
+  const formatMinuteRange = useCallback((startMin: number, endMin: number) => {
     function pad2(n: number) {
       return n < 10 ? `0${n}` : `${n}`;
     }
@@ -125,8 +201,18 @@ export default function WorkSchedule() {
       const mm = min % 60;
       return `${pad2(hh)}:${pad2(mm)}`;
     }
-    return `${minuteToHHmm(schedule.startMinute)} - ${minuteToHHmm(schedule.endMinute)}`;
-  }, [schedule.startMinute, schedule.endMinute]);
+    return `${minuteToHHmm(startMin)} - ${minuteToHHmm(endMin)}`;
+  }, []);
+
+  const timeRangeText = useMemo(
+    () => formatMinuteRange(schedule.startMinute, schedule.endMinute),
+    [formatMinuteRange, schedule.startMinute, schedule.endMinute]
+  );
+
+  const checkoutTimeRangeText = useMemo(
+    () => formatMinuteRange(schedule.checkoutStartMinute, schedule.checkoutEndMinute),
+    [formatMinuteRange, schedule.checkoutStartMinute, schedule.checkoutEndMinute]
+  );
 
   const onToggleEnabled = useCallback(async (enabled: boolean) => {
     setSchedule((p) => ({ ...p, enabled }));
@@ -148,16 +234,21 @@ export default function WorkSchedule() {
     setSchedule((p) => ({ ...p, startMinute, endMinute }));
   }, []);
 
+  const onChangeCheckoutTime = useCallback(async (values: number[]) => {
+    const [checkoutStartMinute, checkoutEndMinute] = values;
+    setSchedule((p) => ({ ...p, checkoutStartMinute, checkoutEndMinute }));
+  }, []);
+
   const fetchMembers = useCallback(async (page = 1) => {
     try {
       if (page === 1) {
-        const response = await faceService.getMembers({ page: 1, per_page: 20 });
+        const response = await faceService.getMembers({ page: 1, per_page: 50 });
         setMembers(response.data);
         setMembersPage(1);
         setHasMoreMembers(response.meta?.has_next ?? false);
       } else {
         setLoadingMoreMembers(true);
-        const response = await faceService.getMembers({ page, per_page: 20 });
+        const response = await faceService.getMembers({ page, per_page: 10 });
         setMembers((prev) => [...prev, ...response.data]);
         setMembersPage(page);
         setHasMoreMembers(response.meta?.has_next ?? false);
@@ -187,36 +278,49 @@ export default function WorkSchedule() {
     if (saving) return;
     setSaving(true);
     try {
-      const member_ids = select2Value;
-      function minuteToTimeString(min: number) {
-        const clampedMin = Math.max(0, Math.min(min, 1439));
-        const hh = Math.floor(clampedMin / 60)
-          .toString()
-          .padStart(2, '0');
-        const mm = (clampedMin % 60).toString().padStart(2, '0');
-        return `${hh}:${mm}:00`;
+      if (isAttendanceRule) {
+        const validationKey = getAttendanceValidationMessageKey(
+          schedule.startMinute,
+          schedule.endMinute,
+          schedule.checkoutStartMinute,
+          schedule.checkoutEndMinute
+        );
+        if (validationKey) {
+          showCommonAlert({
+            title: t('uploadDetectZone.failureTitle'),
+            message: t(validationKey),
+            buttons: [{ text: t('common.ok') }],
+          });
+          return;
+        }
       }
+
+      const member_ids = select2Value;
       const start_time = minuteToTimeString(schedule.startMinute);
-      // Clamp endMinute to 1439 (23:59)
       const end_time = minuteToTimeString(schedule.endMinute);
-      const weekdayMap: Record<string, number> = {
-        mon: 1,
-        tue: 2,
-        wed: 3,
-        thu: 4,
-        fri: 5,
-        sat: 6,
-        sun: 7,
-      };
-      const weekdays = schedule.repeatDays.map((d) => weekdayMap[d]).filter((n) => n !== undefined);
+      const checkout_start_time = minuteToTimeString(schedule.checkoutStartMinute);
+      const checkout_end_time = minuteToTimeString(schedule.checkoutEndMinute);
+      const weekdays = schedule.repeatDays
+        .map((d) => WEEKDAY_KEY_TO_NUM[d])
+        .filter((n) => n !== undefined);
       const is_active = schedule.enabled;
-      const response = await cameraService.updateWorkScheduleForRule(camera.id, ruleId, {
+      const schedulePayload: Record<string, unknown> = {
         member_ids,
         start_time,
         end_time,
         weekdays,
         is_active,
-      });
+      };
+      if (isAttendanceRule) {
+        schedulePayload.checkout_start_time = checkout_start_time;
+        schedulePayload.checkout_end_time = checkout_end_time;
+      }
+
+      const response = await cameraService.updateWorkScheduleForRule(
+        camera.id,
+        ruleId,
+        schedulePayload
+      );
 
       if (response.success) {
         showCommonAlert({
@@ -261,7 +365,7 @@ export default function WorkSchedule() {
     fetchMembers();
     fetchRelationships();
   }, [fetchMembers, fetchRelationships]);
-  console.log(code);
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" />
@@ -296,6 +400,7 @@ export default function WorkSchedule() {
                 style={styles.select2Trigger}
                 onPress={() => setOpenSelect2(true)}
                 activeOpacity={0.8}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 {select2Value.length > 0 ? (
                   <View style={styles.memberChipRow}>
@@ -394,43 +499,112 @@ export default function WorkSchedule() {
 
             <View style={styles.divider} />
 
-            {/* Time row */}
-            <View style={styles.timeHeaderRow}>
-              <View style={styles.timeLeft}>
-                <IconClockWorkSchedule />
-                <Text style={styles.timeLabel}>{t('workSchedule.activeTime')}</Text>
-              </View>
+            {isAttendanceRule ? (
+              <>
+                <View style={styles.timeHeaderRow}>
+                  <View style={styles.timeLeft}>
+                    <IconClockWorkSchedule />
+                    <Text style={styles.timeLabel}>{t('workSchedule.checkInTimeRange')}</Text>
+                  </View>
+                  <View style={styles.timePill}>
+                    <Text style={styles.timePillText}>{timeRangeText}</Text>
+                  </View>
+                </View>
+                <View style={styles.sliderContainer}>
+                  <MultiSlider
+                    values={[schedule.startMinute, schedule.endMinute]}
+                    min={0}
+                    max={1439}
+                    step={1}
+                    onValuesChange={onChangeTime}
+                    onValuesChangeFinish={onChangeTime}
+                    sliderLength={sliderLength}
+                    trackStyle={styles.sliderTrack}
+                    selectedStyle={styles.sliderSelected}
+                    unselectedStyle={styles.sliderUnselected}
+                    containerStyle={styles.sliderAlignCenter}
+                    markerStyle={styles.sliderMarker}
+                  />
+                  <View style={styles.timeTicks}>
+                    <Text style={styles.tickText}>00:00</Text>
+                    <Text style={styles.tickText}>06:00</Text>
+                    <Text style={styles.tickText}>12:00</Text>
+                    <Text style={styles.tickText}>18:00</Text>
+                    <Text style={styles.tickText}>23:59</Text>
+                  </View>
+                </View>
 
-              <View style={styles.timePill}>
-                <Text style={styles.timePillText}>{timeRangeText}</Text>
-              </View>
-            </View>
+                <View style={styles.divider} />
 
-            {/* Range slider */}
-            <View style={styles.sliderContainer}>
-              <MultiSlider
-                values={[schedule.startMinute, schedule.endMinute]}
-                min={0}
-                max={1439}
-                step={1}
-                onValuesChange={onChangeTime}
-                onValuesChangeFinish={onChangeTime}
-                sliderLength={sliderLength}
-                trackStyle={styles.sliderTrack}
-                selectedStyle={styles.sliderSelected}
-                unselectedStyle={styles.sliderUnselected}
-                containerStyle={styles.sliderAlignCenter}
-                markerStyle={styles.sliderMarker}
-              />
-
-              <View style={styles.timeTicks}>
-                <Text style={styles.tickText}>00:00</Text>
-                <Text style={styles.tickText}>06:00</Text>
-                <Text style={styles.tickText}>12:00</Text>
-                <Text style={styles.tickText}>18:00</Text>
-                <Text style={styles.tickText}>23:59</Text>
-              </View>
-            </View>
+                <View style={styles.timeHeaderRow}>
+                  <View style={styles.timeLeft}>
+                    <IconClockWorkSchedule />
+                    <Text style={styles.timeLabel}>{t('workSchedule.checkOutTimeRange')}</Text>
+                  </View>
+                  <View style={styles.timePill}>
+                    <Text style={styles.timePillText}>{checkoutTimeRangeText}</Text>
+                  </View>
+                </View>
+                <View style={styles.sliderContainer}>
+                  <MultiSlider
+                    values={[schedule.checkoutStartMinute, schedule.checkoutEndMinute]}
+                    min={0}
+                    max={1439}
+                    step={1}
+                    onValuesChange={onChangeCheckoutTime}
+                    onValuesChangeFinish={onChangeCheckoutTime}
+                    sliderLength={sliderLength}
+                    trackStyle={styles.sliderTrack}
+                    selectedStyle={styles.sliderSelected}
+                    unselectedStyle={styles.sliderUnselected}
+                    containerStyle={styles.sliderAlignCenter}
+                    markerStyle={styles.sliderMarker}
+                  />
+                  <View style={styles.timeTicks}>
+                    <Text style={styles.tickText}>00:00</Text>
+                    <Text style={styles.tickText}>06:00</Text>
+                    <Text style={styles.tickText}>12:00</Text>
+                    <Text style={styles.tickText}>18:00</Text>
+                    <Text style={styles.tickText}>23:59</Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.timeHeaderRow}>
+                  <View style={styles.timeLeft}>
+                    <IconClockWorkSchedule />
+                    <Text style={styles.timeLabel}>{t('workSchedule.activeTime')}</Text>
+                  </View>
+                  <View style={styles.timePill}>
+                    <Text style={styles.timePillText}>{timeRangeText}</Text>
+                  </View>
+                </View>
+                <View style={styles.sliderContainer}>
+                  <MultiSlider
+                    values={[schedule.startMinute, schedule.endMinute]}
+                    min={0}
+                    max={1439}
+                    step={1}
+                    onValuesChange={onChangeTime}
+                    onValuesChangeFinish={onChangeTime}
+                    sliderLength={sliderLength}
+                    trackStyle={styles.sliderTrack}
+                    selectedStyle={styles.sliderSelected}
+                    unselectedStyle={styles.sliderUnselected}
+                    containerStyle={styles.sliderAlignCenter}
+                    markerStyle={styles.sliderMarker}
+                  />
+                  <View style={styles.timeTicks}>
+                    <Text style={styles.tickText}>00:00</Text>
+                    <Text style={styles.tickText}>06:00</Text>
+                    <Text style={styles.tickText}>12:00</Text>
+                    <Text style={styles.tickText}>18:00</Text>
+                    <Text style={styles.tickText}>23:59</Text>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
 
           {/* Save button */}

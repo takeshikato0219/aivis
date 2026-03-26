@@ -40,17 +40,18 @@ import rulesService from '@/services/rulesService';
 import cameraService from '@/services/cameraService';
 import faceService from '@/services/faceService';
 import {
-  applyCountIncrement,
+  applyCountIncrements,
   subscribeCountDetectionEvent,
 } from '@/services/countDetectionEventService';
 
 import { MODE_BACKGROUNDS, MODE_ICONS, RULE_CONFIGS_BY_WORKFLOW } from './Detail.constants';
-import type {
-  CameraListItem,
-  CountDetectionData,
-  FilterItem,
-  RuleConfig,
-  WorkflowType,
+import {
+  isAttendanceSubcounts,
+  type CameraListItem,
+  type CountDetectionData,
+  type FilterItem,
+  type RuleConfig,
+  type WorkflowType,
 } from './Detail.types';
 
 const ICONS = [
@@ -97,15 +98,37 @@ const getCounterText = (
   workflowType: WorkflowType,
   data: CountDetectionData | null
 ): string => {
-  if (!data) return '0人';
+  const workflowCodes = RULE_CONFIGS_BY_WORKFLOW[workflowType].map((c) => c.code);
+  if (!workflowCodes.includes(code) || !data) return '0人';
+
   if (code === 'home_return_count') {
-    const hr = data.home_return_count ?? { current: 0, total: 0 };
+    if (!('home_return_count' in data) || data.home_return_count == null) return '0人';
+    const hr = data.home_return_count;
     return `${hr.current}/${hr.total}人`;
   }
-  if (code === 'creature_detection') return `${data.creature_detection ?? 0}`;
-  if (code === 'daily_passerby') return `${data.daily_passerby ?? 0}人`;
-  if (code === 'unregistered_detection' && workflowType === 'Family') {
-    return `${data.unregistered_detection ?? 0}人`;
+
+  if (code === 'creature_detection') {
+    if (!('creature_detection' in data)) return '0人';
+    return `${data.creature_detection ?? 0}`;
+  }
+
+  if (code === 'attendance') {
+    if (!('attendance' in data) || data.attendance == null) return '0人';
+    const a = data.attendance;
+    if (isAttendanceSubcounts(a)) {
+      return '';
+    }
+    if (typeof a === 'number') {
+      return `${a}人`;
+    }
+    return '0人';
+  }
+
+  const record = data as Record<string, unknown>;
+  if (!(code in record)) return '0人';
+  const raw = record[code];
+  if (typeof raw === 'number') {
+    return `${raw}人`;
   }
   return '0人';
 };
@@ -170,7 +193,7 @@ const Detail = () => {
   };
 
   const handlePressCustomerReport = (itemName: string, iconName: string) => {
-    navigation.navigate('CustomerReport', { title: itemName, icon: iconName });
+    navigation.navigate('CustomerReport', { title: itemName, icon: iconName, cameraId: camera.id });
   };
 
   const goToFaceUpload = () => {
@@ -212,7 +235,6 @@ const Detail = () => {
   const getCountDetection = useCallback(async () => {
     try {
       const response = await cameraService.countDetections(camera.id);
-      2;
       if (response.success && response.data) {
         setCountDetectionData(response.data);
       }
@@ -281,8 +303,12 @@ const Detail = () => {
   const cameraListWithIcons: CameraListItem[] = ruleConfigs.map((config) => {
     const rule = rulesList.find((r) => r.code === config.code);
     const counterText = getCounterText(config.code, workflowType, countDetectionData);
+    const att = countDetectionData?.attendance;
+    const attendanceSub =
+      config.code === 'attendance' && isAttendanceSubcounts(att) ? att : undefined;
     const baseItem = {
       counter: counterText,
+      ...(attendanceSub ? { attendanceSub } : {}),
       code: config.code,
       icon: config.icon,
       iconName: config.iconName,
@@ -451,7 +477,7 @@ const Detail = () => {
     return subscribeCountDetectionEvent((payload) => {
       const cameraId = camera?.id != null ? String(camera.id) : undefined;
       if (payload.camera_id && cameraId && payload.camera_id !== cameraId) return;
-      setCountDetectionData((prev) => applyCountIncrement(prev, payload.event_type));
+      setCountDetectionData((prev) => applyCountIncrements(prev, payload.codes));
     });
   }, [camera?.id]);
 
@@ -614,9 +640,32 @@ const Detail = () => {
                         <Text style={[styles.filterText, !item.status && styles.disableText]}>
                           {item.name}
                         </Text>
-                        <Text style={[styles.filterText, !item.status && styles.disableText]}>
-                          {item.counter}
-                        </Text>
+                        {item.attendanceSub ? (
+                          <View style={styles.attendanceCounterBlock}>
+                            <Text
+                              style={[
+                                styles.filterText,
+                                styles.attendanceCounterLine,
+                                !item.status && styles.disableText,
+                              ]}
+                            >
+                              {t('detail.checkin')}: {item.attendanceSub.checkin}人
+                            </Text>
+                            <Text
+                              style={[
+                                styles.filterText,
+                                styles.attendanceCounterLine,
+                                !item.status && styles.disableText,
+                              ]}
+                            >
+                              {t('detail.checkout')}: {item.attendanceSub.checkout}人
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text style={[styles.filterText, !item.status && styles.disableText]}>
+                            {item.counter}
+                          </Text>
+                        )}
                       </View>
                     </View>
                     <MoveRightIcon style={!item.status ? styles.disableIcon : undefined} />

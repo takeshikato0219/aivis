@@ -74,6 +74,9 @@ jest.mock('@/services/appBadgeService', () => ({
     setBadgeCount: jest.fn(() => Promise.resolve()),
   },
 }));
+jest.mock('@/services/countDetectionEventService', () => ({
+  emitCountDetectionEvent: jest.fn(),
+}));
 jest.mock('@navigation/navigationRef', () => ({
   navigationRef: {
     isReady: jest.fn(() => true),
@@ -91,13 +94,16 @@ jest.mock('@react-navigation/native', () => ({
 const messaging = require('@react-native-firebase/messaging').default();
 const notifee = require('@notifee/react-native');
 const authService = require('@/services/authService');
+const { emitCountDetectionEvent } = require('@/services/countDetectionEventService');
 const { store } = require('@redux/store');
+const { navigationRef } = require('@navigation/navigationRef');
 const { Platform, PermissionsAndroid } = require('react-native');
 
 describe('pushNotificationService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     store.getState.mockReturnValue({ auth: { accessToken: 'token' } });
+    navigationRef.isReady.mockReturnValue(true);
   });
 
   describe('requestPermissionAndGetToken', () => {
@@ -140,6 +146,24 @@ describe('pushNotificationService', () => {
 
     it('should return null on error', async () => {
       PermissionsAndroid.request.mockRejectedValue(new Error('fail'));
+      Platform.OS = 'android';
+      Platform.Version = 33;
+      const token = await pushNotificationService.requestPermissionAndGetToken();
+      expect(token).toBeNull();
+    });
+
+    it('should skip POST_NOTIFICATIONS request on Android API below 33', async () => {
+      Platform.OS = 'android';
+      Platform.Version = 32;
+      messaging.getToken.mockResolvedValue('fcm-token-low-api');
+      const token = await pushNotificationService.requestPermissionAndGetToken();
+      expect(token).toBe('fcm-token-low-api');
+      expect(PermissionsAndroid.request).not.toHaveBeenCalled();
+    });
+
+    it('should return null when getToken resolves empty', async () => {
+      PermissionsAndroid.request.mockResolvedValue('granted');
+      messaging.getToken.mockResolvedValue(null);
       Platform.OS = 'android';
       Platform.Version = 33;
       const token = await pushNotificationService.requestPermissionAndGetToken();
@@ -266,6 +290,30 @@ describe('pushNotificationService', () => {
         })
       );
     });
+
+    it('should not display notification when FCM data contains rule count keys (silent update)', async () => {
+      Platform.OS = 'android';
+      const remoteMessage = {
+        notification: { title: 'title', body: 'body' },
+        data: { visitor_count: '1' },
+      };
+      // @ts-ignore: Accessing private method for test coverage
+      await pushNotificationService.displayForegroundNotification(remoteMessage);
+      expect(notifee.displayNotification).not.toHaveBeenCalled();
+    });
+
+    it('should use default i18n title when title is missing', async () => {
+      Platform.OS = 'android';
+      const remoteMessage = { data: { body: 'only body' } };
+      // @ts-ignore: Accessing private method for test coverage
+      await pushNotificationService.displayForegroundNotification(remoteMessage);
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'pushNotification.defaultTitle',
+          body: 'only body',
+        })
+      );
+    });
   });
 
   describe('init', () => {
@@ -296,6 +344,60 @@ describe('pushNotificationService', () => {
         .mockRejectedValue(new Error('fail'));
       await pushNotificationService.init();
       expect(pushNotificationService.requestPermissionAndGetToken).toHaveBeenCalled();
+    });
+
+    it('should emit count detection event when foreground message has rule keys in data', async () => {
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue('token');
+      pushNotificationService.registerTokenWithBackend = jest.fn().mockResolvedValue(undefined);
+      messaging.onMessage.mockImplementation((cb: (msg: { data?: Record<string, string> }) => void) => {
+        cb({
+          data: { visitor_count: '1', camera_id: 'camera-99' },
+        });
+        return jest.fn();
+      });
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      await pushNotificationService.init();
+      expect(emitCountDetectionEvent).toHaveBeenCalledWith({
+        codes: ['visitor_count'],
+        camera_id: 'camera-99',
+      });
+    });
+
+    it('should call all unsubscribe handlers on cleanup', async () => {
+      const unsubMsg = jest.fn();
+      const unsubOpened = jest.fn();
+      const unsubNotifee = jest.fn();
+      const unsubToken = jest.fn();
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue(null);
+      pushNotificationService.registerTokenWithBackend = jest.fn();
+      messaging.onMessage.mockReturnValue(unsubMsg);
+      messaging.onNotificationOpenedApp.mockReturnValue(unsubOpened);
+      notifee.onForegroundEvent.mockReturnValue(unsubNotifee);
+      messaging.onTokenRefresh.mockReturnValue(unsubToken);
+      messaging.getInitialNotification.mockResolvedValue(null);
+      await pushNotificationService.init();
+      pushNotificationService.cleanup();
+      expect(unsubMsg).toHaveBeenCalled();
+      expect(unsubOpened).toHaveBeenCalled();
+      expect(unsubNotifee).toHaveBeenCalled();
+      expect(unsubToken).toHaveBeenCalled();
+    });
+
+    it('should read Firebase initial notification then Notifee when Firebase has no data', async () => {
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue(null);
+      pushNotificationService.registerTokenWithBackend = jest.fn();
+      messaging.onMessage.mockReturnValue(jest.fn());
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      notifee.getInitialNotification.mockResolvedValue(null);
+      await pushNotificationService.init();
+      expect(messaging.getInitialNotification).toHaveBeenCalled();
+      expect(notifee.getInitialNotification).toHaveBeenCalled();
     });
   });
 

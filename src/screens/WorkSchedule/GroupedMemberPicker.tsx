@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Member, MemberRelationship } from '@/services/faceService';
@@ -227,27 +228,37 @@ export function GroupedMemberPicker({
                   )}
                 </TouchableOpacity>
 
-                {isExpanded &&
-                  group.members.map((member) => {
-                    const isSelected = value.includes(member.id);
-                    return (
-                      <TouchableOpacity
-                        key={member.id}
-                        style={[styleProps.listChildContainer, modalStyles.memberItem]}
-                        onPress={() => toggleMember(member.id)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styleProps.listChildLabel}>{member.name}</Text>
-                        <View style={modalStyles.iconSlot}>
-                          <Icon
-                            name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                            size={24}
-                            color={isSelected ? '#2A9EC6' : 'rgba(234,241,247,0.5)'}
-                          />
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
+                {isExpanded && hasMembers && (
+                  <ScrollView
+                    style={modalStyles.childScroll}
+                    contentContainerStyle={modalStyles.childScrollContent}
+                    nestedScrollEnabled={Platform.OS === 'android'}
+                    showsVerticalScrollIndicator
+                    keyboardShouldPersistTaps="handled"
+                    bounces={false}
+                  >
+                    {group.members.map((member) => {
+                      const isSelected = value.includes(member.id);
+                      return (
+                        <TouchableOpacity
+                          key={member.id}
+                          style={[styleProps.listChildContainer, modalStyles.memberItem]}
+                          onPress={() => toggleMember(member.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styleProps.listChildLabel}>{member.name}</Text>
+                          <View style={modalStyles.iconSlot}>
+                            <Icon
+                              name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                              size={24}
+                              color={isSelected ? '#2A9EC6' : 'rgba(234,241,247,0.5)'}
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                )}
               </View>
             );
           })}
@@ -358,6 +369,12 @@ const modalStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'rgb(16,14,14)',
+  },
+  childScroll: {
+    maxHeight: scale(280),
+  },
+  childScrollContent: {
+    paddingBottom: 4,
   },
   footer: {
     flexDirection: 'row',

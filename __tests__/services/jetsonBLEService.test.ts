@@ -1,6 +1,6 @@
 import { Device, Subscription } from 'react-native-ble-plx';
 import { Platform } from 'react-native';
-import { jetsonBLEService } from '@/services/jetsonBLEService';
+import { jetsonBLEService, ConnectionType } from '@/services/jetsonBLEService';
 import bleManager from '../../src/utils/bleManagerSingleton';
 import { store } from '@redux/store';
 import {
@@ -10,6 +10,9 @@ import {
   setError,
   clearError,
   SerializableDevice,
+  setWifiScanStatus,
+  AuthStatus,
+  WiFiScanStatus,
 } from '@redux/slices/bleSlice';
 
 // Mock react-native-ble-plx
@@ -37,9 +40,11 @@ jest.mock('../../src/redux/store', () => ({
     dispatch: jest.fn(),
     getState: jest.fn(() => ({
       ble: {
-        wifiScanStatus: 0, // WiFiScanStatus.IDLE
+        wifiScanStatus: 0,
+        authStatus: 0,
       },
     })),
+    subscribe: jest.fn(() => jest.fn()),
   },
 }));
 
@@ -53,13 +58,18 @@ jest.mock('../../src/redux/slices/bleSlice', () => ({
   clearError: jest.fn(() => ({ type: 'clearError' })),
   setWifiStatus: jest.fn(),
   setWifiNetworks: jest.fn(),
-  setWifiScanStatus: jest.fn(),
+  setWifiScanStatus: jest.fn((payload) => ({ type: 'setWifiScanStatus', payload })),
   resetConnectionState: jest.fn(() => ({ type: 'resetConnectionState' })),
   WiFiScanStatus: {
     IDLE: 0,
     SCANNING: 1,
     COMPLETED: 2,
     ERROR: 3,
+  },
+  AuthStatus: {
+    UNAUTHENTICATED: 0,
+    AUTHENTICATED: 1,
+    INVALID_PIN: 2,
   },
   SerializableDevice: {},
 }));
@@ -87,61 +97,8 @@ jest.mock('react-native', () => ({
   PermissionsAndroid: mockPermissionsAndroid,
 }));
 
-// Mock Buffer
-jest.mock('buffer', () => ({
-  Buffer: {
-    from: jest.fn((data: string | number[], encoding?: string) => {
-      if (typeof data === 'string' && encoding === 'base64') {
-        // For base64 input, return buffer with proper indexing
-        const realBuffer = Buffer.from(data, 'base64');
-        return {
-          toString: jest.fn((enc: string) => {
-            if (enc === 'utf-8') {
-              return realBuffer.toString('utf-8');
-            }
-            return data;
-          }),
-          [0]: realBuffer[0], // Allow indexing
-          length: realBuffer.length,
-        };
-      }
-      if (Array.isArray(data)) {
-        // For array input
-        const realBuffer = Buffer.from(data);
-        return {
-          toString: jest.fn((enc: string) => {
-            if (enc === 'base64') {
-              return realBuffer.toString('base64');
-            }
-            return data;
-          }),
-          [0]: realBuffer[0],
-          length: realBuffer.length,
-        };
-      }
-      if (encoding === 'utf-8') {
-        // For utf-8 string input
-        const realBuffer = Buffer.from(data, 'utf-8');
-        return {
-          toString: jest.fn((enc: string) => {
-            if (enc === 'base64') {
-              return realBuffer.toString('base64');
-            }
-            return data;
-          }),
-          [0]: realBuffer[0],
-          length: realBuffer.length,
-        };
-      }
-      // Default case
-      return {
-        toString: jest.fn(() => data),
-        [0]: 0,
-        length: 1,
-      };
-    }),
-  },
-}));
+// Use real Buffer so stringToBase64 / base64 helpers in jetsonBLEService work
+jest.mock('buffer', () => jest.requireActual('buffer'));
 
 describe('JetsonBLEService', () => {
   let mockDevice: Device;
@@ -156,6 +113,19 @@ describe('JetsonBLEService', () => {
     (jetsonBLEService as any).initialized = false;
     (jetsonBLEService as any).scanTimeout = null;
     (jetsonBLEService as any).wifiScanTimeout = null;
+    (jetsonBLEService as any).netCheckTimeout = null;
+    (jetsonBLEService as any).isConnected = false;
+    (jetsonBLEService as any).isDisconnecting = false;
+    (jetsonBLEService as any).isCleaningUp = false;
+
+    (store.getState as jest.Mock).mockReturnValue({
+      ble: { wifiScanStatus: 0, authStatus: AuthStatus.UNAUTHENTICATED },
+    });
+    (store.subscribe as jest.Mock).mockImplementation(() => jest.fn());
+
+    mockSubscription = {
+      remove: jest.fn(),
+    } as any;
 
     // Create mock device
     mockDevice = {
@@ -180,10 +150,6 @@ describe('JetsonBLEService', () => {
       manufacturerData: 'test-data',
     };
 
-    mockSubscription = {
-      remove: jest.fn(),
-    } as any;
-
     // Setup default mocks
     (bleManager.startDeviceScan as jest.Mock).mockImplementation((services, options, callback) => {
       // Simulate finding a device
@@ -193,6 +159,25 @@ describe('JetsonBLEService', () => {
     (bleManager.connectToDevice as jest.Mock).mockResolvedValue(mockDevice);
     (mockDevice.monitorCharacteristicForService as jest.Mock).mockReturnValue(mockSubscription);
     (bleManager.onDeviceDisconnected as jest.Mock).mockReturnValue(mockSubscription);
+
+    mockPermissionsAndroid.requestMultiple.mockResolvedValue({
+      'android.permission.BLUETOOTH_SCAN': 'granted',
+      'android.permission.BLUETOOTH_CONNECT': 'granted',
+      'android.permission.ACCESS_FINE_LOCATION': 'granted',
+    });
+    mockPermissionsAndroid.request.mockResolvedValue('granted');
+    (Platform as any).OS = 'android';
+    (Platform as any).Version = 31;
+  });
+
+  afterEach(() => {
+    const svc = jetsonBLEService as any;
+    if (svc.netCheckTimeout) clearTimeout(svc.netCheckTimeout);
+    if (svc.wifiScanTimeout) clearTimeout(svc.wifiScanTimeout);
+    if (svc.scanTimeout) clearTimeout(svc.scanTimeout);
+    svc.netCheckTimeout = null;
+    svc.wifiScanTimeout = null;
+    svc.scanTimeout = null;
   });
 
   describe('Initialization', () => {
@@ -261,6 +246,7 @@ describe('JetsonBLEService', () => {
       expect(result).toBe(true);
       expect(mockPermissionsAndroid.requestMultiple).not.toHaveBeenCalled();
     });
+
   });
 
   describe('Scanning', () => {
@@ -308,6 +294,19 @@ describe('JetsonBLEService', () => {
       expect(bleManager.stopDeviceScan).toHaveBeenCalled();
       expect(store.dispatch).toHaveBeenCalledWith(setScanning(false));
     });
+
+    it('should dispatch error when Bluetooth permissions are not granted', async () => {
+      mockPermissionsAndroid.requestMultiple.mockResolvedValue({
+        'android.permission.BLUETOOTH_SCAN': 'denied',
+        'android.permission.BLUETOOTH_CONNECT': 'granted',
+        'android.permission.ACCESS_FINE_LOCATION': 'granted',
+      });
+
+      await jetsonBLEService.startScan();
+
+      expect(store.dispatch).toHaveBeenCalledWith(setError('Bluetooth permissions not granted'));
+      expect(store.dispatch).toHaveBeenCalledWith(setScanning(false));
+    });
   });
 
   describe('Connection', () => {
@@ -328,6 +327,65 @@ describe('JetsonBLEService', () => {
       await jetsonBLEService.disconnect();
       expect(bleManager.cancelDeviceConnection).not.toHaveBeenCalled();
     });
+
+    it('should return success immediately when already connected', async () => {
+      (jetsonBLEService as any).isConnected = true;
+
+      const result = await jetsonBLEService.connect(mockDevice, '1234');
+
+      expect(result).toEqual({ success: true });
+      expect(bleManager.connectToDevice).not.toHaveBeenCalled();
+    });
+
+    it('should complete connect when PIN auth succeeds', async () => {
+      let subscribeListener: () => void;
+      (store.subscribe as jest.Mock).mockImplementation((cb: () => void) => {
+        subscribeListener = cb;
+        return jest.fn();
+      });
+      (mockDevice.writeCharacteristicWithResponseForService as jest.Mock).mockImplementation(
+        async () => {
+          (store.getState as jest.Mock).mockReturnValue({
+            ble: { wifiScanStatus: 0, authStatus: AuthStatus.AUTHENTICATED },
+          });
+          subscribeListener();
+        }
+      );
+
+      const result = await jetsonBLEService.connect(mockDevice, '1234');
+
+      expect(result).toEqual({ success: true });
+      expect(mockDevice.writeCharacteristicWithResponseForService).toHaveBeenCalled();
+    });
+
+    it('should return INVALID_PIN when auth state is invalid PIN', async () => {
+      let subscribeListener: () => void;
+      (store.subscribe as jest.Mock).mockImplementation((cb: () => void) => {
+        subscribeListener = cb;
+        return jest.fn();
+      });
+      (mockDevice.writeCharacteristicWithResponseForService as jest.Mock).mockImplementation(
+        async () => {
+          (store.getState as jest.Mock).mockReturnValue({
+            ble: { wifiScanStatus: 0, authStatus: AuthStatus.INVALID_PIN },
+          });
+          subscribeListener();
+        }
+      );
+
+      const result = await jetsonBLEService.connect(mockDevice, '0000');
+
+      expect(result).toEqual({ success: false, reason: 'INVALID_PIN' });
+    });
+
+    it('should cancel connection when connected and disconnect is called', async () => {
+      (jetsonBLEService as any).isConnected = true;
+      (jetsonBLEService as any).connectedDevice = mockDevice;
+
+      await jetsonBLEService.disconnect();
+
+      expect(bleManager.cancelDeviceConnection).toHaveBeenCalledWith(mockDevice.id);
+    });
   });
 
   describe('WiFi Operations', () => {
@@ -343,6 +401,98 @@ describe('JetsonBLEService', () => {
 
       expect(result).toBe(false);
       expect(store.dispatch).toHaveBeenCalledWith(setError('Not connected to the device'));
+    });
+
+    it('should write SSID and password when connected', async () => {
+      (jetsonBLEService as any).connectedDevice = mockDevice;
+      (jetsonBLEService as any).isConnected = true;
+
+      const ok = await jetsonBLEService.sendWiFiCredentials('SSID-X', 'secret');
+
+      expect(ok).toBe(true);
+      expect(mockDevice.writeCharacteristicWithResponseForService).toHaveBeenCalledTimes(2);
+    });
+
+    it('should dispatch error when WiFi credential write fails', async () => {
+      (jetsonBLEService as any).connectedDevice = mockDevice;
+      (jetsonBLEService as any).isConnected = true;
+      (mockDevice.writeCharacteristicWithResponseForService as jest.Mock).mockRejectedValueOnce(
+        new Error('write failed')
+      );
+
+      const ok = await jetsonBLEService.sendWiFiCredentials('SSID-X', 'secret');
+
+      expect(ok).toBe(false);
+      expect(store.dispatch).toHaveBeenCalledWith(setError('write failed'));
+    });
+
+    it('should request WiFi scan when connected', async () => {
+      (jetsonBLEService as any).connectedDevice = mockDevice;
+      (jetsonBLEService as any).isConnected = true;
+
+      const ok = await jetsonBLEService.requestWiFiScan();
+
+      expect(ok).toBe(true);
+      expect(setWifiScanStatus).toHaveBeenCalledWith(WiFiScanStatus.SCANNING);
+      expect(mockDevice.writeCharacteristicWithResponseForService).toHaveBeenCalled();
+    });
+
+    it('should return false when WiFi scan write fails', async () => {
+      (jetsonBLEService as any).connectedDevice = mockDevice;
+      (jetsonBLEService as any).isConnected = true;
+      (mockDevice.writeCharacteristicWithResponseForService as jest.Mock).mockRejectedValueOnce(
+        new Error('scan write error')
+      );
+
+      const ok = await jetsonBLEService.requestWiFiScan();
+
+      expect(ok).toBe(false);
+      expect(store.dispatch).toHaveBeenCalledWith(setError('scan write error'));
+    });
+  });
+
+  describe('checkNetworkStatus', () => {
+    it('should return false when not connected', async () => {
+      const ok = await jetsonBLEService.checkNetworkStatus();
+
+      expect(ok).toBe(false);
+      expect(store.dispatch).toHaveBeenCalledWith(setError('Not connected to the device'));
+    });
+
+    it('should write net check and return true when connected', async () => {
+      (jetsonBLEService as any).connectedDevice = mockDevice;
+      (jetsonBLEService as any).isConnected = true;
+
+      const ok = await jetsonBLEService.checkNetworkStatus();
+
+      expect(ok).toBe(true);
+      expect(mockDevice.writeCharacteristicWithResponseForService).toHaveBeenCalled();
+    });
+
+    it('should dispatch error when net check write fails', async () => {
+      (jetsonBLEService as any).connectedDevice = mockDevice;
+      (jetsonBLEService as any).isConnected = true;
+      (mockDevice.writeCharacteristicWithResponseForService as jest.Mock).mockRejectedValueOnce(
+        new Error('net fail')
+      );
+
+      const ok = await jetsonBLEService.checkNetworkStatus();
+
+      expect(ok).toBe(false);
+      expect(store.dispatch).toHaveBeenCalledWith(setError('net fail'));
+    });
+  });
+
+  describe('getConnectionTypeText', () => {
+    it('returns Vietnamese label for known connection types', () => {
+      expect(jetsonBLEService.getConnectionTypeText(ConnectionType.WIFI)).toBe('WiFi');
+      expect(jetsonBLEService.getConnectionTypeText(ConnectionType.ETHERNET)).toBe(
+        'Ethernet (LAN)'
+      );
+    });
+
+    it('falls back to NONE label for unknown type', () => {
+      expect(jetsonBLEService.getConnectionTypeText('unknown' as any)).toBe('Không có kết nối');
     });
   });
 

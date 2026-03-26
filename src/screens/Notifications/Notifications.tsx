@@ -206,7 +206,16 @@ const Notifications = () => {
                   const onPress = () => {
                     if (!item.is_seen) handleMarkAsRead(item.id);
                     if (isDailyPasserby) {
-                      navigation.navigate('CustomerReport', { title: itemName, icon: iconName });
+                      const dateValue = item.sent_at || item.created_at;
+                      const detectedAt = dateValue
+                        ? new Date(dateValue).toISOString().slice(0, 10)
+                        : undefined;
+                      navigation.navigate('CustomerReport', {
+                        title: itemName,
+                        icon: iconName,
+                        cameraId: item.camera_id,
+                        detected_at: detectedAt,
+                      });
                     } else {
                       const dateValue = item.sent_at || item.created_at;
                       const detectedAt = dateValue

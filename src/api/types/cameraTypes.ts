@@ -130,6 +130,9 @@ export interface WorkScheduleApiResponse {
     member_ids: string[];
     start_time: string;
     end_time: string;
+    /** Attendance: check-out window (giờ tan ca), optional until backend always returns them */
+    checkout_start_time?: string;
+    checkout_end_time?: string;
     weekdays: number[];
     is_active: boolean;
     created_at: string;
@@ -227,6 +230,29 @@ export interface CameraDetailResponse {
   success: boolean;
   message: string;
   data: CameraDetailData;
+}
+
+export interface CustomerAttributeAgeGroups {
+  under_30: number;
+  from_30_to_49: number;
+  above_50: number;
+}
+
+export interface CustomerAttributeSegment {
+  age_groups: CustomerAttributeAgeGroups;
+  total: number;
+}
+
+export interface CustomerAttributeReportData {
+  female: CustomerAttributeSegment;
+  male: CustomerAttributeSegment;
+  unknown: CustomerAttributeSegment;
+}
+
+export interface CustomerAttributeReportResponse {
+  success: boolean;
+  message: string;
+  data: CustomerAttributeReportData;
 }
 
 export interface CameraDetailApiResponse {

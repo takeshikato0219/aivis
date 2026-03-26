@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import BackIcon from '@assets/svg/icon-back.svg';
@@ -22,6 +23,9 @@ import IconLive from '@assets/svg/icon-live.svg';
 import IconBear from '@assets/svg/icon-bear.svg';
 import IconListFace from '@assets/svg/icon-list-face.svg';
 import { AppStackParamList } from '@navigation/types';
+import cameraService from '@/services/cameraService';
+import type { CustomerAttributeReportData } from '@api/types/cameraTypes';
+import { useTranslation } from 'react-i18next';
 
 const ICON_MAP: Record<string, React.FC<any>> = {
   IconHome,
@@ -33,11 +37,45 @@ const ICON_MAP: Record<string, React.FC<any>> = {
 };
 
 const CustomerReport = () => {
-  const [selectedDate, setSelectedDate] = useState('2026-03-04');
-  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const navigation = useNavigation();
   const route = useRoute<RouteProp<AppStackParamList, 'CustomerReport'>>();
+  const cameraId = route.params?.cameraId;
+  const [selectedDate, setSelectedDate] = useState(() => {
+    return route.params?.detected_at || new Date().toISOString().slice(0, 10);
+  });
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [report, setReport] = useState<CustomerAttributeReportData | null>(null);
+  const [loading, setLoading] = useState(!!cameraId);
   const HeaderIcon = ICON_MAP[route.params?.icon] || Icon;
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    if (!cameraId) {
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const response = await cameraService.reportCustomer(cameraId, { date: selectedDate });
+        if (!cancelled && response.success && response.data) {
+          setReport(response.data);
+        }
+      } catch {
+        if (!cancelled) {
+          setReport(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [cameraId, selectedDate]);
 
   return (
     <View style={styles.container}>
@@ -86,54 +124,124 @@ const CustomerReport = () => {
         contentContainerStyle={styles.pbScrollView}
         showsVerticalScrollIndicator={false}
       >
-        <View>
-          <View style={styles.viewStyle}>
-            <View style={styles.styleCenterRow}>
-              <IconMen />
-              <Text style={styles.styleText}>男性</Text>
+        {loading ? (
+          // eslint-disable-next-line react-native/no-inline-styles
+          <ActivityIndicator size="large" color="#2196f3" style={{ marginTop: 24 }} />
+        ) : (
+          <View>
+            <View style={styles.viewStyle}>
+              <View style={styles.styleCenterRow}>
+                <IconMen />
+                <Text style={styles.styleText}>{t('customerReport.male')}</Text>
+              </View>
+              <Text style={styles.styleText}>
+                {t('customerReport.personCount', { count: report?.male?.total ?? 0 })}
+              </Text>
             </View>
-            <Text style={styles.styleText}>25人</Text>
+            <View style={styles.viewChild}>
+              <View style={styles.viewItem}>
+                <Text style={styles.styleTextCenter}>{t('customerReport.ageUnder30')}</Text>
+                <Text style={styles.styleTextCenter}>
+                  {t('customerReport.personCount', {
+                    count: report?.male?.age_groups?.under_30 ?? 0,
+                  })}
+                </Text>
+              </View>
+              <View style={styles.styleItem} />
+              <View style={styles.viewItem}>
+                <Text style={styles.styleTextCenter}>{t('customerReport.age30AndOver')}</Text>
+                <Text style={styles.styleTextCenter}>
+                  {t('customerReport.personCount', {
+                    count: report?.male?.age_groups?.from_30_to_49 ?? 0,
+                  })}
+                </Text>
+              </View>
+              <View style={styles.styleItem} />
+              <View style={styles.viewItem}>
+                <Text style={styles.styleTextCenter}>{t('customerReport.age50AndOver')}</Text>
+                <Text style={styles.styleTextCenter}>
+                  {t('customerReport.personCount', {
+                    count: report?.male?.age_groups?.above_50 ?? 0,
+                  })}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.viewItem2}>
+              <View style={styles.styleCenterRow}>
+                <IconWomen />
+                <Text style={styles.styleText}>{t('customerReport.female')}</Text>
+              </View>
+              <Text style={styles.styleText}>
+                {t('customerReport.personCount', { count: report?.female?.total ?? 0 })}
+              </Text>
+            </View>
+            <View style={styles.viewChild}>
+              <View style={styles.viewItem}>
+                <Text style={styles.styleTextCenter}>{t('customerReport.ageUnder30')}</Text>
+                <Text style={styles.styleTextCenter}>
+                  {t('customerReport.personCount', {
+                    count: report?.female?.age_groups?.under_30 ?? 0,
+                  })}
+                </Text>
+              </View>
+              <View style={styles.styleItem} />
+              <View style={styles.viewItem}>
+                <Text style={styles.styleTextCenter}>{t('customerReport.age30AndOver')}</Text>
+                <Text style={styles.styleTextCenter}>
+                  {t('customerReport.personCount', {
+                    count: report?.female?.age_groups?.from_30_to_49 ?? 0,
+                  })}
+                </Text>
+              </View>
+              <View style={styles.styleItem} />
+              <View style={styles.viewItem}>
+                <Text style={styles.styleTextCenter}>{t('customerReport.age50AndOver')}</Text>
+                <Text style={styles.styleTextCenter}>
+                  {t('customerReport.personCount', {
+                    count: report?.female?.age_groups?.above_50 ?? 0,
+                  })}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.viewItem2}>
+              <View style={styles.styleCenterRow}>
+                <IconSuspect />
+                <Text style={styles.styleText}>{t('customerReport.unknown')}</Text>
+              </View>
+              <Text style={styles.styleText}>
+                {t('customerReport.personCount', { count: report?.unknown?.total ?? 0 })}
+              </Text>
+            </View>
+            <View style={styles.viewChild}>
+              <View style={styles.viewItem}>
+                <Text style={styles.styleTextCenter}>{t('customerReport.ageUnder30')}</Text>
+                <Text style={styles.styleTextCenter}>
+                  {t('customerReport.personCount', {
+                    count: report?.unknown?.age_groups?.under_30 ?? 0,
+                  })}
+                </Text>
+              </View>
+              <View style={styles.styleItem} />
+              <View style={styles.viewItem}>
+                <Text style={styles.styleTextCenter}>{t('customerReport.age30AndOver')}</Text>
+                <Text style={styles.styleTextCenter}>
+                  {t('customerReport.personCount', {
+                    count: report?.unknown?.age_groups?.from_30_to_49 ?? 0,
+                  })}
+                </Text>
+              </View>
+              <View style={styles.styleItem} />
+              <View style={styles.viewItem}>
+                <Text style={styles.styleTextCenter}>{t('customerReport.age50AndOver')}</Text>
+                <Text style={styles.styleTextCenter}>
+                  {t('customerReport.personCount', {
+                    count: report?.unknown?.age_groups?.above_50 ?? 0,
+                  })}
+                </Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.viewChild}>
-            <View style={styles.viewItem}>
-              <Text style={styles.styleTextCenter}>30歳未満</Text>
-              <Text style={styles.styleTextCenter}>25人</Text>
-            </View>
-            <View style={styles.styleItem} />
-            <View style={styles.viewItem}>
-              <Text style={styles.styleTextCenter}>30歳未満</Text>
-              <Text style={styles.styleTextCenter}>25人</Text>
-            </View>
-            <View style={styles.styleItem} />
-            <View style={styles.viewItem}>
-              <Text style={styles.styleTextCenter}>30歳未満</Text>
-              <Text style={styles.styleTextCenter}>25人</Text>
-            </View>
-          </View>
-          <View style={styles.viewItem2}>
-            <View style={styles.styleCenterRow}>
-              <IconWomen />
-              <Text style={styles.styleText}>女性</Text>
-            </View>
-            <Text style={styles.styleText}>25人</Text>
-          </View>
-          <View style={styles.viewChild}>
-            <View style={styles.viewItem}>
-              <Text style={styles.styleTextCenter}>30歳未満</Text>
-              <Text style={styles.styleTextCenter}>25人</Text>
-            </View>
-            <View style={styles.styleItem} />
-            <View style={styles.viewItem}>
-              <Text style={styles.styleTextCenter}>30歳未満</Text>
-              <Text style={styles.styleTextCenter}>25人</Text>
-            </View>
-            <View style={styles.styleItem} />
-            <View style={styles.viewItem}>
-              <Text style={styles.styleTextCenter}>30歳未満</Text>
-              <Text style={styles.styleTextCenter}>25人</Text>
-            </View>
-          </View>
-        </View>
+        )}
       </ScrollView>
       <Modal
         visible={showCalendarModal}
@@ -168,7 +276,7 @@ const CustomerReport = () => {
               style={styles.closeCalendarBtn}
               onPress={() => setShowCalendarModal(false)}
             >
-              <Text style={styles.closeCalendarText}>Đóng</Text>
+              <Text style={styles.closeCalendarText}>{t('customerReport.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

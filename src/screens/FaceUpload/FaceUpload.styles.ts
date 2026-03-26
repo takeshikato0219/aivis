@@ -558,6 +558,12 @@ export const styles = StyleSheet.create({
   },
   membersList: {
     padding: 16,
+    flexGrow: 1,
+  },
+  listFooterLoading: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   memberItem: {
     flexDirection: 'row',

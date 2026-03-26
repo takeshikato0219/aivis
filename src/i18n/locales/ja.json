@@ -201,7 +201,9 @@
     "releaseMode": "解除モード",
     "securityMode": "セキュリティモード",
     "textNotification": "侵入 知 即時通知",
-    "doYouWantToSwitchMode": "モードを切り替えますか？"
+    "doYouWantToSwitchMode": "モードを切り替えますか？",
+    "checkin": "出勤",
+    "checkout": "退勤"
   },
   "validate": {
     "emailRequired": "メールアドレスを入力してください。",
@@ -586,6 +588,16 @@
     "uploadPhotoFromLibrary": "ライブラリから写真をアップロード",
     "close": "閉じる"
   },
+  "customerReport": {
+    "male": "男性",
+    "female": "女性",
+    "unknown": "不明",
+    "ageUnder30": "30歳未満",
+    "age30AndOver": "30歳以上",
+    "age50AndOver": "50歳以上",
+    "personCount": "{{count}}人",
+    "close": "閉じる"
+  },
   "detailFace": {
     "detailFace": "詳細顔"
   },
@@ -597,6 +609,11 @@
     "scheduleEnabled": "ルールの有効化／無効化",
     "repeat": "繰り返し",
     "activeTime": "AI 知有効時間",
+    "checkInTimeRange": "就業時間（開始〜終了）",
+    "checkOutTimeRange": "退勤時間帯（開始〜終了）",
+    "attendanceRangesIdentical": "就業時間と退勤時間帯は別の時間帯にしてください。",
+    "attendanceRangesOverlap": "就業時間と退勤時間帯が重ならないようにしてください。",
+    "attendanceCheckoutEndsBeforeWorkStart": "退勤時間帯の終了は、就業時間の開始より前にできません。",
     "save": "保存",
     "saving": "保存中...",
     "weekdays": {

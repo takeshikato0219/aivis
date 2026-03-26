@@ -133,6 +133,32 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
   ],
 };
 
+/** All rule `code` values from RULE_CONFIGS_BY_WORKFLOW (e.g. push payload `code`, count keys in `data`). */
+export const ALL_RULE_CODES = new Set<string>(
+  (Object.keys(RULE_CONFIGS_BY_WORKFLOW) as WorkflowType[]).flatMap((wf) =>
+    RULE_CONFIGS_BY_WORKFLOW[wf].map((c) => c.code)
+  )
+);
+
+/** FCM may send which attendance sub-counter changed (not in RULE_CONFIGS_BY_WORKFLOW rows). */
+const ATTENDANCE_FCM_SUBKEYS = new Set(['attendance_checkin', 'attendance_checkout']);
+
+/**
+ * FCM `data` may use rule keys directly (e.g. `{ visitor_count: "1", vip_customer_detection: "1" }`) without a `code` field.
+ * Returns every key that matches RULE_CONFIGS_BY_WORKFLOW / ALL_RULE_CODES (payload key order preserved).
+ * Also includes `attendance_checkin` / `attendance_checkout` for Store attendance subcounts.
+ */
+export function getRuleCodesFromFcmData(
+  data: Record<string, unknown> | undefined | null
+): string[] {
+  if (!data || typeof data !== 'object') return [];
+  const codes: string[] = [];
+  for (const key of Object.keys(data)) {
+    if (ALL_RULE_CODES.has(key) || ATTENDANCE_FCM_SUBKEYS.has(key)) codes.push(key);
+  }
+  return codes;
+}
+
 export const MODE_BACKGROUNDS = [
   CameraShopDetailBgPng,
   CameraHomeDetailBgPng,

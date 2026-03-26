@@ -60,7 +60,7 @@ describe('RulesService', () => {
           sort_by: 'sort_order',
           sort_order: 'asc',
           page: 1,
-          per_page: 10,
+          per_page: 50,
         }),
       })
     );

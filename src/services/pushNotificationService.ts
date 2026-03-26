@@ -6,6 +6,7 @@ import ImageResizer from '@bam.tech/react-native-image-resizer';
 import i18n from '@/i18n';
 import authService from '@/services/authService';
 import { store } from '@redux/store';
+import { getRuleCodesFromFcmData } from '@/screens/Detail/Detail.constants';
 import { emitCountDetectionEvent } from '@/services/countDetectionEventService';
 import notificationsService from '@/services/notificationsService';
 import rulesService from '@/services/rulesService';
@@ -119,10 +120,10 @@ class PushNotificationService {
   }
 
   /**
-   * Check if notification should be suppressed (silent/background data-only).
+   * Check if notification should be suppressed (silent count-update push: `data` contains a rule key from RULE_CONFIGS_BY_WORKFLOW, e.g. visitor_count).
    */
   private shouldSuppressNotification(remoteMessage: any): boolean {
-    return !!remoteMessage?.data?.event_type;
+    return getRuleCodesFromFcmData(remoteMessage?.data).length > 0;
   }
 
   /**
@@ -343,11 +344,11 @@ class PushNotificationService {
       this.unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
         console.log('[PushNotification] Foreground message:', remoteMessage);
         await this.displayForegroundNotification(remoteMessage);
-        if (remoteMessage?.data?.event_type) {
-          const eventType = remoteMessage.data.event_type;
-          const cameraId = remoteMessage.data.camera_id;
+        const codes = getRuleCodesFromFcmData(remoteMessage?.data);
+        if (codes.length > 0) {
+          const cameraId = remoteMessage?.data?.camera_id;
           emitCountDetectionEvent({
-            event_type: String(eventType),
+            codes,
             camera_id: cameraId != null ? String(cameraId) : undefined,
           });
         }

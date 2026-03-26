@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import {
   ActivityIndicator,
@@ -24,6 +24,7 @@ import Line from '@xmartlabs/react-native-line';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { setUserData } from '@utils/authStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { User } from '@api/types/authTypes';
 
 const LINE_PROFILE_KEY = 'lineProfile';
 
@@ -32,6 +33,8 @@ const Setting = () => {
   const { t } = useTranslation();
   const { user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
+  const userRef = useRef(user);
+  userRef.current = user;
 
   // LINE Subscription state
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
@@ -43,20 +46,19 @@ const Setting = () => {
     navigation.goBack();
   };
 
-  const loadSubscriptionStatus = useCallback(async () => {
+  const loadSubscriptionStatus = useCallback(async (userOverride?: User | null) => {
     setIsLoadingStatus(true);
     try {
-      const isUserLoggedInWithLine = !!user?.line_notification_id;
-      if (isUserLoggedInWithLine) {
-        setIsFollowing(!!user.has_followed_bot);
-      }
+      const u = userOverride ?? userRef.current;
+      // @ts-ignore
+      setIsFollowing(u.has_followed_bot);
     } catch (error) {
       console.error('Error loading subscription status:', error);
       setIsFollowing(false);
     } finally {
       setIsLoadingStatus(false);
     }
-  }, [user?.has_followed_bot, user?.line_notification_id]);
+  }, []);
 
   useEffect(() => {
     const loadLineProfile = async () => {
@@ -67,8 +69,7 @@ const Setting = () => {
       }
     };
     loadLineProfile();
-    loadSubscriptionStatus();
-  }, [loadSubscriptionStatus]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -241,7 +242,7 @@ const Setting = () => {
             await setUserData(updatedUser);
             dispatch(setUser(updatedUser));
             await AsyncStorage.removeItem(LINE_PROFILE_KEY);
-            await loadSubscriptionStatus();
+            await loadSubscriptionStatus(updatedUser);
           } catch (error) {
             console.error('Error unsubscribing from LINE:', error);
           } finally {

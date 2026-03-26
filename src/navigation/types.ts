@@ -84,7 +84,7 @@ export type AppStackParamList = {
     cameraId: string;
     detected_at?: string;
   };
-  CustomerReport: { title: string; icon: string };
+  CustomerReport: { title: string; icon: string; cameraId: string; detected_at?: string };
   Policy: { type: string };
 };
 

@@ -30,6 +30,12 @@ import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-nativ
 import { useImagePicker } from '@hooks/useImagePicker';
 import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';
 import { getApiErrorDisplayMessage } from '@utils/errorHandler';
+import {
+  filterFacesInFrameForPose,
+  getSingleFaceFrameIssue,
+  validateFacePose,
+  type FacePoseKey,
+} from '@utils/faceUploadFaceValidation';
 
 // Face position titles for individual image editing
 const FACE_POSITION_TITLES = [
@@ -570,39 +576,6 @@ const DetailFace = () => {
     }
   };
 
-  const validateFacePosition = (face: Face, positionKey: string): boolean => {
-    const rotX = face.rotationX ?? 0;
-    const rotY = face.rotationY ?? 0;
-    if (rotX === 0 && rotY === 0 && positionKey !== 'center') {
-      return false;
-    }
-    const normalizeAngle = (angle: number) => {
-      let normalized = angle % 360;
-      if (normalized > 180) normalized -= 360;
-      if (normalized < -180) normalized += 360;
-      return normalized;
-    };
-
-    const rotationX = normalizeAngle(rotX);
-    const rotationY = normalizeAngle(rotY);
-    const rotationThreshold = 15;
-
-    switch (positionKey) {
-      case 'center':
-        return Math.abs(rotationX) < rotationThreshold && Math.abs(rotationY) < rotationThreshold;
-      case 'left':
-        return rotationY < -rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
-      case 'right':
-        return rotationY > rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
-      case 'up':
-        return rotationX > rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
-      case 'down':
-        return rotationX < -rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
-      default:
-        return false;
-    }
-  };
-
   const startSinglePrepare = () => {
     setIsPreparing(true);
     setPrepareProgress(0);
@@ -773,55 +746,8 @@ const DetailFace = () => {
       }
 
       const allFaces = await FaceDetection.detect(imageUri, faceDetectionOptions);
-      const positionKey = FACE_POSITION_TITLES[selectedImageIndex]?.key || 'center';
-
-      // Validation params per position (same as FaceUpload.tsx)
-      const FRAME_MARGIN = positionKey === 'center' ? 0.15 : 0.12;
-      const MIN_OVERLAP_RATIO = positionKey === 'center' ? 0.8 : 0.75;
-      const MIN_FACE_RATIO = 0.1;
-      const MAX_FACE_RATIO = 0.9;
-
-      const filterFacesInFrame = (
-        width: number,
-        height: number,
-        frameLeft: number,
-        frameTop: number,
-        frameRight: number,
-        frameBottom: number
-      ): Face[] => {
-        return allFaces.filter((face) => {
-          const fl = face.frame.left;
-          const ft = face.frame.top;
-          const fr = face.frame.left + face.frame.width;
-          const fb = face.frame.top + face.frame.height;
-          const overlapLeft = Math.max(fl, frameLeft);
-          const overlapTop = Math.max(ft, frameTop);
-          const overlapRight = Math.min(fr, frameRight);
-          const overlapBottom = Math.min(fb, frameBottom);
-          const overlapW = Math.max(0, overlapRight - overlapLeft);
-          const overlapH = Math.max(0, overlapBottom - overlapTop);
-          const overlapRatioW = overlapW / face.frame.width;
-          const overlapRatioH = overlapH / face.frame.height;
-          const enoughInFrame =
-            overlapRatioW >= MIN_OVERLAP_RATIO && overlapRatioH >= MIN_OVERLAP_RATIO;
-          if (!enoughInFrame) return false;
-          const faceSizeRatio = Math.max(face.frame.width / width, face.frame.height / height);
-          return faceSizeRatio >= MIN_FACE_RATIO && faceSizeRatio <= MAX_FACE_RATIO;
-        });
-      };
-
-      const runFilterWithDimensions = (width: number, height: number): Face[] => {
-        const marginX = width * FRAME_MARGIN;
-        const marginY = height * FRAME_MARGIN;
-        return filterFacesInFrame(
-          width,
-          height,
-          marginX,
-          marginY,
-          width - marginX,
-          height - marginY
-        );
-      };
+      const positionKey = (FACE_POSITION_TITLES[selectedImageIndex]?.key ||
+        'center') as FacePoseKey;
 
       let faces: Face[];
       let usedWidth: number | null = null;
@@ -829,9 +755,9 @@ const DetailFace = () => {
 
       if (Platform.OS === 'ios') {
         if (imgWidth != null && imgHeight != null) {
-          faces = runFilterWithDimensions(imgWidth, imgHeight);
+          faces = filterFacesInFrameForPose(allFaces, imgWidth, imgHeight, positionKey);
           if (faces.length === 0 && allFaces.length > 0) {
-            faces = runFilterWithDimensions(imgHeight, imgWidth);
+            faces = filterFacesInFrameForPose(allFaces, imgHeight, imgWidth, positionKey);
             if (faces.length > 0) {
               usedWidth = imgHeight;
               usedHeight = imgWidth;
@@ -853,7 +779,7 @@ const DetailFace = () => {
             (w, h) => {
               usedWidth = w;
               usedHeight = h;
-              resolve(runFilterWithDimensions(w, h));
+              resolve(filterFacesInFrameForPose(allFaces, w, h, positionKey));
             },
             () => resolve([])
           );
@@ -863,38 +789,14 @@ const DetailFace = () => {
       const getFrameRejectionReason = (): string | null => {
         if (allFaces.length === 0 || allFaces.length > 1) return null;
         if (usedWidth == null || usedHeight == null) return t('faceUpload.faceOutsideFrame');
-        const face = allFaces[0];
-        const marginX = usedWidth * FRAME_MARGIN;
-        const marginY = usedHeight * FRAME_MARGIN;
-        const frameLeft = marginX;
-        const frameTop = marginY;
-        const frameRight = usedWidth - marginX;
-        const frameBottom = usedHeight - marginY;
-        const fl = face.frame.left;
-        const ft = face.frame.top;
-        const fr = face.frame.left + face.frame.width;
-        const fb = face.frame.top + face.frame.height;
-        const overlapLeft = Math.max(fl, frameLeft);
-        const overlapTop = Math.max(ft, frameTop);
-        const overlapRight = Math.min(fr, frameRight);
-        const overlapBottom = Math.min(fb, frameBottom);
-        const overlapW = Math.max(0, overlapRight - overlapLeft);
-        const overlapH = Math.max(0, overlapBottom - overlapTop);
-        const overlapRatioW = overlapW / face.frame.width;
-        const overlapRatioH = overlapH / face.frame.height;
-        const enoughInFrame =
-          overlapRatioW >= MIN_OVERLAP_RATIO && overlapRatioH >= MIN_OVERLAP_RATIO;
-        if (!enoughInFrame) return t('faceUpload.faceOutsideFrame');
-        const faceSizeRatio = Math.max(
-          face.frame.width / usedWidth,
-          face.frame.height / usedHeight
-        );
-        if (faceSizeRatio < MIN_FACE_RATIO) return t('faceUpload.faceTooFar');
-        if (faceSizeRatio > MAX_FACE_RATIO) return t('faceUpload.faceTooClose');
+        const issue = getSingleFaceFrameIssue(allFaces[0], usedWidth, usedHeight, positionKey);
+        if (issue === 'outside') return t('faceUpload.faceOutsideFrame');
+        if (issue === 'too_far') return t('faceUpload.faceTooFar');
+        if (issue === 'too_close') return t('faceUpload.faceTooClose');
         return null;
       };
 
-      if (faces.length === 1 && validateFacePosition(faces[0], positionKey)) {
+      if (faces.length === 1 && validateFacePose(faces[0], positionKey)) {
         const updatedImages = ensureFiveImageSlots(member.images);
         updatedImages[selectedImageIndex] = {
           ...updatedImages[selectedImageIndex],

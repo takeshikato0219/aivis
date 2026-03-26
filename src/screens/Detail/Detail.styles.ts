@@ -204,4 +204,11 @@ export const styles = StyleSheet.create({
   disableIcon: {
     opacity: 0.4,
   },
+  attendanceCounterBlock: {
+    marginTop: 2,
+    gap: 2,
+  },
+  attendanceCounterLine: {
+    fontSize: isTablet() ? 22 : 14,
+  },
 });

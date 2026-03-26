@@ -13,6 +13,7 @@ import {
   CameraModesResponse,
   CameraDetailResponse,
   CameraDetailApiResponse,
+  CustomerAttributeReportResponse,
 } from '@api/types/cameraTypes';
 
 class CameraService {
@@ -121,7 +122,20 @@ class CameraService {
   }
 
   async countDetections(cameraId: string): Promise<any> {
-    const response = await axiosInstance.get(`${API_ENDPOINTS.CAMERAS}/${cameraId}/stats/family`);
+    const response = await axiosInstance.get(`${API_ENDPOINTS.CAMERAS}/${cameraId}/stats`);
+    return response.data;
+  }
+
+  async reportCustomer(
+    cameraId: string,
+    params: { date: string }
+  ): Promise<CustomerAttributeReportResponse> {
+    const response = await axiosInstance.get<CustomerAttributeReportResponse>(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}/attribute-report`,
+      {
+        params: { date: params.date },
+      }
+    );
     return response.data;
   }
 }

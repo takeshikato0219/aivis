@@ -160,7 +160,9 @@
     "releaseMode": "Release Mode",
     "securityMode": "Security Mode",
     "textNotification": "Intrusion detection, immediate notification",
-    "doYouWantToSwitchMode": "Do you want to switch mode?"
+    "doYouWantToSwitchMode": "Do you want to switch mode?",
+    "checkin": "Check-in",
+    "checkout": "Check-out"
   },
   "validate": {
     "emailRequired": "The email field is required.",
@@ -545,6 +547,16 @@
     "uploadPhotoFromLibrary": "Upload photo from library",
     "close": "Close"
   },
+  "customerReport": {
+    "male": "Male",
+    "female": "Female",
+    "unknown": "Unknown",
+    "ageUnder30": "Under 30",
+    "age30AndOver": "30+",
+    "age50AndOver": "50+",
+    "personCount": "{{count}}",
+    "close": "Close"
+  },
   "detailFace": {
     "detailFace": "Detail Face"
   },
@@ -556,6 +568,11 @@
     "scheduleEnabled": "Enable/Disable Rule",
     "repeat": "Repeat",
     "activeTime": "AI Active time",
+    "checkInTimeRange": "Work hours (start – end)",
+    "checkOutTimeRange": "End-of-shift hours (start – end)",
+    "attendanceRangesIdentical": "The work hours and end-of-shift hours must be two different ranges.",
+    "attendanceRangesOverlap": "Work hours and end-of-shift hours must not overlap.",
+    "attendanceCheckoutEndsBeforeWorkStart": "End-of-shift hours must not end before work hours begin.",
     "save": "Save",
     "saving": "Saving...",
     "weekdays": {

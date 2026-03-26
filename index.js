@@ -7,11 +7,13 @@ import messaging from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance, AndroidStyle } from '@notifee/react-native';
 import App from './App';
 import { name as appName } from './app.json';
+import { getRuleCodesFromFcmData } from './src/screens/Detail/Detail.constants';
 
 const ANDROID_CHANNEL_ID = 'fcm_default_channel';
 
-// Check if notification should be suppressed (silent/background data-only)
-const shouldSuppressNotification = (remoteMessage) => !!remoteMessage?.data?.event_type;
+// Silent count-update push: `data` contains one or more rule keys from RULE_CONFIGS_BY_WORKFLOW
+const shouldSuppressNotification = (remoteMessage) =>
+  getRuleCodesFromFcmData(remoteMessage?.data).length > 0;
 
 // Background message handler - must be registered before App
 messaging().setBackgroundMessageHandler(async (remoteMessage) => {
