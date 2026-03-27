@@ -349,12 +349,14 @@ describe('pushNotificationService', () => {
     it('should emit count detection event when foreground message has rule keys in data', async () => {
       pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue('token');
       pushNotificationService.registerTokenWithBackend = jest.fn().mockResolvedValue(undefined);
-      messaging.onMessage.mockImplementation((cb: (msg: { data?: Record<string, string> }) => void) => {
-        cb({
-          data: { visitor_count: '1', camera_id: 'camera-99' },
-        });
-        return jest.fn();
-      });
+      messaging.onMessage.mockImplementation(
+        (cb: (msg: { data?: Record<string, string> }) => void) => {
+          cb({
+            data: { visitor_count: '1', camera_id: 'camera-99' },
+          });
+          return jest.fn();
+        }
+      );
       messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
       notifee.onForegroundEvent.mockReturnValue(jest.fn());
       messaging.onTokenRefresh.mockReturnValue(jest.fn());

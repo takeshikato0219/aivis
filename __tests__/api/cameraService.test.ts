@@ -399,7 +399,10 @@ describe('CameraService (API)', () => {
 
       const result = await cameraService.updateWorkScheduleForRule('c1', 'r1', body);
 
-      expect(mockAxiosInstance.patch).toHaveBeenCalledWith(`${mockApiEndpoints.CAMERAS}/c1/rules/r1`, body);
+      expect(mockAxiosInstance.patch).toHaveBeenCalledWith(
+        `${mockApiEndpoints.CAMERAS}/c1/rules/r1`,
+        body
+      );
       expect(result).toEqual(payload);
     });
   });

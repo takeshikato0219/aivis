@@ -8,6 +8,7 @@ import {
 
 function makeFace(overrides: Partial<Face> & { frame: Face['frame'] }): Face {
   return {
+    // @ts-ignore
     frame: overrides.frame,
     rotationX: overrides.rotationX,
     rotationY: overrides.rotationY,

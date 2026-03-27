@@ -246,7 +246,6 @@ describe('JetsonBLEService', () => {
       expect(result).toBe(true);
       expect(mockPermissionsAndroid.requestMultiple).not.toHaveBeenCalled();
     });
-
   });
 
   describe('Scanning', () => {

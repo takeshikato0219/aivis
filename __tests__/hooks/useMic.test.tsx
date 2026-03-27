@@ -25,10 +25,7 @@ const mockLiveAudio = require('react-native-live-audio-stream').default;
 
 const VALID_MIC_URL = 'wss://example.com/mic?token=test';
 
-function renderUseMic(
-  config: Parameters<typeof useMic>[0] = {},
-  preloadMic?: MicState
-) {
+function renderUseMic(config: Parameters<typeof useMic>[0] = {}, preloadMic?: MicState) {
   const store = configureStore({ reducer: { stream: streamReducer } });
   if (preloadMic !== undefined) {
     store.dispatch(setMicState(preloadMic));
@@ -72,6 +69,7 @@ describe('useMic', () => {
       (isStreamURLValid as jest.Mock).mockReturnValue(false);
       const injectJavaScript = jest.fn();
       const webViewRef = { current: { injectJavaScript } };
+      // @ts-ignore
       const { result, store } = renderUseMic({ micUrl: 'bad', webViewRef });
 
       await act(async () => {
@@ -95,6 +93,7 @@ describe('useMic', () => {
     it('injects start script when URL is valid and WebView is ready', async () => {
       const injectJavaScript = jest.fn();
       const webViewRef = { current: { injectJavaScript } };
+      // @ts-ignore
       const { result } = renderUseMic({ micUrl: VALID_MIC_URL, webViewRef });
 
       await act(async () => {
@@ -155,6 +154,7 @@ describe('useMic', () => {
     it('stopMic injects cleanup script and sets STOPPED', () => {
       const injectJavaScript = jest.fn();
       const webViewRef = { current: { injectJavaScript } };
+      // @ts-ignore
       const { result, store } = renderUseMic({ webViewRef });
 
       act(() => {
@@ -176,10 +176,10 @@ describe('useMic', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <Provider store={store}>{children}</Provider>
       );
-      const { result } = renderHook(
-        () => useMic({ micUrl: VALID_MIC_URL, webViewRef }),
-        { wrapper }
-      );
+      // @ts-ignore
+      const { result } = renderHook(() => useMic({ micUrl: VALID_MIC_URL, webViewRef }), {
+        wrapper,
+      });
 
       await act(async () => {
         await result.current.toggleMic();
@@ -192,6 +192,7 @@ describe('useMic', () => {
     it('toggleMic calls startMic when idle', async () => {
       const injectJavaScript = jest.fn();
       const webViewRef = { current: { injectJavaScript } };
+      // @ts-ignore
       const { result } = renderUseMic({ micUrl: VALID_MIC_URL, webViewRef });
 
       await act(async () => {
@@ -204,7 +205,7 @@ describe('useMic', () => {
     it('autoStart runs startMic when micUrl is valid', async () => {
       const injectJavaScript = jest.fn();
       const webViewRef = { current: { injectJavaScript } };
-
+      // @ts-ignore
       renderHook(() => useMic({ micUrl: VALID_MIC_URL, autoStart: true, webViewRef }), {
         wrapper: ({ children }) => (
           <Provider store={configureStore({ reducer: { stream: streamReducer } })}>
