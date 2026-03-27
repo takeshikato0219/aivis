@@ -1,5 +1,5 @@
-import axiosInstance from './axiosConfig';
-import { API_ENDPOINTS } from './apiEndpoints';
+import axiosInstance from '@api/axiosConfig';
+import { API_ENDPOINTS } from '@api/apiEndpoints';
 
 export interface MemberRelationship {
   id: string;
@@ -10,6 +10,7 @@ export interface MemberImage {
   id: string;
   image_path: string;
   image_url: string;
+  sort_order: number;
 }
 
 export interface MemberRelationship {

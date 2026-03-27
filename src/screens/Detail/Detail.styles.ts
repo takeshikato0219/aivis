@@ -195,4 +195,20 @@ export const styles = StyleSheet.create({
     paddingBottom: 40,
     flexGrow: 1,
   },
+  disableBackground: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  disableText: {
+    color: COLORS.gray9A9A9A,
+  },
+  disableIcon: {
+    opacity: 0.4,
+  },
+  attendanceCounterBlock: {
+    marginTop: 2,
+    gap: 2,
+  },
+  attendanceCounterLine: {
+    fontSize: isTablet() ? 22 : 14,
+  },
 });

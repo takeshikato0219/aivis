@@ -9,6 +9,7 @@ import OfflineBanner from '@components/OfflineBanner/OfflineBanner';
 import ErrorHandler from '@utils/errorHandler';
 import NetworkMonitor from '@utils/networkMonitor';
 import CrashReporter from '@utils/crashReporter';
+import PushNotificationInitializer from '@components/PushNotificationInitializer/PushNotificationInitializer';
 import { initI18n } from '@/i18n';
 import { jetsonBLEService } from '@/services/jetsonBLEService';
 
@@ -90,13 +91,15 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     >
       <Provider store={store}>
         <PaperProvider theme={theme}>
-          <StatusBar
-            barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-            backgroundColor={theme.colors.background}
-            translucent={false}
-          />
-          <OfflineBanner />
-          {children}
+          <PushNotificationInitializer>
+            <StatusBar
+              barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+              backgroundColor={theme.colors.background}
+              translucent={false}
+            />
+            <OfflineBanner />
+            {children}
+          </PushNotificationInitializer>
         </PaperProvider>
       </Provider>
     </ErrorBoundary>

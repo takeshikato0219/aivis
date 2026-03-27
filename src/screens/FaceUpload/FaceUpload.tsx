@@ -26,10 +26,16 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { styles } from './FaceUpload.styles';
 import { useInput } from '@hooks/useInput';
 import TextInput from '@components/TextInput/TextInput';
-import faceService, { MemberRelationship } from '@api/faceService';
+import faceService, { MemberRelationship } from '@/services/faceService';
 import { COLORS } from '@constants/theme';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { isName } from '@utils/validate';
+import { getApiErrorDisplayMessage } from '@utils/errorHandler';
+import {
+  filterFacesInFrameForPose,
+  getSingleFaceFrameIssue,
+  validateFacePose,
+} from '@utils/faceUploadFaceValidation';
 import { ListFaceRouteProp } from '@navigation/types';
 import { launchImageLibrary } from 'react-native-image-picker';
 
@@ -47,6 +53,7 @@ const FaceUpload: React.FC = () => {
       key: 'center',
       label: t('faceUpload.center'),
       instruction: t('faceUpload.lookStraightAtTheCamera'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
       scanDuration: 3000,
       prepareTime: 2000,
     },
@@ -54,6 +61,7 @@ const FaceUpload: React.FC = () => {
       key: 'left',
       label: t('faceUpload.turnLeftFace'),
       instruction: t('faceUpload.slowlyTurnYourHeadLEFT'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
       scanDuration: 3000,
       prepareTime: 2000,
     },
@@ -61,6 +69,7 @@ const FaceUpload: React.FC = () => {
       key: 'right',
       label: t('faceUpload.turnRightFace'),
       instruction: t('faceUpload.slowlyTurnYourHeadRIGHT'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
       scanDuration: 3000,
       prepareTime: 2000,
     },
@@ -68,6 +77,7 @@ const FaceUpload: React.FC = () => {
       key: 'up',
       label: t('faceUpload.lookUpFace'),
       instruction: t('faceUpload.slowlyTiltYourHeadUP'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
       scanDuration: 3000,
       prepareTime: 2000,
     },
@@ -75,13 +85,14 @@ const FaceUpload: React.FC = () => {
       key: 'down',
       label: t('faceUpload.lookDownFace'),
       instruction: t('faceUpload.slowlyTiltYourHeadDOWN'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
       scanDuration: 3000,
       prepareTime: 2000,
     },
   ] as const;
 
   interface FaceData {
-    position: FacePosition;
+    positionIndex: number;
     imageUri: string;
     timestamp: number;
     scanProgress: number;
@@ -113,52 +124,11 @@ const FaceUpload: React.FC = () => {
   // Face detection options for static images
   const faceDetectionOptions: FaceDetectionOptions = {
     performanceMode: 'accurate',
-    landmarkMode: 'none',
+    landmarkMode: 'all',
     contourMode: 'none',
     classificationMode: 'none',
     minFaceSize: Platform.OS === 'ios' ? 0.1 : 0.15,
     trackingEnabled: false,
-  };
-
-  // Validate face position based on rotation angles
-  const validateFacePosition = (face: Face, position: FacePosition): boolean => {
-    // ML Kit returns angles in degrees, not radians
-    // Normalize to -180 to 180 range
-    const normalizeAngle = (angle: number) => {
-      let normalized = angle % 360;
-      if (normalized > 180) normalized -= 360;
-      if (normalized < -180) normalized += 360;
-      return normalized;
-    };
-
-    const rotationX = normalizeAngle(face.rotationX);
-    const rotationY = normalizeAngle(face.rotationY);
-    const rotationThreshold = 15; // degrees
-
-    switch (position) {
-      case 'center':
-        // Face should be relatively straight
-        return Math.abs(rotationX) < rotationThreshold && Math.abs(rotationY) < rotationThreshold;
-
-      case 'left':
-        // Face should be turned left (negative Y rotation for front camera)
-        return rotationY < -rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
-
-      case 'right':
-        // Face should be turned right (positive Y rotation for front camera)
-        return rotationY > rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
-
-      case 'up':
-        // Face should be tilted up (positive X rotation for front camera)
-        return rotationX > rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
-
-      case 'down':
-        // Face should be tilted down (negative X rotation for front camera)
-        return rotationX < -rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
-
-      default:
-        return false;
-    }
   };
 
   const getPositionErrorMessage = (position: FacePosition): string => {
@@ -386,7 +356,30 @@ const FaceUpload: React.FC = () => {
         flash: 'off',
       });
       let imageUri = photo.path.startsWith('file://') ? photo.path : `file://${photo.path}`;
+      let imgWidth: number | null = null;
+      let imgHeight: number | null = null;
+
       if (Platform.OS === 'ios') {
+        // Resize before detection: ImageResizer outputs normalized pixels (orientation applied).
+        // ML Kit often fails on raw camera images due to EXIF orientation - resize fixes this.
+        try {
+          const resizedImage = await ImageResizer.createResizedImage(
+            imageUri,
+            1920,
+            1920,
+            'JPEG',
+            100,
+            0,
+            undefined,
+            false
+          );
+          imageUri = resizedImage.uri;
+          imgWidth = resizedImage.width;
+          imgHeight = resizedImage.height;
+        } catch (resizeError) {
+          console.error('Image resize error:', resizeError);
+        }
+      } else {
         try {
           const resizedImage = await ImageResizer.createResizedImage(
             imageUri,
@@ -400,17 +393,67 @@ const FaceUpload: React.FC = () => {
           );
           imageUri = resizedImage.uri;
         } catch (resizeError) {
-          console.error('Image resize/normalize error:', resizeError);
+          console.error('Image resize error:', resizeError);
         }
       }
 
       // Detect faces in the captured image
-      const faces = await FaceDetection.detect(imageUri, faceDetectionOptions);
+      const allFaces = await FaceDetection.detect(imageUri, faceDetectionOptions);
+
+      const positionKey = currentPosition.key;
+
+      let faces: Face[];
+
+      let usedWidth: number | null = null;
+      let usedHeight: number | null = null;
+
+      if (Platform.OS === 'ios') {
+        if (imgWidth != null && imgHeight != null) {
+          faces = filterFacesInFrameForPose(allFaces, imgWidth, imgHeight, positionKey);
+          if (faces.length === 0 && allFaces.length > 0) {
+            faces = filterFacesInFrameForPose(allFaces, imgHeight, imgWidth, positionKey);
+            if (faces.length > 0) {
+              usedWidth = imgHeight;
+              usedHeight = imgWidth;
+            } else {
+              usedWidth = imgWidth;
+              usedHeight = imgHeight;
+            }
+          } else if (faces.length > 0 || allFaces.length > 0) {
+            usedWidth = imgWidth;
+            usedHeight = imgHeight;
+          }
+        } else {
+          faces = [];
+        }
+      } else {
+        faces = await new Promise<Face[]>((resolve) => {
+          Image.getSize(
+            imageUri,
+            (w, h) => {
+              usedWidth = w;
+              usedHeight = h;
+              resolve(filterFacesInFrameForPose(allFaces, w, h, positionKey));
+            },
+            () => resolve([])
+          );
+        });
+      }
+
+      const getFrameRejectionReason = (): string | null => {
+        if (allFaces.length === 0 || allFaces.length > 1) return null;
+        if (usedWidth == null || usedHeight == null) return t('faceUpload.faceOutsideFrame');
+        const issue = getSingleFaceFrameIssue(allFaces[0], usedWidth, usedHeight, positionKey);
+        if (issue === 'outside') return t('faceUpload.faceOutsideFrame');
+        if (issue === 'too_far') return t('faceUpload.faceTooFar');
+        if (issue === 'too_close') return t('faceUpload.faceTooClose');
+        return null;
+      };
 
       // Check if exactly one face is detected and in correct position
-      if (faces.length === 1 && validateFacePosition(faces[0], currentPosition.key)) {
+      if (faces.length === 1 && validateFacePose(faces[0], positionKey)) {
         const faceData: FaceData = {
-          position: currentPosition.key,
+          positionIndex: currentPositionIndex,
           imageUri,
           timestamp: Date.now(),
           scanProgress: scanProgress,
@@ -458,7 +501,10 @@ const FaceUpload: React.FC = () => {
         let errorMessage = '';
 
         if (faces.length === 0) {
-          errorMessage = t('faceUpload.noFaceDetected');
+          errorMessage =
+            allFaces.length > 0
+              ? (getFrameRejectionReason() ?? t('faceUpload.faceOutsideFrame'))
+              : t('faceUpload.noFaceDetected');
         } else if (faces.length > 1) {
           errorMessage = t('faceUpload.multipleFacesDetected');
         } else if (faces.length === 1) {
@@ -484,11 +530,21 @@ const FaceUpload: React.FC = () => {
     }
   };
 
-  const uploadFaces = async (allFaces: { position: string; imageUri: string }[]) => {
-    if (allFaces.length !== 1) {
+  const uploadFaces = async (allFaces: { position: number; imageUri: string }[]) => {
+    if (allFaces.length < 1) {
       Alert.alert(
         t('faceUpload.validationError') || 'Validation Error',
-        t('faceUpload.mustHave5Images') || 'Must capture all 5 face positions before uploading'
+        t('faceUpload.mustHaveAtLeastOneImage') ||
+          'Must capture at least 1 face image before uploading',
+        [
+          {
+            text: t('common.retry') || 'Retry',
+            onPress: () => {
+              setIsProcessing(false);
+              startScanning();
+            },
+          },
+        ]
       );
       return;
     }
@@ -497,18 +553,20 @@ const FaceUpload: React.FC = () => {
 
     try {
       const formData = new FormData();
+      const imageIndices: number[] = [];
       formData.append('name', nameInput.value);
       if (selectedRelationship) {
         formData.append('relationship_type_id', selectedRelationship.id);
       }
-      allFaces.forEach((face) => {
+      for (const face of allFaces) {
+        imageIndices.push(face.position);
         formData.append('images', {
           uri: face.imageUri,
           type: 'image/jpeg',
           name: `${face.position}.jpg`,
-        } as any);
-      });
-
+        });
+      }
+      formData.append('sort_orders', imageIndices.join(','));
       await faceService.uploadFaces(formData);
       Alert.alert(
         t('faceUpload.uploadSuccess') || 'Success',
@@ -524,25 +582,24 @@ const FaceUpload: React.FC = () => {
       );
     } catch (error) {
       console.error('Upload error:', error);
-      Alert.alert(
-        t('faceUpload.uploadFailed') || 'Upload Failed',
-        t('faceUpload.uploadFailedMessage') || 'Failed to upload face data. Please try again.',
-        [
-          {
-            text: t('common.ok') || 'OK',
-            onPress: () => {
-              navigation.goBack();
-            },
+      const displayMessage = getApiErrorDisplayMessage(error);
+      Alert.alert(t('faceUpload.uploadFailed') || 'Upload Failed', displayMessage, [
+        {
+          text: t('common.retry') || 'Retry',
+          onPress: () => {
+            restartCaptureFromBeginning();
           },
-        ]
-      );
+        },
+      ]);
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleComplete = async (allFaces: FaceData[]) => {
-    await uploadFaces(allFaces.map(({ position, imageUri }) => ({ position, imageUri })));
+    await uploadFaces(
+      allFaces.map(({ positionIndex, imageUri }) => ({ position: positionIndex, imageUri }))
+    );
   };
 
   const stopAllScanning = () => {
@@ -577,6 +634,18 @@ const FaceUpload: React.FC = () => {
     }
   };
 
+  /** After submit fails in capture flow: reset all poses and let useEffect run startPrepare again. */
+  const restartCaptureFromBeginning = () => {
+    stopAllScanning();
+    setIsUploading(false);
+    setIsProcessing(false);
+    setCurrentPositionIndex(0);
+    setCapturedFaces([]);
+    setLastCapturedImage(null);
+    setShowPreview(false);
+    progressAnim.setValue(0);
+  };
+
   const handleRetake = () => {
     Alert.alert(
       t('faceUpload.retake') || 'Retake?',
@@ -607,7 +676,7 @@ const FaceUpload: React.FC = () => {
     }
 
     if (type !== 'capture') {
-      const hasAtLeastOneImage = images.some((img) => !!img);
+      const hasAtLeastOneImage = images.some((img) => img.uri);
       if (!hasAtLeastOneImage) {
         setChoosePhotoError(t('faceUpload.pleaseChooseAtLeastOneImage'));
         return false;
@@ -630,57 +699,54 @@ const FaceUpload: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!validateForm()) {
-      return;
-    }
-    const imageIds: number[] = [];
-    const imageFiles: { uri: string; type: string; name: string }[] = [];
-    images.forEach((img, idx) => {
-      if (img.uri) {
-        imageIds.push(img.id!);
-        imageFiles.push({
-          uri: img.uri,
-          type: 'image/jpeg',
-          name: `${FACE_POSITION_TITLES[idx]?.key || 'center'}.jpg`,
-        });
-      }
-    });
-    const formData = new FormData();
-    formData.append('name', nameInput.value);
-    if (selectedRelationship) {
-      formData.append('relationship_type_id', selectedRelationship.id);
-    }
-    formData.append('image_ids', imageIds.join(','));
-    imageFiles.forEach((file) => formData.append('image_files', file as any));
     try {
-      console.log(formData);
-      await faceService.uploadFaces(formData);
-      Alert.alert(
-        t('faceUpload.uploadSuccess') || 'Success',
-        t('faceUpload.uploadSuccessMessage') || 'Face data uploaded successfully!',
-        [
-          {
-            text: t('common.ok') || 'OK',
-            onPress: () => {
-              navigation.goBack();
+      if (!validateForm()) {
+        return;
+      }
+      setIsUploading(true);
+      const imageIndices: number[] = [];
+      const imageFiles: { uri: string; type: string; name: string }[] = [];
+      images.forEach((img, idx) => {
+        if (img.uri) {
+          imageIndices.push(idx);
+          imageFiles.push({
+            uri: img.uri,
+            type: 'image/jpeg',
+            name: `${FACE_POSITION_TITLES[idx]?.key || 'center'}.jpg`,
+          });
+        }
+      });
+      const formData = new FormData();
+      formData.append('name', nameInput.value);
+      if (selectedRelationship) {
+        formData.append('relationship_type_id', selectedRelationship.id);
+      }
+      formData.append('sort_orders', imageIndices.join(','));
+      imageFiles.forEach((file) => formData.append('images', file as any));
+      const response = await faceService.uploadFaces(formData);
+      if (response.success) {
+        Alert.alert(
+          t('faceUpload.uploadSuccess') || 'Success',
+          t('faceUpload.uploadSuccessMessage') || 'Face data uploaded successfully!',
+          [
+            {
+              text: t('common.ok') || 'OK',
+              onPress: () => {
+                navigation.goBack();
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
+      setIsUploading(false);
     } catch (error) {
       console.error('Upload error:', error);
-      Alert.alert(
-        t('faceUpload.uploadFailed') || 'Upload Failed',
-        t('faceUpload.uploadFailedMessage') || 'Failed to upload face data. Please try again.',
-        [
-          {
-            text: t('common.ok') || 'OK',
-            onPress: () => {
-              navigation.goBack();
-            },
-          },
-        ]
-      );
+      const displayMessage = getApiErrorDisplayMessage(error);
+      Alert.alert('', displayMessage, [
+        {
+          text: t('common.ok') || 'OK',
+        },
+      ]);
     } finally {
       setIsUploading(false);
     }
@@ -728,7 +794,7 @@ const FaceUpload: React.FC = () => {
       const newImages = [...images];
       newImages[index] = {
         uri: result.assets[0].uri || null,
-        id: index + 1, // id là vị trí 1-5
+        id: index + 1,
       };
       setImages(newImages);
       setChoosePhotoError(undefined);
@@ -778,7 +844,7 @@ const FaceUpload: React.FC = () => {
       <TouchableOpacity
         style={styles.saveButtonChoosePhoto}
         onPress={handleSave}
-        disabled={isLoadingRelationships}
+        disabled={isUploading}
       >
         <Text style={styles.startButtonText}>{t('workSchedule.save')}</Text>
       </TouchableOpacity>
@@ -996,6 +1062,13 @@ const FaceUpload: React.FC = () => {
             </TouchableOpacity>
           </Modal>
         </SafeAreaView>
+        {/* Uploading Overlay */}
+        {isUploading && (
+          <View style={styles.uploadingOverlay}>
+            <ActivityIndicator size="large" color="#4CAF50" />
+            <Text style={styles.uploadingText}>{t('faceUpload.uploading')}</Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -1193,6 +1266,7 @@ const FaceUpload: React.FC = () => {
 
         {/* Instructions */}
         <Animated.View style={[styles.instructionsContainer, { opacity: fadeAnim }]}>
+          <Text style={styles.instruction}>{currentPosition.memo}</Text>
           <Text style={styles.positionLabel}>{currentPosition.label.toUpperCase()}</Text>
           <Text style={styles.instruction}>{currentPosition.instruction}</Text>
 

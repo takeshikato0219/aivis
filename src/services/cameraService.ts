@@ -1,5 +1,5 @@
-import axiosInstance from './axiosConfig';
-import { API_ENDPOINTS } from './apiEndpoints';
+import axiosInstance from '@api/axiosConfig';
+import { API_ENDPOINTS } from '@api/apiEndpoints';
 import {
   RegisterCameraRequest,
   RegisterCameraResponse,
@@ -10,7 +10,11 @@ import {
   LiveStreamUrlResponse,
   RuleMasterListApiResponse,
   WorkScheduleApiResponse,
-} from './types/cameraTypes';
+  CameraModesResponse,
+  CameraDetailResponse,
+  CameraDetailApiResponse,
+  CustomerAttributeReportResponse,
+} from '@api/types/cameraTypes';
 
 class CameraService {
   async registerCamera(data: RegisterCameraRequest): Promise<RegisterCameraResponse> {
@@ -92,6 +96,45 @@ class CameraService {
     const response = await axiosInstance.patch(
       `${API_ENDPOINTS.CAMERAS}/${cameraId}/rules/${ruleId}`,
       scheduleData
+    );
+    return response.data;
+  }
+
+  async getCameraModes(): Promise<CameraModesResponse> {
+    const response = await axiosInstance.get<CameraModesResponse>(`${API_ENDPOINTS.CAMERAS}/modes`);
+    return response.data;
+  }
+
+  async getDetailCamera(cameraId: string): Promise<CameraDetailResponse> {
+    const response = await axiosInstance.get<CameraDetailResponse>(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}`
+    );
+    return response.data;
+  }
+
+  async updateCamera(cameraId: string, modeId: string): Promise<any> {
+    const requestBody = { mode_id: modeId };
+    const response = await axiosInstance.patch<CameraDetailApiResponse>(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}`,
+      requestBody
+    );
+    return response.data;
+  }
+
+  async countDetections(cameraId: string): Promise<any> {
+    const response = await axiosInstance.get(`${API_ENDPOINTS.CAMERAS}/${cameraId}/stats`);
+    return response.data;
+  }
+
+  async reportCustomer(
+    cameraId: string,
+    params: { date: string }
+  ): Promise<CustomerAttributeReportResponse> {
+    const response = await axiosInstance.get<CustomerAttributeReportResponse>(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}/attribute-report`,
+      {
+        params: { date: params.date },
+      }
     );
     return response.data;
   }

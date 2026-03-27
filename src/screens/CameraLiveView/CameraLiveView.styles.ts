@@ -59,7 +59,18 @@ export const getStyles = (width: number, height: number) => {
       bottom: 0,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.7)',
+      backgroundColor: '#000',
+      zIndex: 10,
+    },
+    loadingIndicatorOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 10,
     },
     loadingText: {
       color: '#FFF',
@@ -72,7 +83,7 @@ export const getStyles = (width: number, height: number) => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.7)',
+      backgroundColor: '#000',
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 10,
@@ -83,7 +94,7 @@ export const getStyles = (width: number, height: number) => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: '#000',
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 9,
@@ -134,6 +145,8 @@ export const getStyles = (width: number, height: number) => {
       alignItems: 'flex-start',
       padding: 12,
       paddingTop: 8,
+      zIndex: 11,
+      elevation: 11,
     },
     topLeft: {
       flexDirection: 'row',
@@ -392,6 +405,10 @@ export const getStyles = (width: number, height: number) => {
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 9999,
+    },
+    micIconRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
     },
   });
 };

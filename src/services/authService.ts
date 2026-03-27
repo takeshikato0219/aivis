@@ -1,5 +1,5 @@
-import axiosInstance from './axiosConfig';
-import { API_ENDPOINTS } from './apiEndpoints';
+import axiosInstance from '@api/axiosConfig';
+import { API_ENDPOINTS } from '@api/apiEndpoints';
 import {
   ChangePasswordResponse,
   ForgotPasswordResponse,
@@ -37,6 +37,8 @@ class AuthService {
       status: data.status,
       type: data.type,
       has_followed_bot: data.has_followed_bot,
+      line_notification_id: data.line_notification_id,
+      line_display_name: data.line_display_name,
     };
   }
 
@@ -108,13 +110,18 @@ class AuthService {
     phone?: string;
     line_user_id?: string;
     avatar?: any;
+    has_followed_bot?: any;
+    device_token?: string;
   }): Promise<User> {
     const formData = new FormData();
 
     if (data.name !== undefined) formData.append('name', data.name);
     if (data.email !== undefined) formData.append('email', data.email);
     if (data.phone !== undefined) formData.append('phone', data.phone);
+    if (data.has_followed_bot !== undefined)
+      formData.append('has_followed_bot', data.has_followed_bot);
     if (data.line_user_id !== undefined) formData.append('line_user_id', data.line_user_id);
+    if (data.device_token !== undefined) formData.append('device_token', data.device_token);
 
     if (data.avatar) {
       formData.append('avatar', {
@@ -129,7 +136,6 @@ class AuthService {
         'Content-Type': 'multipart/form-data',
       },
     });
-
     const resData = response.data.data || response.data;
     return this.mapApiUserToUser(resData);
   }

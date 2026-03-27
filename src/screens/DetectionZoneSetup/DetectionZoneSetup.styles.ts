@@ -6,6 +6,7 @@ export const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   safeArea: {
+    flex: 1,
     backgroundColor: '#000',
   },
   header: {
@@ -32,20 +33,38 @@ export const styles = StyleSheet.create({
   previewContainer: {
     flex: 1,
     backgroundColor: '#000',
+    marginBottom: 16,
+    marginHorizontal: 15,
   },
   cameraPreview: {
     flex: 1,
     backgroundColor: '#000',
-    marginBottom: 10,
-    marginHorizontal: 15,
   },
   overlayContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
+    ...StyleSheet.absoluteFill,
+    zIndex: 15,
+  },
+  loadingBgOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#000',
+  },
+  lastFrameOverlay: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 5,
+  },
+  loadingIndicatorInOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorInOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   gridOverlay: {
     ...StyleSheet.absoluteFill,
+    overflow: 'hidden',
   },
   gridLineVertical: {
     position: 'absolute',
@@ -103,7 +122,7 @@ export const styles = StyleSheet.create({
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -115,7 +134,7 @@ export const styles = StyleSheet.create({
   },
   reconnectingOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -133,7 +152,7 @@ export const styles = StyleSheet.create({
   },
   errorOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -205,11 +224,13 @@ export const styles = StyleSheet.create({
     color: '#FCD34D',
     marginTop: 2,
   },
+  svgOverlay: {
+    ...StyleSheet.absoluteFill,
+  },
   webViewContainer: {
     flex: 1,
     backgroundColor: '#000',
     overflow: 'hidden',
-    opacity: 0.99,
   },
   muteButton: {
     position: 'absolute',

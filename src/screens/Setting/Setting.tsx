@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import {
   ActivityIndicator,
@@ -14,16 +14,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAppSelector, useAppDispatch } from '@redux/store';
 import { checkAuthAsync, setUser } from '@redux/slices/authSlice';
-import authService from '@api/authService';
+import authService from '@/services/authService';
 import HomeBackgroundImage from '@assets/png/home-background.png';
 import { HomeScreenNavigationProp } from '@navigation/types';
 import BackIcon from '@assets/svg/icon-back.svg';
-import LineSubscriptionService, { LineSubscriptionStatus } from '@api/lineSubscriptionService';
-import lineAuthService from '@api/lineAuthService';
+import LineSubscriptionService from '@/services/lineSubscriptionService';
+import lineAuthService from '@/services/lineAuthService';
 import Line from '@xmartlabs/react-native-line';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { setUserData } from '@utils/authStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { User } from '@api/types/authTypes';
 
 const LINE_PROFILE_KEY = 'lineProfile';
 
@@ -32,50 +33,43 @@ const Setting = () => {
   const { t } = useTranslation();
   const { user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
+  const userRef = useRef(user);
+  userRef.current = user;
 
   // LINE Subscription state
-  const [subscriptionStatus, setSubscriptionStatus] = useState<LineSubscriptionStatus | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isUnsubscribing, setIsUnsubscribing] = useState(false);
-  const [lineProfile, setLineProfile] = useState<any>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const goBack = () => {
     navigation.goBack();
   };
 
-  const loadSubscriptionStatus = useCallback(async () => {
+  const loadSubscriptionStatus = useCallback(async (userOverride?: User | null) => {
     setIsLoadingStatus(true);
     try {
-      const isUserLoggedInWithLine = !!user?.line_user_id; // Check if user authenticated with LINE
-      if (isUserLoggedInWithLine) {
-        const status = await LineSubscriptionService.checkSubscriptionStatus();
-        setSubscriptionStatus(status);
-      } else {
-        setSubscriptionStatus(null);
-      }
+      const u = userOverride ?? userRef.current;
+      // @ts-ignore
+      setIsFollowing(u.has_followed_bot);
     } catch (error) {
       console.error('Error loading subscription status:', error);
-      setSubscriptionStatus(null);
+      setIsFollowing(false);
     } finally {
       setIsLoadingStatus(false);
     }
-  }, [user?.line_user_id]);
+  }, []);
 
   useEffect(() => {
     const loadLineProfile = async () => {
       try {
-        const storedProfile = await AsyncStorage.getItem(LINE_PROFILE_KEY);
-        if (storedProfile) {
-          setLineProfile(JSON.parse(storedProfile));
-        }
+        await AsyncStorage.getItem(LINE_PROFILE_KEY);
       } catch (e) {
         console.error('Failed to load LINE profile from storage', e);
       }
     };
     loadLineProfile();
-    loadSubscriptionStatus();
-  }, [loadSubscriptionStatus]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -96,7 +90,7 @@ const Setting = () => {
     try {
       try {
         const response = await authService.linkLineAccount(userId);
-        console.log(response);
+        await setUserData(response.data.data);
       } catch (apiError: any) {
         console.error('linkLineAccount error:', apiError?.response?.data || apiError);
         return false;
@@ -109,6 +103,71 @@ const Setting = () => {
     }
   };
 
+  const loginAndSubscribe = async () => {
+    try {
+      const loginResult = await lineAuthService.signIn();
+      if (!loginResult) return false;
+      if (!loginResult.idToken) {
+        Alert.alert(t('common.error'), t('lineSubscription.failedToGetIdToken'));
+        return false;
+      }
+      const response = await performSubscription();
+      if (!response?.userId) {
+        Alert.alert(t('common.error'), t('lineSubscription.failedToGetUserId'));
+        return false;
+      }
+      const updateSuccess = await updateUserWithLineId(response.userId);
+      if (!updateSuccess) {
+        Alert.alert(
+          t('common.error'),
+          t('lineSubscription.failedToUpdateUserProfilePleaseTryAgain')
+        );
+        return false;
+      }
+      await loadSubscriptionStatus();
+      return true;
+    } catch (error) {
+      console.error('Error logging in with LINE:', error);
+      return false;
+    }
+  };
+
+  const showLineLoginAlert = () => {
+    Alert.alert(
+      t('lineSubscription.lineSdkLoginRequired'),
+      t('lineSubscription.lineSdkLoginRequiredMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('lineSubscription.loginWithLine'),
+          onPress: async () => {
+            setIsSubscribing(true);
+            await loginAndSubscribe();
+            setIsSubscribing(false);
+          },
+        },
+      ]
+    );
+  };
+
+  const showLineAuthAlert = () => {
+    Alert.alert(
+      t('lineSubscription.lineAuthRequired'),
+      t('lineSubscription.lineAuthRequiredMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('lineSubscription.loginWithLine'),
+          onPress: async () => {
+            setIsSubscribing(true);
+            await loginAndSubscribe();
+            setIsSubscribing(false);
+          },
+        },
+      ]
+    );
+  };
+
   const handleSubscribeToLine = async () => {
     setIsSubscribing(true);
     try {
@@ -116,69 +175,19 @@ const Setting = () => {
       if (isUserLoggedInWithLine) {
         const isLineLoggedIn = await checkLineLoginStatus();
         if (!isLineLoggedIn) {
-          Alert.alert(
-            t('lineSubscription.lineSdkLoginRequired'),
-            t('lineSubscription.lineSdkLoginRequiredMessage'),
-            [
-              { text: t('common.cancel'), style: 'cancel' },
-              {
-                text: t('lineSubscription.loginWithLine'),
-                onPress: async () => {
-                  try {
-                    const loginResult = await lineAuthService.signIn();
-                    if (loginResult) {
-                      await performSubscription();
-                    }
-                  } catch (loginError) {
-                    console.error('Error logging in with LINE:', loginError);
-                    setIsSubscribing(false);
-                  }
-                },
-              },
-            ]
-          );
+          showLineLoginAlert();
           setIsSubscribing(false);
           return;
         }
-
         await performSubscription();
       } else {
-        Alert.alert(
-          t('lineSubscription.lineAuthRequired'),
-          t('lineSubscription.lineAuthRequiredMessage'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            {
-              text: t('lineSubscription.loginWithLine'),
-              onPress: async () => {
-                try {
-                  const loginResult = await performSubscription();
-                  if (loginResult?.userId) {
-                    const updateSuccess = await updateUserWithLineId(lineProfile.userId);
-                    if (!updateSuccess) {
-                      Alert.alert(
-                        t('common.error'),
-                        t('lineSubscription.failedToUpdateUserProfilePleaseTryAgain')
-                      );
-                      setIsSubscribing(false);
-                    }
-                  } else {
-                    Alert.alert(t('common.error'), t('lineSubscription.failedToGetIdToken'));
-                    setIsSubscribing(false);
-                  }
-                } catch (loginError) {
-                  console.error('Error logging in with LINE:', loginError);
-                  setIsSubscribing(false);
-                }
-              },
-            },
-          ]
-        );
+        showLineAuthAlert();
         setIsSubscribing(false);
         return;
       }
     } catch (error) {
       console.error('Error subscribing to LINE:', error);
+    } finally {
       setIsSubscribing(false);
     }
   };
@@ -189,15 +198,12 @@ const Setting = () => {
       if (success) {
         try {
           const profile = await Line.getProfile();
-          setLineProfile(profile);
           await AsyncStorage.setItem(LINE_PROFILE_KEY, JSON.stringify(profile));
           return profile;
         } catch (profileError) {
           console.error('Error updating LINE profile info:', profileError);
         }
-        setSubscriptionStatus((prev) =>
-          prev ? { ...prev, isSubscribed: true } : { isSubscribed: true }
-        );
+        setIsFollowing(true);
         await loadSubscriptionStatus();
       }
     } catch (error) {
@@ -215,7 +221,7 @@ const Setting = () => {
   };
 
   const handleUnsubscribeFromLine = async () => {
-    if (!user?.line_user_id) {
+    if (!user?.line_notification_id) {
       Alert.alert(
         t('lineSubscription.lineAuthRequired'),
         t('lineSubscription.cannotUnsubscribeMessage')
@@ -235,8 +241,8 @@ const Setting = () => {
             const updatedUser = await authService.updateProfile(updateData);
             await setUserData(updatedUser);
             dispatch(setUser(updatedUser));
-            setLineProfile(null);
             await AsyncStorage.removeItem(LINE_PROFILE_KEY);
+            await loadSubscriptionStatus(updatedUser);
           } catch (error) {
             console.error('Error unsubscribing from LINE:', error);
           } finally {
@@ -282,18 +288,20 @@ const Setting = () => {
             <View style={styles.section}>
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
-                {lineProfile && (
-                  <View style={styles.marginLine}>
+                <View style={styles.marginLine}>
+                  {user?.line_notification_id && (
                     <Text style={styles.lineStyle}>
                       {t('lineSubscription.LINEDisplayName')}
-                      {lineProfile.displayName}
+                      {user?.line_display_name}
                     </Text>
+                  )}
+                  {user?.line_notification_id && (
                     <Text style={styles.lineStyle}>
-                      {t('lineSubscription.LINEUserID')} {lineProfile.userId}
+                      {t('lineSubscription.LINEUserID')} {user.line_notification_id}
                     </Text>
-                  </View>
-                )}
-                {!subscriptionStatus?.isSubscribed ? (
+                  )}
+                </View>
+                {!isFollowing ? (
                   <TouchableOpacity
                     style={[styles.lineButton, styles.subscribeButton]}
                     onPress={handleSubscribeToLine}

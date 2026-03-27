@@ -1,6 +1,6 @@
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import i18n from '@/i18n';
-import { GoogleAuthService, GoogleSignInResponse } from '../../src/api/googleAuthService';
+import { GoogleAuthService, GoogleSignInResponse } from '@/services/googleAuthService';
 
 // Mock dependencies
 jest.mock('@react-native-google-signin/google-signin', () => ({

@@ -30,13 +30,13 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useUserSync } from '@hooks/useUserSync';
 import CleanShotIcon from '@assets/svg/clean-shot.svg';
 import IconBlue from '@assets/svg/icon-blue.svg';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
 import { useErrorHandler } from '@hooks/useErrorHandler';
-import CameraIcon from '@assets/png/camera.png';
-import MoveRightIcon from '@assets/svg/vector-right.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
+import notificationsService from '@/services/notificationsService';
+import { appBadgeService } from '@/services/appBadgeService';
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -60,15 +60,13 @@ const Home = () => {
   const [hasCamerasInAllTab, setHasCamerasInAllTab] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastFrameUris, setLastFrameUris] = useState<{ [cameraId: string]: string | null }>({});
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // USING COMMON HOOKS
   const { syncUserData } = useUserSync();
   useAppSetup({ screenName: 'Home' });
 
-  // Initial load
   useEffect(() => {
     fetchWorkflowStatuses();
-    // Initial load will be handled by the filter change effect when statuses are loaded
   }, []);
 
   useEffect(() => {
@@ -148,6 +146,7 @@ const Home = () => {
 
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore) {
+      fetchWorkflowStatuses();
       setIsLoadingMore(true);
       fetchCameraList(true, selectedFacilityId).finally(() => {
         setIsLoadingMore(false);
@@ -178,12 +177,34 @@ const Home = () => {
   const goToDetail = (camera: Camera) => {
     navigation.navigate('Detail', {
       camera: camera,
+      workflowStatuses: workflowStatuses,
     });
   };
 
   const goToBluetoothScan = () => {
     navigation.navigate('ConnectDevice' as never);
   };
+
+  const loadNotifications = useCallback(async () => {
+    if (!user?.id) {
+      setUnreadCount(0);
+      await appBadgeService.setBadgeCount(0);
+      return;
+    }
+    try {
+      const response = await notificationsService.getNotifications({
+        is_seen: false,
+        user_id: user.id,
+      });
+      const unread = response.meta.total;
+      setUnreadCount(unread);
+      await appBadgeService.setBadgeCount(unread);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      setUnreadCount(0);
+      await appBadgeService.setBadgeCount(0);
+    }
+  }, [user?.id]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -217,12 +238,13 @@ const Home = () => {
   // Load last frames when cameraList changes or Home regains focus
   useFocusEffect(
     useCallback(() => {
+      loadNotifications();
       if (cameraList.length > 0) {
         loadLastFrames(cameraList);
       } else {
         setLastFrameUris({});
       }
-    }, [cameraList, loadLastFrames])
+    }, [cameraList, loadLastFrames, loadNotifications])
   );
 
   const renderCameraContent = () => {
@@ -323,7 +345,6 @@ const Home = () => {
     );
   };
 
-  // Add useFocusEffect to reload camera list when Home regains focus
   useFocusEffect(
     useCallback(() => {
       fetchCameraList(false, selectedFacilityId);
@@ -357,10 +378,19 @@ const Home = () => {
               </View>
               <View style={styles.headerIcons}>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('Notifications' as never)}
+                  onPress={() => navigation.navigate('Notifications', { userId: user?.id })}
                   style={styles.iconBtn}
                 >
-                  <BellIcon />
+                  <View>
+                    <BellIcon />
+                    {unreadCount > 0 && (
+                      <View style={styles.badgeContainer}>
+                        <Text style={styles.badgeTextNoti}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setIsDrawerOpen(true)} style={styles.iconBtn}>
                   <MenuIcon />
@@ -413,14 +443,17 @@ const Home = () => {
             )}
 
             {renderCameraContent()}
-            <TouchableOpacity style={styles.manualButton} onPress={goToBluetoothScan}>
-              <View style={styles.viewAddCamera}>
-                <Image source={CameraIcon} />
-                <Text style={styles.manualButtonText}>{t('home.addCamera')}</Text>
-                <MoveRightIcon style={styles.positionButtonBottom} />
-              </View>
-            </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            style={styles.floatingButton}
+            onPress={goToBluetoothScan}
+            activeOpacity={0.8}
+          >
+            <View style={styles.centerButton}>
+              <Icon name="plus" size={32} color="#ccc" />
+              <Text style={styles.manualButtonText}>{t('home.addCamera')}</Text>
+            </View>
+          </TouchableOpacity>
           <DrawerMenu
             isOpen={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}

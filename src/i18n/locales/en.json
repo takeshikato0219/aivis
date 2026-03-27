@@ -160,7 +160,9 @@
     "releaseMode": "Release Mode",
     "securityMode": "Security Mode",
     "textNotification": "Intrusion detection, immediate notification",
-    "doYouWantToSwitchMode": "Do you want to switch mode?"
+    "doYouWantToSwitchMode": "Do you want to switch mode?",
+    "checkin": "Check-in",
+    "checkout": "Check-out"
   },
   "validate": {
     "emailRequired": "The email field is required.",
@@ -247,7 +249,13 @@
     "thereIsNoRecordingData": "There is no recording data",
     "video": "Video",
     "call": "Call",
-    "photo": "Photo"
+    "photo": "Photo",
+    "micPermissionBlocked": "Your mic has been blocked. Please enable mic permission in Settings to use the voice function.",
+    "micPermissionUnavailable": "Your mic is not ready. Please check your device settings to ensure the mic is available and try again.",
+    "photoLibraryPermissionIsRequiredToSaveScreenshots": "Photo library permission is required to save screenshots",
+    "storagePermissionIsRequiredToSaveScreenshots": "Storage permission is required to save screenshots",
+    "photoLibraryPermissionIsRequiredToSaveVideos": "Photo library permission is required to save videos",
+    "storagePermissionIsRequiredToSaveVideos": "Storage permission is required to save videos"
   },
   "changePassword": {
     "changePasswordSuccess": "Password Changed",
@@ -313,7 +321,8 @@
     "agentCode": "Agent Code",
     "cameraRegisteredSuccessfully": "Camera registered successfully",
     "authenticationRequired": "Please login to register camera",
-    "theCameraHasBeenRegistered": "The camera has been registered"
+    "theCameraHasBeenRegistered": "The camera has been registered",
+    "noQRData": "No QR data scanned"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Enter the default password for the Jetson Orin's local hotspot:",
@@ -450,6 +459,9 @@
     "qualityScore": "Scan Quality",
     "faceDetectionError": "Face Detection Error",
     "noFaceDetected": "No face detected in the captured image. Please try again.",
+    "faceOutsideFrame": "Please position your face within the detection frame.",
+    "faceTooClose": "Move back - your face is too close to the camera.",
+    "faceTooFar": "Move closer - your face is too far from the camera.",
     "multipleFacesDetected": "Multiple faces detected. Please ensure only one face is visible and try again.",
     "getReady": "Get ready...",
     "pleaseFaceTheCameraStraightAhead": "Please face the camera straight ahead.",
@@ -501,7 +513,9 @@
     "slowlyTiltYourHeadDOWN": "Slowly tilt your head DOWN",
     "selectPhoto": "Please select one photo from the library. For improved accuracy, please choose all 5 photos from different angles.",
     "pleaseChooseAtLeastOneImage": "Please choose at least one image",
-    "pleaseEnterTheRequiredInformation": "Please enter the required information."
+    "pleaseEnterTheRequiredInformation": "Please enter the required information.",
+    "pleaseProvideAll5PhotosInTheCorrectPositionsToImproveRecognitionAccuracy": "Please provide all 5 photos in the correct positions to improve recognition accuracy.",
+    "pleaseAlignYourFaceWithinTheRectangle": "Please align your face within the rectangle."
   },
   "liveStream": {
     "connectionSuccessful": "Connection Successful",
@@ -533,6 +547,16 @@
     "uploadPhotoFromLibrary": "Upload photo from library",
     "close": "Close"
   },
+  "customerReport": {
+    "male": "Male",
+    "female": "Female",
+    "unknown": "Unknown",
+    "ageUnder30": "Under 30",
+    "age30AndOver": "30+",
+    "age50AndOver": "50+",
+    "personCount": "{{count}}",
+    "close": "Close"
+  },
   "detailFace": {
     "detailFace": "Detail Face"
   },
@@ -544,6 +568,11 @@
     "scheduleEnabled": "Enable/Disable Rule",
     "repeat": "Repeat",
     "activeTime": "AI Active time",
+    "checkInTimeRange": "Work hours (start – end)",
+    "checkOutTimeRange": "End-of-shift hours (start – end)",
+    "attendanceRangesIdentical": "The work hours and end-of-shift hours must be two different ranges.",
+    "attendanceRangesOverlap": "Work hours and end-of-shift hours must not overlap.",
+    "attendanceCheckoutEndsBeforeWorkStart": "End-of-shift hours must not end before work hours begin.",
     "save": "Save",
     "saving": "Saving...",
     "weekdays": {
@@ -556,6 +585,9 @@
       "sun": "Sun"
     },
     "selectFaceToApply": "Select face to apply",
+    "other": "Other",
+    "selectedCount": "{{count}} selected",
+    "loadMore": "Load more",
     "updateSuccessful": "Update successful",
     "updateFailed": "Update failed"
   },
@@ -579,9 +611,22 @@
     "successMessage": "Detection zone setup successful",
     "failureMessage": "Detection zone setup failed",
     "setupError": "Setup error",
-    "twoPointError": "The two points must not coincide with the edge of the frame. Please select a different position!"
+    "twoPointError": "The two points must not coincide with the edge of the frame. Please select a different position!",
+    "endSetup": "End Setup?",
+    "doYouWantToEndTheSetupProcess": "Do you want to end the setup process?"
   },
   "listNotificationCamera": {
     "tapTheListBelowToView": "Tap the list below to view"
+  },
+  "notifications": {
+    "title": "Notifications"
+  },
+  "pushNotification": {
+    "permissionTitle": "Notification Permission",
+    "permissionMessage": "This app needs permission to display notifications so we can alert you about important events.",
+    "allow": "Allow",
+    "deny": "Deny",
+    "channelName": "Notifications",
+    "defaultTitle": "Notification"
   }
 }

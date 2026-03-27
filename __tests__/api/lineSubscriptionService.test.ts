@@ -1,4 +1,4 @@
-import LineSubscriptionService from '../../src/api/lineSubscriptionService';
+import LineSubscriptionService from '@/services/lineSubscriptionService';
 import { showCommonAlert } from '@components/Alert/Alert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuthData } from '@utils/authStorage';

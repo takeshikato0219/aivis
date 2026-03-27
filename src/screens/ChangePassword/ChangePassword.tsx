@@ -29,7 +29,7 @@ import { RootStackParamList } from '@navigation/types';
 import { useNavigation } from '@react-navigation/native';
 import BackIcon from '@assets/svg/icon-back.svg';
 import HomeBackgroundImage from '@assets/png/home-background.png';
-import authService from '@api/authService';
+import authService from '@/services/authService';
 import { removeAuthData } from '@utils/authStorage';
 import { logout } from '@redux/slices/authSlice';
 

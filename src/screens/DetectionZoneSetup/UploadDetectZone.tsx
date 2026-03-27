@@ -6,7 +6,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import detectionZoneService from '@/services/detectionZone';
 
 type SettingAIStackParamList = {
@@ -29,19 +29,19 @@ export default function UploadDetectZone() {
     getLinkLive();
   }, [getLinkLive]);
 
-  const getTypeZone = async (zoneType: 'detection' | 'restricted' | 'entryExit') => {
+  const getTypeZone = async (zoneType: 'detection' | 'restricted' | 'entry_exit') => {
     const response = await detectionZoneService.getType();
     if (zoneType === 'detection') {
       return response.data[0].id;
     } else if (zoneType === 'restricted') {
-      return response.data[2].id;
-    } else if (zoneType === 'entryExit') {
       return response.data[1].id;
+    } else if (zoneType === 'entry_exit') {
+      return response.data[2].id;
     }
     return '';
   };
 
-  const handleSetupDetectionZone = async (zoneType: 'detection' | 'restricted' | 'entryExit') => {
+  const handleSetupDetectionZone = async (zoneType: 'detection' | 'restricted' | 'entry_exit') => {
     const typeId = await getTypeZone(zoneType);
     (navigation as any).navigate('DetectionZoneSetup', {
       camera: camera,
@@ -79,16 +79,7 @@ export default function UploadDetectZone() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => handleSetupDetectionZone('restricted')}
-          >
-            <View style={styles.settingLeft}>
-              <Text style={styles.settingText}>{t('uploadDetectZone.setupRestrictedZone')}</Text>
-            </View>
-            <Icon name="chevron-right" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => handleSetupDetectionZone('entryExit')}
+            onPress={() => handleSetupDetectionZone('entry_exit')}
           >
             <View style={styles.settingLeft}>
               <Text style={styles.settingText}>{t('uploadDetectZone.setupEntryExit')}</Text>

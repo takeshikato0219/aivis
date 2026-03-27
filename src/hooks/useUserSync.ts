@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@redux/store';
 import { Alert, AppState } from 'react-native';
-import authService from '@api/authService';
+import authService from '@/services/authService';
 import { setUser, logout } from '@redux/slices/authSlice';
 import { setUserData, removeAuthData } from '@utils/authStorage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -48,9 +48,8 @@ export const useUserSync = () => {
         await setUserData(freshUserData);
       }
     } catch (error: any) {
+      // 401 is already handled by the axios interceptor (refresh + logout on failure)
       if (error?.response?.status === 401 || error?.apiStatusCode === 401) {
-        await removeAuthData();
-        dispatch(logout());
         return;
       }
     }

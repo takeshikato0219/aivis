@@ -1,7 +1,7 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
-import { Camera } from '@api/types/cameraTypes';
-import { MemberRelationship } from '@api/faceService';
+import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
+import { MemberRelationship } from '@/services/faceService';
 
 // ===== ROOT STACK =====
 export type RootStackParamList = {
@@ -23,9 +23,10 @@ export type AuthStackParamList = {
 export type AppStackParamList = {
   Introduce: undefined;
   Home: undefined;
-  Notifications: undefined;
+  Notifications: { userId?: string };
   Detail: {
     camera: Camera;
+    workflowStatuses: WorkflowStatus[];
   };
   CameraLive: {
     cameraId: string;
@@ -40,6 +41,9 @@ export type AppStackParamList = {
   ChangePassword: undefined;
   DetectionZoneSetup: {
     camera: Camera;
+    zoneType?: 'detection' | 'restricted' | 'entry_exit';
+    typeId?: string;
+    liveUrl: string;
   };
   ConnectDevice: undefined;
   PairingCode: {
@@ -68,12 +72,20 @@ export type AppStackParamList = {
     camera: Camera;
     ruleId: string;
     title: string;
+    code: string;
   };
   UploadDetectZone: {
     camera: Camera;
   };
-  ListNotificationCamera: { title: string; icon: string };
-  CustomerReport: { title: string; icon: string };
+  ListNotificationCamera: {
+    title: string;
+    icon: string;
+    code: string;
+    cameraId: string;
+    detected_at?: string;
+  };
+  CustomerReport: { title: string; icon: string; cameraId: string; detected_at?: string };
+  Policy: { type: string };
 };
 
 // ===== NAVIGATION PROPS =====

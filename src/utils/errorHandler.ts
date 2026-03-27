@@ -14,10 +14,55 @@ export interface AppError {
   originalError?: any;
   statusCode?: number;
   apiStatusCode?: number;
-  apiResponse?: any;
+  apiResponse?: ApiErrorResponse;
   timestamp: number;
   screen?: string;
   action?: string;
+}
+
+/** API validation errors: { "images.0": ["error msg"], "field": ["msg1", "msg2"] } */
+export interface ApiErrorResponse {
+  message?: string;
+  success?: boolean;
+  errors?: Record<string, string[]>;
+  [key: string]: any;
+}
+
+/**
+ * Get and format all validation errors from the API response for display.
+ * @param error - Error object from catch (may have apiResponse if passed through axios interceptor)
+ * @returns Full string: main message + list of validation errors
+ */
+export function getApiErrorDisplayMessage(error: any): string {
+  const mainMessage = error?.message || 'An error occurred';
+  const apiResponse = error?.apiResponse as ApiErrorResponse | undefined;
+  const validationErrors = formatApiValidationErrors(apiResponse);
+  if (validationErrors) {
+    return `${mainMessage}\n\n${validationErrors}`;
+  }
+  return mainMessage;
+}
+
+/**
+ * Format object errors từ API (vd: { "images.0": ["msg"], "field": ["msg"] }) thành chuỗi hiển thị.
+ */
+export function formatApiValidationErrors(apiResponse?: ApiErrorResponse | null): string {
+  const errors = apiResponse?.errors;
+  if (!errors || typeof errors !== 'object') return '';
+
+  const lines: string[] = [];
+  for (const [field, messages] of Object.entries(errors)) {
+    if (Array.isArray(messages) && messages.length > 0) {
+      // images.0 -> "Image 1", images.1 -> "Image 2" (user-friendly, 1-based)
+      let label = field;
+      if (field.startsWith('images.')) {
+        const idx = parseInt(field.replace('images.', ''), 10);
+        label = !isNaN(idx) ? `Image ${idx + 1}` : field;
+      }
+      messages.forEach((msg) => lines.push(`• ${label}: ${msg}`));
+    }
+  }
+  return lines.join('\n');
 }
 
 class ErrorHandler {

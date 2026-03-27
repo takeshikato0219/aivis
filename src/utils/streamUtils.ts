@@ -44,6 +44,16 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
   return `(function(){
     var isIOS = ${platform === 'ios'};
 
+    function sendRN(type, data) {
+      try {
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(Object.assign({type:type}, data||{})));
+        }
+      } catch(e){}
+    }
+
+    sendRN('jsReady');
+
     (function() {
       var OrigWS = window.WebSocket;
       if (window.__wsPatched) return;
@@ -160,20 +170,21 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
       }
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
-    setTimeout(init, 500);
-    setTimeout(init, 1500);
-    setTimeout(init, 3000);
+    [500, 1000, 1500, 2500, 4000, 6000].forEach(function(ms){ setTimeout(init, ms); });
+
+    var playRetries = 0;
+    var playInterval = setInterval(function(){
+      document.querySelectorAll('video').forEach(function(v){
+        if (v && v.paused && (v.readyState >= 1 || v.src || v.srcObject)) v.play().catch(function(){});
+      });
+      playRetries++;
+      if (playRetries >= 30) clearInterval(playInterval);
+    }, 500);
 
     var _lastTime = 0;
     var _stallCount = 0;
     var _isPlaying = false;
-    function sendRN(type, data) {
-      try {
-        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-          window.ReactNativeWebView.postMessage(JSON.stringify(Object.assign({type:type}, data||{})));
-        }
-      } catch(e){}
-    }
+
     setInterval(function(){
       var video = document.querySelector('video');
       var canvas = document.querySelector('canvas');
@@ -183,9 +194,13 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
           _stallCount = 0;
           if (!_isPlaying) { _isPlaying = true; sendRN('playing'); }
           sendRN('heartbeat');
+        } else if (video.readyState >= 2 && !video.paused && video.currentTime === 0 && !_isPlaying) {
+          sendRN('buffering');
+        } else if (video.readyState < 2) {
+          sendRN('buffering');
         } else if (video.readyState >= 2) {
           _stallCount++;
-          if (_stallCount >= 3) { _isPlaying = false; sendRN('stalled'); _stallCount = 0; }
+          if (_stallCount >= 10) { _isPlaying = false; sendRN('stalled'); _stallCount = 0; }
         }
         return;
       }
@@ -199,10 +214,11 @@ export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
             sendRN('heartbeat');
           } else {
             _stallCount++;
-            if (_stallCount >= 3) { _isPlaying = false; sendRN('stalled'); _stallCount = 0; }
+            if (_stallCount >= 10) { _isPlaying = false; sendRN('stalled'); _stallCount = 0; }
           }
         } catch(e){}
       }
+      if (!video && !canvas) { sendRN('buffering'); }
     }, 3000);
 
     window.__playerStop = function() {
@@ -283,7 +299,16 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
   var video = document.getElementById('v');
   var _wsRetry = 0;
 
-  // ✅ Nhận lệnh mute từ React Native
+  function sendRN(type, data) {
+    try {
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(Object.assign({type:type}, data||{})));
+      }
+    } catch(e){}
+  }
+
+  sendRN('jsReady');
+
   function handleMuteMessage(data) {
     try {
       var msg = JSON.parse(data);
@@ -295,8 +320,8 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
   window.addEventListener('message', function(e) { handleMuteMessage(e.data); });
   document.addEventListener('message', function(e) { handleMuteMessage(e.data); });
 
-  // Try MSE first (MediaSource Extensions)
   function tryMSE() {
+    sendRN('protocol', { protocol: 'mse' });
     if (!window.MediaSource) { tryHLS(); return; }
     try {
       var wsUrl = '${wsUrl}';
@@ -308,10 +333,17 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
 
       var sb; var queue = []; var adding = false;
 
+      ws.onopen = function(){ sendRN('buffering'); };
+
       ms.addEventListener('sourceopen', function(){
         ws.onopen = function(){
           ws.send(JSON.stringify({type:'mse'}));
+          sendRN('buffering');
         };
+        if (ws.readyState === 1) {
+          ws.send(JSON.stringify({type:'mse'}));
+          sendRN('buffering');
+        }
         ws.onmessage = function(e){
           if (typeof e.data === 'string') {
             try {
@@ -347,10 +379,9 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
       ws.onclose = function(){
         if (!video.src || video.error) tryHLS();
         else {
-          // Auto-reconnect MSE WebSocket with backoff
           _wsRetry++;
           if (_wsRetry <= 3) {
-            sendRN('stalled');
+            sendRN('buffering');
             setTimeout(function(){ tryMSE(); }, Math.min(2000 * Math.pow(2, _wsRetry - 1), 8000));
           } else {
             sendRN('wsClose');
@@ -361,40 +392,33 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
 
       setTimeout(function(){
         if (video.readyState < 2) { ws.close(); tryHLS(); }
-      }, 5000);
+      }, 12000);
 
     } catch(e) { tryHLS(); }
   }
 
-  // HLS fallback
   function tryHLS() {
+    sendRN('protocol', { protocol: 'hls' });
+    sendRN('buffering');
     video.src = '${hlsUrl}';
     video.muted = true;
     video.play().catch(function(){});
     setTimeout(function(){
       if (video.readyState < 2) tryMJPEG();
-    }, 5000);
+    }, 10000);
   }
 
-  // MJPEG fallback
   function tryMJPEG() {
+    sendRN('protocol', { protocol: 'mjpeg' });
+    sendRN('buffering');
     video.style.display = 'none';
     var img = document.createElement('img');
     img.src = '${mjpegUrl}';
     img.style.cssText = 'position:fixed;top:50%;left:50%;min-width:100vw;min-height:100vh;width:auto;height:auto;transform:translate(-50%,-50%);z-index:1;background:#000;';
     document.body.appendChild(img);
-    // Report playing when MJPEG image loads
     img.onload = function(){ sendRN('playing'); };
   }
 
-  // Health reporting to React Native
-  function sendRN(type, data) {
-    try {
-      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-        window.ReactNativeWebView.postMessage(JSON.stringify(Object.assign({type:type}, data||{})));
-      }
-    } catch(e){}
-  }
   var _lastTime = 0;
   var _stallCount = 0;
   var _isPlaying = false;
@@ -404,13 +428,26 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
       _stallCount = 0;
       if (!_isPlaying) { _isPlaying = true; sendRN('playing'); }
       sendRN('heartbeat');
+    } else if (video && video.readyState >= 2 && !video.paused && video.currentTime === 0 && !_isPlaying) {
+      sendRN('buffering');
+    } else if (video && video.readyState < 2) {
+      sendRN('buffering');
     } else if (video && video.readyState >= 2) {
       _stallCount++;
-      if (_stallCount >= 3) { _isPlaying = false; sendRN('stalled'); _stallCount = 0; }
+      if (_stallCount >= 10) { _isPlaying = false; sendRN('stalled'); _stallCount = 0; }
     }
   }, 3000);
 
   video.muted = true;
+  var playRetryCount = 0;
+  var playRetryInterval = setInterval(function(){
+    if (video && video.paused && (video.readyState >= 1 || video.src || video.srcObject)) {
+      video.play().catch(function(){});
+    }
+    playRetryCount++;
+    if (playRetryCount >= 30) clearInterval(playRetryInterval);
+  }, 500);
+
   tryMSE();
 })();
 </script>

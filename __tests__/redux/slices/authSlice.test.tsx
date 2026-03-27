@@ -18,7 +18,7 @@ import reducer, {
 import type { User, LoginResponse } from '@api/types/authTypes';
 
 // Mock authService
-jest.mock('@api/authService', () => ({
+jest.mock('@/services/authService', () => ({
   login: jest.fn(),
   logout: jest.fn(),
   register: jest.fn(),
@@ -36,7 +36,7 @@ jest.mock('@utils/authStorage', () => ({
   removeAuthData: jest.fn(),
 }));
 
-import authService from '@api/authService';
+import authService from '@/services/authService';
 
 const mockAuthService = authService as jest.Mocked<typeof authService>;
 

@@ -29,7 +29,7 @@ import {
   getInjectedStreamPlayerJS,
   buildIOSStreamInlineHtml,
 } from '@utils/streamUtils';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 interface CameraInfo {
@@ -104,7 +104,7 @@ const ConnectionSuccessful: React.FC = () => {
 
   // Convert Camera to CameraInfo
   const cameraInfo: CameraInfo = {
-    id: cameraData?.id || '1',
+    id: cameraData?.id,
     name: cameraData?.name || 'AIVIS Pro Cam 1',
     serial: cameraData?.serial || 'シリアル：8928-XXXX-12',
     status: getStatus(cameraData?.status),
@@ -112,9 +112,15 @@ const ConnectionSuccessful: React.FC = () => {
   };
 
   const [cameraName, setCameraName] = useState(cameraData?.name || t(''));
+  const [cameraNameError, setCameraNameError] = useState<string | null>(null);
 
   const changeNameCamera = async () => {
-    if (!cameraData?.id || !cameraName.trim()) return;
+    if (!cameraName.trim()) {
+      setCameraNameError(t('validate.fieldRequired'));
+      return;
+    }
+    setCameraNameError(null);
+    if (!cameraData?.id) return;
     try {
       await cameraService.registerCamera({
         id: cameraData.id,
@@ -262,12 +268,16 @@ const ConnectionSuccessful: React.FC = () => {
           <TextInput
             style={styles.editNameInput}
             value={cameraName}
-            onChangeText={setCameraName}
+            onChangeText={(text) => {
+              setCameraName(text);
+              if (cameraNameError && text.trim()) setCameraNameError(null);
+            }}
             onBlur={changeNameCamera}
             placeholder={t('liveStream.exampleLivingRoomCamera')}
             placeholderTextColor="#8B92A8"
           />
         </View>
+        {cameraNameError && <Text style={styles.cameraNameError}>{cameraNameError}</Text>}
         <Text style={styles.cameraNameHint}>
           {t('liveStream.thisNameWillAppearInYourDashboardAlerts')}
         </Text>
@@ -275,10 +285,12 @@ const ConnectionSuccessful: React.FC = () => {
 
       <SafeAreaView edges={['bottom']} style={styles.bottomSection}>
         <TouchableOpacity
-          style={styles.primaryButton}
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={[styles.primaryButton, cameraNameError ? { opacity: 0.5 } : null]}
           onPress={() => {
             navigation.navigate('Home' as any);
           }}
+          disabled={!!cameraNameError}
         >
           <View style={styles.viewButtonBottom}>
             <Text style={styles.primaryButtonText}>{t('liveStream.startMonitoring')}</Text>
@@ -287,10 +299,12 @@ const ConnectionSuccessful: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.secondaryButton}
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={[styles.secondaryButton, cameraNameError ? { opacity: 0.5 } : null]}
           onPress={() => {
-            navigation.navigate('FaceUpload' as never);
+            (navigation as any).navigate('ListFace', { type: '' });
           }}
+          disabled={!!cameraNameError}
         >
           <View style={styles.viewButtonBottom}>
             <Text style={styles.secondaryButtonText}>{t('liveStream.faceSetup')}</Text>

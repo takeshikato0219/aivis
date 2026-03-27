@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'https://avis-api-dev.unlimited.io.vn/api/v1';
+export const API_BASE_URL = 'https://avis-api-dev.aivis-camera.ai/api/v1';
 
 export const API_ENDPOINTS = {
   // Authentication
@@ -16,11 +16,12 @@ export const API_ENDPOINTS = {
     GOOGLE_LOGIN: '/oauth/google/login',
     LINE_LOGIN: '/oauth/line/login',
     LINE_LINK: '/oauth/line/link',
+    FCM_TOKEN: '/auth/fcm-token',
   },
   // Cameras
   CAMERAS: '/cameras',
   FACILITIES: '/facilities',
-  CAMERAS_DETECTION_TYPE: '/camerasdetection-types',
+  CAMERAS_DETECTION_TYPE: '/cameras/detection-types',
   // Face
   MEMBER_RELATIONSHIPS: '/member-relationships',
   MEMBERS: '/members',
@@ -33,6 +34,12 @@ export const API_ENDPOINTS = {
 
   //policies
   POLICIES: '/policies',
+
+  //notifications
+  NOTIFICATIONS: '/notifications',
+
+  //detections
+  DETECTIONS: '/detections',
 };
 
 export type ApiEndpoints = typeof API_ENDPOINTS;

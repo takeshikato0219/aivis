@@ -1,34 +1,41 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
   ActivityIndicator,
-  Modal,
+  Alert,
+  Animated,
   FlatList,
   Image,
-  Animated,
+  Modal,
   Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useInput } from '@hooks/useInput';
-import { Camera } from 'react-native-vision-camera';
+import { Camera, useCameraPermission } from 'react-native-vision-camera';
 import FaceDetection, { Face } from '@react-native-ml-kit/face-detection';
 import ImageResizer from '@bam.tech/react-native-image-resizer';
 import BackIcon from '@assets/svg/icon-back.svg';
 import TextInput from '@components/TextInput/TextInput';
 import { styles } from './FaceUpload.styles';
-import faceService, { Member, MemberRelationship } from '@api/faceService';
+import faceService, { Member, MemberRelationship } from '@/services/faceService';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS } from '@constants/theme';
 import { DetailFaceNavigationProp, DetailFaceRouteProp } from '@navigation/types';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useImagePicker } from '@hooks/useImagePicker';
 import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';
+import { getApiErrorDisplayMessage } from '@utils/errorHandler';
+import {
+  filterFacesInFrameForPose,
+  getSingleFaceFrameIssue,
+  validateFacePose,
+  type FacePoseKey,
+} from '@utils/faceUploadFaceValidation';
 
 // Face position titles for individual image editing
 const FACE_POSITION_TITLES = [
@@ -56,44 +63,6 @@ const FACE_POSITION_TITLES = [
     key: 'down',
     getTitle: (t: any) => t('faceUpload.lookingDown'),
     getInstruction: (t: any) => t('faceUpload.lookDown'),
-  },
-] as const;
-
-const FACE_POSITIONS = [
-  {
-    key: 'center',
-    label: 'Center',
-    instruction: 'Look straight at the camera',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'left',
-    label: 'Turn Left',
-    instruction: 'Slowly turn your head LEFT',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'right',
-    label: 'Turn Right',
-    instruction: 'Slowly turn your head RIGHT',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'up',
-    label: 'Look Up',
-    instruction: 'Slowly tilt your head UP',
-    scanDuration: 3000,
-    prepareTime: 2000,
-  },
-  {
-    key: 'down',
-    label: 'Look Down',
-    instruction: 'Slowly tilt your head DOWN',
-    scanDuration: 3000,
-    prepareTime: 2000,
   },
 ] as const;
 
@@ -239,13 +208,11 @@ export const PositionArrow: React.FC<{ position: string }> = ({ position }) => {
 };
 
 const DetailFace = () => {
-  // All hooks must be called at the top level, before any conditional logic or returns
   const navigation = useNavigation<DetailFaceNavigationProp>();
   const route = useRoute<DetailFaceRouteProp>();
   const { t } = useTranslation();
   const { memberId, relationships: routeRelationships } = route.params;
 
-  // Camera and animation refs for single face detection
   const camera = React.useRef<Camera>(null);
   const scanLineAnim = React.useRef(new Animated.Value(0)).current;
   const particleAnim = React.useRef(new Animated.Value(0)).current;
@@ -254,18 +221,18 @@ const DetailFace = () => {
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
-  const { hasPermission, requestPermission } = require('react-native-vision-camera');
+  const { hasPermission, requestPermission } = useCameraPermission();
   const device = require('react-native-vision-camera').useCameraDevice('front');
 
-  // Timer refs
   const prepareTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const scanTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Face detection options
+  // landmarkMode: 'all' required for ML Kit to return Euler angles (rotationX, rotationY)
+  // needed to validate left/right/up/down face positions
   const faceDetectionOptions = {
     performanceMode: 'accurate' as const,
-    landmarkMode: 'none' as const,
+    landmarkMode: 'all' as const,
     contourMode: 'none' as const,
     classificationMode: 'none' as const,
     minFaceSize: Platform.OS === 'ios' ? 0.1 : 0.15,
@@ -290,15 +257,57 @@ const DetailFace = () => {
   const [isPreparing, setIsPreparing] = useState(false);
   const [prepareProgress, setPrepareProgress] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [changedImageIds, setChangedImageIds] = useState<Set<string>>(new Set());
-  const [isSaveDisabled, setIsSaveDisabled] = useState(false);
 
-  // New: track which image index is being edited for upload
+  const [changedImageIndices, setChangedImageIndices] = useState<Set<number>>(new Set());
+
+  const [isSaveDisabled, setIsSaveDisabled] = useState(false);
   const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null);
 
   const imagePicker = useImagePicker();
 
-  // Reset loaded data when memberId changes
+  const FACE_POSITIONS = [
+    {
+      key: 'center',
+      label: t('faceUpload.center'),
+      instruction: t('faceUpload.lookStraightAtTheCamera'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'left',
+      label: t('faceUpload.turnLeftFace'),
+      instruction: t('faceUpload.slowlyTurnYourHeadLEFT'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'right',
+      label: t('faceUpload.turnRightFace'),
+      instruction: t('faceUpload.slowlyTurnYourHeadRIGHT'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'up',
+      label: t('faceUpload.lookUpFace'),
+      instruction: t('faceUpload.slowlyTiltYourHeadUP'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'down',
+      label: t('faceUpload.lookDownFace'),
+      instruction: t('faceUpload.slowlyTiltYourHeadDOWN'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+  ] as const;
+
   useEffect(() => {
     setHasLoadedData(false);
     setIsLoading(true);
@@ -306,9 +315,9 @@ const DetailFace = () => {
     setOriginalData(null);
     setSelectedRelationship(null);
     setHasChanges(false);
+    setChangedImageIndices(new Set());
   }, [memberId]);
 
-  // Original data for comparison
   const [originalData, setOriginalData] = useState<{
     name: string;
     relationship_type_id: string;
@@ -318,6 +327,12 @@ const DetailFace = () => {
     validateFn: (v) => (v.trim() ? undefined : 'required'),
   });
 
+  function ensureFiveImageSlots(images: any[] = []) {
+    return Array.from({ length: 5 }, (_, i) => {
+      const found = images.find((img) => img && img.sort_order === i);
+      return found || { sort_order: i, image_url: '', id: undefined };
+    });
+  }
 
   const fetchMemberDetail = useCallback(async () => {
     if (!memberId || hasLoadedData) return;
@@ -327,6 +342,8 @@ const DetailFace = () => {
       const memberData = await faceService.getMember(memberId);
 
       if (memberData) {
+        memberData.images = ensureFiveImageSlots(memberData.images);
+
         setMember(memberData);
         nameInput.setValue(memberData.name);
 
@@ -336,7 +353,6 @@ const DetailFace = () => {
             memberData.relationship?.id ?? memberData.relationship_type_id ?? '',
         });
 
-        // Use relationships from route params
         setMemberRelationships(routeRelationships || []);
 
         const currentRelationship = (routeRelationships || []).find(
@@ -364,29 +380,25 @@ const DetailFace = () => {
     }, [fetchMemberDetail])
   );
 
-  // Check for changes
   useEffect(() => {
     if (!originalData || !selectedRelationship) return;
 
     const hasNameChanged = nameInput.value.trim() !== originalData.name;
     const hasRelationshipChanged = selectedRelationship.id !== originalData.relationship_type_id;
-    const newHasChanges = hasNameChanged || hasRelationshipChanged;
+    const hasImageChanged = changedImageIndices.size > 0;
+    const newHasChanges = hasNameChanged || hasRelationshipChanged || hasImageChanged;
 
-    // Only update if there's actually a change to avoid unnecessary re-renders
     setHasChanges((prev) => (prev !== newHasChanges ? newHasChanges : prev));
-  }, [nameInput.value, selectedRelationship, originalData]);
+  }, [nameInput.value, selectedRelationship, originalData, changedImageIndices]);
 
-  // Auto start prepare phase when single detect modal opens
   useEffect(() => {
     if (showSingleDetectModal && selectedImageIndex >= 0) {
-      // Fade in animation
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
         useNativeDriver: true,
       }).start();
 
-      // Breathing animation
       Animated.loop(
         Animated.sequence([
           Animated.timing(scaleAnim, {
@@ -402,7 +414,6 @@ const DetailFace = () => {
         ])
       ).start();
 
-      // Start prepare after modal opens with a longer delay
       const initTimer = setTimeout(() => {
         startSinglePrepare();
       }, 1500);
@@ -428,29 +439,36 @@ const DetailFace = () => {
       const formData = new FormData();
       formData.append('name', nameInput.value.trim());
       formData.append('relationship_type_id', selectedRelationship.id);
-      const changedIds: string[] = [];
+
+      const imageIndices: number[] = [];
       const imageFiles: any[] = [];
+
       member.images.forEach((image, index) => {
-        if (
-          image &&
-          image.id &&
-          changedImageIds.has(image.id) &&
-          image.image_url &&
-          image.image_url.startsWith('file://')
-        ) {
-          changedIds.push(image.id);
+        const isChanged = changedImageIndices.has(index);
+        const uri = image?.image_url ?? '';
+
+        const isLocalUri =
+          uri.length > 0 && !uri.startsWith('http://') && !uri.startsWith('https://');
+
+        if (isChanged && isLocalUri) {
+          imageIndices.push(index);
           const positionKey = FACE_POSITION_TITLES[index]?.key || 'center';
           imageFiles.push({
-            uri: image.image_url,
+            uri,
             type: 'image/jpeg',
             name: `${positionKey}.jpg`,
           });
         }
       });
-      formData.append('image_ids', changedIds.join(','));
-      imageFiles.forEach((file) => formData.append('image_files', file));
 
+      if (imageFiles.length > 0) {
+        formData.append('sort_orders', imageIndices.join(','));
+      }
+      imageFiles.forEach((file) => formData.append('images', file));
       await faceService.updateMember(member.id, formData);
+
+      setChangedImageIndices(new Set());
+      setHasLoadedData(false);
       fetchMemberDetail();
 
       Alert.alert(
@@ -459,18 +477,20 @@ const DetailFace = () => {
         [
           {
             text: t('common.ok') || 'OK',
-            onPress: () => {
-              setChangedImageIds(new Set());
-            },
+            onPress: () => {},
           },
         ]
       );
-      // After successful save
       setIsSaveDisabled(true);
     } catch (error) {
       console.error('Failed to update member:', error);
-      Alert.alert(t('common.error') || 'Error', 'Failed to update member details');
-      setIsSaveDisabled(false); // Re-enable if error
+      const displayMessage = getApiErrorDisplayMessage(error);
+      Alert.alert('', displayMessage, [
+        {
+          text: t('common.ok') || 'OK',
+        },
+      ]);
+      setIsSaveDisabled(false);
     } finally {
       setIsUpdating(false);
     }
@@ -499,34 +519,40 @@ const DetailFace = () => {
     setShowDropdown(false);
   };
 
-  // Handle image press to open single face detection modal
   const handleImagePress = (index: number) => {
     setEditingImageIndex(index);
     imagePicker.handleUploadPress();
   };
 
   useEffect(() => {
-    if (
-      editingImageIndex !== null &&
-      imagePicker.selectedImage &&
-      member &&
-      member.images &&
-      member.images[editingImageIndex]
-    ) {
-      const updatedImages = [...member.images];
+    if (editingImageIndex !== null && imagePicker.selectedImage && member) {
+      const updatedImages = ensureFiveImageSlots(member.images);
       updatedImages[editingImageIndex] = {
         ...updatedImages[editingImageIndex],
         image_url: imagePicker.selectedImage.uri,
       };
       setMember({ ...member, images: updatedImages });
       setHasChanges(true);
-      if (updatedImages[editingImageIndex]?.id) {
-        setChangedImageIds((prev) => new Set(prev).add(updatedImages[editingImageIndex].id));
-      }
-      setEditingImageIndex(null);
+
+      setChangedImageIndices((prev) => new Set(prev).add(editingImageIndex));
+
       imagePicker.setSelectedImage(null);
+      setEditingImageIndex(null);
     }
-  }, [editingImageIndex, imagePicker, member, imagePicker.selectedImage]);
+  }, [editingImageIndex, imagePicker.selectedImage, imagePicker, member]);
+
+  useEffect(() => {
+    if (!showSingleDetectModal) {
+      setImageLoading((prev) => {
+        const next = [...prev];
+        if (editingImageIndex !== null) {
+          next[editingImageIndex] = false;
+        }
+        return next;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSingleDetectModal]);
 
   const getPositionErrorMessage = (position: string): string => {
     switch (position) {
@@ -550,48 +576,6 @@ const DetailFace = () => {
     }
   };
 
-  // Validate face position based on current position key
-  const validateFacePosition = (face: Face, positionKey: string): boolean => {
-    // ML Kit returns angles in degrees, not radians
-    // Normalize to -180 to 180 range
-    const normalizeAngle = (angle: number) => {
-      let normalized = angle % 360;
-      if (normalized > 180) normalized -= 360;
-      if (normalized < -180) normalized += 360;
-      return normalized;
-    };
-
-    const rotationX = normalizeAngle(face.rotationX);
-    const rotationY = normalizeAngle(face.rotationY);
-    const rotationThreshold = 15; // degrees
-
-    switch (positionKey) {
-      case 'center':
-        // Face should be relatively straight
-        return Math.abs(rotationX) < rotationThreshold && Math.abs(rotationY) < rotationThreshold;
-
-      case 'left':
-        // Face should be turned left (negative Y rotation for front camera)
-        return rotationY < -rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
-
-      case 'right':
-        // Face should be turned right (positive Y rotation for front camera)
-        return rotationY > rotationThreshold && Math.abs(rotationX) < rotationThreshold * 2;
-
-      case 'up':
-        // Face should be tilted up (positive X rotation for front camera)
-        return rotationX > rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
-
-      case 'down':
-        // Face should be tilted down (negative X rotation for front camera)
-        return rotationX < -rotationThreshold && Math.abs(rotationY) < rotationThreshold * 2;
-
-      default:
-        return false;
-    }
-  };
-
-  // Start prepare phase for single face detection
   const startSinglePrepare = () => {
     setIsPreparing(true);
     setPrepareProgress(0);
@@ -616,7 +600,6 @@ const DetailFace = () => {
     }, 2000);
   };
 
-  // Stop prepare phase
   const stopSinglePrepare = () => {
     setIsPreparing(false);
     setPrepareProgress(0);
@@ -631,12 +614,10 @@ const DetailFace = () => {
     }
   };
 
-  // Start scanning phase for single face detection
   const startSingleScanning = () => {
     setIsDetecting(true);
     setDetectProgress(0);
 
-    // Animation effects
     Animated.loop(
       Animated.sequence([
         Animated.timing(scanLineAnim, {
@@ -675,7 +656,6 @@ const DetailFace = () => {
       ])
     ).start();
 
-    // Progress tracking
     const startTime = Date.now();
     progressIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -696,7 +676,6 @@ const DetailFace = () => {
     }, 3000);
   };
 
-  // Stop scanning phase
   const stopSingleScanning = () => {
     setIsDetecting(false);
     scanLineAnim.stopAnimation();
@@ -715,7 +694,6 @@ const DetailFace = () => {
     }
   };
 
-  // Handle single face capture
   const handleSingleCaptureFace = async () => {
     if (isDetecting || !camera.current || !member || isCapturing) {
       return;
@@ -728,8 +706,9 @@ const DetailFace = () => {
       });
 
       let imageUri = photo.path.startsWith('file://') ? photo.path : `file://${photo.path}`;
+      let imgWidth: number | null = null;
+      let imgHeight: number | null = null;
 
-      // iOS: Normalize image orientation
       if (Platform.OS === 'ios') {
         try {
           const resizedImage = await ImageResizer.createResizedImage(
@@ -743,35 +722,92 @@ const DetailFace = () => {
             false
           );
           imageUri = resizedImage.uri;
+          imgWidth = resizedImage.width;
+          imgHeight = resizedImage.height;
         } catch (resizeError) {
-          console.error('Image resize/normalize error:', resizeError);
+          console.error('Image resize error:', resizeError);
+        }
+      } else {
+        try {
+          const resizedImage = await ImageResizer.createResizedImage(
+            imageUri,
+            1920,
+            1920,
+            'JPEG',
+            100,
+            0,
+            undefined,
+            false
+          );
+          imageUri = resizedImage.uri;
+        } catch (resizeError) {
+          console.error('Image resize error:', resizeError);
         }
       }
 
-      // Detect faces
-      const faces = await FaceDetection.detect(imageUri, faceDetectionOptions);
-      const positionKey = FACE_POSITION_TITLES[selectedImageIndex]?.key || 'center';
+      const allFaces = await FaceDetection.detect(imageUri, faceDetectionOptions);
+      const positionKey = (FACE_POSITION_TITLES[selectedImageIndex]?.key ||
+        'center') as FacePoseKey;
 
-      if (faces.length === 1 && validateFacePosition(faces[0], positionKey)) {
-        // Update the image in member data
-        const updatedImages = [...member.images];
+      let faces: Face[];
+      let usedWidth: number | null = null;
+      let usedHeight: number | null = null;
+
+      if (Platform.OS === 'ios') {
+        if (imgWidth != null && imgHeight != null) {
+          faces = filterFacesInFrameForPose(allFaces, imgWidth, imgHeight, positionKey);
+          if (faces.length === 0 && allFaces.length > 0) {
+            faces = filterFacesInFrameForPose(allFaces, imgHeight, imgWidth, positionKey);
+            if (faces.length > 0) {
+              usedWidth = imgHeight;
+              usedHeight = imgWidth;
+            } else {
+              usedWidth = imgWidth;
+              usedHeight = imgHeight;
+            }
+          } else if (faces.length > 0 || allFaces.length > 0) {
+            usedWidth = imgWidth;
+            usedHeight = imgHeight;
+          }
+        } else {
+          faces = [];
+        }
+      } else {
+        faces = await new Promise<Face[]>((resolve) => {
+          Image.getSize(
+            imageUri,
+            (w, h) => {
+              usedWidth = w;
+              usedHeight = h;
+              resolve(filterFacesInFrameForPose(allFaces, w, h, positionKey));
+            },
+            () => resolve([])
+          );
+        });
+      }
+
+      const getFrameRejectionReason = (): string | null => {
+        if (allFaces.length === 0 || allFaces.length > 1) return null;
+        if (usedWidth == null || usedHeight == null) return t('faceUpload.faceOutsideFrame');
+        const issue = getSingleFaceFrameIssue(allFaces[0], usedWidth, usedHeight, positionKey);
+        if (issue === 'outside') return t('faceUpload.faceOutsideFrame');
+        if (issue === 'too_far') return t('faceUpload.faceTooFar');
+        if (issue === 'too_close') return t('faceUpload.faceTooClose');
+        return null;
+      };
+
+      if (faces.length === 1 && validateFacePose(faces[0], positionKey)) {
+        const updatedImages = ensureFiveImageSlots(member.images);
         updatedImages[selectedImageIndex] = {
           ...updatedImages[selectedImageIndex],
           image_url: imageUri,
         };
 
-        const updatedMember = {
-          ...member,
-          images: updatedImages,
-        };
-
-        setMember(updatedMember);
+        setMember({ ...member, images: updatedImages });
         setHasChanges(true);
-        if (updatedImages[selectedImageIndex]?.id) {
-          setChangedImageIds((prev) => new Set(prev).add(updatedImages[selectedImageIndex].id));
-        }
 
-        // Success animation
+        setChangedImageIndices((prev) => new Set(prev).add(selectedImageIndex));
+
         Animated.sequence([
           Animated.timing(successAnim, {
             toValue: 1,
@@ -786,16 +822,17 @@ const DetailFace = () => {
           }),
         ]).start();
 
-        // Close modal after success
         setTimeout(() => {
           handleCloseDetectModal();
         }, 2000);
       } else {
-        // Show error based on detection result
         let errorMessage = '';
 
         if (faces.length === 0) {
-          errorMessage = t('faceUpload.noFaceDetected') || 'No face detected';
+          errorMessage =
+            allFaces.length > 0
+              ? (getFrameRejectionReason() ?? t('faceUpload.faceOutsideFrame'))
+              : t('faceUpload.noFaceDetected') || 'No face detected';
         } else if (faces.length > 1) {
           errorMessage = t('faceUpload.multipleFacesDetected') || 'Multiple faces detected';
         } else if (faces.length === 1) {
@@ -813,17 +850,12 @@ const DetailFace = () => {
           {
             text: t('common.retry') || 'Retry',
             onPress: () => {
-              // Stop current processes first
               stopSinglePrepare();
               stopSingleScanning();
-
-              // Reset all states
               setIsDetecting(false);
               setDetectProgress(0);
               setIsPreparing(false);
               setPrepareProgress(0);
-
-              // Restart prepare phase after a short delay
               setTimeout(() => {
                 startSinglePrepare();
               }, 500);
@@ -851,6 +883,8 @@ const DetailFace = () => {
     setPrepareProgress(0);
     setDetectProgress(0);
   };
+
+  const [imageLoading, setImageLoading] = useState<boolean[]>([false, false, false, false, false]);
 
   return (
     <View style={styles.container}>
@@ -920,11 +954,16 @@ const DetailFace = () => {
 
           {/* Images Section */}
           <View style={styles.detailSection}>
-            <Text style={styles.detailSectionTitle}>{t('faceUpload.images') || 'Images'}</Text>
+            <Text style={styles.detailSectionTitle}>{t('faceUpload.images')}</Text>
+            <Text style={styles.detailSectionTitle}>
+              {t(
+                'faceUpload.pleaseProvideAll5PhotosInTheCorrectPositionsToImproveRecognitionAccuracy'
+              )}
+            </Text>
             <View style={styles.imagesGrid}>
               {[0, 1, 2, 3, 4].map((index) => {
                 const images = member?.images || [];
-                const image = images[index];
+                const image = images.find((img) => img.sort_order === index);
                 const positionTitle = FACE_POSITION_TITLES[index];
                 return (
                   <View key={image?.id || index} style={styles.imageItemContainer}>
@@ -935,21 +974,53 @@ const DetailFace = () => {
                       style={styles.imageItem}
                       onPress={() => handleImagePress(index)}
                     >
-                      {image && image.image_url ? (
-                        <Image
-                          source={{ uri: image.image_url }}
-                          style={styles.imagePreview}
-                          resizeMode="cover"
-                        />
+                      {image?.image_url ? (
+                        <>
+                          <Image
+                            source={{ uri: image.image_url }}
+                            style={styles.imagePreview}
+                            resizeMode="cover"
+                            onLoadStart={() => {
+                              setImageLoading((prev) => {
+                                const next = [...prev];
+                                next[index] = true;
+                                return next;
+                              });
+                            }}
+                            onLoadEnd={() => {
+                              setImageLoading((prev) => {
+                                const next = [...prev];
+                                next[index] = false;
+                                return next;
+                              });
+                            }}
+                          />
+                          {imageLoading[index] && (
+                            <View
+                              style={[
+                                styles.imagePreview,
+                                // eslint-disable-next-line react-native/no-inline-styles
+                                {
+                                  position: 'absolute',
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  backgroundColor: 'rgba(255,255,255,0.5)',
+                                },
+                              ]}
+                            >
+                              <ActivityIndicator size="large" color="#000" />
+                            </View>
+                          )}
+                          <View style={styles.imageOverlay}>
+                            <Icon name="pencil" size={20} color="#fff" />
+                            <Text style={styles.imageIndex}>{index + 1}</Text>
+                          </View>
+                        </>
                       ) : (
                         <View style={styles.imageOverlay}>
                           <Icon name="plus" size={32} color="#ccc" />
                         </View>
                       )}
-                      <View style={styles.imageOverlay}>
-                        <Icon name="pencil" size={20} color="#fff" />
-                        <Text style={styles.imageIndex}>{index + 1}</Text>
-                      </View>
                     </TouchableOpacity>
                   </View>
                 );
@@ -989,6 +1060,14 @@ const DetailFace = () => {
             )}
           </TouchableOpacity>
         </ScrollView>
+
+        {/* Loading Overlay for Uploading */}
+        {isUpdating && (
+          <View style={styles.uploadingOverlay}>
+            <ActivityIndicator size="large" color="#4CAF50" />
+            <Text style={styles.uploadingText}>{t('faceUpload.uploading') || 'Uploading...'}</Text>
+          </View>
+        )}
 
         {/* Relationship Dropdown Modal */}
         <Modal
@@ -1080,7 +1159,6 @@ const DetailFace = () => {
               </View>
             ) : (
               <View style={styles.container}>
-                {/* Camera */}
                 <Camera
                   ref={camera}
                   style={styles.absoluteFill}
@@ -1090,7 +1168,6 @@ const DetailFace = () => {
                 />
 
                 <View style={styles.overlay}>
-                  {/* Header */}
                   <SafeAreaView edges={['top']}>
                     <View style={styles.header}>
                       <TouchableOpacity
@@ -1147,7 +1224,6 @@ const DetailFace = () => {
                         </View>
                       )}
 
-                      {/* Scanning Line */}
                       {isDetecting && (
                         <Animated.View
                           style={[
@@ -1168,7 +1244,6 @@ const DetailFace = () => {
                         </Animated.View>
                       )}
 
-                      {/* Scanning Particles */}
                       {isDetecting && (
                         <Animated.View
                           style={[
@@ -1202,7 +1277,6 @@ const DetailFace = () => {
                         isPreparing={isPreparing}
                       />
 
-                      {/* Corner Indicators with Pulse */}
                       {isDetecting && (
                         <Animated.View
                           style={[
@@ -1223,7 +1297,6 @@ const DetailFace = () => {
                         </Animated.View>
                       )}
 
-                      {/* Success Badge */}
                       <Animated.View
                         style={[
                           styles.successOverlay,
@@ -1238,7 +1311,6 @@ const DetailFace = () => {
                       </Animated.View>
                     </Animated.View>
 
-                    {/* Position Arrow */}
                     {selectedImageIndex >= 0 &&
                       FACE_POSITIONS[selectedImageIndex]?.key !== 'center' &&
                       !isCapturing && (
@@ -1246,10 +1318,12 @@ const DetailFace = () => {
                       )}
                   </View>
 
-                  {/* Instructions */}
                   <Animated.View style={[styles.instructionsContainer, { opacity: fadeAnim }]}>
                     {selectedImageIndex >= 0 && FACE_POSITIONS[selectedImageIndex] && (
                       <>
+                        <Text style={styles.instruction}>
+                          {FACE_POSITIONS[selectedImageIndex].memo}
+                        </Text>
                         <Text style={styles.positionLabel}>
                           {FACE_POSITIONS[selectedImageIndex].label.toUpperCase()}
                         </Text>
@@ -1259,7 +1333,6 @@ const DetailFace = () => {
                       </>
                     )}
 
-                    {/* Status */}
                     {isPreparing && (
                       <View style={styles.feedbackContainer}>
                         <Text style={styles.feedbackText}>

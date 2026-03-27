@@ -18,11 +18,15 @@ export const styles = StyleSheet.create({
     padding: 4,
   },
   headerTitle: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 10,
+    minWidth: 0,
   },
   headerText: {
+    flex: 1,
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
@@ -210,6 +214,11 @@ export const styles = StyleSheet.create({
     flex: 1,
     zIndex: 1,
     backgroundColor: 'transparent',
+  },
+  loadMoreFooter: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   noDataContainer: {
     alignItems: 'center',

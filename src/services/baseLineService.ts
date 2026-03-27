@@ -9,7 +9,7 @@ let isLineSdkConfigured = false;
  * including SDK configuration, authentication checks, and utility methods
  */
 export abstract class BaseLineService {
-  protected channelId = '2008969814';
+  protected channelId = '2009514097';
 
   constructor() {
     this.configure();

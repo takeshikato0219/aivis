@@ -145,7 +145,7 @@ describe('axiosConfig refresh token and error handling', () => {
     const axios = require('axios');
     // @ts-ignore
     axiosMockInstance = axios.mockInstance;
-    authService = require('../../src/api/authService').default;
+    authService = require('@/services/authService').default;
     ErrorHandler = require('../../src/utils/errorHandler');
     removeAuthData = require('@utils/authStorage').removeAuthData;
     updateTokens = require('@utils/authStorage').updateTokens;

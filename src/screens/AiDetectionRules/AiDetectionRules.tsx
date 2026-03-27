@@ -14,11 +14,11 @@ import { useTranslation } from 'react-i18next';
 import { styles } from './AiDetectionRules.style';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import BackIcon from '@assets/svg/icon-back.svg';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 export type AiRule = {
   id: string;
   title: string;
-  enabled: boolean;
+  code: string;
 };
 
 type AiDetectionRulesStackParamList = {
@@ -38,7 +38,7 @@ export default function AiDetectionRules() {
     const mappedRules: AiRule[] = response.data.map((item: any) => ({
       id: item.id,
       title: item.name,
-      enabled: true,
+      code: item.code,
     }));
     setRules(mappedRules);
   }, [camera?.id]);
@@ -48,11 +48,12 @@ export default function AiDetectionRules() {
   }, [fetchRules]);
 
   const handleSetupClockSchedule = useCallback(
-    (ruleId: string, title: string) => {
+    (ruleId: string, title: string, code: string) => {
       (navigation as any).navigate('WorkSchedule', {
         camera: camera,
         ruleId,
         title,
+        code,
       });
     },
     [camera, navigation]
@@ -64,7 +65,7 @@ export default function AiDetectionRules() {
       return (
         <>
           <Pressable
-            onPress={() => handleSetupClockSchedule(item.id, item.title)}
+            onPress={() => handleSetupClockSchedule(item.id, item.title, item.code)}
             style={styles.row}
           >
             <View style={styles.left}>

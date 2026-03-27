@@ -25,7 +25,7 @@ import Logo from '@assets/svg/logo.svg';
 import LoginBackground from '@assets/svg/login-background.svg';
 import { LoginScreenNavigationProp } from '@navigation/types';
 import { useNavigation } from '@react-navigation/native';
-import authService from '@api/authService';
+import authService from '@/services/authService';
 
 const ForgotPassword: React.FC = () => {
   const { isLoading } = useAppSelector((state) => state.auth);

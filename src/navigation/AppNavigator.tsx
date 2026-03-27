@@ -32,6 +32,7 @@ import WorkSchedule from '@screens/WorkSchedule/WorkSchedule';
 import UploadDetectZone from '@screens/DetectionZoneSetup/UploadDetectZone';
 import ListNotificationCamera from '@screens/ListNotificationCamera/ListNotificationCamera';
 import CustomerReport from '@screens/CustomerReport/CustomerReport';
+import Policy from '@screens/Policy/Policy';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -242,6 +243,13 @@ const AppNavigator = () => {
         <Stack.Screen
           name="CustomerReport"
           component={CustomerReport}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Policy"
+          component={Policy}
           options={{
             headerShown: false,
           }}

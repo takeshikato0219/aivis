@@ -11,6 +11,7 @@ import { HomeScreenNavigationProp } from '@navigation/types';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { logout } from '@redux/slices/authSlice';
 import { removeAuthData } from '@utils/authStorage';
+import { appBadgeService } from '@/services/appBadgeService';
 import BackIcon from '@assets/svg/icon-back.svg';
 
 const Profile = () => {
@@ -37,15 +38,21 @@ const Profile = () => {
   const handleLogout = async () => {
     try {
       await removeAuthData();
+      await appBadgeService.setBadgeCount(0);
       dispatch(logout());
     } catch (error) {
       console.error('Logout error:', error);
+      await appBadgeService.setBadgeCount(0);
       dispatch(logout());
     }
   };
 
   const goBack = () => {
     navigation.goBack();
+  };
+
+  const gotoPolicy = (type: string) => {
+    navigation.navigate('Policy', { type });
   };
 
   return (
@@ -97,10 +104,18 @@ const Profile = () => {
                 <Icon name="chevron-right" size={24} color="#FFF" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.settingItem}>
+              <TouchableOpacity style={styles.settingItem} onPress={() => gotoPolicy('privacy')}>
                 <View style={styles.settingLeft}>
                   <Icon name="shield-account" size={24} color="#00ADD4" />
                   <Text style={styles.settingText}>{t('profile.privacy')}</Text>
+                </View>
+                <Icon name="chevron-right" size={24} color="#FFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.settingItem} onPress={() => gotoPolicy('terms')}>
+                <View style={styles.settingLeft}>
+                  <Icon name="dresser" size={24} color="#00ADD4" />
+                  <Text style={styles.settingText}>{t('auth.termsOfUse')}</Text>
                 </View>
                 <Icon name="chevron-right" size={24} color="#FFF" />
               </TouchableOpacity>
@@ -117,14 +132,6 @@ const Profile = () => {
                 <View style={styles.settingLeft}>
                   <Icon name="cog-outline" size={24} color="#00ADD4" />
                   <Text style={styles.settingText}>{t('profile.settings')}</Text>
-                </View>
-                <Icon name="chevron-right" size={24} color="#FFF" />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.settingItem}>
-                <View style={styles.settingLeft}>
-                  <Icon name="help-circle-outline" size={24} color="#00ADD4" />
-                  <Text style={styles.settingText}>{t('profile.help')}</Text>
                 </View>
                 <Icon name="chevron-right" size={24} color="#FFF" />
               </TouchableOpacity>

@@ -1,6 +1,6 @@
 import axiosInstance from '../../src/api/axiosConfig';
 import { API_ENDPOINTS } from '../../src/api/apiEndpoints';
-import cameraService from '../../src/api/cameraService';
+import cameraService from '@/services/cameraService';
 import {
   RegisterCameraRequest,
   RegisterCameraResponse,
@@ -15,6 +15,7 @@ jest.mock('../../src/api/axiosConfig', () => ({
   default: {
     patch: jest.fn(),
     get: jest.fn(),
+    delete: jest.fn(),
   },
 }));
 
@@ -24,6 +25,7 @@ jest.mock('../../src/api/apiEndpoints', () => ({
   API_ENDPOINTS: {
     CAMERAS: '/cameras',
     FACILITIES: '/facilities',
+    STATUSES: '/statuses',
   },
 }));
 
@@ -296,6 +298,179 @@ describe('CameraService (API)', () => {
       const result = await cameraService.getWorkflowStatuses();
 
       expect(result.data).toHaveLength(0);
+    });
+  });
+
+  describe('registerCamera — user_id', () => {
+    it('should include user_id in body when provided', async () => {
+      mockAxiosInstance.patch.mockResolvedValue({
+        data: { success: true, message: 'ok', data: {} as any },
+      });
+
+      await cameraService.registerCamera({
+        id: 'cam-1',
+        user_id: 'user-99',
+        name: 'Cam',
+      });
+
+      expect(mockAxiosInstance.patch).toHaveBeenCalledWith(`${mockApiEndpoints.CAMERAS}/cam-1`, {
+        user_id: 'user-99',
+        name: 'Cam',
+      });
+    });
+  });
+
+  describe('updateStatus', () => {
+    it('should GET statuses endpoint', async () => {
+      const payload = { id: 's1', name: 'Active' };
+      mockAxiosInstance.get.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.updateStatus();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(mockApiEndpoints.STATUSES);
+      expect(result).toEqual(payload);
+    });
+
+    it('should propagate axios errors', async () => {
+      mockAxiosInstance.get.mockRejectedValue(new Error('status fail'));
+      await expect(cameraService.updateStatus()).rejects.toThrow('status fail');
+    });
+  });
+
+  describe('getLiveStreamUrl', () => {
+    it('should GET livestream URL for camera', async () => {
+      const payload = { success: true, data: { url: 'wss://x' } } as any;
+      mockAxiosInstance.get.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.getLiveStreamUrl('cam-42');
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        `${mockApiEndpoints.CAMERAS}/cam-42/livestream`
+      );
+      expect(result).toEqual(payload);
+    });
+  });
+
+  describe('getRulesForCamera', () => {
+    it('should GET rules for camera', async () => {
+      const payload = { success: true, data: [] } as any;
+      mockAxiosInstance.get.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.getRulesForCamera('cam-9');
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(`${mockApiEndpoints.CAMERAS}/cam-9/rules`);
+      expect(result).toEqual(payload);
+    });
+  });
+
+  describe('deleteCamera', () => {
+    it('should DELETE camera by id', async () => {
+      const payload: GetWorkflowStatusesResponse = {
+        success: true,
+        message: 'deleted',
+        data: [],
+      };
+      mockAxiosInstance.delete.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.deleteCamera('cam-del');
+
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith(`${mockApiEndpoints.CAMERAS}/cam-del`);
+      expect(result).toEqual(payload);
+    });
+  });
+
+  describe('getWorkScheduleForRule', () => {
+    it('should GET work schedule for rule', async () => {
+      const payload = { success: true, data: {} } as any;
+      mockAxiosInstance.get.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.getWorkScheduleForRule('c1', 'r1');
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(`${mockApiEndpoints.CAMERAS}/c1/rules/r1`);
+      expect(result).toEqual(payload);
+    });
+  });
+
+  describe('updateWorkScheduleForRule', () => {
+    it('should PATCH work schedule body', async () => {
+      const body = { slots: [{ day: 1 }] };
+      const payload = { success: true } as any;
+      mockAxiosInstance.patch.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.updateWorkScheduleForRule('c1', 'r1', body);
+
+      expect(mockAxiosInstance.patch).toHaveBeenCalledWith(
+        `${mockApiEndpoints.CAMERAS}/c1/rules/r1`,
+        body
+      );
+      expect(result).toEqual(payload);
+    });
+  });
+
+  describe('getCameraModes', () => {
+    it('should GET camera modes', async () => {
+      const payload = { success: true, data: [] } as any;
+      mockAxiosInstance.get.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.getCameraModes();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(`${mockApiEndpoints.CAMERAS}/modes`);
+      expect(result).toEqual(payload);
+    });
+  });
+
+  describe('getDetailCamera', () => {
+    it('should GET camera detail', async () => {
+      const payload = { success: true, data: { id: 'c1' } } as any;
+      mockAxiosInstance.get.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.getDetailCamera('c1');
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(`${mockApiEndpoints.CAMERAS}/c1`);
+      expect(result).toEqual(payload);
+    });
+  });
+
+  describe('updateCamera', () => {
+    it('should PATCH mode_id on camera', async () => {
+      const payload = { success: true } as any;
+      mockAxiosInstance.patch.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.updateCamera('c1', 'mode-2');
+
+      expect(mockAxiosInstance.patch).toHaveBeenCalledWith(`${mockApiEndpoints.CAMERAS}/c1`, {
+        mode_id: 'mode-2',
+      });
+      expect(result).toEqual(payload);
+    });
+  });
+
+  describe('countDetections', () => {
+    it('should GET stats for camera', async () => {
+      const payload = { visitor_count: 1 };
+      mockAxiosInstance.get.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.countDetections('c1');
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(`${mockApiEndpoints.CAMERAS}/c1/stats`);
+      expect(result).toEqual(payload);
+    });
+  });
+
+  describe('reportCustomer', () => {
+    it('should GET attribute-report with date param', async () => {
+      const payload = { success: true, data: [] } as any;
+      mockAxiosInstance.get.mockResolvedValue({ data: payload });
+
+      const result = await cameraService.reportCustomer('c1', { date: '2025-03-01' });
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        `${mockApiEndpoints.CAMERAS}/c1/attribute-report`,
+        {
+          params: { date: '2025-03-01' },
+        }
+      );
+      expect(result).toEqual(payload);
     });
   });
 });

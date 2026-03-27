@@ -1,4 +1,4 @@
-import PolicyService, { PoliciesResponse } from '../../src/api/policyService';
+import PolicyService, { PoliciesResponse } from '@/services/policyService';
 import axiosInstance from '../../src/api/axiosConfig';
 import { API_ENDPOINTS } from '../../src/api/apiEndpoints';
 

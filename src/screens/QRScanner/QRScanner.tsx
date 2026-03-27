@@ -28,8 +28,7 @@ import RectangleIcon6 from '@assets/svg/rectangle-6.svg';
 import RectangleIcon7 from '@assets/svg/rectangle-7.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 import { useTranslation } from 'react-i18next';
-import { useAppSelector } from '@redux/store';
-import cameraService from '@api/cameraService';
+import cameraService from '@/services/cameraService';
 import { jetsonBLEService } from '@/services/jetsonBLEService';
 
 const CAMERA_PERMISSION_KEY = '@camera_permission_status';
@@ -49,7 +48,6 @@ const QRScanner: React.FC = () => {
   const [scanningEnabled, setScanningEnabled] = useState<boolean>(true); // New state to control scanning
   const [scanResult, setScanResult] = useState<'idle' | 'success' | 'error'>('idle');
   const { t } = useTranslation();
-  const { accessToken, isAuthenticated } = useAppSelector((state) => state.auth);
   const isProcessingRef = useRef<boolean>(false);
   const [idStatusCamera, setIdStatusCamera] = useState<string>('');
   const [responseData, setResponseData] = useState<any>(null);
@@ -135,55 +133,40 @@ const QRScanner: React.FC = () => {
     isProcessingRef.current = false;
   };
 
-  const registerCamera = async (qrData: string) => {
-    void jetsonBLEService.disconnect();
-
-    setScanningEnabled(false);
-
-    if (isProcessingRef.current) {
+  const handleManualConnect = async () => {
+    if (!scannedData) {
+      Alert.alert(t('common.error') || 'Error', t('QRScan.noQRData') || 'No QR data scanned');
       return;
     }
-
-    // Check authentication
-    if (!isAuthenticated || !accessToken) {
-      setIsSearching(false);
-      setScannedData(null);
-      setScanResult('error');
-      Alert.alert(
-        t('common.error') || 'Error',
-        t('QRScan.authenticationRequired') || 'Please login to register camera',
-        [
-          {
-            text: t('common.ok'),
-            onPress: () => {
-              resetScanningState();
-            },
-          },
-        ]
-      );
+    if (responseData) {
+      navigation.navigate('ConnectionSuccessful', {
+        cameraData: responseData,
+      });
       return;
     }
-
-    isProcessingRef.current = true;
-
+    setIsSearching(true);
+    setScanResult('idle');
     try {
-      // Parse QR data
-      const parsedData = JSON.parse(qrData);
+      const parsedData = JSON.parse(scannedData);
       const { id } = parsedData;
-
-      // Call camera service to register
       const response = await cameraService.registerCamera({
         id,
         status_id: idStatusCamera,
       });
-      setTimeout(() => {
-        setScanResult('success');
-        setResponseData(response.data);
-      }, 15000);
-    } catch (error: any) {
-      console.error('Error registering camera:', error);
+      if (!response.data) {
+        setIsSearching(false);
+        setScanResult('error');
+        return;
+      }
+      setResponseData(response.data);
+      setScanResult('success');
       setIsSearching(false);
-      isProcessingRef.current = false;
+      navigation.navigate('ConnectionSuccessful', {
+        cameraData: response.data,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      setIsSearching(false);
       setScanResult('error');
       Alert.alert('', t('QRScan.theCameraHasBeenRegistered'), [
         {
@@ -203,10 +186,21 @@ const QRScanner: React.FC = () => {
     setIdStatusCamera(cameras[2]?.id ?? '');
   };
 
+  const registerCamera = async (qrData: string) => {
+    void jetsonBLEService.disconnect();
+    setScanningEnabled(false);
+    if (isProcessingRef.current) {
+      return;
+    }
+    setScannedData(qrData);
+    setIsSearching(false);
+    setScanResult('success');
+    isProcessingRef.current = false;
+  };
+
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: (codes) => {
-      // Only process QR codes if scanning is enabled and not already processing
       if (
         codes.length > 0 &&
         !scannedData &&
@@ -216,19 +210,11 @@ const QRScanner: React.FC = () => {
       ) {
         const qrData = codes[0].value;
         if (qrData) {
-          setScannedData(qrData);
-          setIsSearching(true);
           registerCamera(qrData);
         }
       }
     },
   });
-
-  const handleManualConnect = () => {
-    navigation.navigate('ConnectionSuccessful', {
-      cameraData: responseData,
-    });
-  };
 
   const handleBack = () => {
     if (navigation.canGoBack()) {

@@ -8,6 +8,7 @@ import {
   TouchableWithoutFeedback,
   Animated,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { styles } from './FaceUpload.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,34 +16,68 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import faceService, { Member, MemberRelationship } from '@api/faceService';
+import faceService, { Member, MemberRelationship } from '@/services/faceService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AppStackParamList } from '@navigation/types';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+const MEMBERS_PER_PAGE = 20;
 
 const ListFace = () => {
   const navigation = useNavigation<StackNavigationProp<AppStackParamList>>();
   const { t } = useTranslation();
 
   const [members, setMembers] = useState<Member[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [membersPage, setMembersPage] = useState(1);
+  const [hasMoreMembers, setHasMoreMembers] = useState(false);
+  const [loadingMoreMembers, setLoadingMoreMembers] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const hasFetchedOnceRef = useRef(false);
   const [relationships, setRelationships] = useState<MemberRelationship[]>([]);
   const [showModal, setShowModal] = useState(false);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  const fetchMembers = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const response = await faceService.getMembers();
-      setMembers(response.data);
-    } catch (error) {
-      console.error('Failed to fetch members:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const fetchMembers = useCallback(
+    async (page = 1, options?: { isRefresh?: boolean; silent?: boolean }) => {
+      try {
+        if (page === 1) {
+          if (options?.isRefresh) {
+            setRefreshing(true);
+          } else if (!options?.silent) {
+            setIsInitialLoading(true);
+          }
+          const response = await faceService.getMembers({ page: 1, per_page: MEMBERS_PER_PAGE });
+          setMembers(response.data);
+          setMembersPage(1);
+          setHasMoreMembers(response.meta?.has_next ?? false);
+        } else {
+          setLoadingMoreMembers(true);
+          const response = await faceService.getMembers({ page, per_page: MEMBERS_PER_PAGE });
+          setMembers((prev) => [...prev, ...response.data]);
+          setMembersPage(page);
+          setHasMoreMembers(response.meta?.has_next ?? false);
+        }
+      } catch (error) {
+        console.error('Failed to fetch members:', error);
+      } finally {
+        setLoadingMoreMembers(false);
+        setRefreshing(false);
+        setIsInitialLoading(false);
+      }
+    },
+    []
+  );
+
+  const loadMoreMembers = useCallback(async () => {
+    if (loadingMoreMembers || !hasMoreMembers || refreshing) return;
+    await fetchMembers(membersPage + 1);
+  }, [fetchMembers, membersPage, hasMoreMembers, loadingMoreMembers, refreshing]);
+
+  const onRefresh = useCallback(() => {
+    fetchMembers(1, { isRefresh: true });
+  }, [fetchMembers]);
 
   useEffect(() => {
     const fetchRelationships = async () => {
@@ -58,7 +93,8 @@ const ListFace = () => {
 
   useFocusEffect(
     useCallback(() => {
-      fetchMembers();
+      fetchMembers(1, { silent: hasFetchedOnceRef.current });
+      hasFetchedOnceRef.current = true;
     }, [fetchMembers])
   );
 
@@ -200,18 +236,10 @@ const ListFace = () => {
         )}
         {/* Members List */}
         <View style={styles.listContainer}>
-          {isLoading ? (
+          {isInitialLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#4CAF50" />
               <Text style={styles.loadingText}>{t('common.loading') || 'Loading...'}</Text>
-            </View>
-          ) : members.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Icon name="face-recognition" size={64} color="#888" />
-              <Text style={styles.emptyText}>{t('listFace.noMembers') || 'No members found'}</Text>
-              <Text style={styles.emptySubtext}>
-                {t('listFace.addFirstMember') || 'Add your first member'}
-              </Text>
             </View>
           ) : (
             <FlatList
@@ -220,6 +248,34 @@ const ListFace = () => {
               renderItem={renderMemberItem}
               contentContainerStyle={styles.membersList}
               showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor="#4CAF50"
+                  colors={['#4CAF50']}
+                />
+              }
+              onEndReached={loadMoreMembers}
+              onEndReachedThreshold={0.35}
+              ListFooterComponent={
+                loadingMoreMembers ? (
+                  <View style={styles.listFooterLoading}>
+                    <ActivityIndicator size="small" color="#4CAF50" />
+                  </View>
+                ) : null
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Icon name="face-recognition" size={64} color="#888" />
+                  <Text style={styles.emptyText}>
+                    {t('listFace.noMembers') || 'No members found'}
+                  </Text>
+                  <Text style={styles.emptySubtext}>
+                    {t('listFace.addFirstMember') || 'Add your first member'}
+                  </Text>
+                </View>
+              }
             />
           )}
         </View>

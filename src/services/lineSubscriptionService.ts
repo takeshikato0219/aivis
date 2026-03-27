@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showCommonAlert } from '@components/Alert/Alert';
-import { BaseLineService } from './baseLineService';
+import { BaseLineService } from '@/services/baseLineService';
 import { getAuthData } from '@utils/authStorage';
 
 export interface LineSubscriptionStatus {
@@ -24,12 +24,7 @@ export class LineSubscriptionService extends BaseLineService {
       if (!profile?.userId) {
         return { isSubscribed: false };
       }
-
-      // Check if user is following the official account
-      // Note: In a real implementation, you would call your backend API
-      // which would use LINE's Messaging API to check follower status
       const isSubscribed = await this.checkFollowerStatus(profile.userId);
-
       return {
         isSubscribed,
         userId: profile.userId,
@@ -86,34 +81,32 @@ export class LineSubscriptionService extends BaseLineService {
    * Private method to check if user is following the official account
    * In a real app, this would call your backend API
    */
-  private async checkFollowerStatus(userId: string): Promise<boolean> {
+  /**
+   * Check if the stored follower status matches the given userId and isSubscribed is true
+   */
+  async checkFollowerStatus(_userId: string): Promise<boolean> {
     try {
-      // Get stored subscription status
       const { user } = await getAuthData();
-      const storedStatus = user.has_followed_bot;
-
-      if (storedStatus) {
-        const parsedStatus = JSON.parse(storedStatus);
-        // Check if the stored status belongs to the current user
-        if (parsedStatus.userId === userId) {
-          return parsedStatus.isSubscribed;
-        }
+      const stored = user.has_followed_bot;
+      if (!stored) {
+        console.log(
+          '[LINE Subscription] No stored status found for user:',
+          _userId,
+          '- defaulting to not subscribed'
+        );
+        return false;
       }
-
-      // If no stored status or different user, check with LINE API
-      // For demo purposes, we'll assume user is not subscribed initially
-      console.log(
-        '[LINE Subscription] No stored status found for user:',
-        userId,
-        '- defaulting to not subscribed'
-      );
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // In real implementation, this would call LINE API to check follower status
-      // For demo, return false (not subscribed) as default
-      return false;
+      let parsed;
+      try {
+        parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
+      } catch (e) {
+        console.log('[LINE Subscription] Error parsing stored status:', e);
+        return false;
+      }
+      if (parsed.userId !== _userId) {
+        return false;
+      }
+      return !!parsed.isSubscribed;
     } catch (error) {
       console.log('[LINE Subscription] Error checking follower status:', error);
       return false;

@@ -33,8 +33,13 @@ export const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  scrollContentContainer: {
+    flexGrow: 1,
+  },
   notificationCard: {
     marginBottom: 8,
+    backgroundColor: '#181717',
+    borderRadius: 16,
   },
   unreadCard: {
     backgroundColor: COLORS.primary + '10',
@@ -66,13 +71,19 @@ export const styles = StyleSheet.create({
   viewTitle: {
     flex: 1,
     marginHorizontal: 14,
-    justifyContent: 'center',
   },
 
   headerTitle: {
     fontSize: isTablet() ? 35 : 20,
     fontWeight: FONTS.weights.medium,
     color: COLORS.background,
-    textAlign: 'center',
+  },
+  noData: {
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  loadingMoreContainer: {
+    alignItems: 'center',
+    padding: 16,
   },
 });

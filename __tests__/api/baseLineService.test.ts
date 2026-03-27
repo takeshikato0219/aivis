@@ -1,4 +1,4 @@
-import { BaseLineService } from '../../src/api/baseLineService';
+import { BaseLineService } from '@/services/baseLineService';
 
 const mockSetup = jest.fn();
 const mockGetCurrentAccessToken = jest.fn();

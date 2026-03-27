@@ -201,7 +201,9 @@
     "releaseMode": "解除モード",
     "securityMode": "セキュリティモード",
     "textNotification": "侵入 知 即時通知",
-    "doYouWantToSwitchMode": "モードを切り替えますか？"
+    "doYouWantToSwitchMode": "モードを切り替えますか？",
+    "checkin": "出勤",
+    "checkout": "退勤"
   },
   "validate": {
     "emailRequired": "メールアドレスを入力してください。",
@@ -288,7 +290,13 @@
     "thereIsNoRecordingData": "録画データはありません",
     "video": "録画",
     "call": "通話",
-    "photo": "写真"
+    "photo": "写真",
+    "micPermissionBlocked": "マイクがブロックされています。音声機能を使用するには、設定でマイクの権限を有効にしてください。",
+    "micPermissionUnavailable": "マイクがまだ使用できません。デバイスの設定を確認し、マイクが利用可能かどうかを確認してから再度お試しください。",
+    "photoLibraryPermissionIsRequiredToSaveScreenshots": "スクリーンショットを保存するには写真ライブラリの許可が必要です",
+    "storagePermissionIsRequiredToSaveScreenshots": "スクリーンショットを保存するにはストレージの許可が必要です",
+    "photoLibraryPermissionIsRequiredToSaveVideos": "ビデオを保存するには写真ライブラリの許可が必要です",
+    "storagePermissionIsRequiredToSaveVideos": "ビデオを保存するにはストレージの許可が必要です"
   },
   "changePassword": {
     "changePasswordSuccess": "パスワード変更完了",
@@ -354,7 +362,8 @@
     "agentCode": "代理店コード",
     "cameraRegisteredSuccessfully": "カメラの登録が完了しました",
     "authenticationRequired": "カメラを登録するにはログインしてください",
-    "theCameraHasBeenRegistered": "カメラの登録が完了しました"
+    "theCameraHasBeenRegistered": "カメラの登録が完了しました",
+    "noQRData": "QRデータがスキャンされていません"
   },
   "wifiHotspot": {
     "enterPasswordInstruction": "Jetson Orinのローカルホットスポットのデフォルトパスワードを入力してください：",
@@ -491,6 +500,9 @@
     "qualityScore": "スキャン品質",
     "faceDetectionError": "顔検出エラー",
     "noFaceDetected": "キャプチャした画像に顔が検出されませんでした。もう一度お試しください。",
+    "faceOutsideFrame": "検出枠内に顔を配置してください。",
+    "faceTooClose": "カメラに近づきすぎています。もう少し離れてください。",
+    "faceTooFar": "カメラから遠すぎます。もう少し近づいてください。",
     "multipleFacesDetected": "複数の顔が検出されました。1人の顔だけが見えるようにして、もう一度お試しください。",
     "getReady": "準備してください...",
     "pleaseFaceTheCameraStraightAhead": "カメラをまっすぐ見てください。",
@@ -542,7 +554,9 @@
     "slowlyTiltYourHeadDOWN": "ゆっくりと頭を下に傾けてください",
     "selectPhoto": "ライブラリから写真を1枚選択してください。精度を高めたい場合は、5つの角度すべての写真を選択してください。",
     "pleaseChooseAtLeastOneImage": "少なくとも1枚の画像を選択してください",
-    "pleaseEnterTheRequiredInformation": "必要な情報を入力してください。"
+    "pleaseEnterTheRequiredInformation": "必要な情報を入力してください。",
+    "pleaseProvideAll5PhotosInTheCorrectPositionsToImproveRecognitionAccuracy": "認識精度を高めるために、正しい位置で5枚すべての写真を提供してください。",
+    "pleaseAlignYourFaceWithinTheRectangle": "顔を四角い枠の中に合わせてください。"
   },
   "liveStream": {
     "connectionSuccessful": "接続に成功しました",
@@ -574,6 +588,16 @@
     "uploadPhotoFromLibrary": "ライブラリから写真をアップロード",
     "close": "閉じる"
   },
+  "customerReport": {
+    "male": "男性",
+    "female": "女性",
+    "unknown": "不明",
+    "ageUnder30": "30歳未満",
+    "age30AndOver": "30歳以上",
+    "age50AndOver": "50歳以上",
+    "personCount": "{{count}}人",
+    "close": "閉じる"
+  },
   "detailFace": {
     "detailFace": "詳細顔"
   },
@@ -585,6 +609,11 @@
     "scheduleEnabled": "ルールの有効化／無効化",
     "repeat": "繰り返し",
     "activeTime": "AI 知有効時間",
+    "checkInTimeRange": "就業時間（開始〜終了）",
+    "checkOutTimeRange": "退勤時間帯（開始〜終了）",
+    "attendanceRangesIdentical": "就業時間と退勤時間帯は別の時間帯にしてください。",
+    "attendanceRangesOverlap": "就業時間と退勤時間帯が重ならないようにしてください。",
+    "attendanceCheckoutEndsBeforeWorkStart": "退勤時間帯の終了は、就業時間の開始より前にできません。",
     "save": "保存",
     "saving": "保存中...",
     "weekdays": {
@@ -597,6 +626,9 @@
       "sun": "日"
     },
     "selectFaceToApply": "適用する顔を選択",
+    "other": "その他",
+    "selectedCount": "{{count}}件選択中",
+    "loadMore": "もっと見る",
     "updateSuccessful": "更新に成功しました",
     "updateFailed": "更新に失敗しました"
   },
@@ -620,9 +652,19 @@
     "successMessage": "検知ゾーンの設定に成功しました",
     "failureMessage": "検知ゾーンの設定に失敗しました",
     "setupError": "設定エラー",
-    "twoPointError": "2つのポイントがフレームの端と一致してはいけません。別の位置を選択してください。"
+    "twoPointError": "2つのポイントがフレームの端と一致してはいけません。別の位置を選択してください。",
+    "endSetup": "設定を終了しますか？",
+    "doYouWantToEndTheSetupProcess": "設定プロセスを終了しますか？"
   },
   "listNotificationCamera": {
     "tapTheListBelowToView": "下のリストをタップして表示してください"
+  },
+  "pushNotification": {
+    "permissionTitle": "通知の許可",
+    "permissionMessage": "重要なイベントをお知らせするため、このアプリは通知を表示する許可が必要です。",
+    "allow": "許可する",
+    "deny": "拒否",
+    "channelName": "通知",
+    "defaultTitle": "通知"
   }
 }
