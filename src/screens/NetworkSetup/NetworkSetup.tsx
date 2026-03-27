@@ -91,13 +91,23 @@ const NetworkSetup: React.FC = () => {
       return [];
     }
 
-    return wifiNetworks.map((network, idx) => ({
-      id: `ble-${idx}`,
-      name: network.ssid,
-      signal: network.signal >= -55 ? 'excellent' : network.signal >= -70 ? 'good' : 'weak',
-      secure: network.security !== 'open',
-      capabilities: network.security,
-    }));
+    return wifiNetworks.map((network, idx) => {
+      let signalLevel: 'excellent' | 'good' | 'weak';
+      if (network.signal >= -55) {
+        signalLevel = 'excellent';
+      } else if (network.signal >= -70) {
+        signalLevel = 'good';
+      } else {
+        signalLevel = 'weak';
+      }
+      return {
+        id: `ble-${idx}`,
+        name: network.ssid,
+        signal: signalLevel,
+        secure: network.security !== 'open',
+        capabilities: network.security,
+      };
+    });
   };
 
   const handleConnectLte = async () => {

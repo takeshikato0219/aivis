@@ -67,32 +67,42 @@ interface VideoStateComponentProps {
   imageUrl: string | null;
   t: (key: string) => string;
 }
-const VideoStateComponent: React.FC<VideoStateComponentProps> = ({ videoUrl, imageUrl, t }) => (
-  <View style={styles.emptyState}>
-    {videoUrl ? (
-      <View style={styles.videoFullContainer}>
-        <Video
-          source={{ uri: videoUrl }}
-          style={styles.videoFullPlayer}
-          controls
-          resizeMode="cover"
-          paused={false}
-        />
-      </View>
-    ) : imageUrl ? (
-      <View style={styles.videoFullContainer}>
-        <Image source={{ uri: imageUrl }} style={styles.videoFullPlayer} resizeMode="contain" />
-      </View>
-    ) : (
+const VideoStateComponent: React.FC<VideoStateComponentProps> = ({ videoUrl, imageUrl, t }) => {
+  const renderContent = () => {
+    if (videoUrl) {
+      return (
+        <View style={styles.videoFullContainer}>
+          <Video
+            source={{ uri: videoUrl }}
+            style={styles.videoFullPlayer}
+            controls
+            resizeMode="cover"
+            paused={false}
+          />
+        </View>
+      );
+    }
+
+    if (imageUrl) {
+      return (
+        <View style={styles.videoFullContainer}>
+          <Image source={{ uri: imageUrl }} style={styles.videoFullPlayer} resizeMode="contain" />
+        </View>
+      );
+    }
+
+    return (
       <>
         <View style={styles.emptyIcon}>
           <IconCCTV />
         </View>
         <Text style={styles.emptyText}>{t('listNotificationCamera.tapTheListBelowToView')}</Text>
       </>
-    )}
-  </View>
-);
+    );
+  };
+
+  return <View style={styles.emptyState}>{renderContent()}</View>;
+};
 
 const mapDetectionToNotificationItem = (d: Detection): NotificationItem => {
   const [datePart, timePart] = d.detected_at.split('T');

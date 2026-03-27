@@ -141,17 +141,17 @@ const buildRuleConfigs = (
   }
 ): RuleConfig[] => {
   const configs = RULE_CONFIGS_BY_WORKFLOW[workflowType];
-  return configs.map(({ code, icon, iconName, handlerType }) => ({
-    code,
-    icon,
-    iconName,
-    handler:
-      handlerType === 'notification'
-        ? (name: string, iconParam: string) => handlers.notification(name, iconParam, code)
-        : handlerType === 'customerReport'
-          ? (name: string, iconParam: string) => handlers.customerReport(name, iconParam)
-          : '',
-  }));
+  return configs.map(({ code, icon, iconName, handlerType }) => {
+    let handler: RuleConfig['handler'];
+    if (handlerType === 'notification') {
+      handler = (name: string, iconParam: string) => handlers.notification(name, iconParam, code);
+    } else if (handlerType === 'customerReport') {
+      handler = (name: string, iconParam: string) => handlers.customerReport(name, iconParam);
+    } else {
+      handler = '';
+    }
+    return { code, icon, iconName, handler };
+  });
 };
 
 const Detail = () => {
@@ -171,7 +171,14 @@ const Detail = () => {
   const [countDetectionData, setCountDetectionData] = useState<CountDetectionData | null>(null);
   const [livePersonCount, setLivePersonCount] = useState<number | null>(null);
 
-  const facilityId = camera?.facility_id ?? (camera as any)?.facility?.id;
+  let facilityId;
+  if (camera?.facility_id != null) {
+    facilityId = camera.facility_id;
+  } else if ((camera as any)?.facility?.id != null) {
+    facilityId = (camera as any).facility.id;
+  } else {
+    facilityId = undefined;
+  }
   const matchedWorkflow = workflowStatuses?.find((ws) => String(ws.id) === String(facilityId));
   const workflowName = matchedWorkflow?.name ?? '';
   const workflowType = getWorkflowType(workflowName);
@@ -336,12 +343,14 @@ const Detail = () => {
       ? countDetectionData.people_count_ws_url
       : null;
 
-  const displayLiveCount =
-    livePersonCount !== null
-      ? livePersonCount
-      : typeof countDetectionData?.people_count_ws_url === 'number'
-        ? countDetectionData.people_count_ws_url
-        : 0;
+  let displayLiveCount: number;
+  if (livePersonCount !== null) {
+    displayLiveCount = livePersonCount;
+  } else if (typeof countDetectionData?.people_count_ws_url === 'number') {
+    displayLiveCount = countDetectionData.people_count_ws_url;
+  } else {
+    displayLiveCount = 0;
+  }
 
   const iconLiveItem: CameraListItem = {
     ...LIVING_ITEM_BASE,
