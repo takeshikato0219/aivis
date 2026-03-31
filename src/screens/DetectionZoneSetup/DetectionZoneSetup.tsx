@@ -271,7 +271,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchLiveUrl]);
 
-  // Capture frame định kỳ khi live - lưu khung hình cuối trước khi bị gián đoạn
+  //Capture frames periodically during live-streaming - save the last frame before interruption.
   useEffect(() => {
     if (!isLive || !streamHtmlUrl) return;
     const interval = setInterval(async () => {
@@ -281,7 +281,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     return () => clearInterval(interval);
   }, [isLive, streamHtmlUrl, captureFrameFromWebView]);
 
-  // Xóa last frame khi stream live lại
+  // Remove the last frame when resuming a live stream.
   useEffect(() => {
     if (isLive && lastFrameBase64 !== null) setLastFrameBase64(null);
   }, [isLive, lastFrameBase64]);

@@ -39,6 +39,7 @@ import { COLORS } from '@constants/theme';
 import rulesService from '@/services/rulesService';
 import cameraService from '@/services/cameraService';
 import faceService from '@/services/faceService';
+import detectionZoneService from '@/services/detectionZone';
 import {
   applyCountIncrements,
   subscribeCountDetectionEvent,
@@ -47,6 +48,7 @@ import {
 import { MODE_BACKGROUNDS, MODE_ICONS, RULE_CONFIGS_BY_WORKFLOW } from './Detail.constants';
 import {
   isAttendanceSubcounts,
+  isEnterpriseAttendanceInOut,
   type CameraListItem,
   type CountDetectionData,
   type FilterItem,
@@ -124,6 +126,18 @@ const getCounterText = (
     return '0人';
   }
 
+  if (code === 'enterprise_attendance') {
+    if (!('enterprise_attendance' in data) || data.enterprise_attendance == null) return '0人';
+    const ea = data.enterprise_attendance;
+    if (isEnterpriseAttendanceInOut(ea)) {
+      return '';
+    }
+    if (typeof ea === 'number') {
+      return `${ea}人`;
+    }
+    return '0人';
+  }
+
   const record = data as Record<string, unknown>;
   if (!(code in record)) return '0人';
   const raw = record[code];
@@ -138,6 +152,7 @@ const buildRuleConfigs = (
   handlers: {
     notification: (itemName: string, iconName: string, code: string) => void;
     customerReport: (itemName: string, iconName: string) => void;
+    restrictedZone: () => void;
   }
 ): RuleConfig[] => {
   const configs = RULE_CONFIGS_BY_WORKFLOW[workflowType];
@@ -147,6 +162,8 @@ const buildRuleConfigs = (
       handler = (name: string, iconParam: string) => handlers.notification(name, iconParam, code);
     } else if (handlerType === 'customerReport') {
       handler = (name: string, iconParam: string) => handlers.customerReport(name, iconParam);
+    } else if (handlerType === 'restrictedZone') {
+      handler = handlers.restrictedZone;
     } else {
       handler = '';
     }
@@ -210,6 +227,25 @@ const Detail = () => {
   const handleSetupDetectionZone = () => {
     navigation.navigate('SettingAI', { camera });
   };
+
+  const handleRestrictedZoneSetup = useCallback(async () => {
+    try {
+      const [liveRes, typeRes] = await Promise.all([
+        cameraService.getLiveStreamUrl(camera.id),
+        detectionZoneService.getType(),
+      ]);
+      const typeId = typeRes.data[1]?.id;
+      if (!typeId) return;
+      navigation.navigate('DetectionZoneSetup', {
+        camera,
+        zoneType: 'restricted',
+        typeId,
+        liveUrl: liveRes.data.live_url,
+      });
+    } catch (err) {
+      console.warn('Failed to open restricted zone setup:', err);
+    }
+  }, [camera, navigation]);
 
   const getRulesMaster = async () => {
     try {
@@ -305,14 +341,21 @@ const Detail = () => {
   const ruleConfigs = buildRuleConfigs(workflowType, {
     notification: handlePressNotification,
     customerReport: handlePressCustomerReport,
+    restrictedZone: handleRestrictedZoneSetup,
   });
 
   const cameraListWithIcons: CameraListItem[] = ruleConfigs.map((config) => {
     const rule = rulesList.find((r) => r.code === config.code);
     const counterText = getCounterText(config.code, workflowType, countDetectionData);
     const att = countDetectionData?.attendance;
+    const ea = countDetectionData?.enterprise_attendance;
     const attendanceSub =
-      config.code === 'attendance' && isAttendanceSubcounts(att) ? att : undefined;
+      config.code === 'attendance' && isAttendanceSubcounts(att)
+        ? att
+        : config.code === 'enterprise_attendance' && isEnterpriseAttendanceInOut(ea)
+          ? ea
+          : undefined;
+    const displayName = rule?.rule_name ?? '';
     const baseItem = {
       counter: counterText,
       ...(attendanceSub ? { attendanceSub } : {}),
@@ -324,14 +367,14 @@ const Detail = () => {
     if (rule) {
       return {
         id: rule.id,
-        name: rule.rule_name,
+        name: displayName,
         status: rule.is_active,
         ...baseItem,
       };
     }
     return {
       id: config.code,
-      name: '',
+      name: displayName,
       status: false,
       ...baseItem,
     };
@@ -406,6 +449,7 @@ const Detail = () => {
     if (item.handler) {
       if (item.handler === goToFaceUpload) return goToFaceUpload;
       if (item.handler === handleCameraPress) return handleCameraPress;
+      if (item.handler === handleRestrictedZoneSetup) return handleRestrictedZoneSetup;
       if (typeof item.handler === 'function') {
         return () =>
           (item.handler as (itemName: string, iconName: string) => void)(
@@ -651,24 +695,49 @@ const Detail = () => {
                         </Text>
                         {item.attendanceSub ? (
                           <View style={styles.attendanceCounterBlock}>
-                            <Text
-                              style={[
-                                styles.filterText,
-                                styles.attendanceCounterLine,
-                                !item.status && styles.disableText,
-                              ]}
-                            >
-                              {t('detail.checkin')}: {item.attendanceSub.checkin}人
-                            </Text>
-                            <Text
-                              style={[
-                                styles.filterText,
-                                styles.attendanceCounterLine,
-                                !item.status && styles.disableText,
-                              ]}
-                            >
-                              {t('detail.checkout')}: {item.attendanceSub.checkout}人
-                            </Text>
+                            {isEnterpriseAttendanceInOut(item.attendanceSub) ? (
+                              <>
+                                <Text
+                                  style={[
+                                    styles.filterText,
+                                    styles.attendanceCounterLine,
+                                    !item.status && styles.disableText,
+                                  ]}
+                                >
+                                  {t('detail.checkin')}: {item.attendanceSub.in}人
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.filterText,
+                                    styles.attendanceCounterLine,
+                                    !item.status && styles.disableText,
+                                  ]}
+                                >
+                                  {t('detail.checkout')}: {item.attendanceSub.out}人
+                                </Text>
+                              </>
+                            ) : (
+                              <>
+                                <Text
+                                  style={[
+                                    styles.filterText,
+                                    styles.attendanceCounterLine,
+                                    !item.status && styles.disableText,
+                                  ]}
+                                >
+                                  {t('detail.checkin')}: {item.attendanceSub.checkin}人
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.filterText,
+                                    styles.attendanceCounterLine,
+                                    !item.status && styles.disableText,
+                                  ]}
+                                >
+                                  {t('detail.checkout')}: {item.attendanceSub.checkout}人
+                                </Text>
+                              </>
+                            )}
                           </View>
                         ) : (
                           <Text style={[styles.filterText, !item.status && styles.disableText]}>

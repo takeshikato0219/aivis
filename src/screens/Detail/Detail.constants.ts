@@ -19,7 +19,7 @@ import IconHelmet from '@assets/svg/helmet-icon.svg';
 import IconVip from '@assets/svg/vip-label-icon.svg';
 import type { WorkflowType } from './Detail.types';
 
-export type RuleHandlerType = 'notification' | 'customerReport' | 'none';
+export type RuleHandlerType = 'notification' | 'customerReport' | 'restrictedZone' | 'none';
 
 export interface RuleConfigStatic {
   code: string;
@@ -128,7 +128,7 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
       code: 'restricted_area_intrusion',
       icon: IconBan,
       iconName: 'IconBan',
-      handlerType: 'notification',
+      handlerType: 'restrictedZone',
     },
   ],
 };
