@@ -20,7 +20,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import SettingsIcon from '@assets/svg/icon-setting.svg';
 import LogoDetail from '@assets/svg/logo-detail.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
-import RetangleImage from '@assets/png/rectangle-home.png';
+import RetangleImage from '@assets/webp/rectangle-home.webp';
 import IconHome from '@assets/svg/icon-home.svg';
 import IconPerson from '@assets/svg/icon-person.svg';
 import IconSuspect from '@assets/svg/icon-suspect.svg';
@@ -39,7 +39,6 @@ import { COLORS } from '@constants/theme';
 import rulesService from '@/services/rulesService';
 import cameraService from '@/services/cameraService';
 import faceService from '@/services/faceService';
-import detectionZoneService from '@/services/detectionZone';
 import {
   applyCountIncrements,
   subscribeCountDetectionEvent,
@@ -47,7 +46,6 @@ import {
 
 import { MODE_BACKGROUNDS, MODE_ICONS, RULE_CONFIGS_BY_WORKFLOW } from './Detail.constants';
 import {
-  isAttendanceSubcounts,
   isEnterpriseAttendanceInOut,
   type CameraListItem,
   type CountDetectionData,
@@ -112,18 +110,6 @@ const getCounterText = (
   if (code === 'creature_detection') {
     if (!('creature_detection' in data)) return '0人';
     return `${data.creature_detection ?? 0}`;
-  }
-
-  if (code === 'attendance') {
-    if (!('attendance' in data) || data.attendance == null) return '0人';
-    const a = data.attendance;
-    if (isAttendanceSubcounts(a)) {
-      return '';
-    }
-    if (typeof a === 'number') {
-      return `${a}人`;
-    }
-    return '0人';
   }
 
   if (code === 'enterprise_attendance') {
@@ -228,24 +214,16 @@ const Detail = () => {
     navigation.navigate('SettingAI', { camera });
   };
 
-  const handleRestrictedZoneSetup = useCallback(async () => {
-    try {
-      const [liveRes, typeRes] = await Promise.all([
-        cameraService.getLiveStreamUrl(camera.id),
-        detectionZoneService.getType(),
-      ]);
-      const typeId = typeRes.data[1]?.id;
-      if (!typeId) return;
-      navigation.navigate('DetectionZoneSetup', {
-        camera,
-        zoneType: 'restricted',
-        typeId,
-        liveUrl: liveRes.data.live_url,
-      });
-    } catch (err) {
-      console.warn('Failed to open restricted zone setup:', err);
-    }
-  }, [camera, navigation]);
+  const handleRestrictedZoneSetup = useCallback(() => {
+    const rule = rulesList.find((r) => r.code === 'restricted_area_intrusion');
+    const displayName = rule?.rule_name ?? '';
+    navigation.navigate('ListNotificationCamera', {
+      title: displayName,
+      icon: 'IconBan',
+      code: 'restricted_area_intrusion',
+      cameraId: camera.id,
+    });
+  }, [camera.id, navigation, rulesList]);
 
   const getRulesMaster = async () => {
     try {
@@ -347,14 +325,9 @@ const Detail = () => {
   const cameraListWithIcons: CameraListItem[] = ruleConfigs.map((config) => {
     const rule = rulesList.find((r) => r.code === config.code);
     const counterText = getCounterText(config.code, workflowType, countDetectionData);
-    const att = countDetectionData?.attendance;
     const ea = countDetectionData?.enterprise_attendance;
     const attendanceSub =
-      config.code === 'attendance' && isAttendanceSubcounts(att)
-        ? att
-        : config.code === 'enterprise_attendance' && isEnterpriseAttendanceInOut(ea)
-          ? ea
-          : undefined;
+      config.code === 'enterprise_attendance' && isEnterpriseAttendanceInOut(ea) ? ea : undefined;
     const displayName = rule?.rule_name ?? '';
     const baseItem = {
       counter: counterText,
@@ -695,49 +668,24 @@ const Detail = () => {
                         </Text>
                         {item.attendanceSub ? (
                           <View style={styles.attendanceCounterBlock}>
-                            {isEnterpriseAttendanceInOut(item.attendanceSub) ? (
-                              <>
-                                <Text
-                                  style={[
-                                    styles.filterText,
-                                    styles.attendanceCounterLine,
-                                    !item.status && styles.disableText,
-                                  ]}
-                                >
-                                  {t('detail.checkin')}: {item.attendanceSub.in}人
-                                </Text>
-                                <Text
-                                  style={[
-                                    styles.filterText,
-                                    styles.attendanceCounterLine,
-                                    !item.status && styles.disableText,
-                                  ]}
-                                >
-                                  {t('detail.checkout')}: {item.attendanceSub.out}人
-                                </Text>
-                              </>
-                            ) : (
-                              <>
-                                <Text
-                                  style={[
-                                    styles.filterText,
-                                    styles.attendanceCounterLine,
-                                    !item.status && styles.disableText,
-                                  ]}
-                                >
-                                  {t('detail.checkin')}: {item.attendanceSub.checkin}人
-                                </Text>
-                                <Text
-                                  style={[
-                                    styles.filterText,
-                                    styles.attendanceCounterLine,
-                                    !item.status && styles.disableText,
-                                  ]}
-                                >
-                                  {t('detail.checkout')}: {item.attendanceSub.checkout}人
-                                </Text>
-                              </>
-                            )}
+                            <Text
+                              style={[
+                                styles.filterText,
+                                styles.attendanceCounterLine,
+                                !item.status && styles.disableText,
+                              ]}
+                            >
+                              {t('detail.checkin')}: {item.attendanceSub.in}人
+                            </Text>
+                            <Text
+                              style={[
+                                styles.filterText,
+                                styles.attendanceCounterLine,
+                                !item.status && styles.disableText,
+                              ]}
+                            >
+                              {t('detail.checkout')}: {item.attendanceSub.out}人
+                            </Text>
                           </View>
                         ) : (
                           <Text style={[styles.filterText, !item.status && styles.disableText]}>

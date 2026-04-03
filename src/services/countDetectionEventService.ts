@@ -1,5 +1,5 @@
 import type { CountDetectionData } from '@/screens/Detail/Detail.types';
-import { isAttendanceSubcounts } from '@/screens/Detail/Detail.types';
+import { isAttendanceSubcounts, isEnterpriseAttendanceInOut } from '@/screens/Detail/Detail.types';
 
 export type CountDetectionEventPayload = {
   /** Rule codes from RULE_CONFIGS_BY_WORKFLOW (FCM may send multiple keys in one payload). */
@@ -54,6 +54,36 @@ function bumpAttendanceSub(
   };
 }
 
+/** Enterprise workflow — FCM may send `{ enterprise_attendance: { in: 1 } }` / `{ out: 1 }` → codes `enterprise_attendance_in` / `enterprise_attendance_out`. */
+function bumpEnterpriseAttendanceSub(
+  data: CountDetectionData,
+  sub: 'in' | 'out'
+): CountDetectionData {
+  const cur = data.enterprise_attendance;
+  if (isEnterpriseAttendanceInOut(cur)) {
+    return {
+      ...data,
+      enterprise_attendance: { ...cur, [sub]: cur[sub] + 1 },
+    };
+  }
+  if (typeof cur === 'number') {
+    return {
+      ...data,
+      enterprise_attendance: {
+        in: sub === 'in' ? cur + 1 : cur,
+        out: sub === 'out' ? 1 : 0,
+      },
+    };
+  }
+  return {
+    ...data,
+    enterprise_attendance: {
+      in: sub === 'in' ? 1 : 0,
+      out: sub === 'out' ? 1 : 0,
+    },
+  };
+}
+
 export function applyCountIncrement(
   data: CountDetectionData | null,
   code: string
@@ -65,6 +95,36 @@ export function applyCountIncrement(
   }
   if (code === 'attendance_checkout') {
     return bumpAttendanceSub(data, 'checkout');
+  }
+
+  if (code === 'enterprise_attendance_in') {
+    return bumpEnterpriseAttendanceSub(data, 'in');
+  }
+  if (code === 'enterprise_attendance_out') {
+    return bumpEnterpriseAttendanceSub(data, 'out');
+  }
+
+  if (code === 'enterprise_attendance') {
+    const value = data.enterprise_attendance;
+    if (isEnterpriseAttendanceInOut(value)) {
+      return {
+        ...data,
+        enterprise_attendance: { ...value, in: value.in + 1 },
+      };
+    }
+    if (typeof value === 'number') {
+      return {
+        ...data,
+        enterprise_attendance: value + 1,
+      };
+    }
+    if (!('enterprise_attendance' in data) || data.enterprise_attendance == null) {
+      return {
+        ...data,
+        enterprise_attendance: { in: 1, out: 0 },
+      };
+    }
+    return data;
   }
 
   if (code === 'attendance') {

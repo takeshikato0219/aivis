@@ -18,7 +18,7 @@ import Video from 'react-native-video';
 import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
 import IconCCTV from '@assets/svg/icon-cctv.svg';
 import { Calendar } from 'react-native-calendars';
-import BackgroundNofication from '@assets/png/background-notification.png';
+import BackgroundNofication from '@assets/webp/background-notification.webp';
 import { styles } from './ListNotificationCamera.style';
 import { useTranslation } from 'react-i18next';
 import { AppStackParamList } from '@navigation/types';

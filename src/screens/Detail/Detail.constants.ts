@@ -10,9 +10,9 @@ import IconSafeActive from '@assets/svg/icon-safe-active.svg';
 import IconSafeUnActive from '@assets/svg/icon-safe-unactive.svg';
 import IconUnlockActive from '@assets/svg/icon-lock-active.svg';
 import IconUnlockUnActive from '@assets/svg/icon-lock-unactive.svg';
-import CameraShopDetailBgPng from '@assets/png/camera-shop-detail-bg.png';
-import CameraHomeDetailBgPng from '@assets/png/camera-home-detail-bg.png';
-import CameraFactoryDetailBgPng from '@assets/png/camera-factory-detail-bg.png';
+import CameraShopDetailBgPng from '@assets/webp/camera-shop-detail-bg.webp';
+import CameraHomeDetailBgPng from '@assets/webp/camera-home-detail-bg.webp';
+import CameraFactoryDetailBgPng from '@assets/webp/camera-factory-detail-bg.webp';
 import IconAttendance from '@assets/svg/attendance-icon.svg';
 import IconBan from '@assets/svg/ban-sign-icon.svg';
 import IconHelmet from '@assets/svg/helmet-icon.svg';
@@ -86,12 +86,6 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
       iconName: 'IconBan',
       handlerType: 'notification',
     },
-    {
-      code: 'attendance',
-      icon: IconAttendance,
-      iconName: 'IconAttendance',
-      handlerType: 'notification',
-    },
   ],
   Enterprise: [
     {
@@ -134,19 +128,74 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
 };
 
 /** All rule `code` values from RULE_CONFIGS_BY_WORKFLOW (e.g. push payload `code`, count keys in `data`). */
-export const ALL_RULE_CODES = new Set<string>(
-  (Object.keys(RULE_CONFIGS_BY_WORKFLOW) as WorkflowType[]).flatMap((wf) =>
+export const ALL_RULE_CODES = new Set<string>([
+  ...(Object.keys(RULE_CONFIGS_BY_WORKFLOW) as WorkflowType[]).flatMap((wf) =>
     RULE_CONFIGS_BY_WORKFLOW[wf].map((c) => c.code)
-  )
-);
+  ),
+  'enterprise_attendance_in',
+  'enterprise_attendance_out',
+]);
 
-/** FCM may send which attendance sub-counter changed (not in RULE_CONFIGS_BY_WORKFLOW rows). */
-const ATTENDANCE_FCM_SUBKEYS = new Set(['attendance_checkin', 'attendance_checkout']);
+function toPositiveInt(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v) && v > 0) return Math.floor(v);
+  if (typeof v === 'string') {
+    const n = Number(v.trim());
+    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  }
+  return 0;
+}
+
+function normalizeEnterpriseAttendanceFcmRaw(raw: unknown): unknown {
+  if (typeof raw === 'string') {
+    const t = raw.trim();
+    if (t.startsWith('{') || t.startsWith('[')) {
+      try {
+        return JSON.parse(t) as unknown;
+      } catch {
+        try {
+          // Backend may send Python repr e.g. "{'in': 1}" — JSON requires double-quoted keys/strings
+          const jsonish = t.replace(/'/g, '"');
+          return JSON.parse(jsonish) as unknown;
+        } catch {
+          return raw;
+        }
+      }
+    }
+  }
+  return raw;
+}
+
+/**
+ * Maps `enterprise_attendance` from FCM `data` to increment codes.
+ *
+ * Contract: each push uses exactly one of:
+ * - `{ enterprise_attendance: { in: 1 } }`  → `enterprise_attendance_in`
+ * - `{ enterprise_attendance: { out: 1 } }` → `enterprise_attendance_out`
+ *
+ * FCM often stringifies nested objects, so `data.enterprise_attendance` may be the string `'{"in":1}'` / `'{"out":1}'`.
+ * Zero / invalid / missing `in` & `out` → `[]` (no phantom increment).
+ */
+export function enterpriseAttendanceCodesFromFcmValue(raw: unknown): string[] {
+  if (raw == null || raw === '') return [];
+
+  const normalized = normalizeEnterpriseAttendanceFcmRaw(raw);
+
+  if (typeof normalized !== 'object' || normalized === null) return [];
+
+  const o = normalized as Record<string, unknown>;
+  if (!('in' in o) && !('out' in o)) return [];
+
+  const codes: string[] = [];
+  const inCount = toPositiveInt(o.in);
+  const outCount = toPositiveInt(o.out);
+  for (let i = 0; i < inCount; i++) codes.push('enterprise_attendance_in');
+  for (let i = 0; i < outCount; i++) codes.push('enterprise_attendance_out');
+  return codes;
+}
 
 /**
  * FCM `data` may use rule keys directly (e.g. `{ visitor_count: "1", vip_customer_detection: "1" }`) without a `code` field.
  * Returns every key that matches RULE_CONFIGS_BY_WORKFLOW / ALL_RULE_CODES (payload key order preserved).
- * Also includes `attendance_checkin` / `attendance_checkout` for Store attendance subcounts.
  */
 export function getRuleCodesFromFcmData(
   data: Record<string, unknown> | undefined | null
@@ -154,7 +203,12 @@ export function getRuleCodesFromFcmData(
   if (!data || typeof data !== 'object') return [];
   const codes: string[] = [];
   for (const key of Object.keys(data)) {
-    if (ALL_RULE_CODES.has(key) || ATTENDANCE_FCM_SUBKEYS.has(key)) codes.push(key);
+    if (!ALL_RULE_CODES.has(key)) continue;
+    if (key === 'enterprise_attendance') {
+      codes.push(...enterpriseAttendanceCodesFromFcmValue(data[key]));
+      continue;
+    }
+    codes.push(key);
   }
   return codes;
 }

@@ -116,6 +116,7 @@ export const styles = StyleSheet.create({
   },
   unsubscribeButton: {
     backgroundColor: '#FF6B6B',
+    marginBottom: 10,
   },
   buttonText: {
     color: 'white',

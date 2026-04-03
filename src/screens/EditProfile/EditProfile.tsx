@@ -26,7 +26,7 @@ import { useErrorHandler } from '@hooks/useErrorHandler';
 import { useAppSetup } from '@hooks/useAppSetup';
 import { useNavigation } from '@react-navigation/native';
 import { HomeScreenNavigationProp } from '@navigation/types';
-import HomeBackgroundImage from '@assets/png/home-background.png';
+import HomeBackgroundImage from '@assets/webp/home-background.webp';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useImagePicker } from '@hooks/useImagePicker';
 import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';

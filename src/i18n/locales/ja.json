@@ -62,6 +62,8 @@
     "loginIsInProgress": "ログイン処理中です。",
     "googlePlayServicesAreNotAvailable": "Google Play サービスが利用できません。",
     "googleSignInFailed": "Google ログインに失敗しました。",
+    "appleSignInFailed": "Appleでのログインに失敗しました。",
+    "appleSignInNotAvailable": "この端末ではAppleでのログインは利用できません",
     "errorWhileSigningOutOfGoogle": "Google ログアウト時にエラーが発生しました：",
     "errorWhileRevokingAccess": "アクセス権の取り消し時にエラーが発生しました：",
     "errorWhileClearingCachedToken": "キャッシュされたトークンの削除時にエラーが発生しました：",
@@ -432,7 +434,7 @@
     "lteConnected": "LTEに接続されました",
     "nowUsing": "現在使用中：",
     "wifiScanError": "Wi-Fiスキャンエラー",
-    "availableLte": "SIMカードが検出されました",
+    "availableLte": "LTE",
     "noSimDetected": "SIMカードが検出されません",
     "ltePassword": "SIM／ネットワークのパスワード",
     "ltePasswordPlaceholder": "Password",
@@ -471,7 +473,9 @@
     "done": "完了",
     "idle": "待機中",
     "lanConnectionIsActive": "LAN接続があります",
-    "noLanConnection": "LAN接続がありません"
+    "noLanConnection": "LAN接続がありません",
+    "lteConnectionIsActive": "LTE接続があります",
+    "noLteConnection": "LTE接続がありません"
   },
   "faceUpload": {
     "title": "顔登録",
@@ -666,5 +670,9 @@
     "deny": "拒否",
     "channelName": "通知",
     "defaultTitle": "通知"
+  },
+  "setting": {
+    "deleteAccount": "アカウントを削除",
+    "deleteAccountConfirmation": "アカウントを削除しますか？"
   }
 }

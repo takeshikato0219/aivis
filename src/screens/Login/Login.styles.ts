@@ -139,6 +139,9 @@ export const styles = StyleSheet.create({
   socialLineButton: {
     backgroundColor: '#06C755',
   },
+  socialAppleButton: {
+    backgroundColor: '#fff',
+  },
   socialButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',

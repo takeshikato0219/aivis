@@ -6,7 +6,7 @@ import { useAppSetup } from '@hooks/useAppSetup';
 import { styles } from './Profile.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import HomeBackgroundImage from '@assets/png/home-background.png';
+import HomeBackgroundImage from '@assets/webp/home-background.webp';
 import { HomeScreenNavigationProp } from '@navigation/types';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { logout } from '@redux/slices/authSlice';

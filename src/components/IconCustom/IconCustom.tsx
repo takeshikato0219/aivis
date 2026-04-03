@@ -6,6 +6,7 @@ import LineIcon from '@assets/svg/line.svg';
 import ShopIcon from '@assets/svg/shop.svg';
 import KeyboardIcon from '@assets/svg/keyboard.svg';
 import LockIconNetwork from '@assets/svg/lock-icon.svg';
+import AppleLogo from '@assets/svg/apple-logo.svg';
 
 export const EmailOutlineIcon = () => <MailIcon />;
 
@@ -22,3 +23,5 @@ export const ShopIconComponent = () => <ShopIcon />;
 export const KeyboardIconComponent = () => <KeyboardIcon />;
 
 export const LockIconComponent = () => <LockIconNetwork />;
+
+export const AppleLogoComponent = () => <AppleLogo />;

@@ -34,7 +34,7 @@ export interface CameraListItem {
   name: string;
   status: boolean;
   counter: string;
-  attendanceSub?: AttendanceSubcounts | EnterpriseAttendanceInOut;
+  attendanceSub?: EnterpriseAttendanceInOut;
   code?: string;
   icon?: ComponentType<any>;
   iconName?: string;

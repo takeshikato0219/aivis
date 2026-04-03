@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppSelector, useAppDispatch } from '@redux/store';
 import { checkAuthAsync, setUser } from '@redux/slices/authSlice';
 import authService from '@/services/authService';
-import HomeBackgroundImage from '@assets/png/home-background.png';
+import HomeBackgroundImage from '@assets/webp/home-background.webp';
 import { HomeScreenNavigationProp } from '@navigation/types';
 import BackIcon from '@assets/svg/icon-back.svg';
 import LineSubscriptionService from '@/services/lineSubscriptionService';
@@ -257,6 +257,16 @@ const Setting = () => {
     navigation.navigate('ListFace', { type: '' });
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(t('common.confirm'), t('setting.deleteAccountConfirmation'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.ok'),
+        onPress: async () => {},
+      },
+    ]);
+  };
+
   return (
     <View style={styles.wrapper}>
       <ImageBackground
@@ -283,6 +293,16 @@ const Setting = () => {
                 <Text style={styles.settingText}>{t('faceUpload.title')}</Text>
               </View>
               <Icon name="chevron-right" size={24} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.lineButton, styles.unsubscribeButton]}
+              onPress={handleDeleteAccount}
+            >
+              {isUnsubscribing ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.buttonText}>{t('setting.deleteAccount')}</Text>
+              )}
             </TouchableOpacity>
             {/* LINE Official Account Section */}
             <View style={styles.section}>

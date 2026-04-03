@@ -16,7 +16,7 @@ import { logout } from '@redux/slices/authSlice';
 import { useTranslation } from 'react-i18next';
 import { styles } from './DrawerMenu.styles';
 import DeviceInfo from 'react-native-device-info';
-import HomeBackgroundImage from '@assets/png/home-background.png';
+import HomeBackgroundImage from '@assets/webp/home-background.webp';
 import { removeAuthData } from '@utils/authStorage';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';

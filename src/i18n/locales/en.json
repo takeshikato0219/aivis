@@ -62,6 +62,8 @@
     "loginIsInProgress": "Login is in progress",
     "googlePlayServicesAreNotAvailable": "Google Play Services are not available",
     "googleSignInFailed": "Google sign in failed",
+    "appleSignInFailed": "Apple sign in failed",
+    "appleSignInNotAvailable": "Sign in with Apple is not available on this device",
     "errorWhileSigningOutOfGoogle": "Error while signing out of Google:",
     "errorWhileRevokingAccess": "Error while revoking access:",
     "errorWhileClearingCachedToken": "Error while clearing cached token:",
@@ -391,7 +393,7 @@
     "lteConnected": "LTE Connected",
     "nowUsing": "Now using: ",
     "wifiScanError": "WiFi scan error",
-    "availableLte": "Detected SIM",
+    "availableLte": "LTE",
     "noSimDetected": "No SIM detected",
     "ltePassword": "Password for SIM/Network",
     "ltePasswordPlaceholder": "Password",
@@ -430,7 +432,9 @@
     "done": "Done",
     "idle": "Idle",
     "lanConnectionIsActive": "LAN connection is active",
-    "noLanConnection": "No LAN connection"
+    "noLanConnection": "No LAN connection",
+    "lteConnectionIsActive": "LTE connection is active",
+    "noLteConnection": "No LTE connection"
   },
   "faceUpload": {
     "title": "Face Registration",
@@ -628,5 +632,9 @@
     "deny": "Deny",
     "channelName": "Notifications",
     "defaultTitle": "Notification"
+  },
+  "setting": {
+    "deleteAccount": "Delete Account",
+    "deleteAccountConfirmation": "Do you want to delete your account?"
   }
 }

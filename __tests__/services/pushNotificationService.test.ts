@@ -74,9 +74,15 @@ jest.mock('@/services/appBadgeService', () => ({
     setBadgeCount: jest.fn(() => Promise.resolve()),
   },
 }));
-jest.mock('@/services/countDetectionEventService', () => ({
-  emitCountDetectionEvent: jest.fn(),
-}));
+jest.mock('@/services/countDetectionEventService', () => {
+  const actual = jest.requireActual(
+    '@/services/countDetectionEventService'
+  ) as typeof import('@/services/countDetectionEventService');
+  return {
+    ...actual,
+    emitCountDetectionEvent: jest.fn(),
+  };
+});
 jest.mock('@navigation/navigationRef', () => ({
   navigationRef: {
     isReady: jest.fn(() => true),
@@ -366,6 +372,78 @@ describe('pushNotificationService', () => {
         codes: ['visitor_count'],
         camera_id: 'camera-99',
       });
+    });
+
+    it('should emit enterprise_attendance_in/out from nested JSON string in enterprise_attendance', async () => {
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue('token');
+      pushNotificationService.registerTokenWithBackend = jest.fn().mockResolvedValue(undefined);
+      messaging.onMessage.mockImplementation(
+        (cb: (msg: { data?: Record<string, unknown> }) => void) => {
+          cb({
+            data: {
+              enterprise_attendance: '{"in":1,"out":1}',
+              camera_id: 'cam-1',
+            },
+          });
+          return jest.fn();
+        }
+      );
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      await pushNotificationService.init();
+      expect(emitCountDetectionEvent).toHaveBeenCalledWith({
+        codes: ['enterprise_attendance_in', 'enterprise_attendance_out'],
+        camera_id: 'cam-1',
+      });
+    });
+
+    it('should emit only enterprise_attendance_out when nested JSON has out only', async () => {
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue('token');
+      pushNotificationService.registerTokenWithBackend = jest.fn().mockResolvedValue(undefined);
+      messaging.onMessage.mockImplementation(
+        (cb: (msg: { data?: Record<string, unknown> }) => void) => {
+          cb({
+            data: {
+              enterprise_attendance: '{"out":1}',
+              camera_id: 'cam-2',
+            },
+          });
+          return jest.fn();
+        }
+      );
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      await pushNotificationService.init();
+      expect(emitCountDetectionEvent).toHaveBeenCalledWith({
+        codes: ['enterprise_attendance_out'],
+        camera_id: 'cam-2',
+      });
+    });
+
+    it('should not emit count when enterprise_attendance is all zeros or empty', async () => {
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue('token');
+      pushNotificationService.registerTokenWithBackend = jest.fn().mockResolvedValue(undefined);
+      messaging.onMessage.mockImplementation(
+        (cb: (msg: { data?: Record<string, unknown> }) => void) => {
+          cb({
+            data: {
+              enterprise_attendance: '{"in":0,"out":0}',
+              camera_id: 'cam-0',
+            },
+          });
+          return jest.fn();
+        }
+      );
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      await pushNotificationService.init();
+      expect(emitCountDetectionEvent).not.toHaveBeenCalled();
     });
 
     it('should call all unsubscribe handlers on cleanup', async () => {

@@ -110,6 +110,7 @@ const RULE_CODES_WITH_FACE_MEMBER_SELECT = new Set([
   'enterprise_attendance',
   'helmet_wearing',
   'mask_wearing',
+  'glove_wearing',
 ]);
 
 export default function WorkSchedule() {
