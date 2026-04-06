@@ -148,4 +148,11 @@ export const styles = StyleSheet.create({
   marginLine: {
     marginTop: 8,
   },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
 });

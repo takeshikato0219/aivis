@@ -257,7 +257,8 @@
     "photoLibraryPermissionIsRequiredToSaveScreenshots": "Photo library permission is required to save screenshots",
     "storagePermissionIsRequiredToSaveScreenshots": "Storage permission is required to save screenshots",
     "photoLibraryPermissionIsRequiredToSaveVideos": "Photo library permission is required to save videos",
-    "storagePermissionIsRequiredToSaveVideos": "Storage permission is required to save videos"
+    "storagePermissionIsRequiredToSaveVideos": "Storage permission is required to save videos",
+    "streamOff": "Stream Off"
   },
   "changePassword": {
     "changePasswordSuccess": "Password Changed",
@@ -434,7 +435,8 @@
     "lanConnectionIsActive": "LAN connection is active",
     "noLanConnection": "No LAN connection",
     "lteConnectionIsActive": "LTE connection is active",
-    "noLteConnection": "No LTE connection"
+    "noLteConnection": "No LTE connection",
+    "wrongPasswordOrNetworkNotFound": "Wrong password or network not found. Please try again."
   },
   "faceUpload": {
     "title": "Face Registration",
@@ -635,6 +637,9 @@
   },
   "setting": {
     "deleteAccount": "Delete Account",
-    "deleteAccountConfirmation": "Do you want to delete your account?"
+    "deleteAccountConfirmation": "Do you want to delete your account?",
+    "userIDDoesNotExist": "User ID does not exist.",
+    "failedToDeleteUser": "Failed to delete user.",
+    "userDeletedSuccessfully": "User deleted successfully."
   }
 }

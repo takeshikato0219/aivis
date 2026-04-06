@@ -167,6 +167,15 @@ class AuthService {
     return this.mapLoginResponse(response);
   }
 
+  async socialAppleLogin(data: SocialLoginRequest): Promise<LoginResponse> {
+    const response = await axiosInstance.post(API_ENDPOINTS.AUTH.APPLE_LOGIN, data, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    return this.mapLoginResponse(response);
+  }
+
   async socialLineLogin(data: SocialLoginRequest): Promise<LoginResponse> {
     const response = await axiosInstance.post(API_ENDPOINTS.AUTH.LINE_LOGIN, data, {
       headers: {
@@ -183,6 +192,10 @@ class AuthService {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
+  }
+
+  async deleteUser(): Promise<any> {
+    return axiosInstance.delete(`${API_ENDPOINTS.AUTH.DELETE}`);
   }
 }
 

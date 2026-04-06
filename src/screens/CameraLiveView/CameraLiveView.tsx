@@ -74,7 +74,7 @@ const CameraLiveView: React.FC = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
   const [currentQuality, setCurrentQuality] = useState<StreamQuality>(STREAM_QUALITIES[2]);
-  const [timeExp, setTimeExp] = useState<string | null>(null);
+  const [expMinutes, setExpMinutes] = useState<number | null>(null);
   const [streamHtmlUrl, setStreamHtmlUrl] = useState('');
   const [micUrl, setMicUrl] = useState('');
   const [isTalkingDelayed, setIsTalkingDelayed] = useState(false);
@@ -121,6 +121,12 @@ const CameraLiveView: React.FC = () => {
   // Derive live status: only "connected" means truly live
   const isLive = connectionStatus === 'connected' && !!streamHtmlUrl && !isWebViewLoading;
 
+  useEffect(() => {
+    if (!isLive && isTalking) {
+      stopMic();
+    }
+  }, [isLive, isTalking, stopMic]);
+
   // Animation effect for quality modal
   useEffect(() => {
     if (isAnimating) {
@@ -162,7 +168,7 @@ const CameraLiveView: React.FC = () => {
     try {
       const res = await cameraService.getLiveStreamUrl(cameraId);
       if (res.success && res.data) {
-        setTimeExp(res.data.time_exp);
+        setExpMinutes(res.data.exp_minutes ?? null);
         setStreamWsUrl(res.data.live_url);
         setMicUrl(res.data.mic || '');
         const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
@@ -179,13 +185,11 @@ const CameraLiveView: React.FC = () => {
   }, [fetchLiveUrl]);
 
   useEffect(() => {
-    if (!timeExp) return;
-    const refreshMs = new Date(timeExp).getTime() - Date.now() - 2 * 60 * 1000;
-    if (refreshMs > 0) {
-      const timer = setTimeout(fetchLiveUrl, refreshMs);
-      return () => clearTimeout(timer);
-    }
-  }, [timeExp, fetchLiveUrl]);
+    if (!expMinutes || expMinutes <= 2) return;
+    const refreshMs = (expMinutes - 2) * 60 * 1000;
+    const timer = setTimeout(fetchLiveUrl, refreshMs);
+    return () => clearTimeout(timer);
+  }, [expMinutes, fetchLiveUrl]);
 
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   useEffect(() => {
@@ -393,7 +397,7 @@ const CameraLiveView: React.FC = () => {
   }, [t, captureFrameFromWebView]);
 
   const toggleTalk = useCallback(async () => {
-    if (isMicProcessing) return;
+    if (isMicProcessing || !isLive) return;
     setIsMicProcessing(true);
     try {
       const micPermission = await checkMicPermission();
@@ -426,7 +430,7 @@ const CameraLiveView: React.FC = () => {
     } finally {
       setIsMicProcessing(false);
     }
-  }, [toggleMic, t, isMicProcessing]);
+  }, [toggleMic, t, isMicProcessing, isLive]);
 
   const closeQualityModal = () => {
     setIsAnimating(false);
@@ -852,16 +856,16 @@ const CameraLiveView: React.FC = () => {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.mainButton}
+                  style={[styles.mainButton, !isLive && styles.mainButtonDisabled]}
                   onPress={toggleTalk}
-                  disabled={isMicProcessing}
+                  disabled={isMicProcessing || !isLive}
                 >
                   <View style={[styles.iconCircle, isTalkingDelayed && styles.iconCircleActive]}>
                     <View style={styles.micIconRow}>
                       {isTalking && !isTalkingDelayed ? (
                         <ActivityIndicator size="small" color="#44ef52" />
                       ) : (
-                        <Icon name="microphone" size={28} color="#FFF" />
+                        <Icon name="microphone" size={28} color={isLive ? '#FFF' : '#666'} />
                       )}
                     </View>
                   </View>
@@ -900,10 +904,15 @@ const CameraLiveView: React.FC = () => {
             <View style={styles.topLeft}>
               <View style={[styles.liveIndicator, !isLive && styles.offlineIndicator]}>
                 <View style={[styles.liveRedDot, !isLive && styles.offlineDot]} />
-                <Text style={styles.liveText}>{isLive ? 'Live' : 'Offline'}</Text>
+                <Text style={styles.liveText}>
+                  {isLive ? t('cameraLive.streamOff') : t('cameraLive.streamOff')}
+                </Text>
               </View>
             </View>
             <View style={styles.hdStyle}>
+              <TouchableOpacity style={styles.closeButton} onPress={handleReconnect}>
+                <Icon name="reload" size={22} color="#FFF" />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                 <Icon name="close" size={24} color="#FFF" />
               </TouchableOpacity>
@@ -932,13 +941,17 @@ const CameraLiveView: React.FC = () => {
           <Text style={styles.mainButtonText}>{t('cameraLive.video')}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.mainButton} onPress={toggleTalk} disabled={isMicProcessing}>
+        <TouchableOpacity
+          style={[styles.mainButton, !isLive && styles.mainButtonDisabled]}
+          onPress={toggleTalk}
+          disabled={isMicProcessing || !isLive}
+        >
           <View style={[styles.iconCircle, isTalkingDelayed && styles.iconCircleActive]}>
             <View style={styles.micIconRow}>
               {isTalking && !isTalkingDelayed ? (
                 <ActivityIndicator size="small" color="#44ef52" />
               ) : (
-                <Icon name="microphone" size={28} color="#FFF" />
+                <Icon name="microphone" size={28} color={isLive ? '#FFF' : '#666'} />
               )}
             </View>
           </View>

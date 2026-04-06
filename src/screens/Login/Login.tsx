@@ -16,6 +16,7 @@ import {
   loginAsync,
   socialLineLoginAsync,
   socialLoginAsync,
+  socialAppleLoginAsync,
   verifyTokenAsync,
 } from '@redux/slices/authSlice';
 import Button from '@components/Button/Button';
@@ -32,6 +33,7 @@ import { COLORS, FONTS } from '@constants/theme';
 import { showCommonAlert } from '@components/Alert/Alert';
 import { useTranslation } from 'react-i18next';
 import {
+  AppleLogoComponent,
   EmailOutlineIcon,
   GoogleIconComponent,
   LineIconComponent,
@@ -45,6 +47,7 @@ import { setAuthData } from '@utils/authStorage';
 import { disableBiometricLogin } from '@/services/biometricService';
 import lineAuthService from '@/services/lineAuthService';
 import googleAuthService from '@/services/googleAuthService';
+import appleAuthService from '@/services/appleAuthService';
 import authService from '@/services/authService';
 import Line from '@xmartlabs/react-native-line';
 
@@ -339,6 +342,30 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleAppleLogin = async () => {
+    if (Platform.OS !== 'ios') {
+      return;
+    }
+
+    if (!isConnected) {
+      handleNetworkError();
+      return;
+    }
+
+    try {
+      const appleUser = await appleAuthService.signIn();
+      const loginResult = await dispatch(
+        socialAppleLoginAsync({ id_token: appleUser.idToken })
+      ).unwrap();
+      if (appleUser.givenName && appleUser.familyName) {
+        await authService.updateProfile({ name: appleUser.givenName + ' ' + appleUser.familyName });
+      }
+      await handleLoginSuccess(loginResult);
+    } catch (err: any) {
+      handleLoginError(err);
+    }
+  };
+
   const handleLineLogin = async () => {
     if (!isConnected) {
       handleNetworkError();
@@ -506,6 +533,22 @@ const Login: React.FC = () => {
                       <LineIconComponent />
                     </View>
                   </TouchableOpacity>
+                  {Platform.OS === 'ios' ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.socialButton,
+                        styles.socialAppleButton,
+                        isLoading && styles.disabledButton,
+                      ]}
+                      onPress={handleAppleLogin}
+                      disabled={isLoading}
+                      testID="apple-login-button"
+                    >
+                      <View style={styles.socialButtonContent}>
+                        <AppleLogoComponent />
+                      </View>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               </View>
             </View>

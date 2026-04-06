@@ -298,7 +298,8 @@
     "photoLibraryPermissionIsRequiredToSaveScreenshots": "スクリーンショットを保存するには写真ライブラリの許可が必要です",
     "storagePermissionIsRequiredToSaveScreenshots": "スクリーンショットを保存するにはストレージの許可が必要です",
     "photoLibraryPermissionIsRequiredToSaveVideos": "ビデオを保存するには写真ライブラリの許可が必要です",
-    "storagePermissionIsRequiredToSaveVideos": "ビデオを保存するにはストレージの許可が必要です"
+    "storagePermissionIsRequiredToSaveVideos": "ビデオを保存するにはストレージの許可が必要です",
+    "streamOff": "配信停止"
   },
   "changePassword": {
     "changePasswordSuccess": "パスワード変更完了",
@@ -475,7 +476,8 @@
     "lanConnectionIsActive": "LAN接続があります",
     "noLanConnection": "LAN接続がありません",
     "lteConnectionIsActive": "LTE接続があります",
-    "noLteConnection": "LTE接続がありません"
+    "noLteConnection": "LTE接続がありません",
+    "wrongPasswordOrNetworkNotFound": "パスワードが間違っているか、ネットワークが見つかりません。もう一度お試しください。"
   },
   "faceUpload": {
     "title": "顔登録",
@@ -673,6 +675,9 @@
   },
   "setting": {
     "deleteAccount": "アカウントを削除",
-    "deleteAccountConfirmation": "アカウントを削除しますか？"
+    "deleteAccountConfirmation": "アカウントを削除しますか？",
+    "userIDDoesNotExist": "ユーザーIDが存在しません。",
+    "failedToDeleteUser": "ユーザーの削除に失敗しました。",
+    "userDeletedSuccessfully": "ユーザーの削除に成功しました。"
   }
 }

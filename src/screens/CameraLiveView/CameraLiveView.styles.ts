@@ -157,13 +157,11 @@ export const getStyles = (width: number, height: number) => {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: 'rgba(255,255,255,0.3)',
-      paddingHorizontal: 8,
-      paddingVertical: 3,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
       borderRadius: 40,
       gap: 4,
-      height: 37,
-      width: 85,
-      justifyContent: 'center',
+      alignSelf: 'flex-start',
     },
     liveRedDot: {
       width: 13,
@@ -173,9 +171,8 @@ export const getStyles = (width: number, height: number) => {
     },
     liveText: {
       color: '#FFF',
-      fontSize: 16,
+      fontSize: 14,
       fontWeight: FONTS.weights.medium,
-      marginLeft: 8,
     },
     offlineIndicator: {
       backgroundColor: 'rgba(255,255,255,0.15)',
@@ -297,6 +294,9 @@ export const getStyles = (width: number, height: number) => {
       alignItems: 'center',
       justifyContent: 'center',
       minWidth: 70,
+    },
+    mainButtonDisabled: {
+      opacity: 0.4,
     },
     iconCircle: {
       width: 56,

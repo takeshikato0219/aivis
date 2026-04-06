@@ -4,11 +4,12 @@ import i18n from '@/i18n';
 
 export interface AppleSignInResponse {
   idToken: string;
+  givenName?: string | null;
+  familyName?: string | null;
 }
 
 class AppleAuthService {
   async signIn(): Promise<AppleSignInResponse> {
-    console.log(1, appleAuth);
     if (Platform.OS !== 'ios') {
       throw new Error(i18n.t('auth.appleSignInNotAvailable'));
     }
@@ -22,12 +23,15 @@ class AppleAuthService {
         requestedOperation: appleAuth.Operation.LOGIN,
         requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
       });
-
       if (!response.identityToken) {
         throw new Error(i18n.t('auth.appleSignInFailed'));
       }
 
-      return { idToken: response.identityToken };
+      return {
+        idToken: response.identityToken,
+        givenName: response.fullName?.givenName ?? null,
+        familyName: response.fullName?.familyName ?? null,
+      };
     } catch (error: any) {
       if (error?.code === appleAuth.Error.CANCELED) {
         throw new Error(i18n.t('auth.userCancelledLogin'));
