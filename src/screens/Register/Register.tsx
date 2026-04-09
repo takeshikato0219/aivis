@@ -312,7 +312,7 @@ const Register: React.FC = () => {
               </View>
               <Text style={styles.title}>{t('auth.createAccount')}</Text>
               <View style={styles.card}>
-                <Text style={styles.label}>NAME</Text>
+                <Text style={styles.label}>{t('profile.name')}</Text>
                 <TextInput
                   value={nameInput.value}
                   onChangeText={nameInput.handleChange}
@@ -330,7 +330,7 @@ const Register: React.FC = () => {
                 )}
 
                 {/* ID/email */}
-                <Text style={styles.label}>ID/EMAIl</Text>
+                <Text style={styles.label}>{t('profile.idEmail')}</Text>
                 <TextInput
                   value={emailInput.value}
                   onChangeText={emailInput.handleChange}
@@ -350,7 +350,7 @@ const Register: React.FC = () => {
                 )}
 
                 {/* Phone */}
-                <Text style={styles.label}>PHONE</Text>
+                <Text style={styles.label}>{t('profile.phone')}</Text>
                 <TextInput
                   value={phoneInput.value}
                   onChangeText={phoneInput.handleChange}
@@ -370,7 +370,7 @@ const Register: React.FC = () => {
                 )}
 
                 {/* Password */}
-                <Text style={styles.label}>PASSWORD</Text>
+                <Text style={styles.label}>{t('profile.password')}</Text>
                 <TextInput
                   value={passwordInput.value}
                   onChangeText={passwordInput.handleChange}
@@ -390,7 +390,7 @@ const Register: React.FC = () => {
                 )}
 
                 {/* Re-Password */}
-                <Text style={styles.label}>RE-PASSWORD</Text>
+                <Text style={styles.label}>{t('profile.rePassword')}</Text>
                 <TextInput
                   value={passwordConfirm.value}
                   onChangeText={passwordConfirm.handleChange}
@@ -412,7 +412,7 @@ const Register: React.FC = () => {
                 )}
 
                 {/* Upload image */}
-                <Text style={styles.label}>UPLOAD IMAGE</Text>
+                <Text style={styles.label}>{t('profile.uploadImage')}</Text>
                 <View style={styles.imageUploadContainer}>
                   {selectedImage ? (
                     <View style={styles.imagePreviewContainer}>

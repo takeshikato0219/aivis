@@ -31,10 +31,6 @@ const Profile = () => {
     navigation.navigate('ChangePassword' as any);
   };
 
-  const goToSettings = () => {
-    navigation.navigate('Setting' as any);
-  };
-
   const handleLogout = async () => {
     try {
       await removeAuthData();
@@ -124,14 +120,6 @@ const Profile = () => {
                 <View style={styles.settingLeft}>
                   <Icon name="lock" size={24} color="#00ADD4" />
                   <Text style={styles.settingText}>{t('profile.changePassword')}</Text>
-                </View>
-                <Icon name="chevron-right" size={24} color="#FFF" />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.settingItem} onPress={goToSettings}>
-                <View style={styles.settingLeft}>
-                  <Icon name="cog-outline" size={24} color="#00ADD4" />
-                  <Text style={styles.settingText}>{t('profile.settings')}</Text>
                 </View>
                 <Icon name="chevron-right" size={24} color="#FFF" />
               </TouchableOpacity>

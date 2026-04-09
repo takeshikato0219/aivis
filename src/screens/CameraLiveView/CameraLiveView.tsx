@@ -905,7 +905,7 @@ const CameraLiveView: React.FC = () => {
               <View style={[styles.liveIndicator, !isLive && styles.offlineIndicator]}>
                 <View style={[styles.liveRedDot, !isLive && styles.offlineDot]} />
                 <Text style={styles.liveText}>
-                  {isLive ? t('cameraLive.streamOff') : t('cameraLive.streamOff')}
+                  {isLive ? 'Live' : t('cameraLive.streamOff')}
                 </Text>
               </View>
             </View>

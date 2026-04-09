@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showCommonAlert } from '@components/Alert/Alert';
+import i18n from '@/i18n';
 import { BaseLineService } from '@/services/baseLineService';
 import { getAuthData } from '@utils/authStorage';
 
@@ -34,9 +35,9 @@ export class LineSubscriptionService extends BaseLineService {
     } catch (error: any) {
       console.log('[LINE Subscription] Error checking subscription:', error);
       showCommonAlert({
-        title: 'LINE Subscription Error',
-        message: 'Unable to check LINE subscription status. Please try again.',
-        buttons: [{ text: 'OK' }],
+        title: i18n.t('lineSubscription.checkSubscriptionStatusErrorTitle'),
+        message: i18n.t('lineSubscription.checkSubscriptionStatusErrorMessage'),
+        buttons: [{ text: i18n.t('common.ok') }],
       });
       return { isSubscribed: false };
     }
@@ -59,9 +60,9 @@ export class LineSubscriptionService extends BaseLineService {
         await this.saveSubscriptionStatus(profile.userId, true);
 
         showCommonAlert({
-          title: 'Subscription Successful',
-          message: 'You have successfully subscribed to our LINE Official Account!',
-          buttons: [{ text: 'OK' }],
+          title: i18n.t('lineSubscription.subscribeSuccessAlertTitle'),
+          message: i18n.t('lineSubscription.subscriptionSuccess'),
+          buttons: [{ text: i18n.t('common.ok') }],
         });
       }
 
@@ -69,9 +70,9 @@ export class LineSubscriptionService extends BaseLineService {
     } catch (error: any) {
       console.log('[LINE Subscription] Error subscribing:', error);
       showCommonAlert({
-        title: 'Subscription Failed',
-        message: 'Unable to subscribe to LINE Official Account. Please try again.',
-        buttons: [{ text: 'OK' }],
+        title: i18n.t('lineSubscription.subscribeFailedTitle'),
+        message: i18n.t('lineSubscription.subscribeFailedMessage'),
+        buttons: [{ text: i18n.t('common.ok') }],
       });
       return false;
     }

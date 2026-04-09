@@ -17,6 +17,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Member, MemberRelationship } from '@/services/faceService';
 import { scale } from '@utils/responsive';
 import { useTranslation } from 'react-i18next';
+import { MemberAvatar } from '@/components/MemberAvatar';
 
 const UNCATEGORIZED = '__uncategorized__';
 
@@ -239,6 +240,7 @@ export function GroupedMemberPicker({
                   >
                     {group.members.map((member) => {
                       const isSelected = value.includes(member.id);
+                      const avatarUri = member.image ?? member.images?.[0]?.image_url;
                       return (
                         <TouchableOpacity
                           key={member.id}
@@ -246,7 +248,19 @@ export function GroupedMemberPicker({
                           onPress={() => toggleMember(member.id)}
                           activeOpacity={0.7}
                         >
-                          <Text style={styleProps.listChildLabel}>{member.name}</Text>
+                          <View style={modalStyles.memberInfo}>
+                            <MemberAvatar
+                              uri={avatarUri}
+                              containerStyle={modalStyles.memberAvatar}
+                              imageStyle={modalStyles.memberAvatar}
+                              placeholderStyle={modalStyles.memberAvatarPlaceholder}
+                              loadingOverlayStyle={modalStyles.memberAvatarLoading}
+                              hiddenWhileLoadingStyle={modalStyles.memberAvatarHidden}
+                              iconColor="rgba(234,241,247,0.5)"
+                              spinnerColor="#2A9EC6"
+                            />
+                            <Text style={styleProps.listChildLabel}>{member.name}</Text>
+                          </View>
                           <View style={modalStyles.iconSlot}>
                             <Icon
                               name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
@@ -369,6 +383,38 @@ const modalStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'rgb(16,14,14)',
+  },
+  memberInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  memberAvatar: {
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(16),
+    // Avoid black surface before decode / on some Android GPUs when remote Image fails silently
+    backgroundColor: 'rgba(234,241,247,0.1)',
+  },
+  memberAvatarPlaceholder: {
+    backgroundColor: 'rgba(234,241,247,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memberAvatarHidden: {
+    opacity: 0,
+  },
+  memberAvatarLoading: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(16),
+    backgroundColor: 'rgba(234,241,247,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   childScroll: {
     maxHeight: scale(280),

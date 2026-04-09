@@ -293,10 +293,12 @@ class PushNotificationService {
           id: ANDROID_CHANNEL_ID,
           name: i18n.t('pushNotification.channelName'),
           importance: AndroidImportance.HIGH,
+          sound: 'default',
         });
         notificationPayload.android = {
           channelId: ANDROID_CHANNEL_ID,
           pressAction: { id: 'default' },
+          sound: 'default',
           ...(imageUri && {
             largeIcon: imageUri,
             style: {
@@ -307,6 +309,7 @@ class PushNotificationService {
         };
       } else {
         notificationPayload.ios = {
+          sound: 'default',
           foregroundPresentationOptions: {
             banner: true,
             list: true,

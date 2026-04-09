@@ -19,6 +19,9 @@ import {
 jest.mock('react-native-ble-plx', () => ({
   Device: jest.fn(),
   Subscription: jest.fn(),
+  BleErrorCode: {
+    OperationCancelled: 2,
+  },
 }));
 
 // Mock BLE manager
@@ -56,7 +59,7 @@ jest.mock('../../src/redux/slices/bleSlice', () => ({
   setConnected: jest.fn((payload) => ({ type: 'setConnected', payload })),
   setError: jest.fn((payload) => ({ type: 'setError', payload })),
   clearError: jest.fn(() => ({ type: 'clearError' })),
-  setWifiStatus: jest.fn(),
+  setWifiStatus: jest.fn((payload) => ({ type: 'setWifiStatus', payload })),
   setWifiNetworks: jest.fn(),
   setWifiScanStatus: jest.fn((payload) => ({ type: 'setWifiScanStatus', payload })),
   resetConnectionState: jest.fn(() => ({ type: 'resetConnectionState' })),
@@ -64,6 +67,12 @@ jest.mock('../../src/redux/slices/bleSlice', () => ({
     IDLE: 0,
     SCANNING: 1,
     COMPLETED: 2,
+    ERROR: 3,
+  },
+  WiFiStatus: {
+    WAITING: 0,
+    CONNECTING: 1,
+    SUCCESS: 2,
     ERROR: 3,
   },
   AuthStatus: {
@@ -117,6 +126,7 @@ describe('JetsonBLEService', () => {
     (jetsonBLEService as any).isConnected = false;
     (jetsonBLEService as any).isDisconnecting = false;
     (jetsonBLEService as any).isCleaningUp = false;
+    (jetsonBLEService as any).netSetupTimeout = null;
 
     (store.getState as jest.Mock).mockReturnValue({
       ble: { wifiScanStatus: 0, authStatus: AuthStatus.UNAUTHENTICATED },
@@ -176,9 +186,11 @@ describe('JetsonBLEService', () => {
     if (svc.netCheckTimeout) clearTimeout(svc.netCheckTimeout);
     if (svc.wifiScanTimeout) clearTimeout(svc.wifiScanTimeout);
     if (svc.scanTimeout) clearTimeout(svc.scanTimeout);
+    if (svc.netSetupTimeout) clearTimeout(svc.netSetupTimeout);
     svc.netCheckTimeout = null;
     svc.wifiScanTimeout = null;
     svc.scanTimeout = null;
+    svc.netSetupTimeout = null;
   });
 
   describe('Initialization', () => {
@@ -407,6 +419,25 @@ describe('JetsonBLEService', () => {
       (jetsonBLEService as any).connectedDevice = mockDevice;
       (jetsonBLEService as any).isConnected = true;
 
+      let subscribeListener: (() => void) | undefined;
+      (store.subscribe as jest.Mock).mockImplementation((cb: () => void) => {
+        subscribeListener = cb;
+        return jest.fn();
+      });
+
+      let writeCallCount = 0;
+      (mockDevice.writeCharacteristicWithResponseForService as jest.Mock).mockImplementation(
+        async () => {
+          writeCallCount++;
+          if (writeCallCount === 2 && subscribeListener) {
+            (store.getState as jest.Mock).mockReturnValue({
+              ble: { wifiScanStatus: 0, authStatus: 0, wifiStatus: 2 /* WiFiStatus.SUCCESS */ },
+            });
+            subscribeListener();
+          }
+        }
+      );
+
       const ok = await jetsonBLEService.sendWiFiCredentials('SSID-X', 'secret');
 
       expect(ok).toBe(true);
@@ -499,6 +530,18 @@ describe('JetsonBLEService', () => {
     it('should write UTF-8 mode as base64 to NET_SETUP_CHAR with response', async () => {
       (jetsonBLEService as any).connectedDevice = mockDevice;
       (jetsonBLEService as any).isConnected = true;
+
+      // Mock monitorCharacteristicForService to call the callback with a success value
+      (mockDevice.monitorCharacteristicForService as jest.Mock).mockImplementation(
+        (serviceUUID, charUUID, callback) => {
+          // Simulate async BLE notification after a short delay
+          setTimeout(() => {
+            // Simulate a successful response: base64 for byte 2 (success)
+            callback(null, { value: Buffer.from([2]).toString('base64') });
+          }, 10);
+          return mockSubscription;
+        }
+      );
 
       const ok = await jetsonBLEService.netSetupConnect('lte');
 

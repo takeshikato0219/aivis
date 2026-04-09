@@ -19,6 +19,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import faceService, { Member, MemberRelationship } from '@/services/faceService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AppStackParamList } from '@navigation/types';
+import { MemberAvatar } from '@/components/MemberAvatar';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const MEMBERS_PER_PAGE = 20;
@@ -145,7 +146,16 @@ const ListFace = () => {
           onPress={() => navigation.navigate('DetailFace', { memberId: item.id, relationships })}
         >
           <View style={styles.memberContent}>
-            <Icon name="face-recognition" size={24} color="#00ADD4" />
+            <MemberAvatar
+              uri={item.image ?? item.images?.[0]?.image_url}
+              containerStyle={styles.avatar}
+              imageStyle={styles.avatar}
+              placeholderStyle={styles.placeholder}
+              loadingOverlayStyle={styles.loading}
+              hiddenWhileLoadingStyle={styles.hidden}
+              iconColor="rgba(0,173,212,0.5)"
+              spinnerColor="#00ADD4"
+            />
             <View>
               <Text style={styles.memberName}>{item.name}</Text>
               {relationship && (

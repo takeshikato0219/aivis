@@ -122,7 +122,14 @@
     "emailChangeMessage": "You have just changed your login email. You need to log in to the system again.",
     "emailChangeDetected": "Email Changed from Another Device",
     "emailChangeDetectedMessage": "Your login email has been changed from another device. You need to log in to the system again with your new email.",
-    "loginAgain": "Login Again"
+    "loginAgain": "Login Again",
+    "name": "NAME",
+    "phone": "PHONE",
+    "uploadImage": "UPLOAD IMAGE",
+    "password": "PASSWORD",
+    "rePassword": "RE-PASSWORD",
+    "email": "EMAIL",
+    "idEmail": "ID/EMAIl"
   },
   "offline": {
     "title": "No Internet Connection",
@@ -300,7 +307,9 @@
     "alphanumericCode": "Please enter the 6-digit alphanumeric code found on the label or box of your Jetson Orin device.",
     "uniqueToEachDevice": "The pairing code is unique to each device. If you cannot find it, ensure you're looking at\n the original packaging or the sticker on the back of the camera module.",
     "pairDevice": "Pair Device",
-    "findTheCode": "I can't find the code"
+    "findTheCode": "I can't find the code",
+    "incorrectPIN": "Incorrect PIN",
+    "connectionFailed": "Connection failed"
   },
   "setupComplete": {
     "successfullyConnected": "Successfully Connected to Jetson Orin",
@@ -348,6 +357,11 @@
     "statusUnknown": "Unknown (requires LINE authentication)",
     "subscribing": "Subscribing...",
     "unsubscribing": "Unsubscribing...",
+    "checkSubscriptionStatusErrorTitle": "LINE Subscription Error",
+    "checkSubscriptionStatusErrorMessage": "Unable to check LINE subscription status. Please try again.",
+    "subscribeSuccessAlertTitle": "Subscription Successful",
+    "subscribeFailedTitle": "Subscription Failed",
+    "subscribeFailedMessage": "Unable to subscribe to LINE Official Account. Please try again.",
     "subscriptionSuccess": "Successfully subscribed to LINE Official Account",
     "unsubscriptionSuccess": "Successfully unsubscribed from LINE Official Account",
     "subscriptionError": "Failed to update LINE subscription",
@@ -363,7 +377,9 @@
     "loginWithLine": "Login with LINE",
     "failedToUpdateUserProfilePleaseTryAgain": "Failed to update user profile. Please try again.",
     "LINEDisplayName": "LINE Display Name:",
-    "LINEUserID": "LINE User ID:"
+    "LINEUserID": "LINE User ID:",
+    "returnedFromLineWithoutFinishingTitle": "Linking unsuccessful",
+    "returnedFromLineWithoutFinishingMessage": "You left LINE before completing the steps, so your account was not linked. Tap Subscribe to LINE to try again."
   },
   "networkSetup": {
     "networkSetup": "Network Setup",
@@ -436,7 +452,12 @@
     "noLanConnection": "No LAN connection",
     "lteConnectionIsActive": "LTE connection is active",
     "noLteConnection": "No LTE connection",
-    "wrongPasswordOrNetworkNotFound": "Wrong password or network not found. Please try again."
+    "wrongPasswordOrNetworkNotFound": "Wrong password or network not found. Please try again.",
+    "networkConnectionFailed": "Network connection failed",
+    "connectionTypeNone": "No connection",
+    "connectionTypeWifi": "WiFi",
+    "connectionTypeEthernet": "Ethernet (LAN)",
+    "connectionTypeMobile": "Mobile (LTE/4G)"
   },
   "faceUpload": {
     "title": "Face Registration",

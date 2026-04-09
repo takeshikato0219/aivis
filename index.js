@@ -29,6 +29,7 @@ messaging().setBackgroundMessageHandler(async (remoteMessage) => {
         id: ANDROID_CHANNEL_ID,
         name: 'Notifications',
         importance: AndroidImportance.HIGH,
+        sound: 'default',
       });
       const title =
         remoteMessage.notification?.title ?? remoteMessage.data?.title ?? 'Notification';
@@ -46,6 +47,7 @@ messaging().setBackgroundMessageHandler(async (remoteMessage) => {
         android: {
           channelId: ANDROID_CHANNEL_ID,
           pressAction: { id: 'default' },
+          sound: 'default',
           ...(imageUrl && {
             largeIcon: imageUrl,
             style: {

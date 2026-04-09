@@ -107,6 +107,14 @@ const Setting = () => {
   const loginAndSubscribe = async () => {
     try {
       const loginResult = await lineAuthService.signIn();
+      if (loginResult === 'cancelled') {
+        Alert.alert(
+          t('lineSubscription.returnedFromLineWithoutFinishingTitle'),
+          t('lineSubscription.returnedFromLineWithoutFinishingMessage'),
+          [{ text: t('common.ok') }]
+        );
+        return false;
+      }
       if (!loginResult) return false;
       if (!loginResult.idToken) {
         Alert.alert(t('common.error'), t('lineSubscription.failedToGetIdToken'));

@@ -397,7 +397,7 @@ export const getStyles = (width: number, height: number) => {
     muteButton: {
       position: 'absolute',
       top: 7,
-      right: 60,
+      right: 78,
       width: 34,
       height: 34,
       borderRadius: 22,

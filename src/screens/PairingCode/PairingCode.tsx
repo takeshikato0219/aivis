@@ -65,9 +65,9 @@ const PairingCode: React.FC = () => {
     const result = await connect(device as any, code);
     if (!result || !result.success) {
       if (result?.reason === 'INVALID_PIN') {
-        setError('Incorrect PIN');
+        setError(t('pairingCode.incorrectPIN'));
       } else {
-        setError('Connection failed');
+        setError(t('pairingCode.connectionFailed'));
       }
 
       setLoading(false);

@@ -374,7 +374,7 @@ const Login: React.FC = () => {
 
     try {
       const lineUser = await lineAuthService.signIn();
-      if (!lineUser) {
+      if (lineUser === 'cancelled' || !lineUser) {
         return;
       }
       const loginResult = await dispatch(

@@ -13,11 +13,8 @@ export interface SerializableDevice {
   manufacturerData: string | null;
 }
 
-export interface WiFiNetwork {
-  ssid: string;
-  signal: number;
-  security: string;
-}
+// [ssid, signal, security]
+export type WiFiNetwork = [string, number, string];
 
 // =============================================================================
 // STATUS CODES - must match config.py on Jetson

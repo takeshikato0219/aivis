@@ -122,7 +122,9 @@
     "emailChangeMessage": "ログイン用のメールアドレスを変更しました。システムに再度ログインする必要があります。",
     "emailChangeDetected": "別のデバイスからのメールアドレス変更",
     "emailChangeDetectedMessage": "別のデバイスからログイン用のメールアドレスが変更されました。新しいメールアドレスでシステムに再度ログインする必要があります。",
-    "loginAgain": "再度ログイン"
+    "loginAgain": "再度ログイン",
+    "name": "名前",
+    "phone": "電話"
   },
   "search": {
     "title": "検索",
@@ -341,7 +343,14 @@
     "alphanumericCode": "Jetson Orin デバイスのラベルまたは箱に記載されている6桁の英数字コードを入力してください。",
     "uniqueToEachDevice": "ペアリングコードは各デバイスごとに固有です。見つからない場合は、元のパッケージまたはカメラモジュール背面のステッカーをご確認ください。",
     "pairDevice": "デバイスをペアリング",
-    "findTheCode": "コードが見つかりません"
+    "findTheCode": "コードが見つかりません",
+    "incorrectPIN": "PINが正しくありません",
+    "connectionFailed": "接続に失敗しました",
+    "uploadImage": "画像をアップロード",
+    "password": "パスワード",
+    "rePassword": "パスワード確認",
+    "email": "メールアドレス",
+    "idEmail": "ID／メールアドレス"
   },
   "setupComplete": {
     "successfullyConnected": "Jetson Orin に正常に接続されました",
@@ -389,6 +398,11 @@
     "statusUnknown": "不明（LINE認証が必要です）",
     "subscribing": "購読中...",
     "unsubscribing": "解除中...",
+    "checkSubscriptionStatusErrorTitle": "LINE購読エラー",
+    "checkSubscriptionStatusErrorMessage": "LINEの購読状態を確認できませんでした。もう一度お試しください。",
+    "subscribeSuccessAlertTitle": "購読が完了しました",
+    "subscribeFailedTitle": "購読に失敗しました",
+    "subscribeFailedMessage": "LINE公式アカウントの購読に失敗しました。もう一度お試しください。",
     "subscriptionSuccess": "LINE公式アカウントを正常に購読しました",
     "unsubscriptionSuccess": "LINE公式アカウントの購読を正常に解除しました",
     "subscriptionError": "LINE購読の更新に失敗しました",
@@ -404,7 +418,9 @@
     "loginWithLine": "LINEでログイン",
     "failedToUpdateUserProfilePleaseTryAgain": "ユーザープロファイルの更新に失敗しました。もう一度お試しください。",
     "LINEDisplayName": "LINE表示名：",
-    "LINEUserID": "LINEユーザーID："
+    "LINEUserID": "LINEユーザーID：",
+    "returnedFromLineWithoutFinishingTitle": "連携に失敗しました",
+    "returnedFromLineWithoutFinishingMessage": "LINEでの手続きを完了せずに戻ったため、アカウントを連携できませんでした。「LINEを購読」から再度お試しください。"
   },
   "networkSetup": {
     "networkSetup": "ネットワーク設定",
@@ -477,7 +493,12 @@
     "noLanConnection": "LAN接続がありません",
     "lteConnectionIsActive": "LTE接続があります",
     "noLteConnection": "LTE接続がありません",
-    "wrongPasswordOrNetworkNotFound": "パスワードが間違っているか、ネットワークが見つかりません。もう一度お試しください。"
+    "wrongPasswordOrNetworkNotFound": "パスワードが間違っているか、ネットワークが見つかりません。もう一度お試しください。",
+    "networkConnectionFailed": "ネットワーク接続に失敗しました",
+    "connectionTypeNone": "接続なし",
+    "connectionTypeWifi": "WiFi",
+    "connectionTypeEthernet": "Ethernet (LAN)",
+    "connectionTypeMobile": "モバイル (LTE/4G)"
   },
   "faceUpload": {
     "title": "顔登録",

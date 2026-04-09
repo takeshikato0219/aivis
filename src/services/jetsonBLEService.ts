@@ -14,6 +14,7 @@ import {
   setWifiScanStatus,
   resetConnectionState,
   WiFiScanStatus,
+  WiFiStatus,
   setAuthStatus,
   setIsAuthenticated,
   SerializableDevice,
@@ -36,6 +37,8 @@ const AUTH_STATUS_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef7';
 const PIN_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef6';
 const NET_CHECK_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef8';
 const NET_STATUS_CHAR_UUID = '12345678-1234-5678-1234-56789abcdef9';
+const NET_SETUP_CHAR_UUID = '12345678-1234-5678-1234-56789abcdefa';
+const NET_SETUP_STATUS_CHAR_UUID = '12345678-1234-5678-1234-56789abcdefb';
 
 // =============================================================================
 // CONNECTION TYPE
@@ -57,16 +60,11 @@ export const ConnectionTypeText: Record<ConnectionTypeValue, string> = {
   [ConnectionType.CELLULAR]: 'Di động (LTE/4G)',
 };
 
-export enum ConnectResultType {
-  SUCCESS = 'SUCCESS',
-  INVALID_PIN = 'INVALID_PIN',
-  CONNECTION_ERROR = 'CONNECTION_ERROR',
-  TIMEOUT = 'TIMEOUT',
-}
+export const NET_TYPE = { LTE: 1, WIFI: 2, LAN: 3 } as const;
 
-export interface ConnectResult {
-  type: ConnectResultType;
-}
+export type NetCheckType = keyof typeof NET_TYPE;
+
+export type NetSetupMode = 'lan' | 'lte';
 
 // =============================================================================
 // BASE64 HELPERS
@@ -107,6 +105,7 @@ class JetsonBLEService {
   private wifiScanTimeout: ReturnType<typeof setTimeout> | null = null;
   private initialized: boolean = false;
   private netCheckTimeout: ReturnType<typeof setTimeout> | null = null;
+  private netSetupTimeout: ReturnType<typeof setTimeout> | null = null;
   private isConnected = false;
   private isDisconnecting = false;
   private isCleaningUp = false;
@@ -161,7 +160,7 @@ class JetsonBLEService {
         }
       }
     } catch (error) {
-      console.warn('Failed to check existing BLE connections:', error);
+      console.log('Failed to check existing BLE connections:', error);
     }
   }
 
@@ -175,7 +174,7 @@ class JetsonBLEService {
       // and then calling both cancelTransaction() + sub.remove() fires the
       // error callback twice — the second time with a null error code, which
       // causes a NullPointerException in PromiseImpl.reject on Android.
-      // Instead we let the library manage the transactionId internally and
+      // Instead, we let the library manage the transactionId internally and
       // ONLY call sub.remove() during cleanup, which cancels internally once.
       return device.monitorCharacteristicForService(
         SERVICE_UUID,
@@ -192,7 +191,7 @@ class JetsonBLEService {
               return;
             }
             const errorMsg = error?.message ?? 'Unknown BLE monitor error';
-            console.warn('[BLE] Monitor error:', errorMsg);
+            console.log('[BLE] Monitor error:', errorMsg);
             return;
           }
 
@@ -205,7 +204,16 @@ class JetsonBLEService {
 
     this.subscriptions.push(
       safeMonitor(STATUS_CHAR_UUID, (value) => {
-        store.dispatch(setWifiStatus(base64ToByte(value)));
+        const status = base64ToByte(value);
+        console.log('STATUS_CHAR_UUID', status);
+        store.dispatch(setWifiStatus(status));
+      })
+    );
+
+    this.subscriptions.push(
+      safeMonitor(NET_SETUP_STATUS_CHAR_UUID, (value) => {
+        const status = base64ToByte(value);
+        console.log('NET_SETUP_STATUS_CHAR_UUID', status);
       })
     );
 
@@ -213,8 +221,13 @@ class JetsonBLEService {
       safeMonitor(WIFI_LIST_CHAR_UUID, (value) => {
         try {
           const data = JSON.parse(base64ToString(value));
-          store.dispatch(setWifiScanStatus(data.status));
-          store.dispatch(setWifiNetworks(data.networks || []));
+          if (Array.isArray(data)) {
+            store.dispatch(setWifiNetworks(data));
+            store.dispatch(setWifiScanStatus(2));
+          } else {
+            store.dispatch(setWifiScanStatus(data.s ?? data.status));
+            store.dispatch(setWifiNetworks(data.n ?? data.networks ?? []));
+          }
         } catch {}
       })
     );
@@ -263,6 +276,8 @@ class JetsonBLEService {
     this.isDisconnecting = true;
 
     this.safeCleanupSubscriptions();
+    this.cleanupNetSetupTimeout();
+    this.cleanupNetCheckTimeout();
 
     this.connectedDevice = null;
     store.dispatch(resetConnectionState());
@@ -296,6 +311,13 @@ class JetsonBLEService {
     }
   }
 
+  private cleanupNetSetupTimeout(): void {
+    if (this.netSetupTimeout) {
+      clearTimeout(this.netSetupTimeout);
+      this.netSetupTimeout = null;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // CLEANUP
   // ---------------------------------------------------------------------------
@@ -306,7 +328,7 @@ class JetsonBLEService {
       try {
         sub?.remove?.();
       } catch (e) {
-        console.warn('[BLE] Safe remove subscription error:', e);
+        console.log('[BLE] Safe remove subscription error:', e);
       }
     });
   }
@@ -329,6 +351,8 @@ class JetsonBLEService {
     this.cleanupSubscriptions();
     this.cleanupScanTimeout();
     this.cleanupWifiScanTimeout();
+    this.cleanupNetSetupTimeout();
+    this.cleanupNetCheckTimeout();
     bleManager.stopDeviceScan();
 
     if (this.connectedDevice) {
@@ -364,7 +388,7 @@ class JetsonBLEService {
         return result === 'granted';
       }
     } catch (error) {
-      console.error('[BLE] Permission request error:', error);
+      console.log('[BLE] Permission request error:', error);
       return false;
     }
   }
@@ -520,6 +544,8 @@ class JetsonBLEService {
 
     try {
       this.safeCleanupSubscriptions();
+      this.cleanupNetSetupTimeout();
+      this.cleanupNetCheckTimeout();
 
       if (this.connectedDevice) {
         await bleManager.cancelDeviceConnection(this.connectedDevice.id);
@@ -543,28 +569,53 @@ class JetsonBLEService {
       return false;
     }
 
-    try {
-      store.dispatch(clearError());
+    return new Promise(async (resolve) => {
+      let finished = false;
 
-      // Write SSID
-      await this.connectedDevice.writeCharacteristicWithResponseForService(
-        SERVICE_UUID,
-        SSID_CHAR_UUID,
-        stringToBase64(ssid)
-      );
+      const done = (result: boolean) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve(result);
+      };
 
-      // Write Password → Jetson receives SSID + Password → auto connects to Wi-Fi
-      await this.connectedDevice.writeCharacteristicWithResponseForService(
-        SERVICE_UUID,
-        PWD_CHAR_UUID,
-        stringToBase64(password)
-      );
+      store.dispatch(setWifiStatus(WiFiStatus.WAITING));
 
-      return true;
-    } catch (err: any) {
-      store.dispatch(setError(err?.message || 'WiFi information transmission error'));
-      return false;
-    }
+      const unsubscribe = store.subscribe(() => {
+        const { wifiStatus } = store.getState().ble;
+        if (wifiStatus === WiFiStatus.SUCCESS) {
+          done(true);
+        } else if (wifiStatus === WiFiStatus.ERROR) {
+          done(false);
+        }
+      });
+
+      const timeout = setTimeout(() => {
+        store.dispatch(setError('WiFi connection timeout - no response from device'));
+        done(false);
+      }, 30000);
+
+      try {
+        store.dispatch(clearError());
+
+        await this.connectedDevice!.writeCharacteristicWithResponseForService(
+          SERVICE_UUID,
+          SSID_CHAR_UUID,
+          stringToBase64(ssid)
+        );
+
+        await this.connectedDevice!.writeCharacteristicWithResponseForService(
+          SERVICE_UUID,
+          PWD_CHAR_UUID,
+          stringToBase64(password)
+        );
+      } catch (err: any) {
+        console.log('[BLE] sendWiFiCredentials write error:', err);
+        // store.dispatch(setError(err?.message || 'WiFi credentials write error'));
+        done(false);
+      }
+    });
   };
 
   // ---------------------------------------------------------------------------
@@ -637,30 +688,29 @@ class JetsonBLEService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Request network connection status from Jetson device.
-   * Writes to NET_CHECK_CHAR_UUID and monitors NET_STATUS_CHAR_UUID for response.
-   * @returns Promise with ConnectionTypeValue or null if failed
+   * Request network connection status from Jetson for a given interface type.
+   * Writes one byte NET_TYPE[type] (base64) to NET_CHECK_CHAR_UUID; device responds on NET_STATUS_CHAR_UUID.
    */
-  checkNetworkStatus = async (): Promise<boolean> => {
+  checkNetworkStatus = async (type: NetCheckType): Promise<boolean> => {
     if (!this.connectedDevice) {
       store.dispatch(setError('Not connected to the device'));
       return false;
     }
 
+    const netTypeByte = NET_TYPE[type];
+
     try {
       this.cleanupNetCheckTimeout();
       store.dispatch(clearError());
-
-      console.log('[BLE] Requesting network status...');
-
-      await this.connectedDevice.writeCharacteristicWithResponseForService(
+      const payload = Buffer.from([netTypeByte]).toString('base64');
+      await this.connectedDevice.writeCharacteristicWithoutResponseForService(
         SERVICE_UUID,
         NET_CHECK_CHAR_UUID,
-        byteToBase64(1)
+        payload
       );
 
       this.netCheckTimeout = setTimeout(() => {
-        console.warn('[BLE] Network check timeout');
+        console.log('[BLE] Network check timeout');
         store.dispatch(setError('Network status timeout - no response from device'));
         this.netCheckTimeout = null;
       }, 10000);
@@ -671,6 +721,84 @@ class JetsonBLEService {
       store.dispatch(setError(err?.message || 'Network status request failed'));
       return false;
     }
+  };
+
+  /**
+   * Tell the device which network path to use for setup (LAN vs LTE).
+   * Writes UTF-8 mode string as base64 to NET_SETUP_CHAR_UUID, then waits
+   * for a status notification on NET_SETUP_STATUS_CHAR_UUID (timeout 30 s).
+   * Returns true only when the device confirms successful setup.
+   */
+  netSetupConnect = async (mode: NetSetupMode): Promise<boolean> => {
+    if (!this.connectedDevice) {
+      store.dispatch(setError('Not connected to the device'));
+      return false;
+    }
+
+    return new Promise(async (resolve) => {
+      let finished = false;
+      let sub: Subscription | null = null;
+
+      const done = (result: boolean) => {
+        if (finished) return;
+        finished = true;
+        this.cleanupNetSetupTimeout();
+        try {
+          sub?.remove();
+        } catch {}
+        resolve(result);
+      };
+
+      // Subscribe BEFORE writing so no notification is missed
+      sub = this.connectedDevice!.monitorCharacteristicForService(
+        SERVICE_UUID,
+        NET_SETUP_STATUS_CHAR_UUID,
+        (error, characteristic) => {
+          if (error) {
+            if (
+              error.errorCode === BleErrorCode.OperationCancelled ||
+              error.errorCode == null ||
+              error.message?.toLowerCase().includes('cancel')
+            ) {
+              return;
+            }
+            console.log('[BLE] NET_SETUP_STATUS monitor error:', error.message);
+            done(false);
+            return;
+          }
+
+          if (characteristic?.value) {
+            const byte = base64ToByte(characteristic.value);
+            if (byte === 2) {
+              done(true);
+            } else if (byte === 3) {
+              done(false);
+            }
+            // byte === 1 (in-progress) or any other intermediate state → ignore
+          }
+        }
+      );
+
+      this.netSetupTimeout = setTimeout(() => {
+        console.log('[BLE] Network setup timeout');
+        store.dispatch(setError('Network setup timeout - no response from device'));
+        done(false);
+      }, 30000);
+
+      try {
+        store.dispatch(clearError());
+        const payload = Buffer.from(mode, 'utf-8').toString('base64');
+        await this.connectedDevice!.writeCharacteristicWithResponseForService(
+          SERVICE_UUID,
+          NET_SETUP_CHAR_UUID,
+          payload
+        );
+      } catch (err: any) {
+        console.log('NET_SETUP_CHAR_UUID err', err);
+        store.dispatch(setError(err?.message || 'Network setup failed'));
+        done(false);
+      }
+    });
   };
 
   /**
