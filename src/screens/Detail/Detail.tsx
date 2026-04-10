@@ -173,6 +173,10 @@ const Detail = () => {
   const [countFace, setCountFace] = useState<number>(0);
   const [countDetectionData, setCountDetectionData] = useState<CountDetectionData | null>(null);
   const [livePersonCount, setLivePersonCount] = useState<number | null>(null);
+  const [hasLatestFirmwareUpdate, setHasLatestFirmwareUpdate] = useState<boolean>(false);
+  const [latestFirmwareUpdate, setLatestFirmwareUpdate] = useState<
+    { description: string; id: string; version: string } | null | undefined
+  >(undefined);
 
   let facilityId;
   if (camera?.facility_id != null) {
@@ -211,7 +215,10 @@ const Detail = () => {
   };
 
   const handleSetupDetectionZone = () => {
-    navigation.navigate('SettingAI', { camera });
+    navigation.navigate('SettingAI', {
+      camera,
+      latestFirmwareUpdate: latestFirmwareUpdate ?? undefined,
+    });
   };
 
   const handleRestrictedZoneSetup = useCallback(() => {
@@ -267,14 +274,18 @@ const Detail = () => {
   const getDetail = async () => {
     try {
       const response = await cameraService.getDetailCamera(camera.id);
-      if (response.success && response.data && typeof response.data.mode_id === 'string') {
-        setDetailModeId(response.data.mode_id);
-        if (modes.length > 0) {
-          const foundIdx = modes.findIndex(
-            (mode: any) => String(mode.id) === response.data.mode_id
-          );
-          if (foundIdx !== -1 && foundIdx !== activeIndex) {
-            setActiveIndex(foundIdx);
+      if (response.success && response.data) {
+        setHasLatestFirmwareUpdate(!!response.data.latest_firmware_update);
+        setLatestFirmwareUpdate(response.data.latest_firmware_update ?? null);
+        if (typeof response.data.mode_id === 'string') {
+          setDetailModeId(response.data.mode_id);
+          if (modes.length > 0) {
+            const foundIdx = modes.findIndex(
+              (mode: any) => String(mode.id) === response.data.mode_id
+            );
+            if (foundIdx !== -1 && foundIdx !== activeIndex) {
+              setActiveIndex(foundIdx);
+            }
           }
         }
       }
@@ -558,9 +569,16 @@ const Detail = () => {
               </Text>
             </View>
 
-            <TouchableOpacity onPress={handleSetupDetectionZone}>
-              <SettingsIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
-            </TouchableOpacity>
+            <View style={styles.newBadgeWrapper}>
+              <TouchableOpacity onPress={handleSetupDetectionZone}>
+                <SettingsIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
+              </TouchableOpacity>
+              {hasLatestFirmwareUpdate && (
+                <View style={styles.newBadgeContainer}>
+                  <Text style={styles.newBadgeText}>{t('updateCamera.new')}</Text>
+                </View>
+              )}
+            </View>
           </View>
           <ScrollView
             style={styles.container}

@@ -604,7 +604,8 @@
     "operationSchedule": "稼働スケジュール",
     "aIDetectionRules": "AI検知ルール",
     "deleteCamera": "カメラを削除",
-    "doYouWantToDelete": "削除しますか？"
+    "doYouWantToDelete": "削除しますか？",
+    "updateCameraVersion": "カメラのバージョンを更新"
   },
   "listFace": {
     "listFace": "顔リスト",
@@ -700,5 +701,14 @@
     "userIDDoesNotExist": "ユーザーIDが存在しません。",
     "failedToDeleteUser": "ユーザーの削除に失敗しました。",
     "userDeletedSuccessfully": "ユーザーの削除に成功しました。"
+  },
+  "updateCamera": {
+    "currentCameraVersion": "現在のカメラバージョン",
+    "note": "注意",
+    "noteDescription": "カメラのバージョンを更新する際、システムは一時的に停止します。更新が完了するまでしばらくお待ちください。",
+    "aNewUpdateIsAvailable": "新しいアップデートがあります",
+    "new": "新着",
+    "currentlyThereIsNoUpdateAvailable": "現在、利用可能なアップデートはありません。",
+    "latest": "最新"
   }
 }

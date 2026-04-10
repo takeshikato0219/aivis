@@ -224,6 +224,12 @@ export interface CameraDetailData {
   secret_key: string;
   stream_secret_key: string;
   cloudflare_tunnel_token: string;
+  version: string;
+  latest_firmware_update?: {
+    description: string;
+    id: string;
+    version: string;
+  } | null;
 }
 
 export interface CameraDetailResponse {

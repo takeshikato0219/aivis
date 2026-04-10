@@ -563,7 +563,8 @@
     "operationSchedule": "Operation Schedule",
     "aIDetectionRules": "AI Detection Rules",
     "deleteCamera": "Delete Camera",
-    "doYouWantToDelete": "Do you want to delete?"
+    "doYouWantToDelete": "Do you want to delete?",
+    "updateCameraVersion": "Update camera version"
   },
   "listFace": {
     "listFace": "List Face",
@@ -662,5 +663,14 @@
     "userIDDoesNotExist": "User ID does not exist.",
     "failedToDeleteUser": "Failed to delete user.",
     "userDeletedSuccessfully": "User deleted successfully."
+  },
+  "updateCamera": {
+    "currentCameraVersion": "Current Camera Version",
+    "note": "Note",
+    "noteDescription": "When updating the camera version, the system will temporarily stop working for a moment. Please wait until the update is complete.",
+    "aNewUpdateIsAvailable": "A new update is available",
+    "new": "NEW",
+    "currentlyThereIsNoUpdateAvailable": "Currently, there is no update available.",
+    "latest": "Latest"
   }
 }

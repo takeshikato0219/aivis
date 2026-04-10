@@ -33,6 +33,7 @@ import UploadDetectZone from '@screens/DetectionZoneSetup/UploadDetectZone';
 import ListNotificationCamera from '@screens/ListNotificationCamera/ListNotificationCamera';
 import CustomerReport from '@screens/CustomerReport/CustomerReport';
 import Policy from '@screens/Policy/Policy';
+import UpdateCamera from '@screens/UpdateCamera/UpdateCamera';
 
 const Stack = createStackNavigator<AppStackParamList>();
 
@@ -250,6 +251,13 @@ const AppNavigator = () => {
         <Stack.Screen
           name="Policy"
           component={Policy}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="UpdateCamera"
+          component={UpdateCamera}
           options={{
             headerShown: false,
           }}

@@ -8,11 +8,15 @@ import { useTranslation } from 'react-i18next';
 import IconSettingZone from '@assets/svg/icon-setting-zone.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 import IconAISetting from '@assets/svg/icon-ai-setting.svg';
+import DownloadIcon from '@assets/svg/download-arrow-icon.svg';
 import { showCommonAlert } from '@components/Alert/Alert';
 import cameraService from '@/services/cameraService';
 
 type SettingAIStackParamList = {
-  SettingAI: { camera: any };
+  SettingAI: {
+    camera: any;
+    latestFirmwareUpdate?: { description: string; id: string; version: string } | null;
+  };
 };
 
 const SettingAI = () => {
@@ -20,6 +24,7 @@ const SettingAI = () => {
   const route = useRoute<RouteProp<SettingAIStackParamList, 'SettingAI'>>();
   const { t } = useTranslation();
   const camera = route.params?.camera;
+  const latestFirmwareUpdate = route.params?.latestFirmwareUpdate;
 
   const handleListDetectionZone = () => {
     (navigation as any).navigate('UploadDetectZone', {
@@ -31,6 +36,10 @@ const SettingAI = () => {
     (navigation as any).navigate('AiDetectionRules', {
       camera: camera,
     });
+  };
+
+  const handleUpdateCameraVersion = () => {
+    navigation.navigate('UpdateCamera' as any, { camera, latestFirmwareUpdate });
   };
 
   const handleDeleteCamera = async () => {
@@ -106,6 +115,22 @@ const SettingAI = () => {
             </View>
             <MoveRightIcon />
           </TouchableOpacity>
+          <View style={styles.relativeContainer}>
+            <TouchableOpacity style={styles.styleButton} onPress={handleUpdateCameraVersion}>
+              <View style={styles.styleTextButton}>
+                <View style={styles.styleButtonUpdate}>
+                  <DownloadIcon />
+                </View>
+                <Text style={styles.styleText}>{t('settingAI.updateCameraVersion')}</Text>
+              </View>
+              <MoveRightIcon />
+            </TouchableOpacity>
+            {latestFirmwareUpdate && (
+              <View style={styles.newBadgeContainer}>
+                <Text style={styles.newBadgeText}>{t('updateCamera.new')}</Text>
+              </View>
+            )}
+          </View>
           <TouchableOpacity style={styles.styleButtonDelete} onPress={handleDeleteCamera}>
             <View style={styles.styleTextButton}>
               <Text style={styles.styleText}>{t('settingAI.deleteCamera')}</Text>

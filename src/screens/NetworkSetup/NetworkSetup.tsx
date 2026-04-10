@@ -172,7 +172,8 @@ const NetworkSetup: React.FC = () => {
     if (!bleConnected) {
       Alert.alert(
         t('networkSetup.bleRequired'),
-        t('networkSetup.pleaseConnectToDeviceViaBluetoothFirstToScanWiFiNetworks')
+        t('networkSetup.pleaseConnectToDeviceViaBluetoothFirstToScanWiFiNetworks'),
+        [{ text: 'OK', onPress: () => handleBackToScan() }]
       );
       return;
     }
@@ -283,7 +284,7 @@ const NetworkSetup: React.FC = () => {
     }
 
     setConnecting(true);
-    setProgress(0.5);
+    setProgress(0.6);
 
     try {
       const password = selectedWifi.secure ? passwordInput.value : '';
@@ -311,12 +312,12 @@ const NetworkSetup: React.FC = () => {
           );
         }
         setConnecting(false);
-        setProgress(0.33);
+        setProgress(0.6);
       }
     } catch (error) {
       Alert.alert(t('networkSetup.connectionFailed'), String(error));
       setConnecting(false);
-      setProgress(0.33);
+      setProgress(0.6);
     }
   };
 

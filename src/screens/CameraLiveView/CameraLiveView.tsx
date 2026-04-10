@@ -192,13 +192,26 @@ const CameraLiveView: React.FC = () => {
   }, [expMinutes, fetchLiveUrl]);
 
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const backgroundEnteredAtRef = useRef<number | null>(null);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
-        fetchLiveUrl().then(() => {
-          webViewRef.current?.reload();
-        });
+      const prev = appStateRef.current;
+
+      if (nextAppState === 'background') {
+        backgroundEnteredAtRef.current = Date.now();
       }
+
+      if (prev === 'background' && nextAppState === 'active') {
+        const entered = backgroundEnteredAtRef.current;
+        backgroundEnteredAtRef.current = null;
+        const msInBackground = entered != null ? Date.now() - entered : Infinity;
+        if (msInBackground >= 800) {
+          fetchLiveUrl().then(() => {
+            webViewRef.current?.reload();
+          });
+        }
+      }
+
       appStateRef.current = nextAppState;
     });
     return () => {
@@ -244,6 +257,63 @@ const CameraLiveView: React.FC = () => {
     // eslint-disable-next-line @typescript-eslint/no-shadow
     return () => timers.forEach((t) => clearTimeout(t));
   }, [isLive, streamWsUrl, forceVideoPlay]);
+
+  // Auto-reload every 3s if stream has no actual video data (black screen)
+  const hasVideoDataRef = useRef(false);
+  useEffect(() => {
+    if (!streamHtmlUrl) return;
+
+    // Reset when stream URL changes
+    hasVideoDataRef.current = false;
+
+    const checkAndReload = () => {
+      // Inject JS to sample pixels from video/canvas
+      webViewRef.current?.injectJavaScript(`
+        (function(){
+          try {
+            var hasData = false;
+            var video = document.querySelector('video');
+            var canvas = document.querySelector('canvas');
+            if (video && video.readyState >= 2 && video.videoWidth > 0) {
+              var c = document.createElement('canvas');
+              c.width = 16; c.height = 16;
+              var ctx = c.getContext('2d');
+              ctx.drawImage(video, 0, 0, 16, 16);
+              var d = ctx.getImageData(0, 0, 16, 16).data;
+              for (var i = 0; i < d.length; i += 4) {
+                if (d[i] > 5 || d[i+1] > 5 || d[i+2] > 5) { hasData = true; break; }
+              }
+            } else if (canvas && canvas.width > 0) {
+              var ctx2 = canvas.getContext('2d');
+              var d2 = ctx2.getImageData(0, 0, Math.min(canvas.width, 16), Math.min(canvas.height, 16)).data;
+              for (var j = 0; j < d2.length; j += 4) {
+                if (d2[j] > 5 || d2[j+1] > 5 || d2[j+2] > 5) { hasData = true; break; }
+              }
+            }
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'videoDataCheck', hasData: hasData}));
+          } catch(e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'videoDataCheck', hasData: false}));
+          }
+        })();
+        true;
+      `);
+    };
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const graceTimer = setTimeout(() => {
+      if (!hasVideoDataRef.current) checkAndReload();
+      intervalId = setInterval(() => {
+        if (!hasVideoDataRef.current) {
+          checkAndReload();
+        }
+      }, 3000);
+    }, 10000);
+
+    return () => {
+      clearTimeout(graceTimer);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [streamHtmlUrl, webViewRef]);
 
   const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
 
@@ -638,6 +708,14 @@ const CameraLiveView: React.FC = () => {
                     webViewRef.current?.reload();
                     return;
                   }
+                  if (data.type === 'videoDataCheck') {
+                    hasVideoDataRef.current = data.hasData;
+                    if (!data.hasData) {
+                      console.log('Black screen detected, auto-reloading stream...');
+                      fetchLiveUrl().then(() => handleManualRetry());
+                    }
+                    return;
+                  }
                 } catch {
                   // ignore parse errors
                 }
@@ -832,9 +910,18 @@ const CameraLiveView: React.FC = () => {
                   </View>
                 </View>
 
-                <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                  <Icon name="close" size={24} color="#FFF" />
-                </TouchableOpacity>
+                <View style={styles.reconnectStyle}>
+                  <TouchableOpacity
+                    style={styles.controlButtonFullscreen}
+                    onPress={handleReconnect}
+                  >
+                    <Icon name="reload" size={22} color="#FFF" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+                    <Icon name="close" size={24} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Fullscreen Right Controls */}
@@ -860,12 +947,17 @@ const CameraLiveView: React.FC = () => {
                   onPress={toggleTalk}
                   disabled={isMicProcessing || !isLive}
                 >
-                  <View style={[styles.iconCircle, isTalkingDelayed && styles.iconCircleActive]}>
+                  <View
+                    style={[
+                      styles.iconCircleFullScreen,
+                      isTalkingDelayed && styles.iconCircleActive,
+                    ]}
+                  >
                     <View style={styles.micIconRow}>
                       {isTalking && !isTalkingDelayed ? (
                         <ActivityIndicator size="small" color="#44ef52" />
                       ) : (
-                        <Icon name="microphone" size={28} color={isLive ? '#FFF' : '#666'} />
+                        <Icon name="microphone" size={22} color={isLive ? '#FFF' : '#666'} />
                       )}
                     </View>
                   </View>
@@ -904,13 +996,11 @@ const CameraLiveView: React.FC = () => {
             <View style={styles.topLeft}>
               <View style={[styles.liveIndicator, !isLive && styles.offlineIndicator]}>
                 <View style={[styles.liveRedDot, !isLive && styles.offlineDot]} />
-                <Text style={styles.liveText}>
-                  {isLive ? 'Live' : t('cameraLive.streamOff')}
-                </Text>
+                <Text style={styles.liveText}>{isLive ? 'Live' : t('common.loading')}</Text>
               </View>
             </View>
             <View style={styles.hdStyle}>
-              <TouchableOpacity style={styles.closeButton} onPress={handleReconnect}>
+              <TouchableOpacity style={styles.reloadButton} onPress={handleReconnect}>
                 <Icon name="reload" size={22} color="#FFF" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={handleClose}>

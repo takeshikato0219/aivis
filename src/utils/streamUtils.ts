@@ -28,7 +28,7 @@ export const buildStreamHtmlUrl = (wsUrl?: string): string => {
     // Extract the `src` query param (camera source identifier)
     const src = parsed.searchParams.get('src') || 'camera';
     const baseUrl = `${parsed.protocol}//${parsed.host}`;
-    return `${baseUrl}/stream.html?src=${encodeURIComponent(src)}&mode=webrtc,mse,hls,mjpeg&autoplay=true`;
+    return `${baseUrl}/stream.html?src=${encodeURIComponent(src)}&mode=mse,hls&autoplay=true`;
   } catch {
     return '';
   }
@@ -262,9 +262,7 @@ export function buildIOSStreamInlineHtml(wsUrl: string): { html: string; baseUrl
   const src = parsed.searchParams.get('src') || 'camera';
   const token = parsed.searchParams.get('token') || '';
   const baseUrl = `${parsed.protocol}//${parsed.host}`;
-
   const hlsUrl = `${baseUrl}/api/stream.m3u8?src=${encodeURIComponent(src)}${token ? '&token=' + encodeURIComponent(token) : ''}`;
-  const mjpegUrl = `${baseUrl}/api/frame.jpeg?src=${encodeURIComponent(src)}${token ? '&token=' + encodeURIComponent(token) : ''}`;
 
   const html = `<!DOCTYPE html>
 <html>
@@ -298,6 +296,33 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
 (function(){
   var video = document.getElementById('v');
   var _wsRetry = 0;
+  var _lastDataTS = 0;
+  var _healthCheckTID = null;
+  var _currentWs = null;
+  var HEALTH_CHECK_INTERVAL = 3000;
+  var RECONNECT_TIMEOUT = 5000;
+
+  // Supported codecs (matching web video-rtc.ts)
+  var CODECS = [
+    'avc1.640029','avc1.64002A','avc1.640033',
+    'hvc1.1.6.L153.B0',
+    'mp4a.40.2','mp4a.40.5','flac','opus'
+  ];
+
+  // Safari codec compatibility
+  var safariMatch = navigator.userAgent.match(/Version\\/(\\d+).+Safari/);
+  if (safariMatch) {
+    var ver = parseInt(safariMatch[1]);
+    var skipFrom = ver < 13 ? 'mp4a.40.2' : ver < 14 ? 'flac' : 'opus';
+    var idx = CODECS.indexOf(skipFrom);
+    if (idx > -1) CODECS.splice(idx);
+  }
+
+  function getSupportedCodecs(isSupported) {
+    return CODECS.filter(function(c) {
+      return isSupported('video/mp4; codecs="' + c + '"');
+    }).join();
+  }
 
   function sendRN(type, data) {
     try {
@@ -320,103 +345,155 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
   window.addEventListener('message', function(e) { handleMuteMessage(e.data); });
   document.addEventListener('message', function(e) { handleMuteMessage(e.data); });
 
-  function tryMSE() {
-    sendRN('protocol', { protocol: 'mse' });
-    if (!window.MediaSource) { tryHLS(); return; }
-    try {
-      var wsUrl = '${wsUrl}';
-      var ws = new WebSocket(wsUrl);
-      ws.binaryType = 'arraybuffer';
-
-      var ms = new MediaSource();
-      video.src = URL.createObjectURL(ms);
-
-      var sb; var queue = []; var adding = false;
-
-      ws.onopen = function(){ sendRN('buffering'); };
-
-      ms.addEventListener('sourceopen', function(){
-        ws.onopen = function(){
-          ws.send(JSON.stringify({type:'mse'}));
-          sendRN('buffering');
-        };
-        if (ws.readyState === 1) {
-          ws.send(JSON.stringify({type:'mse'}));
-          sendRN('buffering');
-        }
-        ws.onmessage = function(e){
-          if (typeof e.data === 'string') {
-            try {
-              var msg = JSON.parse(e.data);
-              if (msg.type === 'mse') {
-                var codec = msg.value || 'video/mp4; codecs="avc1.640029"';
-                if (MediaSource.isTypeSupported(codec)) {
-                  sb = ms.addSourceBuffer(codec);
-                  sb.mode = 'segments';
-                  sb.addEventListener('updateend', flushQueue);
-                }
-              }
-            } catch(ex){}
-            return;
-          }
-          if (sb) {
-            queue.push(e.data);
-            flushQueue();
-          }
-        };
-      });
-
-      function flushQueue(){
-        if (adding || !sb || queue.length === 0) return;
-        if (sb.updating) return;
-        adding = true;
-        try { sb.appendBuffer(queue.shift()); }
-        catch(ex){ console.error(ex); }
-        adding = false;
-      }
-
-      ws.onerror = function(){ tryHLS(); };
-      ws.onclose = function(){
-        if (!video.src || video.error) tryHLS();
-        else {
-          _wsRetry++;
-          if (_wsRetry <= 3) {
-            sendRN('buffering');
-            setTimeout(function(){ tryMSE(); }, Math.min(2000 * Math.pow(2, _wsRetry - 1), 8000));
-          } else {
-            sendRN('wsClose');
-            tryHLS();
-          }
-        }
-      };
-
-      setTimeout(function(){
-        if (video.readyState < 2) { ws.close(); tryHLS(); }
-      }, 12000);
-
-    } catch(e) { tryHLS(); }
+  function stopHealthCheck() {
+    if (_healthCheckTID) { clearInterval(_healthCheckTID); _healthCheckTID = null; }
   }
 
+  function startHealthCheck() {
+    stopHealthCheck();
+    _lastDataTS = Date.now();
+    _healthCheckTID = setInterval(function() {
+      if (!_currentWs || _currentWs.readyState !== 1) return;
+      var elapsed = Date.now() - _lastDataTS;
+      if (elapsed >= HEALTH_CHECK_INTERVAL) {
+        sendRN('healthTimeout');
+        stopHealthCheck();
+        if (_currentWs) { _currentWs.close(); _currentWs = null; }
+      }
+    }, Math.min(HEALTH_CHECK_INTERVAL, 5000));
+  }
+
+  // ── HLS fallback (iOS < 17 không có MediaSource) ──
   function tryHLS() {
     sendRN('protocol', { protocol: 'hls' });
     sendRN('buffering');
     video.src = '${hlsUrl}';
     video.muted = true;
     video.play().catch(function(){});
-    setTimeout(function(){
-      if (video.readyState < 2) tryMJPEG();
-    }, 10000);
   }
 
-  function tryMJPEG() {
-    sendRN('protocol', { protocol: 'mjpeg' });
-    sendRN('buffering');
-    video.style.display = 'none';
-    var img = document.createElement('img');
-    img.src = '${mjpegUrl}';
-    img.style.cssText = 'position:fixed;top:50%;left:50%;min-width:100vw;min-height:100vh;width:auto;height:auto;transform:translate(-50%,-50%);z-index:1;background:#000;';
-    document.body.appendChild(img);
-    img.onload = function(){ sendRN('playing'); };
+  // ── MSE (Android only — iOS WKWebView MSE/ManagedMediaSource unreliable) ──
+  function tryMSE() {
+    // iOS WKWebView: ManagedMediaSource exists but doesn't work reliably → always use HLS
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+      tryHLS();
+      return;
+    }
+
+    sendRN('protocol', { protocol: 'mse' });
+
+    var MSClass = window.MediaSource;
+    if (!MSClass) {
+      tryHLS();
+      return;
+    }
+
+    try {
+      var connectTS = Date.now();
+      var wsUrl = '${wsUrl}';
+      var ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer';
+      _currentWs = ws;
+
+      var ms = new MSClass();
+      video.src = URL.createObjectURL(ms);
+      video.srcObject = null;
+
+      video.play().catch(function(){});
+
+      var sb = null;
+      // Pre-allocated 2MB buffer (matching web)
+      var buf = new Uint8Array(2 * 1024 * 1024);
+      var bufLen = 0;
+
+      ws.onopen = function() {
+        sendRN('buffering');
+        startHealthCheck();
+      };
+
+      ms.addEventListener('sourceopen', function() {
+        // Send supported codecs (matching web)
+        var codecStr = getSupportedCodecs(function(type) {
+          return MSClass.isTypeSupported(type);
+        });
+        ws.send(JSON.stringify({ type: 'mse', value: codecStr }));
+        sendRN('buffering');
+
+        ws.onmessage = function(e) {
+          if (typeof e.data === 'string') {
+            try {
+              var msg = JSON.parse(e.data);
+              if (msg.type === 'mse' && msg.value) {
+                sb = ms.addSourceBuffer(msg.value);
+                sb.mode = 'segments';
+                sb.addEventListener('updateend', function() {
+                  // Flush pending buffer
+                  if (!sb.updating && bufLen > 0) {
+                    try {
+                      var data = buf.slice(0, bufLen);
+                      sb.appendBuffer(data);
+                      bufLen = 0;
+                    } catch(ex) {}
+                  }
+                  // Buffer management: keep only 5s (matching web)
+                  if (!sb.updating && sb.buffered && sb.buffered.length) {
+                    var end = sb.buffered.end(sb.buffered.length - 1);
+                    var start = end - 5;
+                    var start0 = sb.buffered.start(0);
+                    if (start > start0) {
+                      sb.remove(start0, start);
+                      ms.setLiveSeekableRange(start, end);
+                    }
+                    if (video.currentTime < start) {
+                      video.currentTime = start;
+                    }
+                    // Adjust playback rate to stay in sync (matching web)
+                    var gap = end - video.currentTime;
+                    video.playbackRate = gap > 0.1 ? gap : 0.1;
+                  }
+                });
+              }
+              if (msg.type === 'error') {
+                sendRN('failed', { message: msg.value });
+              }
+            } catch(ex){}
+            return;
+          }
+          // Binary data
+          _lastDataTS = Date.now();
+          if (sb) {
+            if (sb.updating || bufLen > 0) {
+              var b = new Uint8Array(e.data);
+              buf.set(b, bufLen);
+              bufLen += b.byteLength;
+            } else {
+              try { sb.appendBuffer(e.data); }
+              catch(ex) {}
+            }
+          }
+        };
+      });
+
+      ws.onerror = function() { sendRN('wsError'); };
+      ws.onclose = function() {
+        stopHealthCheck();
+        _currentWs = null;
+        _wsRetry++;
+        if (_wsRetry <= 3) {
+          sendRN('buffering');
+          var delay = Math.max(RECONNECT_TIMEOUT - (Date.now() - connectTS), 0);
+          setTimeout(function(){ tryMSE(); }, delay);
+        } else {
+          sendRN('wsClose');
+        }
+      };
+
+      video.addEventListener('error', function() {
+        if (_currentWs) { _currentWs.close(); _currentWs = null; }
+      });
+
+    } catch(e) { sendRN('failed', { message: e.message }); }
   }
 
   var _lastTime = 0;

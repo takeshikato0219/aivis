@@ -211,4 +211,23 @@ export const styles = StyleSheet.create({
   attendanceCounterLine: {
     fontSize: isTablet() ? 22 : 14,
   },
+  newBadgeContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 25,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    zIndex: 10,
+    alignSelf: 'flex-end',
+  },
+  newBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  newBadgeWrapper: {
+    position: 'relative',
+  },
 });

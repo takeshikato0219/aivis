@@ -110,6 +110,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const hasInitialStreamRef = useRef(false);
   const [lastFrameBase64, setLastFrameBase64] = useState<string | null>(null);
   const captureResolveRef = useRef<((base64: string) => void) | null>(null);
+  const hasVideoDataRef = useRef(false);
 
   const {
     webViewRef,
@@ -126,6 +127,13 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
 
   const webViewError = connectionStatus === 'failed';
   const isLive = connectionStatus === 'connected' && !!streamHtmlUrl && !isWebViewLoading;
+
+  // Reset hasVideoDataRef when connection is lost so auto-reload kicks in again
+  useEffect(() => {
+    if (!isLive) {
+      hasVideoDataRef.current = false;
+    }
+  }, [isLive]);
 
   const captureFrameFromWebView = useCallback((): Promise<string | null> => {
     return new Promise((resolve) => {
@@ -252,6 +260,59 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     // eslint-disable-next-line @typescript-eslint/no-shadow
     return () => timers.forEach((t) => clearTimeout(t));
   }, [isLive, streamWsUrl, forceVideoPlay]);
+
+  // Auto-reload every 3s if stream has no actual video data (black screen) or connection lost
+  useEffect(() => {
+    if (!streamHtmlUrl) return;
+    hasVideoDataRef.current = false;
+
+    const checkAndReload = () => {
+      webViewRef.current?.injectJavaScript(`
+        (function(){
+          try {
+            var hasData = false;
+            var video = document.querySelector('video');
+            var canvas = document.querySelector('canvas');
+            if (video && video.readyState >= 2 && video.videoWidth > 0) {
+              var c = document.createElement('canvas');
+              c.width = 16; c.height = 16;
+              var ctx = c.getContext('2d');
+              ctx.drawImage(video, 0, 0, 16, 16);
+              var d = ctx.getImageData(0, 0, 16, 16).data;
+              for (var i = 0; i < d.length; i += 4) {
+                if (d[i] > 5 || d[i+1] > 5 || d[i+2] > 5) { hasData = true; break; }
+              }
+            } else if (canvas && canvas.width > 0) {
+              var ctx2 = canvas.getContext('2d');
+              var d2 = ctx2.getImageData(0, 0, Math.min(canvas.width, 16), Math.min(canvas.height, 16)).data;
+              for (var j = 0; j < d2.length; j += 4) {
+                if (d2[j] > 5 || d2[j+1] > 5 || d2[j+2] > 5) { hasData = true; break; }
+              }
+            }
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'videoDataCheck', hasData: hasData}));
+          } catch(e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'videoDataCheck', hasData: false}));
+          }
+        })();
+        true;
+      `);
+    };
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const graceTimer = setTimeout(() => {
+      if (!hasVideoDataRef.current) checkAndReload();
+      intervalId = setInterval(() => {
+        if (!hasVideoDataRef.current) {
+          checkAndReload();
+        }
+      }, 3000);
+    }, 10000);
+
+    return () => {
+      clearTimeout(graceTimer);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [streamHtmlUrl, webViewRef]);
 
   const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
 
@@ -778,6 +839,14 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
                     }
                     if (data.type === 'frameCaptured' && captureResolveRef.current) {
                       captureResolveRef.current(data.data || '');
+                      return;
+                    }
+                    if (data.type === 'videoDataCheck') {
+                      hasVideoDataRef.current = data.hasData;
+                      if (!data.hasData) {
+                        console.log('[DetectionZone] Black screen detected, auto-reloading...');
+                        fetchLiveUrl().then(() => handleManualRetry());
+                      }
                       return;
                     }
                   } catch {

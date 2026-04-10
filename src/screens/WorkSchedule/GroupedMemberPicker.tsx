@@ -7,7 +7,6 @@ import {
   ScrollView,
   TextInput,
   Pressable,
-  StyleSheet,
   ActivityIndicator,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -15,11 +14,16 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Member, MemberRelationship } from '@/services/faceService';
-import { scale } from '@utils/responsive';
 import { useTranslation } from 'react-i18next';
 import { MemberAvatar } from '@/components/MemberAvatar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { styles } from './WorkSchedule.style';
 
 const UNCATEGORIZED = '__uncategorized__';
+
+function sortMembersAlphabetically(list: Member[]): Member[] {
+  return [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+}
 
 type GroupedMembers = {
   relationshipId: string;
@@ -75,6 +79,7 @@ export function GroupedMemberPicker({
   styles: styleProps,
 }: GroupedMemberPickerProps) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [searchText, setSearchText] = useState('');
 
@@ -104,7 +109,7 @@ export function GroupedMemberPicker({
         return {
           relationshipId: r.id,
           relationshipName: rel.name ?? rel.name_trans ?? '',
-          members: groups[r.id]?.members ?? [],
+          members: sortMembersAlphabetically(groups[r.id]?.members ?? []),
         };
       }),
       ...(Object.keys(groups).includes(UNCATEGORIZED) && groups[UNCATEGORIZED].members.length > 0
@@ -112,7 +117,7 @@ export function GroupedMemberPicker({
             {
               relationshipId: UNCATEGORIZED,
               relationshipName: groups[UNCATEGORIZED].name,
-              members: groups[UNCATEGORIZED].members,
+              members: sortMembersAlphabetically(groups[UNCATEGORIZED].members),
             },
           ]
         : []),
@@ -125,7 +130,9 @@ export function GroupedMemberPicker({
     return groupedData
       .map((g) => ({
         ...g,
-        members: g.members.filter((m) => m.name.toLowerCase().includes(q)),
+        members: sortMembersAlphabetically(
+          g.members.filter((m) => m.name.toLowerCase().includes(q))
+        ),
       }))
       .filter((g) => g.members.length > 0 || g.relationshipName.toLowerCase().includes(q));
   }, [groupedData, searchText]);
@@ -171,18 +178,18 @@ export function GroupedMemberPicker({
 
   return (
     <Modal visible animationType="slide" presentationStyle="fullScreen">
-      <View style={modalStyles.container}>
-        <View style={modalStyles.header}>
-          <Text style={modalStyles.title}>{placeholder}</Text>
-          <TouchableOpacity onPress={onClose} style={modalStyles.closeBtn}>
+      <View style={[styles.containerPicker, { paddingTop: insets.top }]}>
+        <View style={styles.headerPicker}>
+          <Text style={styles.title}>{placeholder}</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Icon name="close" size={24} color="#EAF1F7" />
           </TouchableOpacity>
         </View>
 
-        <View style={modalStyles.searchContainer}>
+        <View style={styles.searchContainer}>
           <Icon name="magnify" size={20} color="rgba(234,241,247,0.6)" />
           <TextInput
-            style={modalStyles.searchInput}
+            style={styles.searchInput}
             placeholder={searchPlaceholder}
             placeholderTextColor="rgba(234,241,247,0.5)"
             value={searchText}
@@ -191,35 +198,34 @@ export function GroupedMemberPicker({
         </View>
 
         <ScrollView
-          style={modalStyles.scroll}
+          style={styles.scroll}
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={200}
+          removeClippedSubviews={Platform.OS !== 'android'}
         >
           {filteredGroups.map((group) => {
             const isExpanded = expandedGroups.has(group.relationshipId);
             const hasMembers = group.members.length > 0;
 
             return (
-              <View key={group.relationshipId} style={modalStyles.group}>
+              <View key={group.relationshipId} style={styles.group}>
                 <TouchableOpacity
                   style={[
                     styleProps.listParentContainer,
-                    modalStyles.groupHeader,
-                    isExpanded && modalStyles.groupHeaderExpanded,
+                    styles.groupHeader,
+                    isExpanded && styles.groupHeaderExpanded,
                   ]}
                   onPress={() => (hasMembers ? toggleGroup(group.relationshipId) : null)}
                   activeOpacity={hasMembers ? 0.7 : 1}
                   disabled={!hasMembers}
                 >
-                  <View style={modalStyles.groupHeaderContent}>
+                  <View style={styles.groupHeaderContent}>
                     <Text style={styleProps.listParentLabel}>{group.relationshipName}</Text>
-                    {hasMembers && (
-                      <Text style={modalStyles.memberCount}>({group.members.length})</Text>
-                    )}
+                    {hasMembers && <Text style={styles.memberCount}>({group.members.length})</Text>}
                   </View>
                   {hasMembers && (
-                    <View style={modalStyles.iconSlot}>
+                    <View style={styles.iconSlot}>
                       <Icon
                         name={isExpanded ? 'chevron-down' : 'chevron-right'}
                         size={22}
@@ -231,9 +237,10 @@ export function GroupedMemberPicker({
 
                 {isExpanded && hasMembers && (
                   <ScrollView
-                    style={modalStyles.childScroll}
-                    contentContainerStyle={modalStyles.childScrollContent}
+                    style={styles.childScroll}
+                    contentContainerStyle={styles.childScrollContent}
                     nestedScrollEnabled={Platform.OS === 'android'}
+                    removeClippedSubviews={Platform.OS !== 'android'}
                     showsVerticalScrollIndicator
                     keyboardShouldPersistTaps="handled"
                     bounces={false}
@@ -244,24 +251,24 @@ export function GroupedMemberPicker({
                       return (
                         <TouchableOpacity
                           key={member.id}
-                          style={[styleProps.listChildContainer, modalStyles.memberItem]}
+                          style={[styleProps.listChildContainer, styles.memberItem]}
                           onPress={() => toggleMember(member.id)}
                           activeOpacity={0.7}
                         >
-                          <View style={modalStyles.memberInfo}>
+                          <View style={styles.memberInfo}>
                             <MemberAvatar
                               uri={avatarUri}
-                              containerStyle={modalStyles.memberAvatar}
-                              imageStyle={modalStyles.memberAvatar}
-                              placeholderStyle={modalStyles.memberAvatarPlaceholder}
-                              loadingOverlayStyle={modalStyles.memberAvatarLoading}
-                              hiddenWhileLoadingStyle={modalStyles.memberAvatarHidden}
+                              containerStyle={styles.memberAvatar}
+                              imageStyle={styles.memberAvatar}
+                              placeholderStyle={styles.memberAvatarPlaceholder}
+                              loadingOverlayStyle={styles.memberAvatarLoading}
+                              hiddenWhileLoadingStyle={styles.memberAvatarHidden}
                               iconColor="rgba(234,241,247,0.5)"
                               spinnerColor="#2A9EC6"
                             />
                             <Text style={styleProps.listChildLabel}>{member.name}</Text>
                           </View>
-                          <View style={modalStyles.iconSlot}>
+                          <View style={styles.iconSlot}>
                             <Icon
                               name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
                               size={24}
@@ -277,24 +284,24 @@ export function GroupedMemberPicker({
             );
           })}
           {onLoadMore && hasMore && loadingMore && (
-            <View style={modalStyles.loadMoreContainer}>
+            <View style={styles.loadMoreContainer}>
               <ActivityIndicator size="small" color="#2A9EC6" />
             </View>
           )}
         </ScrollView>
 
-        <View style={modalStyles.footer}>
+        <View style={styles.footer}>
           <ScrollView
-            style={modalStyles.footerTextContainer}
-            contentContainerStyle={modalStyles.footerTextContent}
+            style={styles.footerTextContainer}
+            contentContainerStyle={styles.footerTextContent}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={modalStyles.selectedText}>{selectedItemsText(selectedIds)}</Text>
-            <Text style={modalStyles.selectedCountText}>
+            <Text style={styles.selectedText}>{selectedItemsText(selectedIds)}</Text>
+            <Text style={styles.selectedCountText}>
               {t('workSchedule.selectedCount', { count: selectedIds.length })}
             </Text>
           </ScrollView>
-          <Pressable style={[styleProps.button, modalStyles.saveBtn]} onPress={onClose}>
+          <Pressable style={[styleProps.button, styles.saveBtnPicker]} onPress={onClose}>
             <Text style={styleProps.text}>{saveButtonLabel}</Text>
           </Pressable>
         </View>
@@ -302,158 +309,3 @@ export function GroupedMemberPicker({
     </Modal>
   );
 }
-
-const modalStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0B0F14',
-    paddingTop: 10,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(234,241,247,0.16)',
-  },
-  title: {
-    color: '#EAF1F7',
-    fontSize: scale(18),
-    fontWeight: '600',
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: 'rgba(28, 44, 60, 0.55)',
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#EAF1F7',
-    fontSize: scale(15),
-    paddingVertical: 0,
-  },
-  scroll: {
-    flex: 1,
-    marginTop: 12,
-  },
-  group: {
-    marginBottom: 4,
-  },
-  loadMoreContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  groupHeaderExpanded: {
-    backgroundColor: 'rgba(42, 158, 198, 0.25)',
-  },
-  groupHeaderContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconSlot: {
-    width: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberCount: {
-    marginLeft: 8,
-    color: 'rgba(234,241,247,0.6)',
-    fontSize: scale(14),
-  },
-  memberItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgb(16,14,14)',
-  },
-  memberInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  memberAvatar: {
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(16),
-    // Avoid black surface before decode / on some Android GPUs when remote Image fails silently
-    backgroundColor: 'rgba(234,241,247,0.1)',
-  },
-  memberAvatarPlaceholder: {
-    backgroundColor: 'rgba(234,241,247,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberAvatarHidden: {
-    opacity: 0,
-  },
-  memberAvatarLoading: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(16),
-    backgroundColor: 'rgba(234,241,247,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  childScroll: {
-    maxHeight: scale(280),
-  },
-  childScrollContent: {
-    paddingBottom: 4,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(234,241,247,0.16)',
-    backgroundColor: '#0B0F14',
-    gap: 12,
-  },
-  footerTextContainer: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    maxHeight: scale(70),
-  },
-  footerTextContent: {
-    paddingRight: 4,
-  },
-  selectedText: {
-    color: 'rgba(234,241,247,0.7)',
-    fontSize: scale(14),
-  },
-  saveBtn: {
-    minWidth: 80,
-    minHeight: 30,
-    flexShrink: 0,
-  },
-  selectedCountText: {
-    color: 'rgb(255,255,255)',
-    fontSize: scale(13),
-    marginTop: 2,
-  },
-});
