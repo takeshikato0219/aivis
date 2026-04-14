@@ -70,5 +70,3 @@
 | 来客レポート | [CustomerReport.md](./CustomerReport.md) |
 
 ---
-
-**備考:** `Search` は現状 `AppNavigator.tsx` に未登録です。上記以外の画面はアプリスタックのルートに対応します。

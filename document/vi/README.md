@@ -70,5 +70,3 @@ Tài liệu mô tả từng màn hình theo codebase hiện tại (mã nguồn m
 | Báo cáo khách | [CustomerReport.md](./CustomerReport.md) |
 
 ---
-
-**Ghi chú:** `Search` hiện **không** được khai báo trong `AppNavigator.tsx`; các màn còn lại trong bảng trên tương ứng route trong stack ứng dụng.
