@@ -48,7 +48,6 @@ const UpdateCamera = () => {
     setIsUpdating(true);
     try {
       const response = await cameraService.updateVersionCamera(camera.id);
-      console.log('response',response);
       if (response.success) {
         showCommonAlert({
           title: '',
@@ -63,7 +62,6 @@ const UpdateCamera = () => {
         });
       }
     } catch (error) {
-      console.log('error',error);
       let errorMessage = t('common.error');
       if (
         error &&
