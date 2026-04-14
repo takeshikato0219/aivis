@@ -568,6 +568,7 @@ class JetsonBLEService {
       store.dispatch(setError('Not connected to the device'));
       return false;
     }
+    const device = this.connectedDevice;
 
     return new Promise(async (resolve) => {
       let finished = false;
@@ -599,13 +600,13 @@ class JetsonBLEService {
       try {
         store.dispatch(clearError());
 
-        await this.connectedDevice!.writeCharacteristicWithResponseForService(
+        await device.writeCharacteristicWithResponseForService(
           SERVICE_UUID,
           SSID_CHAR_UUID,
           stringToBase64(ssid)
         );
 
-        await this.connectedDevice!.writeCharacteristicWithResponseForService(
+        await device.writeCharacteristicWithResponseForService(
           SERVICE_UUID,
           PWD_CHAR_UUID,
           stringToBase64(password)
@@ -734,6 +735,7 @@ class JetsonBLEService {
       store.dispatch(setError('Not connected to the device'));
       return false;
     }
+    const device = this.connectedDevice;
 
     return new Promise(async (resolve) => {
       let finished = false;
@@ -750,7 +752,7 @@ class JetsonBLEService {
       };
 
       // Subscribe BEFORE writing so no notification is missed
-      sub = this.connectedDevice!.monitorCharacteristicForService(
+      sub = device.monitorCharacteristicForService(
         SERVICE_UUID,
         NET_SETUP_STATUS_CHAR_UUID,
         (error, characteristic) => {
@@ -788,7 +790,7 @@ class JetsonBLEService {
       try {
         store.dispatch(clearError());
         const payload = Buffer.from(mode, 'utf-8').toString('base64');
-        await this.connectedDevice!.writeCharacteristicWithResponseForService(
+        await device.writeCharacteristicWithResponseForService(
           SERVICE_UUID,
           NET_SETUP_CHAR_UUID,
           payload

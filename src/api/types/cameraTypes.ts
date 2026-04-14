@@ -25,6 +25,8 @@ export interface Camera {
   status?: string | CameraStatus;
   location?: string;
   facility_id?: string;
+  /** Some list/detail responses nest facility instead of or in addition to facility_id */
+  facility?: Partial<CameraDetailFacility> & { id: string };
   user_id?: string;
   created_at?: string;
   updated_at?: string;

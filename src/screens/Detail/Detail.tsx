@@ -181,8 +181,8 @@ const Detail = () => {
   let facilityId;
   if (camera?.facility_id != null) {
     facilityId = camera.facility_id;
-  } else if ((camera as any)?.facility?.id != null) {
-    facilityId = (camera as any).facility.id;
+  } else if (camera?.facility?.id != null) {
+    facilityId = camera.facility.id;
   } else {
     facilityId = undefined;
   }

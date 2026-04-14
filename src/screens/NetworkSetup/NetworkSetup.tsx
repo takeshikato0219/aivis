@@ -37,6 +37,7 @@ const NET_STATUS_POLL_MS = 100;
 const NET_STATUS_POLL_MAX_MS = 2000;
 
 type LinkStatus = 'connected' | 'disconnected' | 'error';
+type LinkStatusState = LinkStatus | null;
 
 async function fetchNetworkLinkStatus(
   checkNetworkStatus: (type: NetCheckType) => Promise<boolean>,
@@ -63,7 +64,7 @@ async function fetchNetworkLinkStatus(
 
 function applyLinkStatus(
   result: LinkStatus,
-  setStatus: Dispatch<SetStateAction<'connected' | 'disconnected' | 'error' | null>>,
+  setStatus: Dispatch<SetStateAction<LinkStatusState>>,
   setConnected: Dispatch<SetStateAction<boolean>>
 ) {
   setStatus(result);
@@ -212,11 +213,11 @@ const NetworkSetup: React.FC = () => {
   }, [activeTab, bleConnected]);
 
   // State for LAN network status
-  const [lanStatus, setLanStatus] = useState<'connected' | 'disconnected' | 'error' | null>(null);
+  const [lanStatus, setLanStatus] = useState<LinkStatusState>(null);
   const [lanStatusLoading, setLanStatusLoading] = useState(false);
   const [lanConnected, setLanConnected] = useState(false);
 
-  const [lteStatus, setLteStatus] = useState<'connected' | 'disconnected' | 'error' | null>(null);
+  const [lteStatus, setLteStatus] = useState<LinkStatusState>(null);
   const [lteStatusLoading, setLteStatusLoading] = useState(false);
   const [lteConnected, setLteConnected] = useState(false);
 
