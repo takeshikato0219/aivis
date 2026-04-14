@@ -744,7 +744,7 @@ const CameraLiveView: React.FC = () => {
                   <Video
                     key={`exo-${cameraId}-${videoReloadKey}`}
                     source={{ uri: hlsUrl, type: 'm3u8' }}
-                    style={StyleSheet.absoluteFillObject}
+                    style={StyleSheet.absoluteFill}
                     resizeMode="cover"
                     paused={false}
                     muted={isMuted}

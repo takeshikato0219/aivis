@@ -35,7 +35,7 @@ export const getStyles = (width: number, height: number) => {
     },
     /** react-native-video must fill parent; flex alone is unreliable on Android */
     videoNativeSurface: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: '#000',
     },
     micWebViewHidden: {

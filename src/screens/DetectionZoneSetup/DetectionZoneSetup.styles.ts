@@ -47,7 +47,7 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   videoNativeSurface: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
   },
   micWebViewHidden: {

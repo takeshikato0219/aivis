@@ -910,7 +910,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
                     <Video
                       key={`exo-${camera.id}-${videoReloadKey}`}
                       source={{ uri: hlsUrl, type: 'm3u8' }}
-                      style={StyleSheet.absoluteFillObject}
+                      style={StyleSheet.absoluteFill}
                       resizeMode="cover"
                       paused={false}
                       muted
