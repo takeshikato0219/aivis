@@ -62,6 +62,8 @@
     "loginIsInProgress": "Login is in progress",
     "googlePlayServicesAreNotAvailable": "Google Play Services are not available",
     "googleSignInFailed": "Google sign in failed",
+    "appleSignInFailed": "Apple sign in failed",
+    "appleSignInNotAvailable": "Sign in with Apple is not available on this device",
     "errorWhileSigningOutOfGoogle": "Error while signing out of Google:",
     "errorWhileRevokingAccess": "Error while revoking access:",
     "errorWhileClearingCachedToken": "Error while clearing cached token:",
@@ -120,7 +122,14 @@
     "emailChangeMessage": "You have just changed your login email. You need to log in to the system again.",
     "emailChangeDetected": "Email Changed from Another Device",
     "emailChangeDetectedMessage": "Your login email has been changed from another device. You need to log in to the system again with your new email.",
-    "loginAgain": "Login Again"
+    "loginAgain": "Login Again",
+    "name": "NAME",
+    "phone": "PHONE",
+    "uploadImage": "UPLOAD IMAGE",
+    "password": "PASSWORD",
+    "rePassword": "RE-PASSWORD",
+    "email": "EMAIL",
+    "idEmail": "ID/EMAIl"
   },
   "offline": {
     "title": "No Internet Connection",
@@ -255,7 +264,8 @@
     "photoLibraryPermissionIsRequiredToSaveScreenshots": "Photo library permission is required to save screenshots",
     "storagePermissionIsRequiredToSaveScreenshots": "Storage permission is required to save screenshots",
     "photoLibraryPermissionIsRequiredToSaveVideos": "Photo library permission is required to save videos",
-    "storagePermissionIsRequiredToSaveVideos": "Storage permission is required to save videos"
+    "storagePermissionIsRequiredToSaveVideos": "Storage permission is required to save videos",
+    "streamOff": "Stream Off"
   },
   "changePassword": {
     "changePasswordSuccess": "Password Changed",
@@ -297,7 +307,9 @@
     "alphanumericCode": "Please enter the 6-digit alphanumeric code found on the label or box of your Jetson Orin device.",
     "uniqueToEachDevice": "The pairing code is unique to each device. If you cannot find it, ensure you're looking at\n the original packaging or the sticker on the back of the camera module.",
     "pairDevice": "Pair Device",
-    "findTheCode": "I can't find the code"
+    "findTheCode": "I can't find the code",
+    "incorrectPIN": "Incorrect PIN",
+    "connectionFailed": "Connection failed"
   },
   "setupComplete": {
     "successfullyConnected": "Successfully Connected to Jetson Orin",
@@ -345,6 +357,11 @@
     "statusUnknown": "Unknown (requires LINE authentication)",
     "subscribing": "Subscribing...",
     "unsubscribing": "Unsubscribing...",
+    "checkSubscriptionStatusErrorTitle": "LINE Subscription Error",
+    "checkSubscriptionStatusErrorMessage": "Unable to check LINE subscription status. Please try again.",
+    "subscribeSuccessAlertTitle": "Subscription Successful",
+    "subscribeFailedTitle": "Subscription Failed",
+    "subscribeFailedMessage": "Unable to subscribe to LINE Official Account. Please try again.",
     "subscriptionSuccess": "Successfully subscribed to LINE Official Account",
     "unsubscriptionSuccess": "Successfully unsubscribed from LINE Official Account",
     "subscriptionError": "Failed to update LINE subscription",
@@ -360,7 +377,9 @@
     "loginWithLine": "Login with LINE",
     "failedToUpdateUserProfilePleaseTryAgain": "Failed to update user profile. Please try again.",
     "LINEDisplayName": "LINE Display Name:",
-    "LINEUserID": "LINE User ID:"
+    "LINEUserID": "LINE User ID:",
+    "returnedFromLineWithoutFinishingTitle": "Linking unsuccessful",
+    "returnedFromLineWithoutFinishingMessage": "You left LINE before completing the steps, so your account was not linked. Tap Subscribe to LINE to try again."
   },
   "networkSetup": {
     "networkSetup": "Network Setup",
@@ -391,7 +410,7 @@
     "lteConnected": "LTE Connected",
     "nowUsing": "Now using: ",
     "wifiScanError": "WiFi scan error",
-    "availableLte": "Detected SIM",
+    "availableLte": "LTE",
     "noSimDetected": "No SIM detected",
     "ltePassword": "Password for SIM/Network",
     "ltePasswordPlaceholder": "Password",
@@ -430,7 +449,15 @@
     "done": "Done",
     "idle": "Idle",
     "lanConnectionIsActive": "LAN connection is active",
-    "noLanConnection": "No LAN connection"
+    "noLanConnection": "No LAN connection",
+    "lteConnectionIsActive": "LTE connection is active",
+    "noLteConnection": "No LTE connection",
+    "wrongPasswordOrNetworkNotFound": "Wrong password or network not found. Please try again.",
+    "networkConnectionFailed": "Network connection failed",
+    "connectionTypeNone": "No connection",
+    "connectionTypeWifi": "WiFi",
+    "connectionTypeEthernet": "Ethernet (LAN)",
+    "connectionTypeMobile": "Mobile (LTE/4G)"
   },
   "faceUpload": {
     "title": "Face Registration",
@@ -536,7 +563,8 @@
     "operationSchedule": "Operation Schedule",
     "aIDetectionRules": "AI Detection Rules",
     "deleteCamera": "Delete Camera",
-    "doYouWantToDelete": "Do you want to delete?"
+    "doYouWantToDelete": "Do you want to delete?",
+    "updateCameraVersion": "Update camera version"
   },
   "listFace": {
     "listFace": "List Face",
@@ -628,5 +656,21 @@
     "deny": "Deny",
     "channelName": "Notifications",
     "defaultTitle": "Notification"
+  },
+  "setting": {
+    "deleteAccount": "Delete Account",
+    "deleteAccountConfirmation": "Do you want to delete your account?",
+    "userIDDoesNotExist": "User ID does not exist.",
+    "failedToDeleteUser": "Failed to delete user.",
+    "userDeletedSuccessfully": "User deleted successfully."
+  },
+  "updateCamera": {
+    "currentCameraVersion": "Current Camera Version",
+    "note": "Note",
+    "noteDescription": "When updating the camera version, the system will temporarily stop working for a moment. Please wait until the update is complete.",
+    "aNewUpdateIsAvailable": "A new update is available",
+    "new": "NEW UPDATE",
+    "currentlyThereIsNoUpdateAvailable": "Currently, there is no update available.",
+    "latest": "Latest"
   }
 }

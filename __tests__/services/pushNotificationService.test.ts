@@ -1,4 +1,4 @@
-import { pushNotificationService } from '../../src/services/pushNotificationService';
+import { pushNotificationService } from '@/services/pushNotificationService';
 
 const AuthorizationStatus = { AUTHORIZED: 1, PROVISIONAL: 2, DENIED: 3 };
 jest.mock('@react-native-firebase/messaging', () => {
@@ -50,33 +50,134 @@ jest.mock('react-native-fs', () => ({
   writeFile: jest.fn(() => Promise.resolve()),
   unlink: jest.fn(() => Promise.resolve()),
 }));
-jest.mock('@bam.tech/react-native-image-resizer', () => ({
-  default: {
-    createResizedImage: jest.fn(() =>
-      Promise.resolve({ uri: 'file:///cache/img.jpg', path: '/cache/img.jpg' })
-    ),
-  },
-}));
-jest.mock('@/services/notificationsService', () => ({
-  default: {
-    getNotificationById: jest.fn(() => Promise.resolve(null)),
-    updateNotificationSeen: jest.fn(() => Promise.resolve({})),
-  },
-}));
-jest.mock('@/services/rulesService', () => ({
-  default: {
-    getRules: jest.fn(() => Promise.resolve({ data: [] })),
-  },
-}));
-jest.mock('@/services/appBadgeService', () => ({
-  appBadgeService: {
-    getBadgeCount: jest.fn(() => Promise.resolve(0)),
-    setBadgeCount: jest.fn(() => Promise.resolve()),
-  },
-}));
-jest.mock('@/services/countDetectionEventService', () => ({
-  emitCountDetectionEvent: jest.fn(),
-}));
+jest.mock('@bam.tech/react-native-image-resizer', () => {
+  const g = globalThis as typeof globalThis & {
+    __TEST_PN_IMAGE_RESIZER__?: { __esModule: boolean; default: { createResizedImage: jest.Mock } };
+  };
+  if (!g.__TEST_PN_IMAGE_RESIZER__) {
+    g.__TEST_PN_IMAGE_RESIZER__ = {
+      __esModule: true,
+      default: {
+        createResizedImage: jest.fn(() =>
+          Promise.resolve({ uri: 'file:///cache/img.jpg', path: '/cache/img.jpg' })
+        ),
+      },
+    };
+  }
+  return g.__TEST_PN_IMAGE_RESIZER__;
+});
+
+jest.mock('@/services/notificationsService', () => {
+  const g = globalThis as typeof globalThis & {
+    __TEST_PN_NOTIFICATIONS__?: {
+      __esModule: boolean;
+      default: {
+        getNotificationById: jest.Mock;
+        updateNotificationSeen: jest.Mock;
+      };
+    };
+  };
+  if (!g.__TEST_PN_NOTIFICATIONS__) {
+    g.__TEST_PN_NOTIFICATIONS__ = {
+      __esModule: true,
+      default: {
+        getNotificationById: jest.fn(() => Promise.resolve(null)),
+        updateNotificationSeen: jest.fn(() => Promise.resolve({})),
+      },
+    };
+  }
+  return g.__TEST_PN_NOTIFICATIONS__;
+});
+jest.mock('../../src/services/notificationsService', () => {
+  const g = globalThis as typeof globalThis & {
+    __TEST_PN_NOTIFICATIONS__?: {
+      __esModule: boolean;
+      default: {
+        getNotificationById: jest.Mock;
+        updateNotificationSeen: jest.Mock;
+      };
+    };
+  };
+  if (!g.__TEST_PN_NOTIFICATIONS__) {
+    g.__TEST_PN_NOTIFICATIONS__ = {
+      __esModule: true,
+      default: {
+        getNotificationById: jest.fn(() => Promise.resolve(null)),
+        updateNotificationSeen: jest.fn(() => Promise.resolve({})),
+      },
+    };
+  }
+  return g.__TEST_PN_NOTIFICATIONS__;
+});
+
+jest.mock('@/services/rulesService', () => {
+  const g = globalThis as typeof globalThis & {
+    __TEST_PN_RULES__?: { __esModule: boolean; default: { getRules: jest.Mock } };
+  };
+  if (!g.__TEST_PN_RULES__) {
+    g.__TEST_PN_RULES__ = {
+      __esModule: true,
+      default: {
+        getRules: jest.fn(() => Promise.resolve({ data: [] })),
+      },
+    };
+  }
+  return g.__TEST_PN_RULES__;
+});
+jest.mock('../../src/services/rulesService', () => {
+  const g = globalThis as typeof globalThis & {
+    __TEST_PN_RULES__?: { __esModule: boolean; default: { getRules: jest.Mock } };
+  };
+  if (!g.__TEST_PN_RULES__) {
+    g.__TEST_PN_RULES__ = {
+      __esModule: true,
+      default: {
+        getRules: jest.fn(() => Promise.resolve({ data: [] })),
+      },
+    };
+  }
+  return g.__TEST_PN_RULES__;
+});
+
+jest.mock('@/services/appBadgeService', () => {
+  const g = globalThis as typeof globalThis & {
+    __TEST_PN_BADGE__?: {
+      getBadgeCount: jest.Mock;
+      setBadgeCount: jest.Mock;
+    };
+  };
+  if (!g.__TEST_PN_BADGE__) {
+    g.__TEST_PN_BADGE__ = {
+      getBadgeCount: jest.fn(() => Promise.resolve(0)),
+      setBadgeCount: jest.fn(() => Promise.resolve()),
+    };
+  }
+  return { __esModule: true, appBadgeService: g.__TEST_PN_BADGE__ };
+});
+jest.mock('../../src/services/appBadgeService', () => {
+  const g = globalThis as typeof globalThis & {
+    __TEST_PN_BADGE__?: {
+      getBadgeCount: jest.Mock;
+      setBadgeCount: jest.Mock;
+    };
+  };
+  if (!g.__TEST_PN_BADGE__) {
+    g.__TEST_PN_BADGE__ = {
+      getBadgeCount: jest.fn(() => Promise.resolve(0)),
+      setBadgeCount: jest.fn(() => Promise.resolve()),
+    };
+  }
+  return { __esModule: true, appBadgeService: g.__TEST_PN_BADGE__ };
+});
+jest.mock('@/services/countDetectionEventService', () => {
+  const actual = jest.requireActual(
+    '@/services/countDetectionEventService'
+  ) as typeof import('@/services/countDetectionEventService');
+  return {
+    ...actual,
+    emitCountDetectionEvent: jest.fn(),
+  };
+});
 jest.mock('@navigation/navigationRef', () => ({
   navigationRef: {
     isReady: jest.fn(() => true),
@@ -98,11 +199,15 @@ const { emitCountDetectionEvent } = require('@/services/countDetectionEventServi
 const { store } = require('@redux/store');
 const { navigationRef } = require('@navigation/navigationRef');
 const { Platform, PermissionsAndroid } = require('react-native');
+const notificationsService = (globalThis as any).__TEST_PN_NOTIFICATIONS__.default;
+const rulesService = (globalThis as any).__TEST_PN_RULES__.default;
+const mockImageResizerApi = (globalThis as any).__TEST_PN_IMAGE_RESIZER__.default;
+const appBadgeService = (globalThis as any).__TEST_PN_BADGE__;
 
 describe('pushNotificationService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    store.getState.mockReturnValue({ auth: { accessToken: 'token' } });
+    store.getState.mockReturnValue({ auth: { accessToken: 'token', user: { id: 'user-1' } } });
     navigationRef.isReady.mockReturnValue(true);
   });
 
@@ -142,6 +247,15 @@ describe('pushNotificationService', () => {
       Platform.OS = 'ios';
       const token = await pushNotificationService.requestPermissionAndGetToken();
       expect(token).toBeNull();
+    });
+
+    it('should return token when iOS permission is provisional', async () => {
+      messaging.requestPermission.mockResolvedValue(AuthorizationStatus.PROVISIONAL);
+      messaging.getToken.mockResolvedValue('fcm-provisional');
+      Platform.OS = 'ios';
+      const token = await pushNotificationService.requestPermissionAndGetToken();
+      expect(token).toBe('fcm-provisional');
+      expect(messaging.getToken).toHaveBeenCalled();
     });
 
     it('should return null on error', async () => {
@@ -267,6 +381,7 @@ describe('pushNotificationService', () => {
           title: 'title',
           body: 'body',
           ios: expect.objectContaining({
+            sound: 'default',
             foregroundPresentationOptions: expect.any(Object),
           }),
         })
@@ -282,6 +397,32 @@ describe('pushNotificationService', () => {
       };
       // @ts-ignore: Accessing private method for test coverage
       await pushNotificationService.displayForegroundNotification(remoteMessage);
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ios: expect.objectContaining({
+            attachments: [{ url: expect.any(String), typeHint: 'public.jpeg' }],
+          }),
+        })
+      );
+    });
+
+    it('should treat format=webp in image URL query as webp on iOS', async () => {
+      const RNFS = require('react-native-fs');
+      Platform.OS = 'ios';
+      RNFS.downloadFile.mockReturnValue({ promise: Promise.resolve({ statusCode: 200 }) });
+      mockImageResizerApi.createResizedImage.mockResolvedValue({
+        uri: 'file:///cache/img.jpg',
+        path: '/cache/img.jpg',
+      });
+      const url = 'https://example.com/img?format=webp';
+      const remoteMessage = {
+        notification: { title: 'title', body: 'body' },
+        data: { image_url: url },
+      };
+      // @ts-ignore
+      await pushNotificationService.displayForegroundNotification(remoteMessage);
+      expect(RNFS.downloadFile).toHaveBeenCalled();
+      expect(mockImageResizerApi.createResizedImage).toHaveBeenCalled();
       expect(notifee.displayNotification).toHaveBeenCalledWith(
         expect.objectContaining({
           ios: expect.objectContaining({
@@ -313,6 +454,137 @@ describe('pushNotificationService', () => {
           body: 'only body',
         })
       );
+    });
+
+    it('should use data.message as body when notification body is missing', async () => {
+      Platform.OS = 'android';
+      const remoteMessage = { notification: { title: 't' }, data: { message: 'from data' } };
+      // @ts-ignore: Accessing private method for test coverage
+      await pushNotificationService.displayForegroundNotification(remoteMessage);
+      expect(notifee.displayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: 'from data',
+        })
+      );
+    });
+  });
+
+  describe('getNotificationImageUri (private)', () => {
+    const RNFS = require('react-native-fs');
+
+    beforeEach(() => {
+      RNFS.downloadFile.mockImplementation(() => ({
+        promise: Promise.resolve({ statusCode: 200 }),
+      }));
+      mockImageResizerApi.createResizedImage.mockImplementation(() =>
+        Promise.resolve({ uri: 'file:///cache/img.jpg', path: '/cache/img.jpg' })
+      );
+    });
+
+    it('returns empty string for empty URL', async () => {
+      // @ts-ignore
+      const uri = await pushNotificationService.getNotificationImageUri('');
+      expect(uri).toBe('');
+    });
+
+    it('returns original URL on Android even for webp', async () => {
+      Platform.OS = 'android';
+      const url = 'https://example.com/x.webp';
+      // @ts-ignore
+      const uri = await pushNotificationService.getNotificationImageUri(url);
+      expect(uri).toBe(url);
+      expect(RNFS.downloadFile).not.toHaveBeenCalled();
+    });
+
+    it('returns original URL on iOS for non-webp images', async () => {
+      Platform.OS = 'ios';
+      const url = 'https://example.com/photo.jpg';
+      // @ts-ignore
+      const uri = await pushNotificationService.getNotificationImageUri(url);
+      expect(uri).toBe(url);
+      expect(RNFS.downloadFile).not.toHaveBeenCalled();
+    });
+
+    it('falls back to original URL when webp conversion fails on iOS', async () => {
+      Platform.OS = 'ios';
+      mockImageResizerApi.createResizedImage.mockRejectedValueOnce(new Error('convert fail'));
+      const url = 'https://example.com/fail.webp';
+      // @ts-ignore
+      const uri = await pushNotificationService.getNotificationImageUri(url);
+      expect(uri).toBe(url);
+    });
+  });
+
+  describe('handleNotificationOpened (private)', () => {
+    beforeEach(() => {
+      navigationRef.dispatch.mockClear();
+      notificationsService.updateNotificationSeen.mockImplementation(() =>
+        Promise.resolve({
+          id: 'n1',
+          camera_id: 'cam-1',
+          rules_master_id: 'rm-1',
+          sent_at: '2024-01-15T10:00:00Z',
+        })
+      );
+      rulesService.getRules.mockImplementation(() =>
+        Promise.resolve({
+          data: [{ id: 'rm-1', code: 'visitor_count', rule_name: 'Visitors' }],
+        })
+      );
+    });
+
+    it('does nothing when navigation is not ready', async () => {
+      navigationRef.isReady.mockReturnValue(false);
+      // @ts-ignore
+      await pushNotificationService.handleNotificationOpened({ notification_id: 'n1' });
+      expect(navigationRef.dispatch).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when user id is missing', async () => {
+      store.getState.mockReturnValue({ auth: { accessToken: 'token', user: null } });
+      // @ts-ignore
+      await pushNotificationService.handleNotificationOpened({ notification_id: 'n1' });
+      expect(navigationRef.dispatch).not.toHaveBeenCalled();
+    });
+
+    it('navigates to Notifications when there is no notification id', async () => {
+      // @ts-ignore
+      await pushNotificationService.handleNotificationOpened({});
+      expect(navigationRef.dispatch).toHaveBeenCalled();
+    });
+
+    it('navigates to ListNotificationCamera when notification resolves with camera and rule', async () => {
+      // @ts-ignore
+      await pushNotificationService.handleNotificationOpened({ notification_id: 'n1' });
+      expect(notificationsService.updateNotificationSeen).toHaveBeenCalledWith('n1', true);
+      expect(rulesService.getRules).toHaveBeenCalled();
+      expect(navigationRef.dispatch).toHaveBeenCalled();
+    });
+
+    it('navigates to CustomerReport for customer_attribute_report rule', async () => {
+      rulesService.getRules.mockResolvedValue({
+        data: [{ id: 'rm-1', code: 'customer_attribute_report', rule_name: 'Customer attrs' }],
+      });
+      // @ts-ignore
+      await pushNotificationService.handleNotificationOpened({ notification_id: 'n1' });
+      expect(navigationRef.dispatch).toHaveBeenCalled();
+    });
+
+    it('decrements badge on iOS after marking notification seen', async () => {
+      Platform.OS = 'ios';
+      appBadgeService.getBadgeCount.mockResolvedValue(4);
+      appBadgeService.setBadgeCount.mockResolvedValue(undefined);
+      // @ts-ignore
+      await pushNotificationService.handleNotificationOpened({ notification_id: 'n1' });
+      expect(appBadgeService.getBadgeCount).toHaveBeenCalled();
+      expect(appBadgeService.setBadgeCount).toHaveBeenCalledWith(3);
+    });
+
+    it('falls back to Notifications when updateNotificationSeen fails', async () => {
+      notificationsService.updateNotificationSeen.mockRejectedValueOnce(new Error('api error'));
+      // @ts-ignore
+      await pushNotificationService.handleNotificationOpened({ notification_id: 'n1' });
+      expect(navigationRef.dispatch).toHaveBeenCalled();
     });
   });
 
@@ -368,6 +640,78 @@ describe('pushNotificationService', () => {
       });
     });
 
+    it('should emit enterprise_attendance_in/out from nested JSON string in enterprise_attendance', async () => {
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue('token');
+      pushNotificationService.registerTokenWithBackend = jest.fn().mockResolvedValue(undefined);
+      messaging.onMessage.mockImplementation(
+        (cb: (msg: { data?: Record<string, unknown> }) => void) => {
+          cb({
+            data: {
+              enterprise_attendance: '{"in":1,"out":1}',
+              camera_id: 'cam-1',
+            },
+          });
+          return jest.fn();
+        }
+      );
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      await pushNotificationService.init();
+      expect(emitCountDetectionEvent).toHaveBeenCalledWith({
+        codes: ['enterprise_attendance_in', 'enterprise_attendance_out'],
+        camera_id: 'cam-1',
+      });
+    });
+
+    it('should emit only enterprise_attendance_out when nested JSON has out only', async () => {
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue('token');
+      pushNotificationService.registerTokenWithBackend = jest.fn().mockResolvedValue(undefined);
+      messaging.onMessage.mockImplementation(
+        (cb: (msg: { data?: Record<string, unknown> }) => void) => {
+          cb({
+            data: {
+              enterprise_attendance: '{"out":1}',
+              camera_id: 'cam-2',
+            },
+          });
+          return jest.fn();
+        }
+      );
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      await pushNotificationService.init();
+      expect(emitCountDetectionEvent).toHaveBeenCalledWith({
+        codes: ['enterprise_attendance_out'],
+        camera_id: 'cam-2',
+      });
+    });
+
+    it('should not emit count when enterprise_attendance is all zeros or empty', async () => {
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue('token');
+      pushNotificationService.registerTokenWithBackend = jest.fn().mockResolvedValue(undefined);
+      messaging.onMessage.mockImplementation(
+        (cb: (msg: { data?: Record<string, unknown> }) => void) => {
+          cb({
+            data: {
+              enterprise_attendance: '{"in":0,"out":0}',
+              camera_id: 'cam-0',
+            },
+          });
+          return jest.fn();
+        }
+      );
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      await pushNotificationService.init();
+      expect(emitCountDetectionEvent).not.toHaveBeenCalled();
+    });
+
     it('should call all unsubscribe handlers on cleanup', async () => {
       const unsubMsg = jest.fn();
       const unsubOpened = jest.fn();
@@ -400,6 +744,162 @@ describe('pushNotificationService', () => {
       await pushNotificationService.init();
       expect(messaging.getInitialNotification).toHaveBeenCalled();
       expect(notifee.getInitialNotification).toHaveBeenCalled();
+    });
+
+    it('should register refreshed token when onTokenRefresh fires', async () => {
+      const registerSpy = jest.fn().mockResolvedValue(undefined);
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue('first');
+      pushNotificationService.registerTokenWithBackend = registerSpy;
+      messaging.onMessage.mockReturnValue(jest.fn());
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockImplementation((cb: (t: string) => void) => {
+        cb('refreshed-fcm');
+        return jest.fn();
+      });
+      messaging.getInitialNotification.mockResolvedValue(null);
+      notifee.getInitialNotification.mockResolvedValue(null);
+      await pushNotificationService.init();
+      expect(registerSpy).toHaveBeenCalledWith('first');
+      expect(registerSpy).toHaveBeenCalledWith('refreshed-fcm');
+    });
+
+    it('should await handleNotificationOpened when opened from Firebase cold start', async () => {
+      store.getState.mockReturnValue({
+        auth: { accessToken: 't', user: { id: 'u1' } },
+      });
+      notificationsService.updateNotificationSeen.mockResolvedValue({
+        camera_id: 'c1',
+        rules_master_id: 'rm1',
+      });
+      rulesService.getRules.mockResolvedValue({
+        data: [{ id: 'rm1', code: 'daily_passerby', rule_name: 'Pass' }],
+      });
+      navigationRef.dispatch.mockClear();
+
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue(null);
+      pushNotificationService.registerTokenWithBackend = jest.fn();
+      messaging.onMessage.mockReturnValue(jest.fn());
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue({
+        data: { notification_id: 'cold-n' },
+      });
+      notifee.getInitialNotification.mockResolvedValue(null);
+
+      await pushNotificationService.init();
+      expect(notificationsService.updateNotificationSeen).toHaveBeenCalledWith('cold-n', true);
+      expect(navigationRef.dispatch).toHaveBeenCalled();
+    });
+
+    it('should handle Notifee cold start when Firebase initial has no data', async () => {
+      store.getState.mockReturnValue({
+        auth: { accessToken: 't', user: { id: 'u1' } },
+      });
+      notificationsService.updateNotificationSeen.mockResolvedValue({
+        camera_id: 'c2',
+        rules_master_id: 'rm2',
+      });
+      rulesService.getRules.mockResolvedValue({
+        data: [{ id: 'rm2', code: 'visitor_count', rule_name: 'V' }],
+      });
+      navigationRef.dispatch.mockClear();
+
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue(null);
+      pushNotificationService.registerTokenWithBackend = jest.fn();
+      messaging.onMessage.mockReturnValue(jest.fn());
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      notifee.getInitialNotification.mockResolvedValue({
+        notification: { data: { notification_id: 'notifee-cold' } },
+      });
+
+      await pushNotificationService.init();
+      expect(notificationsService.updateNotificationSeen).toHaveBeenCalledWith(
+        'notifee-cold',
+        true
+      );
+      expect(navigationRef.dispatch).toHaveBeenCalled();
+    });
+
+    it('should invoke handleNotificationOpened when user opens app from background via Firebase', async () => {
+      store.getState.mockReturnValue({
+        auth: { accessToken: 't', user: { id: 'u1' } },
+      });
+      notificationsService.updateNotificationSeen.mockResolvedValue({
+        camera_id: 'c1',
+        rules_master_id: 'rm1',
+      });
+      rulesService.getRules.mockResolvedValue({
+        data: [{ id: 'rm1', code: 'visitor_count', rule_name: 'V' }],
+      });
+
+      let openedHandler: (msg: { data?: Record<string, string> }) => void = () => {};
+      messaging.onNotificationOpenedApp.mockImplementation((cb: typeof openedHandler) => {
+        openedHandler = cb;
+        return jest.fn();
+      });
+
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue(null);
+      pushNotificationService.registerTokenWithBackend = jest.fn();
+      messaging.onMessage.mockReturnValue(jest.fn());
+      notifee.onForegroundEvent.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      notifee.getInitialNotification.mockResolvedValue(null);
+      navigationRef.dispatch.mockClear();
+
+      await pushNotificationService.init();
+      openedHandler({ data: { notification_id: 'bg-1' } });
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise<void>((r) => setImmediate(r));
+
+      expect(notificationsService.updateNotificationSeen).toHaveBeenCalledWith('bg-1', true);
+    });
+
+    it('should invoke handleNotificationOpened on Notifee foreground press with data', async () => {
+      store.getState.mockReturnValue({
+        auth: { accessToken: 't', user: { id: 'u1' } },
+      });
+      notificationsService.updateNotificationSeen.mockResolvedValue({
+        camera_id: 'c1',
+        rules_master_id: 'rm1',
+      });
+      rulesService.getRules.mockResolvedValue({
+        data: [{ id: 'rm1', code: 'visitor_count', rule_name: 'V' }],
+      });
+
+      let notifeeEventHandler: (ev: {
+        type: number;
+        detail: { notification?: { data?: object } };
+      }) => void = () => {};
+      notifee.onForegroundEvent.mockImplementation((cb: typeof notifeeEventHandler) => {
+        notifeeEventHandler = cb;
+        return jest.fn();
+      });
+
+      pushNotificationService.requestPermissionAndGetToken = jest.fn().mockResolvedValue(null);
+      pushNotificationService.registerTokenWithBackend = jest.fn();
+      messaging.onMessage.mockReturnValue(jest.fn());
+      messaging.onNotificationOpenedApp.mockReturnValue(jest.fn());
+      messaging.onTokenRefresh.mockReturnValue(jest.fn());
+      messaging.getInitialNotification.mockResolvedValue(null);
+      notifee.getInitialNotification.mockResolvedValue(null);
+
+      await pushNotificationService.init();
+      notifeeEventHandler({
+        type: 1,
+        detail: { notification: { data: { notification_id: 'press-1' } } },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise<void>((r) => setImmediate(r));
+
+      expect(notificationsService.updateNotificationSeen).toHaveBeenCalledWith('press-1', true);
     });
   });
 

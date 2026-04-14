@@ -36,6 +36,7 @@ export interface Member {
   user_id?: string;
   relationship_type_id?: string;
   image_urls?: string[];
+  image?: string;
 }
 
 export interface MembersResponse {

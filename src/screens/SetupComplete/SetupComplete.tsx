@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Animated, ImageBackground, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import QrScannerBackground from '@assets/png/complete-background.png';
+import QrScannerBackground from '@assets/webp/complete-background.webp';
 import CompleteIcon from '@assets/svg/complete-icon.svg';
 import { useResponsive } from '@hooks/useResponsive';
 import { styles } from './SetupComplete.styles';

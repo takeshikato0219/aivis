@@ -7,17 +7,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#020205',
   },
-
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: '#101820',
-  },
-
-  imageStyle: {
-    width: '100%',
-    height: '100%',
-  },
   safeArea: {
     flex: 1,
     backgroundColor: 'transparent',
@@ -80,5 +69,31 @@ export const styles = StyleSheet.create({
     height: 60,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  styleButtonUpdate: {
+    marginRight: 12,
+    marginLeft: 12,
+  },
+  newBadgeContainer: {
+    position: 'absolute',
+    top: 8,
+    right: 16,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    zIndex: 10,
+    alignSelf: 'flex-end',
+    height: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  newBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  relativeContainer: {
+    position: 'relative',
   },
 });

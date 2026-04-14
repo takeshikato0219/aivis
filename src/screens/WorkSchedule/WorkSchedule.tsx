@@ -7,6 +7,7 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -110,6 +111,7 @@ const RULE_CODES_WITH_FACE_MEMBER_SELECT = new Set([
   'enterprise_attendance',
   'helmet_wearing',
   'mask_wearing',
+  'glove_wearing',
 ]);
 
 export default function WorkSchedule() {
@@ -119,6 +121,7 @@ export default function WorkSchedule() {
   const [membersPage, setMembersPage] = useState(1);
   const [hasMoreMembers, setHasMoreMembers] = useState(false);
   const [loadingMoreMembers, setLoadingMoreMembers] = useState(false);
+  const [loadingMembers, setLoadingMembers] = useState(true);
   const [relationships, setRelationships] = useState<MemberRelationship[]>([]);
   const [openSelect2, setOpenSelect2] = useState(false);
   const [select2Value, setSelect2Value] = useState<string[]>([]);
@@ -242,6 +245,7 @@ export default function WorkSchedule() {
   const fetchMembers = useCallback(async (page = 1) => {
     try {
       if (page === 1) {
+        setLoadingMembers(true);
         const response = await faceService.getMembers({ page: 1, per_page: 50 });
         setMembers(response.data);
         setMembersPage(1);
@@ -257,6 +261,7 @@ export default function WorkSchedule() {
       console.error('Failed to fetch members:', error);
     } finally {
       setLoadingMoreMembers(false);
+      setLoadingMembers(false);
     }
   }, []);
 
@@ -402,7 +407,9 @@ export default function WorkSchedule() {
                 activeOpacity={0.8}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                {select2Value.length > 0 ? (
+                {loadingMembers ? (
+                  <ActivityIndicator size="small" color="#2A9EC6" />
+                ) : select2Value.length > 0 ? (
                   <View style={styles.memberChipRow}>
                     {select2Value
                       .map((id) => members.find((m) => m.id === id))

@@ -38,12 +38,14 @@ describe('bleSlice', () => {
   };
 
   const mockWifiNetwork1: WiFiNetwork = {
+    // @ts-ignore
     ssid: 'Network1',
     signal: -50,
     security: 'WPA2',
   };
 
   const mockWifiNetwork2: WiFiNetwork = {
+    // @ts-ignore
     ssid: 'Network2',
     signal: -30,
     security: 'OPEN',

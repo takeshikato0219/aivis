@@ -23,6 +23,30 @@ export const getStyles = (width: number, height: number) => {
       height: '100%',
       backgroundColor: '#000',
     },
+    /** Root inside videoWrapper — minHeight:0 so flex children (Exo) can fill on Android */
+    videoPlayerRoot: {
+      flex: 1,
+      width: '100%',
+      minHeight: 0,
+      alignSelf: 'stretch',
+      position: 'relative',
+      backgroundColor: '#000',
+      overflow: 'hidden',
+    },
+    /** react-native-video must fill parent; flex alone is unreliable on Android */
+    videoNativeSurface: {
+      ...StyleSheet.absoluteFill,
+      backgroundColor: '#000',
+    },
+    micWebViewHidden: {
+      position: 'absolute',
+      width: 1,
+      height: 1,
+      opacity: 0,
+      left: -100,
+      top: -100,
+      overflow: 'hidden',
+    },
 
     // Fullscreen Mode
     fullscreenContainer: {
@@ -148,6 +172,9 @@ export const getStyles = (width: number, height: number) => {
       zIndex: 11,
       elevation: 11,
     },
+    topOverlayEnd: {
+      justifyContent: 'flex-end',
+    },
     topLeft: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -157,13 +184,11 @@ export const getStyles = (width: number, height: number) => {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: 'rgba(255,255,255,0.3)',
-      paddingHorizontal: 8,
-      paddingVertical: 3,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
       borderRadius: 40,
       gap: 4,
-      height: 37,
-      width: 85,
-      justifyContent: 'center',
+      alignSelf: 'flex-start',
     },
     liveRedDot: {
       width: 13,
@@ -173,9 +198,8 @@ export const getStyles = (width: number, height: number) => {
     },
     liveText: {
       color: '#FFF',
-      fontSize: 16,
+      fontSize: 14,
       fontWeight: FONTS.weights.medium,
-      marginLeft: 8,
     },
     offlineIndicator: {
       backgroundColor: 'rgba(255,255,255,0.15)',
@@ -220,6 +244,15 @@ export const getStyles = (width: number, height: number) => {
       justifyContent: 'center',
       alignItems: 'center',
     },
+    reloadButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 5,
+    },
 
     rightControls: {
       position: 'absolute',
@@ -242,6 +275,16 @@ export const getStyles = (width: number, height: number) => {
       backgroundColor: 'rgba(0,0,0,0.6)',
       justifyContent: 'center',
       alignItems: 'center',
+    },
+
+    controlButtonFullscreen: {
+      width: 35,
+      height: 35,
+      borderRadius: 20,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 10,
     },
 
     exitFullscreenButton: {
@@ -298,6 +341,9 @@ export const getStyles = (width: number, height: number) => {
       justifyContent: 'center',
       minWidth: 70,
     },
+    mainButtonDisabled: {
+      opacity: 0.4,
+    },
     iconCircle: {
       width: 56,
       height: 56,
@@ -306,6 +352,16 @@ export const getStyles = (width: number, height: number) => {
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 6,
+    },
+    iconCircleFullScreen: {
+      width: 40,
+      height: 40,
+      borderRadius: 28,
+      backgroundColor: '#374151',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 6,
+      marginRight: 30,
     },
     iconCircleActive: {
       backgroundColor: '#44ef52',
@@ -397,7 +453,7 @@ export const getStyles = (width: number, height: number) => {
     muteButton: {
       position: 'absolute',
       top: 7,
-      right: 60,
+      right: 87,
       width: 34,
       height: 34,
       borderRadius: 22,
@@ -407,6 +463,10 @@ export const getStyles = (width: number, height: number) => {
       zIndex: 9999,
     },
     micIconRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    reconnectStyle: {
       flexDirection: 'row',
       alignItems: 'center',
     },

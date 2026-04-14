@@ -18,7 +18,7 @@ import Logo from '@assets/svg/logo.svg';
 import { isTablet } from '@utils/responsive';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import IntroduceBackgroundPng from '@assets/png/intro-background.png';
+import IntroduceBackgroundPng from '@assets/webp/intro-background.webp';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 
 const slides = [

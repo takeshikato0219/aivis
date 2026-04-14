@@ -350,4 +350,156 @@ export const styles = StyleSheet.create({
     color: 'rgba(234,241,247,0.9)',
     fontSize: scale(15),
   },
+
+  // Grouped member picker
+  containerPicker: {
+    flex: 1,
+    backgroundColor: '#0B0F14',
+  },
+  headerPicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(234,241,247,0.16)',
+  },
+  title: {
+    color: '#EAF1F7',
+    fontSize: scale(18),
+    fontWeight: '600',
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(28, 44, 60, 0.55)',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#EAF1F7',
+    fontSize: scale(15),
+    paddingVertical: 0,
+  },
+  scroll: {
+    flex: 1,
+    marginTop: 12,
+  },
+  group: {
+    marginBottom: 4,
+  },
+  loadMoreContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  groupHeaderExpanded: {
+    backgroundColor: 'rgba(42, 158, 198, 0.25)',
+  },
+  groupHeaderContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconSlot: {
+    width: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memberCount: {
+    marginLeft: 8,
+    color: 'rgba(234,241,247,0.6)',
+    fontSize: scale(14),
+  },
+  memberItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgb(16,14,14)',
+  },
+  memberInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  memberAvatar: {
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(16),
+    backgroundColor: 'rgba(234,241,247,0.1)',
+  },
+  memberAvatarPlaceholder: {
+    backgroundColor: 'rgba(234,241,247,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memberAvatarHidden: {
+    opacity: 0,
+  },
+  memberAvatarLoading: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(16),
+    backgroundColor: 'rgba(234,241,247,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  childScroll: {
+    maxHeight: scale(280),
+  },
+  childScrollContent: {
+    paddingBottom: 4,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(234,241,247,0.16)',
+    backgroundColor: '#0B0F14',
+    gap: 12,
+  },
+  footerTextContainer: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    maxHeight: scale(70),
+  },
+  footerTextContent: {
+    paddingRight: 4,
+  },
+  selectedText: {
+    color: 'rgba(234,241,247,0.7)',
+    fontSize: scale(14),
+  },
+  saveBtnPicker: {
+    minWidth: 80,
+    minHeight: 30,
+    flexShrink: 0,
+  },
+  selectedCountText: {
+    color: 'rgb(255,255,255)',
+    fontSize: scale(13),
+    marginTop: 2,
+  },
 });

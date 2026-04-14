@@ -19,7 +19,7 @@ import { useResponsive } from '@hooks/useResponsive';
 import LogoDetail from '@assets/svg/logo-detail.svg';
 import { styles } from './ConnectionSuccessful.styles';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
-import CameraLiveViewIcon from '@assets/png/camera-live.png';
+import CameraLiveViewIcon from '@assets/webp/camera-live.webp';
 import IconPencil from '@assets/svg/pencil-icon.svg';
 import SettingIcon from '@assets/svg/settings-icon-incisor.svg';
 import { ConnectionSuccessfulScreenRouteProp } from '@navigation/types';

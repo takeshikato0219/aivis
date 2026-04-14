@@ -105,9 +105,30 @@ export const styles = StyleSheet.create({
     marginBottom: 16,
     height: 340,
   },
+  cardMediaSection: {
+    position: 'relative',
+  },
   videoWrapper: {
     borderRadius: 8,
     overflow: 'hidden',
+  },
+  firmwareNewBadge: {
+    position: 'absolute',
+    top: -5,
+    right: 0,
+    zIndex: 2,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 25,
+  },
+  firmwareNewBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   cardImage: {
     width: '100%',

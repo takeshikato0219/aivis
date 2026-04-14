@@ -385,6 +385,30 @@ export const styles = StyleSheet.create({
     fontWeight: FONTS.weights.medium,
     color: COLORS.background,
   },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  placeholder: {
+    backgroundColor: 'rgba(0,173,212,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hidden: {
+    opacity: 0,
+  },
+  loading: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,173,212,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Form styles
   formSafeArea: {

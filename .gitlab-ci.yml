@@ -28,7 +28,7 @@ install_dependencies:
       - .npm/
     policy: pull-push
   script:
-    - npm ci --prefer-offline --no-audit
+    - npm ci --prefer-offline --no-audit --legacy-peer-deps
   artifacts:
     paths:
       - node_modules/

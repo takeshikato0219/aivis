@@ -19,6 +19,7 @@ export default function UploadDetectZone() {
   const { t } = useTranslation();
   const [link, setLink] = useState<string>('');
   const camera = route.params?.camera;
+  const typeCamera = route.params?.camera.facility.name;
 
   const getLinkLive = React.useCallback(async () => {
     const response = await cameraService.getLiveStreamUrl(camera.id);
@@ -77,6 +78,17 @@ export default function UploadDetectZone() {
             </View>
             <Icon name="chevron-right" size={24} color="#FFF" />
           </TouchableOpacity>
+          {typeCamera === 'Enterprise' ? (
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => handleSetupDetectionZone('restricted')}
+            >
+              <View style={styles.settingLeft}>
+                <Text style={styles.settingText}>{t('uploadDetectZone.setupRestrictedZone')}</Text>
+              </View>
+              <Icon name="chevron-right" size={24} color="#FFF" />
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={styles.settingItem}
             onPress={() => handleSetupDetectionZone('entry_exit')}

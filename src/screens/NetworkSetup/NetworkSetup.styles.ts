@@ -75,7 +75,7 @@ export const styles = StyleSheet.create({
     maxHeight: 260,
   },
   wifiListContainer: {
-    maxHeight: 260,
+    // no maxHeight – outer ScrollView handles scrolling
   },
   networkItem: {
     flexDirection: 'row',
@@ -120,13 +120,14 @@ export const styles = StyleSheet.create({
   },
   passwordSection: {
     marginHorizontal: 20,
-    marginTop: 18,
+    marginTop: 10,
+    marginBottom: 4,
   },
   passLabel: {
     color: '#83BFF1',
     fontWeight: '700',
-    marginBottom: 7,
-    fontSize: 14,
+    marginBottom: 5,
+    fontSize: 13,
   },
   inputWrap: {
     flexDirection: 'row',
@@ -140,10 +141,10 @@ export const styles = StyleSheet.create({
     height: 46,
   },
   input: {
-    marginBottom: 12,
+    marginBottom: 6,
     backgroundColor: COLORS['3E3E3E'],
-    fontSize: isTablet() ? 25 : 19,
-    height: isTablet() ? 70 : 56,
+    fontSize: isTablet() ? 22 : 16,
+    height: isTablet() ? 60 : 48,
   },
   systemCheck: {
     marginHorizontal: 20,
@@ -184,7 +185,7 @@ export const styles = StyleSheet.create({
   connectBtn: {
     backgroundColor: '#41CFFF',
     marginHorizontal: 18,
-    marginTop: 25,
+    marginTop: 14,
     marginBottom: 26,
     borderRadius: 22,
     alignItems: 'center',
@@ -249,6 +250,13 @@ export const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  wifiScrollContent: {
+    flexGrow: 1,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+  },
+  wifiBottomSection: {
+    marginTop: 'auto',
+  },
   contentContainer: {
     flex: 1,
     minHeight: 300,
@@ -256,6 +264,10 @@ export const styles = StyleSheet.create({
   bottomContainer: {
     paddingBottom: Platform.OS === 'ios' ? 40 : 26,
     paddingTop: 10,
+  },
+  bottomContainerKeyboard: {
+    paddingBottom: Platform.OS === 'ios' ? 16 : 12,
+    paddingTop: 6,
   },
   rescanButton: {
     alignSelf: 'flex-end',

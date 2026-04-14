@@ -2,7 +2,26 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: "com.google.gms.google-services"
+
+// Only ship icon fonts used in JS. The package's fonts.gradle often falls back to
+// "*.ttf" when `project.hasProperty("vectoricons")` is false; trim after copy.
+def vectorIconFontAllowlist = ["MaterialIcons.ttf", "MaterialCommunityIcons.ttf"] as Set
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+afterEvaluate {
+    def copyFonts = tasks.findByName("copyReactNativeVectorIconFonts")
+    if (copyFonts != null) {
+        copyFonts.doLast {
+            def fontsDir = file("$buildDir/intermediates/ReactNativeVectorIcons/fonts")
+            if (fontsDir.directory) {
+                fontsDir.eachFile { f ->
+                    if (f.isFile() && !vectorIconFontAllowlist.contains(f.name)) {
+                        f.delete()
+                    }
+                }
+            }
+        }
+    }
+}
 
 /**
  * This is the configuration block to customize your React Native Android app.

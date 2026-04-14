@@ -20,7 +20,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import SettingsIcon from '@assets/svg/icon-setting.svg';
 import LogoDetail from '@assets/svg/logo-detail.svg';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
-import RetangleImage from '@assets/png/rectangle-home.png';
+import RetangleImage from '@assets/webp/rectangle-home.webp';
 import IconHome from '@assets/svg/icon-home.svg';
 import IconPerson from '@assets/svg/icon-person.svg';
 import IconSuspect from '@assets/svg/icon-suspect.svg';
@@ -46,7 +46,7 @@ import {
 
 import { MODE_BACKGROUNDS, MODE_ICONS, RULE_CONFIGS_BY_WORKFLOW } from './Detail.constants';
 import {
-  isAttendanceSubcounts,
+  isEnterpriseAttendanceInOut,
   type CameraListItem,
   type CountDetectionData,
   type FilterItem,
@@ -112,14 +112,14 @@ const getCounterText = (
     return `${data.creature_detection ?? 0}`;
   }
 
-  if (code === 'attendance') {
-    if (!('attendance' in data) || data.attendance == null) return '0人';
-    const a = data.attendance;
-    if (isAttendanceSubcounts(a)) {
+  if (code === 'enterprise_attendance') {
+    if (!('enterprise_attendance' in data) || data.enterprise_attendance == null) return '0人';
+    const ea = data.enterprise_attendance;
+    if (isEnterpriseAttendanceInOut(ea)) {
       return '';
     }
-    if (typeof a === 'number') {
-      return `${a}人`;
+    if (typeof ea === 'number') {
+      return `${ea}人`;
     }
     return '0人';
   }
@@ -138,6 +138,7 @@ const buildRuleConfigs = (
   handlers: {
     notification: (itemName: string, iconName: string, code: string) => void;
     customerReport: (itemName: string, iconName: string) => void;
+    restrictedZone: () => void;
   }
 ): RuleConfig[] => {
   const configs = RULE_CONFIGS_BY_WORKFLOW[workflowType];
@@ -147,6 +148,8 @@ const buildRuleConfigs = (
       handler = (name: string, iconParam: string) => handlers.notification(name, iconParam, code);
     } else if (handlerType === 'customerReport') {
       handler = (name: string, iconParam: string) => handlers.customerReport(name, iconParam);
+    } else if (handlerType === 'restrictedZone') {
+      handler = handlers.restrictedZone;
     } else {
       handler = '';
     }
@@ -170,12 +173,16 @@ const Detail = () => {
   const [countFace, setCountFace] = useState<number>(0);
   const [countDetectionData, setCountDetectionData] = useState<CountDetectionData | null>(null);
   const [livePersonCount, setLivePersonCount] = useState<number | null>(null);
+  const [hasLatestFirmwareUpdate, setHasLatestFirmwareUpdate] = useState<boolean>(false);
+  const [latestFirmwareUpdate, setLatestFirmwareUpdate] = useState<
+    { description: string; id: string; version: string } | null | undefined
+  >(undefined);
 
   let facilityId;
   if (camera?.facility_id != null) {
     facilityId = camera.facility_id;
-  } else if ((camera as any)?.facility?.id != null) {
-    facilityId = (camera as any).facility.id;
+  } else if (camera?.facility?.id != null) {
+    facilityId = camera.facility.id;
   } else {
     facilityId = undefined;
   }
@@ -208,8 +215,22 @@ const Detail = () => {
   };
 
   const handleSetupDetectionZone = () => {
-    navigation.navigate('SettingAI', { camera });
+    navigation.navigate('SettingAI', {
+      camera,
+      latestFirmwareUpdate: latestFirmwareUpdate ?? undefined,
+    });
   };
+
+  const handleRestrictedZoneSetup = useCallback(() => {
+    const rule = rulesList.find((r) => r.code === 'restricted_area_intrusion');
+    const displayName = rule?.rule_name ?? '';
+    navigation.navigate('ListNotificationCamera', {
+      title: displayName,
+      icon: 'IconBan',
+      code: 'restricted_area_intrusion',
+      cameraId: camera.id,
+    });
+  }, [camera.id, navigation, rulesList]);
 
   const getRulesMaster = async () => {
     try {
@@ -250,24 +271,20 @@ const Detail = () => {
     }
   }, [camera.id]);
 
-  const getDetail = async () => {
+  const getDetail = useCallback(async () => {
     try {
       const response = await cameraService.getDetailCamera(camera.id);
-      if (response.success && response.data && typeof response.data.mode_id === 'string') {
-        setDetailModeId(response.data.mode_id);
-        if (modes.length > 0) {
-          const foundIdx = modes.findIndex(
-            (mode: any) => String(mode.id) === response.data.mode_id
-          );
-          if (foundIdx !== -1 && foundIdx !== activeIndex) {
-            setActiveIndex(foundIdx);
-          }
+      if (response.success && response.data) {
+        setHasLatestFirmwareUpdate(!!response.data.latest_firmware_update);
+        setLatestFirmwareUpdate(response.data.latest_firmware_update ?? null);
+        if (typeof response.data.mode_id === 'string') {
+          setDetailModeId(response.data.mode_id);
         }
       }
     } catch (err) {
       console.warn('Failed to fetch camera detail:', err);
     }
-  };
+  }, [camera.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -289,8 +306,7 @@ const Detail = () => {
       getRulesMaster();
       getModes();
       getDetail();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [camera.id])
+    }, [camera.id, getDetail])
   );
 
   useEffect(() => {
@@ -305,14 +321,16 @@ const Detail = () => {
   const ruleConfigs = buildRuleConfigs(workflowType, {
     notification: handlePressNotification,
     customerReport: handlePressCustomerReport,
+    restrictedZone: handleRestrictedZoneSetup,
   });
 
   const cameraListWithIcons: CameraListItem[] = ruleConfigs.map((config) => {
     const rule = rulesList.find((r) => r.code === config.code);
     const counterText = getCounterText(config.code, workflowType, countDetectionData);
-    const att = countDetectionData?.attendance;
+    const ea = countDetectionData?.enterprise_attendance;
     const attendanceSub =
-      config.code === 'attendance' && isAttendanceSubcounts(att) ? att : undefined;
+      config.code === 'enterprise_attendance' && isEnterpriseAttendanceInOut(ea) ? ea : undefined;
+    const displayName = rule?.rule_name ?? '';
     const baseItem = {
       counter: counterText,
       ...(attendanceSub ? { attendanceSub } : {}),
@@ -324,14 +342,14 @@ const Detail = () => {
     if (rule) {
       return {
         id: rule.id,
-        name: rule.rule_name,
+        name: displayName,
         status: rule.is_active,
         ...baseItem,
       };
     }
     return {
       id: config.code,
-      name: '',
+      name: displayName,
       status: false,
       ...baseItem,
     };
@@ -406,6 +424,7 @@ const Detail = () => {
     if (item.handler) {
       if (item.handler === goToFaceUpload) return goToFaceUpload;
       if (item.handler === handleCameraPress) return handleCameraPress;
+      if (item.handler === handleRestrictedZoneSetup) return handleRestrictedZoneSetup;
       if (typeof item.handler === 'function') {
         return () =>
           (item.handler as (itemName: string, iconName: string) => void)(
@@ -541,9 +560,16 @@ const Detail = () => {
               </Text>
             </View>
 
-            <TouchableOpacity onPress={handleSetupDetectionZone}>
-              <SettingsIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
-            </TouchableOpacity>
+            <View style={styles.newBadgeWrapper}>
+              <TouchableOpacity onPress={handleSetupDetectionZone}>
+                <SettingsIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
+                {hasLatestFirmwareUpdate && (
+                  <View style={styles.newBadgeContainer}>
+                    <Text style={styles.newBadgeText}>{t('updateCamera.new')}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
           <ScrollView
             style={styles.container}
@@ -658,7 +684,7 @@ const Detail = () => {
                                 !item.status && styles.disableText,
                               ]}
                             >
-                              {t('detail.checkin')}: {item.attendanceSub.checkin}人
+                              {t('detail.checkin')}: {item.attendanceSub.in}人
                             </Text>
                             <Text
                               style={[
@@ -667,7 +693,7 @@ const Detail = () => {
                                 !item.status && styles.disableText,
                               ]}
                             >
-                              {t('detail.checkout')}: {item.attendanceSub.checkout}人
+                              {t('detail.checkout')}: {item.attendanceSub.out}人
                             </Text>
                           </View>
                         ) : (

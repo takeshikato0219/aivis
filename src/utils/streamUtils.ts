@@ -1,4 +1,62 @@
 /**
+ * Read a query value from a full ws/http(s) URL without using `URLSearchParams` alone.
+ * Some React Native / Hermes builds truncate base64 padding (`=`, `==`) when using
+ * `searchParams.get('token')` on long JWT-like values.
+ *
+ * @param urlString - e.g. `wss://host/api/ws?src=camera&token=eyJ...ifQ==`
+ */
+export function getQueryParamFromUrl(urlString: string, key: string): string | null {
+  if (!urlString || !key) return null;
+  const q = urlString.indexOf('?');
+  if (q < 0) return null;
+  const hashIdx = urlString.indexOf('#', q + 1);
+  const query = urlString.slice(q + 1, hashIdx === -1 ? undefined : hashIdx);
+  const prefix = `${key}=`;
+  const segments = query.split('&');
+  for (const seg of segments) {
+    if (seg.startsWith(prefix)) {
+      const raw = seg.slice(prefix.length);
+      try {
+        return decodeURIComponent(raw.replace(/\+/g, ' '));
+      } catch {
+        return raw;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Raw `token` value as in API `live_url` (substring after `token=` until `&` or end), **not** passed through
+ * `encodeURIComponent`. Some servers require literal `==` padding; `encodeURIComponent` turns `=` into `%3D`
+ * and breaks those backends.
+ */
+export function getRawTokenValueFromUrl(urlString: string): string | null {
+  if (!urlString) return null;
+  const q = urlString.indexOf('?');
+  if (q < 0) return null;
+  const hashIdx = urlString.indexOf('#', q + 1);
+  const query = urlString.slice(q + 1, hashIdx === -1 ? undefined : hashIdx);
+  const m = query.match(/(?:^|&)token=([^&]*)/);
+  return m ? m[1] : null;
+}
+
+/** Decode token for base64/JWT checks (`+`, `%XX`, etc.). */
+export function decodeStreamTokenFromUrlValue(raw: string): string {
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, ' '));
+  } catch {
+    return raw;
+  }
+}
+
+function appendTokenQueryFromLiveUrl(wsUrl: string): string {
+  const raw = getRawTokenValueFromUrl(wsUrl);
+  if (raw == null || raw === '') return '';
+  return `&token=${raw}`;
+}
+
+/**
  * Build stream URL from RTSP URL
  * @param rtspUrl - RTSP URL or full HTTP/HTTPS URL
  * @returns Formatted stream URL
@@ -28,18 +86,57 @@ export const buildStreamHtmlUrl = (wsUrl?: string): string => {
     // Extract the `src` query param (camera source identifier)
     const src = parsed.searchParams.get('src') || 'camera';
     const baseUrl = `${parsed.protocol}//${parsed.host}`;
-    return `${baseUrl}/stream.html?src=${encodeURIComponent(src)}&mode=webrtc,mse,hls,mjpeg&autoplay=true`;
+    return `${baseUrl}/stream.html?src=${encodeURIComponent(src)}&mode=mse,hls&autoplay=true`;
   } catch {
     return '';
   }
 };
 
 /**
- * Sinh ra injectedJavaScript cho WebView stream player.
- * Ẩn logo, progress, thời gian, chỉ giữ video/canvas full-screen.
- * Android: hiện native controls. iOS: ẩn controls, hiện custom mute button.
- * @param platform 'ios' | 'android'
+ * Android WebView / fallback: full mode list + optional token (same query as WS) so stream.html can negotiate webrtc/mjpeg.
+ * @platform android — use from CameraLiveView fetch only; iOS keeps {@link buildStreamHtmlUrl}.
  */
+export const buildStreamHtmlUrlForAndroid = (wsUrl?: string): string => {
+  if (!wsUrl) return '';
+  try {
+    const httpUrl = wsUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+    const parsed = new URL(httpUrl);
+    const src = parsed.searchParams.get('src') || 'camera';
+    const baseUrl = `${parsed.protocol}//${parsed.host}`;
+    const tokenQs = appendTokenQueryFromLiveUrl(wsUrl);
+    return `${baseUrl}/stream.html?src=${encodeURIComponent(src)}&mode=webrtc,mse,hls,mjpeg&autoplay=true${tokenQs}`;
+  } catch {
+    return '';
+  }
+};
+
+/** HLS playlist URL (ExoPlayer / AVPlayer) — same path as inline player fallback. */
+export function buildHlsStreamUrlFromWs(wsUrl: string): string {
+  if (!wsUrl) return '';
+  try {
+    const httpUrl = wsUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+    const parsed = new URL(httpUrl);
+    const src = parsed.searchParams.get('src') || 'camera';
+    const baseUrl = `${parsed.protocol}//${parsed.host}`;
+    const tokenQs = appendTokenQueryFromLiveUrl(wsUrl);
+    return `${baseUrl}/api/stream.m3u8?src=${encodeURIComponent(src)}${tokenQs}`;
+  } catch {
+    return '';
+  }
+}
+
+/** HTTPS origin for WebView baseUrl (mic getUserMedia needs secure context). */
+export function getStreamOriginBaseUrl(wsUrl: string): string {
+  if (!wsUrl) return '';
+  try {
+    const httpUrl = wsUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+    const parsed = new URL(httpUrl);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return '';
+  }
+}
+
 export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
   return `(function(){
     var isIOS = ${platform === 'ios'};
@@ -260,11 +357,8 @@ export function buildIOSStreamInlineHtml(wsUrl: string): { html: string; baseUrl
     return { html: '', baseUrl: '' };
   }
   const src = parsed.searchParams.get('src') || 'camera';
-  const token = parsed.searchParams.get('token') || '';
   const baseUrl = `${parsed.protocol}//${parsed.host}`;
-
-  const hlsUrl = `${baseUrl}/api/stream.m3u8?src=${encodeURIComponent(src)}${token ? '&token=' + encodeURIComponent(token) : ''}`;
-  const mjpegUrl = `${baseUrl}/api/frame.jpeg?src=${encodeURIComponent(src)}${token ? '&token=' + encodeURIComponent(token) : ''}`;
+  const hlsUrl = `${baseUrl}/api/stream.m3u8?src=${encodeURIComponent(src)}${appendTokenQueryFromLiveUrl(wsUrl)}`;
 
   const html = `<!DOCTYPE html>
 <html>
@@ -298,6 +392,33 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
 (function(){
   var video = document.getElementById('v');
   var _wsRetry = 0;
+  var _lastDataTS = 0;
+  var _healthCheckTID = null;
+  var _currentWs = null;
+  var HEALTH_CHECK_INTERVAL = 3000;
+  var RECONNECT_TIMEOUT = 5000;
+
+  // Supported codecs (matching web video-rtc.ts)
+  var CODECS = [
+    'avc1.640029','avc1.64002A','avc1.640033',
+    'hvc1.1.6.L153.B0',
+    'mp4a.40.2','mp4a.40.5','flac','opus'
+  ];
+
+  // Safari codec compatibility
+  var safariMatch = navigator.userAgent.match(/Version\\/(\\d+).+Safari/);
+  if (safariMatch) {
+    var ver = parseInt(safariMatch[1]);
+    var skipFrom = ver < 13 ? 'mp4a.40.2' : ver < 14 ? 'flac' : 'opus';
+    var idx = CODECS.indexOf(skipFrom);
+    if (idx > -1) CODECS.splice(idx);
+  }
+
+  function getSupportedCodecs(isSupported) {
+    return CODECS.filter(function(c) {
+      return isSupported('video/mp4; codecs="' + c + '"');
+    }).join();
+  }
 
   function sendRN(type, data) {
     try {
@@ -320,103 +441,156 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
   window.addEventListener('message', function(e) { handleMuteMessage(e.data); });
   document.addEventListener('message', function(e) { handleMuteMessage(e.data); });
 
+  function stopHealthCheck() {
+    if (_healthCheckTID) { clearInterval(_healthCheckTID); _healthCheckTID = null; }
+  }
+
+  function startHealthCheck() {
+    stopHealthCheck();
+    _lastDataTS = Date.now();
+    _healthCheckTID = setInterval(function() {
+      if (!_currentWs || _currentWs.readyState !== 1) return;
+      var elapsed = Date.now() - _lastDataTS;
+      if (elapsed >= HEALTH_CHECK_INTERVAL) {
+        sendRN('healthTimeout');
+        stopHealthCheck();
+        if (_currentWs) { _currentWs.close(); _currentWs = null; }
+      }
+    }, Math.min(HEALTH_CHECK_INTERVAL, 5000));
+  }
+
+  // ── HLS fallback (iOS < 17 không có MediaSource) ──
+  function tryHLS() {
+    sendRN('protocol', { protocol: 'hls' });
+    sendRN('buffering');
+    video.src = ${JSON.stringify(hlsUrl)};
+    video.muted = true;
+    video.play().catch(function(){});
+  }
+
+  // ── MSE (Android only — iOS WKWebView MSE/ManagedMediaSource unreliable) ──
   function tryMSE() {
+    // iOS WKWebView: ManagedMediaSource exists but doesn't work reliably → always use HLS
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+      tryHLS();
+      return;
+    }
+
     sendRN('protocol', { protocol: 'mse' });
-    if (!window.MediaSource) { tryHLS(); return; }
+
+    // Android 12+ Chromium / WebView: ManagedMediaSource is preferred for live MSE (background + codec path).
+    var MSClass = window.ManagedMediaSource || window.MediaSource;
+    if (!MSClass) {
+      tryHLS();
+      return;
+    }
+
     try {
-      var wsUrl = '${wsUrl}';
+      var connectTS = Date.now();
+      var wsUrl = ${JSON.stringify(wsUrl)};
       var ws = new WebSocket(wsUrl);
       ws.binaryType = 'arraybuffer';
+      _currentWs = ws;
 
-      var ms = new MediaSource();
+      var ms = new MSClass();
       video.src = URL.createObjectURL(ms);
+      video.srcObject = null;
 
-      var sb; var queue = []; var adding = false;
+      video.play().catch(function(){});
 
-      ws.onopen = function(){ sendRN('buffering'); };
+      var sb = null;
+      // Pre-allocated 2MB buffer (matching web)
+      var buf = new Uint8Array(2 * 1024 * 1024);
+      var bufLen = 0;
 
-      ms.addEventListener('sourceopen', function(){
-        ws.onopen = function(){
-          ws.send(JSON.stringify({type:'mse'}));
-          sendRN('buffering');
-        };
-        if (ws.readyState === 1) {
-          ws.send(JSON.stringify({type:'mse'}));
-          sendRN('buffering');
-        }
-        ws.onmessage = function(e){
+      ws.onopen = function() {
+        sendRN('buffering');
+        startHealthCheck();
+      };
+
+      ms.addEventListener('sourceopen', function() {
+        // Send supported codecs (matching web)
+        var codecStr = getSupportedCodecs(function(type) {
+          return MSClass.isTypeSupported(type);
+        });
+        ws.send(JSON.stringify({ type: 'mse', value: codecStr }));
+        sendRN('buffering');
+
+        ws.onmessage = function(e) {
           if (typeof e.data === 'string') {
             try {
               var msg = JSON.parse(e.data);
-              if (msg.type === 'mse') {
-                var codec = msg.value || 'video/mp4; codecs="avc1.640029"';
-                if (MediaSource.isTypeSupported(codec)) {
-                  sb = ms.addSourceBuffer(codec);
-                  sb.mode = 'segments';
-                  sb.addEventListener('updateend', flushQueue);
-                }
+              if (msg.type === 'mse' && msg.value) {
+                sb = ms.addSourceBuffer(msg.value);
+                sb.mode = 'segments';
+                sb.addEventListener('updateend', function() {
+                  // Flush pending buffer
+                  if (!sb.updating && bufLen > 0) {
+                    try {
+                      var data = buf.slice(0, bufLen);
+                      sb.appendBuffer(data);
+                      bufLen = 0;
+                    } catch(ex) {}
+                  }
+                  // Buffer management: keep only 5s (matching web)
+                  if (!sb.updating && sb.buffered && sb.buffered.length) {
+                    var end = sb.buffered.end(sb.buffered.length - 1);
+                    var start = end - 5;
+                    var start0 = sb.buffered.start(0);
+                    if (start > start0) {
+                      sb.remove(start0, start);
+                      ms.setLiveSeekableRange(start, end);
+                    }
+                    if (video.currentTime < start) {
+                      video.currentTime = start;
+                    }
+                    // Adjust playback rate to stay in sync (matching web)
+                    var gap = end - video.currentTime;
+                    video.playbackRate = gap > 0.1 ? gap : 0.1;
+                  }
+                });
+              }
+              if (msg.type === 'error') {
+                sendRN('failed', { message: msg.value });
               }
             } catch(ex){}
             return;
           }
+          // Binary data
+          _lastDataTS = Date.now();
           if (sb) {
-            queue.push(e.data);
-            flushQueue();
+            if (sb.updating || bufLen > 0) {
+              var b = new Uint8Array(e.data);
+              buf.set(b, bufLen);
+              bufLen += b.byteLength;
+            } else {
+              try { sb.appendBuffer(e.data); }
+              catch(ex) {}
+            }
           }
         };
       });
 
-      function flushQueue(){
-        if (adding || !sb || queue.length === 0) return;
-        if (sb.updating) return;
-        adding = true;
-        try { sb.appendBuffer(queue.shift()); }
-        catch(ex){ console.error(ex); }
-        adding = false;
-      }
-
-      ws.onerror = function(){ tryHLS(); };
-      ws.onclose = function(){
-        if (!video.src || video.error) tryHLS();
-        else {
-          _wsRetry++;
-          if (_wsRetry <= 3) {
-            sendRN('buffering');
-            setTimeout(function(){ tryMSE(); }, Math.min(2000 * Math.pow(2, _wsRetry - 1), 8000));
-          } else {
-            sendRN('wsClose');
-            tryHLS();
-          }
+      ws.onerror = function() { sendRN('wsError'); };
+      ws.onclose = function() {
+        stopHealthCheck();
+        _currentWs = null;
+        _wsRetry++;
+        if (_wsRetry <= 3) {
+          sendRN('buffering');
+          var delay = Math.max(RECONNECT_TIMEOUT - (Date.now() - connectTS), 0);
+          setTimeout(function(){ tryMSE(); }, delay);
+        } else {
+          sendRN('wsClose');
         }
       };
 
-      setTimeout(function(){
-        if (video.readyState < 2) { ws.close(); tryHLS(); }
-      }, 12000);
+      video.addEventListener('error', function() {
+        if (_currentWs) { _currentWs.close(); _currentWs = null; }
+      });
 
-    } catch(e) { tryHLS(); }
-  }
-
-  function tryHLS() {
-    sendRN('protocol', { protocol: 'hls' });
-    sendRN('buffering');
-    video.src = '${hlsUrl}';
-    video.muted = true;
-    video.play().catch(function(){});
-    setTimeout(function(){
-      if (video.readyState < 2) tryMJPEG();
-    }, 10000);
-  }
-
-  function tryMJPEG() {
-    sendRN('protocol', { protocol: 'mjpeg' });
-    sendRN('buffering');
-    video.style.display = 'none';
-    var img = document.createElement('img');
-    img.src = '${mjpegUrl}';
-    img.style.cssText = 'position:fixed;top:50%;left:50%;min-width:100vw;min-height:100vh;width:auto;height:auto;transform:translate(-50%,-50%);z-index:1;background:#000;';
-    document.body.appendChild(img);
-    img.onload = function(){ sendRN('playing'); };
+    } catch(e) { sendRN('failed', { message: e.message }); }
   }
 
   var _lastTime = 0;

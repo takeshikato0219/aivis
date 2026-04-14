@@ -16,6 +16,7 @@ const Line = require('@xmartlabs/react-native-line') as {
 const mockCanOpenURL = jest.fn();
 jest.mock('react-native', () => ({
   Linking: { canOpenURL: (...args: unknown[]) => mockCanOpenURL(...args) },
+  Platform: { OS: 'ios' },
 }));
 
 jest.mock('@components/Alert/Alert', () => ({
@@ -91,6 +92,28 @@ describe('LineAuthService', () => {
         message: 'login failed',
         buttons: [{ text: 'OK' }],
       });
+    });
+
+    it('returns cancelled without alert when user dismisses LINE login (Android CANCEL)', async () => {
+      mockCanOpenURL.mockResolvedValue(true);
+      const err = Object.assign(new Error('cancelled'), { code: 'CANCEL' });
+      Line.login.mockRejectedValue(err);
+
+      const result = await service.signIn();
+
+      expect(result).toBe('cancelled');
+      expect(showCommonAlert).not.toHaveBeenCalled();
+    });
+
+    it('returns cancelled without alert when user dismisses LINE login (iOS 3003)', async () => {
+      mockCanOpenURL.mockResolvedValue(true);
+      const err = Object.assign(new Error('User cancelled'), { code: '3003' });
+      Line.login.mockRejectedValue(err);
+
+      const result = await service.signIn();
+
+      expect(result).toBe('cancelled');
+      expect(showCommonAlert).not.toHaveBeenCalled();
     });
   });
 

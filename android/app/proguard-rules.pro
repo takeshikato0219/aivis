@@ -6,6 +6,12 @@
 #
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
+#
+# Shrinking policy: do NOT remove or narrow broad -keep rules below to "save a
+# few KB" without a failing test or a minimal repro. Many libraries (RN, ML Kit,
+# Firebase, ExoPlayer, WebRTC, Vision Camera) rely on reflection; aggressive
+# -keep removal causes release-only crashes. If you must tune rules: reproduce
+# on a release build, add one targeted -keep, verify, then repeat.
 
 # Add any project specific keep options here:
 # React Native

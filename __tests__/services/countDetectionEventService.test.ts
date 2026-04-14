@@ -57,35 +57,59 @@ describe('countDetectionEventService', () => {
       expect(applyCountIncrement(data, 'vip_customer_detection')).toEqual(data);
     });
 
-    it('attendance_checkin bumps checkin when attendance is subcounts', () => {
+    it('enterprise_attendance_in bumps in when enterprise_attendance is in/out', () => {
       const data: CountDetectionData = {
-        attendance: { checkin: 2, checkout: 1 },
+        enterprise_attendance: { in: 2, out: 1 },
       };
-      expect(applyCountIncrement(data, 'attendance_checkin')).toEqual({
-        attendance: { checkin: 3, checkout: 1 },
+      expect(applyCountIncrement(data, 'enterprise_attendance_in')).toEqual({
+        enterprise_attendance: { in: 3, out: 1 },
       });
     });
 
-    it('attendance_checkout bumps checkout when attendance is subcounts', () => {
+    it('enterprise_attendance_out bumps out when enterprise_attendance is in/out', () => {
       const data: CountDetectionData = {
-        attendance: { checkin: 1, checkout: 0 },
+        enterprise_attendance: { in: 1, out: 0 },
       };
-      expect(applyCountIncrement(data, 'attendance_checkout')).toEqual({
-        attendance: { checkin: 1, checkout: 1 },
+      expect(applyCountIncrement(data, 'enterprise_attendance_out')).toEqual({
+        enterprise_attendance: { in: 1, out: 1 },
       });
     });
 
-    it('attendance_checkin when attendance is number creates subcounts from number', () => {
-      const data: CountDetectionData = { attendance: 5 };
-      expect(applyCountIncrement(data, 'attendance_checkin')).toEqual({
-        attendance: { checkin: 6, checkout: 0 },
+    it('enterprise_attendance_in when enterprise_attendance is number creates in/out from number', () => {
+      const data: CountDetectionData = { enterprise_attendance: 5 };
+      expect(applyCountIncrement(data, 'enterprise_attendance_in')).toEqual({
+        enterprise_attendance: { in: 6, out: 0 },
       });
     });
 
-    it('attendance_checkout when attendance is number', () => {
-      const data: CountDetectionData = { attendance: 5 };
-      expect(applyCountIncrement(data, 'attendance_checkout')).toEqual({
-        attendance: { checkin: 5, checkout: 1 },
+    it('enterprise_attendance_out when enterprise_attendance is number', () => {
+      const data: CountDetectionData = { enterprise_attendance: 5 };
+      expect(applyCountIncrement(data, 'enterprise_attendance_out')).toEqual({
+        enterprise_attendance: { in: 5, out: 1 },
+      });
+    });
+
+    it('enterprise_attendance increments in for in/out shape', () => {
+      const data: CountDetectionData = {
+        enterprise_attendance: { in: 1, out: 2 },
+      };
+      expect(applyCountIncrement(data, 'enterprise_attendance')).toEqual({
+        enterprise_attendance: { in: 2, out: 2 },
+      });
+    });
+
+    it('enterprise_attendance when enterprise_attendance is number', () => {
+      const data: CountDetectionData = { enterprise_attendance: 10 };
+      expect(applyCountIncrement(data, 'enterprise_attendance')).toEqual({
+        enterprise_attendance: 11,
+      });
+    });
+
+    it('enterprise_attendance when key missing initializes in', () => {
+      const data: CountDetectionData = { people_count_ws_url: 'wss://x' };
+      expect(applyCountIncrement(data, 'enterprise_attendance')).toEqual({
+        people_count_ws_url: 'wss://x',
+        enterprise_attendance: { in: 1, out: 0 },
       });
     });
 

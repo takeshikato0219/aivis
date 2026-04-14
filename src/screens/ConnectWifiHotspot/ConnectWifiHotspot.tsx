@@ -15,7 +15,7 @@ import { ConnectWifiHotspotNavigationProp, ConnectWifiHotspotRouteProp } from '@
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from './ConnectWifiHotspot.style';
-import HomeBackgroundImage from '@assets/png/home-background.png';
+import HomeBackgroundImage from '@assets/webp/home-background.webp';
 import { LockOutlineIcon } from '@components/IconCustom/IconCustom';
 import { COLORS } from '@constants/theme';
 import { useTranslation } from 'react-i18next';

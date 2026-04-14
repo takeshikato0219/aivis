@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraSetupScreenNavigationProp } from '@navigation/types';
-import QrScannerBackground from '@assets/png/qr-scan-background.png';
+import QrScannerBackground from '@assets/webp/qr-scan-background.webp';
 import { styles } from './QRScanner.styles';
 import RectangleIcon4 from '@assets/svg/rectangle-4.svg';
 import RectangleIcon5 from '@assets/svg/rectangle-5.svg';

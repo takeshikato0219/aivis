@@ -13,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SetupCompleteScreenNavigationProp } from '@navigation/types';
-import QrScannerBackground from '@assets/png/qr-scan-background.png';
+import QrScannerBackground from '@assets/webp/qr-scan-background.webp';
 import { styles } from './CameraSetup.styles';
 import MoveRightIcon from '@assets/svg/vector-right.svg';
 import WifiIcon from '@assets/svg/wifi-icon.svg';

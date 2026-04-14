@@ -26,7 +26,7 @@ import { useErrorHandler } from '@hooks/useErrorHandler';
 import { useAppSetup } from '@hooks/useAppSetup';
 import { useNavigation } from '@react-navigation/native';
 import { HomeScreenNavigationProp } from '@navigation/types';
-import HomeBackgroundImage from '@assets/png/home-background.png';
+import HomeBackgroundImage from '@assets/webp/home-background.webp';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useImagePicker } from '@hooks/useImagePicker';
 import { ImagePickerModal } from '@components/ImagePickerModal/ImagePickerModal';
@@ -347,7 +347,7 @@ const EditProfile: React.FC = () => {
         </View>
 
         {/* Form Fields */}
-        <Text style={styles.label}>NAME</Text>
+        <Text style={styles.label}>{t('profile.name')}</Text>
         <TextInput
           value={nameInput.value}
           onChangeText={nameInput.handleChange}
@@ -364,7 +364,7 @@ const EditProfile: React.FC = () => {
           <Text style={styles.styleErrorText}>{t('validate.' + nameInput.error)}</Text>
         )}
 
-        <Text style={styles.label}>EMAIL</Text>
+        <Text style={styles.label}>{t('profile.email')}</Text>
         <TextInput
           value={emailInput.value}
           onChangeText={emailInput.handleChange}
@@ -382,7 +382,7 @@ const EditProfile: React.FC = () => {
           <Text style={styles.styleErrorText}>{t('validate.' + emailInput.error)}</Text>
         )}
 
-        <Text style={styles.label}>PHONE</Text>
+        <Text style={styles.label}>{t('profile.phone')}</Text>
         <TextInput
           value={phoneInput.value}
           onChangeText={phoneInput.handleChange}

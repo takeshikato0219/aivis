@@ -11,6 +11,21 @@ jest.mock('@xmartlabs/react-native-line', () => ({
   getCurrentAccessToken: jest.fn(),
   getProfile: jest.fn(),
 }));
+jest.mock('@/i18n', () => ({
+  __esModule: true,
+  default: {
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'lineSubscription.subscribeSuccessAlertTitle': 'Subscription Successful',
+        'lineSubscription.subscriptionSuccess': 'Successfully subscribed to LINE Official Account',
+        'lineSubscription.subscribeFailedTitle': 'Subscription Failed',
+        'lineSubscription.subscribeFailedMessage': 'Unable to subscribe to LINE Official Account. Please try again.',
+        'common.ok': 'OK',
+      };
+      return map[key] || key;
+    },
+  },
+}));
 
 // Mock BaseLineService.getCurrentUser
 LineSubscriptionService.getCurrentUser = jest.fn();

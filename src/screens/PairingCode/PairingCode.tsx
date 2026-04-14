@@ -16,10 +16,10 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { PairingCodeScreenNavigationProp, PairingCodeScreenRouteProp } from '@navigation/types';
 import { styles } from './PairingCode.style';
-import HomeBackgroundImage from '@assets/png/home-background.png';
+import HomeBackgroundImage from '@assets/webp/home-background.webp';
 import { useTranslation } from 'react-i18next';
 import BackIcon from '@assets/svg/icon-back.svg';
-import ItemCodeBackground from '@assets/png/pairing-code.png';
+import ItemCodeBackground from '@assets/webp/pairing-code.webp';
 import { jetsonBLEService } from '@/services/jetsonBLEService';
 import { useJetsonBLE } from '@hooks/useJetsonBLE';
 
@@ -65,9 +65,9 @@ const PairingCode: React.FC = () => {
     const result = await connect(device as any, code);
     if (!result || !result.success) {
       if (result?.reason === 'INVALID_PIN') {
-        setError('Incorrect PIN');
+        setError(t('pairingCode.incorrectPIN'));
       } else {
-        setError('Connection failed');
+        setError(t('pairingCode.connectionFailed'));
       }
 
       setLoading(false);

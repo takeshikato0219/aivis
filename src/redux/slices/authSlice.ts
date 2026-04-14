@@ -199,6 +199,21 @@ export const socialLineLoginAsync = createAsyncThunk<
   }
 });
 
+export const socialAppleLoginAsync = createAsyncThunk<
+  LoginResponse,
+  SocialLoginRequest,
+  { rejectValue: AuthError }
+>('auth/socialAppleLogin', async (socialData, { rejectWithValue }) => {
+  try {
+    return await authService.socialAppleLogin(socialData);
+  } catch (error: any) {
+    return rejectWithValue({
+      message: error.message,
+      statusCode: error.apiStatusCode || error.statusCode,
+    });
+  }
+});
+
 // SLICE
 const authSlice = createSlice({
   name: 'auth',
@@ -266,6 +281,21 @@ const authSlice = createSlice({
         setAuthSuccessState(state, action.payload);
       })
       .addCase(socialLineLoginAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.error = action.payload?.message || 'Error occurred';
+      });
+
+    // SOCIAL APPLE LOGIN
+    builder
+      .addCase(socialAppleLoginAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(socialAppleLoginAsync.fulfilled, (state, action) => {
+        setAuthSuccessState(state, action.payload);
+      })
+      .addCase(socialAppleLoginAsync.rejected, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = false;
         state.error = action.payload?.message || 'Error occurred';

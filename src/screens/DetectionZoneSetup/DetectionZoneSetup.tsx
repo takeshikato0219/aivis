@@ -10,7 +10,10 @@ import {
   AppState,
   AppStateStatus,
   Image,
+  StyleSheet,
 } from 'react-native';
+import Video from 'react-native-video';
+import { captureRef, captureScreen } from 'react-native-view-shot';
 import Orientation from 'react-native-orientation-locker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -25,6 +28,9 @@ import { showCommonAlert } from '@components/Alert/Alert';
 import { WebView } from 'react-native-webview';
 import {
   buildStreamHtmlUrl,
+  buildStreamHtmlUrlForAndroid,
+  buildHlsStreamUrlFromWs,
+  getStreamOriginBaseUrl,
   getInjectedStreamPlayerJS,
   buildIOSStreamInlineHtml,
 } from '@utils/streamUtils';
@@ -95,7 +101,9 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const [isLeftIn, setIsLeftIn] = useState(true);
   const [streamWsUrl, setStreamWsUrl] = useState<string>(route.params.liveUrl || '');
   const [streamHtmlUrl, setStreamHtmlUrl] = useState(() =>
-    buildStreamHtmlUrl(route.params.liveUrl)
+    Platform.OS === 'android'
+      ? buildStreamHtmlUrlForAndroid(route.params.liveUrl)
+      : buildStreamHtmlUrl(route.params.liveUrl)
   );
   const [timeExp, setTimeExp] = useState<string | null>(null);
   const [liveViewLayout, setLiveViewLayout] = useState({
@@ -110,6 +118,14 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   const hasInitialStreamRef = useRef(false);
   const [lastFrameBase64, setLastFrameBase64] = useState<string | null>(null);
   const captureResolveRef = useRef<((base64: string) => void) | null>(null);
+  const hasVideoDataRef = useRef(false);
+  const androidVideoSurfaceRef = useRef<View>(null);
+  const [videoReloadKey, setVideoReloadKey] = useState(0);
+
+  const isAndroidNativeHls = Platform.OS === 'android';
+  const reloadNativePlayer = useCallback(() => {
+    setVideoReloadKey((k) => k + 1);
+  }, []);
 
   const {
     webViewRef,
@@ -122,13 +138,68 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     handleWebViewHttpError: onWebViewHttpError,
     handleManualRetry,
     handleWebViewMessage,
-  } = useLiveStream({ maxRetries: 5, heartbeatTimeout: 30000 });
+    markNativePlaybackConnected,
+    markNativePlaybackFailed,
+  } = useLiveStream({
+    maxRetries: 5,
+    heartbeatTimeout: 30000,
+    ...(isAndroidNativeHls && {
+      playbackSurface: 'native-hls' as const,
+      onReloadNativePlayer: reloadNativePlayer,
+    }),
+  });
+
+  const hlsUrl = useMemo(
+    () => (streamWsUrl ? buildHlsStreamUrlFromWs(streamWsUrl) : ''),
+    [streamWsUrl]
+  );
+  const micWebViewBaseUrl = useMemo(
+    () => (streamWsUrl ? getStreamOriginBaseUrl(streamWsUrl) : 'https://localhost'),
+    [streamWsUrl]
+  );
+  const useAndroidExoHls = isAndroidNativeHls && !!hlsUrl;
 
   const webViewError = connectionStatus === 'failed';
   const isLive = connectionStatus === 'connected' && !!streamHtmlUrl && !isWebViewLoading;
 
+  // Reset hasVideoDataRef when connection is lost so auto-reload kicks in again
+  useEffect(() => {
+    if (!isLive) {
+      hasVideoDataRef.current = false;
+    }
+  }, [isLive]);
+
   const captureFrameFromWebView = useCallback((): Promise<string | null> => {
     return new Promise((resolve) => {
+      if (useAndroidExoHls) {
+        const timeout = setTimeout(() => resolve(null), 5000);
+        const finish = (data: string | null) => {
+          clearTimeout(timeout);
+          resolve(data);
+        };
+        const tryCapture = () => {
+          if (!androidVideoSurfaceRef.current) {
+            finish(null);
+            return;
+          }
+          captureRef(androidVideoSurfaceRef, {
+            format: 'jpg',
+            quality: 0.85,
+            result: 'data-uri',
+            handleGLSurfaceViewOnAndroid: true,
+          })
+            .then((dataUri) => {
+              if (dataUri && dataUri.length > 200) {
+                return dataUri;
+              }
+              return captureScreen({ format: 'jpg', quality: 0.85, result: 'data-uri' });
+            })
+            .then((uri) => finish(uri && uri.length > 80 ? uri : null))
+            .catch(() => finish(null));
+        };
+        requestAnimationFrame(() => tryCapture());
+        return;
+      }
       if (!webViewRef.current) {
         resolve(null);
         return;
@@ -167,7 +238,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
         true;
       `);
     });
-  }, [webViewRef]);
+  }, [webViewRef, useAndroidExoHls]);
 
   const [fetchUrlError, setFetchUrlError] = useState(false);
   const showErrorOverlay = (webViewError && !isWebViewLoading) || fetchUrlError;
@@ -179,7 +250,10 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
       if (res.success && res.data) {
         setTimeExp(res.data.time_exp);
         setStreamWsUrl(res.data.live_url);
-        const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
+        const newHtmlUrl =
+          Platform.OS === 'android'
+            ? buildStreamHtmlUrlForAndroid(res.data.live_url)
+            : buildStreamHtmlUrl(res.data.live_url);
         setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
       }
     } catch (e) {
@@ -198,21 +272,41 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
   }, [timeExp, fetchLiveUrl]);
 
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const backgroundEnteredAtRef = useRef<number | null>(null);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
-        fetchLiveUrl().then(() => {
-          webViewRef.current?.reload();
-        });
+      const prev = appStateRef.current;
+
+      if (nextAppState === 'background') {
+        backgroundEnteredAtRef.current = Date.now();
       }
+
+      if (prev === 'background' && nextAppState === 'active') {
+        const entered = backgroundEnteredAtRef.current;
+        backgroundEnteredAtRef.current = null;
+        const msInBackground = entered != null ? Date.now() - entered : Infinity;
+        if (msInBackground >= 800) {
+          fetchLiveUrl().then(() => {
+            if (useAndroidExoHls) {
+              reloadNativePlayer();
+            } else {
+              webViewRef.current?.reload();
+            }
+          });
+        }
+      }
+
       appStateRef.current = nextAppState;
     });
     return () => {
       subscription.remove();
     };
-  }, [fetchLiveUrl, webViewRef]);
+  }, [fetchLiveUrl, webViewRef, useAndroidExoHls, reloadNativePlayer]);
 
   const forceVideoPlay = useCallback(() => {
+    if (useAndroidExoHls) {
+      return;
+    }
     webViewRef.current?.injectJavaScript(`
       (function(){
         var v = document.querySelector('video');
@@ -220,7 +314,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
         true;
       })();
     `);
-  }, [webViewRef]);
+  }, [webViewRef, useAndroidExoHls]);
 
   useFocusEffect(
     useCallback(() => {
@@ -239,12 +333,16 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     if (!currentUrl) return;
     if (hasInitialStreamRef.current && prevStreamUrlRef.current !== currentUrl) {
       prevStreamUrlRef.current = currentUrl;
-      webViewRef.current?.reload();
+      if (useAndroidExoHls) {
+        reloadNativePlayer();
+      } else {
+        webViewRef.current?.reload();
+      }
     } else if (!hasInitialStreamRef.current) {
       hasInitialStreamRef.current = true;
       prevStreamUrlRef.current = currentUrl;
     }
-  }, [streamWsUrl, streamHtmlUrl, webViewRef]);
+  }, [streamWsUrl, streamHtmlUrl, webViewRef, useAndroidExoHls, reloadNativePlayer]);
 
   useEffect(() => {
     if (!isLive || !streamWsUrl) return;
@@ -253,10 +351,68 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     return () => timers.forEach((t) => clearTimeout(t));
   }, [isLive, streamWsUrl, forceVideoPlay]);
 
-  const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
+  // Auto-reload every 3s if stream has no actual video data (black screen) or connection lost
+  useEffect(() => {
+    if (!streamHtmlUrl) return;
+    if (Platform.OS === 'android') return;
+
+    hasVideoDataRef.current = false;
+
+    const checkAndReload = () => {
+      webViewRef.current?.injectJavaScript(`
+        (function(){
+          try {
+            var hasData = false;
+            var video = document.querySelector('video');
+            var canvas = document.querySelector('canvas');
+            if (video && video.readyState >= 2 && video.videoWidth > 0) {
+              var c = document.createElement('canvas');
+              c.width = 16; c.height = 16;
+              var ctx = c.getContext('2d');
+              ctx.drawImage(video, 0, 0, 16, 16);
+              var d = ctx.getImageData(0, 0, 16, 16).data;
+              for (var i = 0; i < d.length; i += 4) {
+                if (d[i] > 5 || d[i+1] > 5 || d[i+2] > 5) { hasData = true; break; }
+              }
+            } else if (canvas && canvas.width > 0) {
+              var ctx2 = canvas.getContext('2d');
+              var d2 = ctx2.getImageData(0, 0, Math.min(canvas.width, 16), Math.min(canvas.height, 16)).data;
+              for (var j = 0; j < d2.length; j += 4) {
+                if (d2[j] > 5 || d2[j+1] > 5 || d2[j+2] > 5) { hasData = true; break; }
+              }
+            }
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'videoDataCheck', hasData: hasData}));
+          } catch(e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'videoDataCheck', hasData: false}));
+          }
+        })();
+        true;
+      `);
+    };
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const graceTimer = setTimeout(() => {
+      if (!hasVideoDataRef.current) checkAndReload();
+      intervalId = setInterval(() => {
+        if (!hasVideoDataRef.current) {
+          checkAndReload();
+        }
+      }, 3000);
+    }, 10000);
+
+    return () => {
+      clearTimeout(graceTimer);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [streamHtmlUrl, webViewRef]);
+
+  const INJECTED_JS = useMemo(
+    () => (Platform.OS === 'android' ? '' : getInjectedStreamPlayerJS('ios')),
+    []
+  );
 
   const inlineStreamSource = useMemo(() => {
-    if (!streamWsUrl) return null;
+    if (!streamWsUrl || Platform.OS === 'android') return null;
     const result = buildIOSStreamInlineHtml(streamWsUrl);
     return result.html ? result : null;
   }, [streamWsUrl]);
@@ -271,7 +427,7 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchLiveUrl]);
 
-  // Capture frame định kỳ khi live - lưu khung hình cuối trước khi bị gián đoạn
+  //Capture frames periodically during live-streaming - save the last frame before interruption.
   useEffect(() => {
     if (!isLive || !streamHtmlUrl) return;
     const interval = setInterval(async () => {
@@ -281,7 +437,13 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     return () => clearInterval(interval);
   }, [isLive, streamHtmlUrl, captureFrameFromWebView]);
 
-  // Xóa last frame khi stream live lại
+  useEffect(() => {
+    if (!isLive && lastFrameBase64 === null) {
+      captureFrameFromWebView().then((frame) => frame && setLastFrameBase64(frame));
+    }
+  }, [isLive, lastFrameBase64, captureFrameFromWebView]);
+
+  // Remove the last frame when resuming a live stream.
   useEffect(() => {
     if (isLive && lastFrameBase64 !== null) setLastFrameBase64(null);
   }, [isLive, lastFrameBase64]);
@@ -685,6 +847,18 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
     handleManualRetry();
   };
 
+  const onLivePreviewLayout = useCallback(
+    (e: { nativeEvent: { layout: { x: number; y: number; width: number; height: number } } }) => {
+      const { x, y, width, height } = e.nativeEvent.layout;
+      setLiveViewLayout((prev) =>
+        prev.x === x && prev.y === y && prev.width === width && prev.height === height
+          ? prev
+          : { x, y, width, height }
+      );
+    },
+    []
+  );
+
   const handleGoback = () => {
     showCommonAlert({
       title: t('detectionZone.endSetup'),
@@ -725,75 +899,128 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
         <View style={styles.body}>
           <View style={styles.previewContainer}>
             {streamHtmlUrl ? (
-              <WebView
-                key={`stream-${camera.id}`}
-                ref={webViewRef}
-                source={
-                  inlineStreamSource
-                    ? { html: inlineStreamSource.html, baseUrl: inlineStreamSource.baseUrl }
-                    : { uri: streamHtmlUrl }
-                }
-                style={styles.cameraPreview}
-                containerStyle={styles.webViewContainer}
-                javaScriptEnabled
-                domStorageEnabled
-                cacheEnabled={false}
-                mediaPlaybackRequiresUserAction={false}
-                allowsInlineMediaPlayback
-                allowsFullscreenVideo={false}
-                scrollEnabled={false}
-                bounces={false}
-                overScrollMode="never"
-                injectedJavaScript={INJECTED_JS}
-                allowsBackForwardNavigationGestures={false}
-                showsHorizontalScrollIndicator={false}
-                showsVerticalScrollIndicator={false}
-                startInLoadingState={false}
-                originWhitelist={['*']}
-                mixedContentMode="always"
-                setBuiltInZoomControls={false}
-                setSupportMultipleWindows={false}
-                mediaCapturePermissionGrantType="grant"
-                {...(Platform.OS === 'android' && {
-                  androidLayerType: 'hardware',
-                })}
-                {...(Platform.OS === 'ios' && {
-                  allowsAirPlayForMediaPlayback: false,
-                  dataDetectorTypes: 'none',
-                  decelerationRate: 'normal',
-                  useWebKit: true,
-                })}
-                onContentProcessDidTerminate={() => {
-                  webViewRef.current?.reload();
-                }}
-                onLoad={handleWebViewLoad}
-                onError={onWebViewError}
-                onHttpError={onWebViewHttpError}
-                onMessage={(event) => {
-                  try {
-                    const data = JSON.parse(event.nativeEvent.data);
-                    if (data.type === 'needReload') {
-                      webViewRef.current?.reload();
-                      return;
-                    }
-                    if (data.type === 'frameCaptured' && captureResolveRef.current) {
-                      captureResolveRef.current(data.data || '');
-                      return;
-                    }
-                  } catch {
-                    // ignore parse errors
+              useAndroidExoHls ? (
+                <View style={styles.videoPlayerRoot} onLayout={onLivePreviewLayout}>
+                  <View
+                    ref={androidVideoSurfaceRef}
+                    style={styles.videoNativeSurface}
+                    collapsable={false}
+                    pointerEvents="box-none"
+                  >
+                    <Video
+                      key={`exo-${camera.id}-${videoReloadKey}`}
+                      source={{ uri: hlsUrl, type: 'm3u8' }}
+                      style={StyleSheet.absoluteFill}
+                      resizeMode="cover"
+                      paused={false}
+                      muted
+                      controls={false}
+                      useTextureView
+                      ignoreSilentSwitch="ignore"
+                      playInBackground={false}
+                      allowsExternalPlayback={false}
+                      onLoad={() => markNativePlaybackConnected()}
+                      onError={(e) => {
+                        console.warn('[DetectionZone] ExoPlayer HLS error', e);
+                        markNativePlaybackFailed();
+                      }}
+                    />
+                  </View>
+                  <WebView
+                    key={`aux-wv-${camera.id}`}
+                    ref={webViewRef}
+                    source={{
+                      html: '<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head><body></body></html>',
+                      baseUrl: micWebViewBaseUrl,
+                    }}
+                    style={styles.micWebViewHidden}
+                    javaScriptEnabled
+                    domStorageEnabled
+                    mediaPlaybackRequiresUserAction={false}
+                    allowsInlineMediaPlayback
+                    mediaCapturePermissionGrantType="grant"
+                    originWhitelist={['*']}
+                    mixedContentMode="always"
+                    setSupportMultipleWindows={false}
+                    setBuiltInZoomControls={false}
+                    overScrollMode="never"
+                    userAgent="Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                    thirdPartyCookiesEnabled
+                    androidLayerType="none"
+                  />
+                </View>
+              ) : (
+                <WebView
+                  key={`stream-${camera.id}`}
+                  ref={webViewRef}
+                  source={
+                    inlineStreamSource
+                      ? { html: inlineStreamSource.html, baseUrl: inlineStreamSource.baseUrl }
+                      : { uri: streamHtmlUrl }
                   }
-                  handleWebViewMessage(event);
-                }}
-                onLayout={(e) => {
-                  const { x, y, width, height } = e.nativeEvent.layout;
-                  setLiveViewLayout((prev) =>
-                    prev.x === x && prev.y === y && prev.width === width && prev.height === height
-                      ? prev
-                      : { x, y, width, height }
-                  );
-                }}
-              />
+                  style={styles.cameraPreview}
+                  containerStyle={styles.webViewContainer}
+                  javaScriptEnabled
+                  domStorageEnabled
+                  cacheEnabled={false}
+                  mediaPlaybackRequiresUserAction={false}
+                  allowsInlineMediaPlayback
+                  allowsFullscreenVideo={false}
+                  scrollEnabled={false}
+                  bounces={false}
+                  overScrollMode="never"
+                  injectedJavaScript={INJECTED_JS}
+                  allowsBackForwardNavigationGestures={false}
+                  showsHorizontalScrollIndicator={false}
+                  showsVerticalScrollIndicator={false}
+                  startInLoadingState={false}
+                  originWhitelist={['*']}
+                  mixedContentMode="always"
+                  setBuiltInZoomControls={false}
+                  setSupportMultipleWindows={false}
+                  mediaCapturePermissionGrantType="grant"
+                  {...(Platform.OS === 'android' && {
+                    androidLayerType: 'hardware',
+                  })}
+                  {...(Platform.OS === 'ios' && {
+                    allowsAirPlayForMediaPlayback: false,
+                    dataDetectorTypes: 'none',
+                    decelerationRate: 'normal',
+                    useWebKit: true,
+                  })}
+                  onContentProcessDidTerminate={() => {
+                    webViewRef.current?.reload();
+                  }}
+                  onLoad={handleWebViewLoad}
+                  onError={onWebViewError}
+                  onHttpError={onWebViewHttpError}
+                  onMessage={(event) => {
+                    try {
+                      const data = JSON.parse(event.nativeEvent.data);
+                      if (data.type === 'needReload') {
+                        webViewRef.current?.reload();
+                        return;
+                      }
+                      if (data.type === 'frameCaptured' && captureResolveRef.current) {
+                        captureResolveRef.current(data.data || '');
+                        return;
+                      }
+                      if (data.type === 'videoDataCheck') {
+                        hasVideoDataRef.current = data.hasData;
+                        if (!data.hasData) {
+                          console.log('[DetectionZone] Black screen detected, auto-reloading...');
+                          fetchLiveUrl().then(() => handleManualRetry());
+                        }
+                        return;
+                      }
+                    } catch {
+                      // ignore parse errors
+                    }
+                    handleWebViewMessage(event);
+                  }}
+                  onLayout={onLivePreviewLayout}
+                />
+              )
             ) : (
               <View
                 style={[styles.cameraPreview, styles.loadingOverlay]}
@@ -945,16 +1172,20 @@ const DetectionZoneSetup: React.FC<Props> = ({ route, navigation }) => {
                   </View>
                 )}
               </View>
-              {!isLive && !isReconnecting && !showErrorOverlay && !fetchUrlError && (
-                <View style={styles.loadingIndicatorInOverlay} pointerEvents="none">
-                  <ActivityIndicator size="small" color="#FFF" />
-                  <Text style={styles.loadingText}>
-                    {!streamHtmlUrl
-                      ? t('bluetoothScreen.connecting')
-                      : t('liveStream.loadingStream')}
-                  </Text>
-                </View>
-              )}
+              {!isLive &&
+                !isReconnecting &&
+                !showErrorOverlay &&
+                !fetchUrlError &&
+                !lastFrameBase64 && (
+                  <View style={styles.loadingIndicatorInOverlay} pointerEvents="none">
+                    <ActivityIndicator size="small" color="#FFF" />
+                    <Text style={styles.loadingText}>
+                      {!streamHtmlUrl
+                        ? t('bluetoothScreen.connecting')
+                        : t('liveStream.loadingStream')}
+                    </Text>
+                  </View>
+                )}
               {isReconnecting && !showErrorOverlay && !fetchUrlError && (
                 <View style={styles.loadingIndicatorInOverlay} pointerEvents="none">
                   <ActivityIndicator size="small" color="#FFF" />

@@ -13,16 +13,16 @@ import { styles } from './Setting.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAppSelector, useAppDispatch } from '@redux/store';
-import { checkAuthAsync, setUser } from '@redux/slices/authSlice';
+import { checkAuthAsync, logout, setUser } from '@redux/slices/authSlice';
 import authService from '@/services/authService';
-import HomeBackgroundImage from '@assets/png/home-background.png';
+import HomeBackgroundImage from '@assets/webp/home-background.webp';
 import { HomeScreenNavigationProp } from '@navigation/types';
 import BackIcon from '@assets/svg/icon-back.svg';
 import LineSubscriptionService from '@/services/lineSubscriptionService';
 import lineAuthService from '@/services/lineAuthService';
 import Line from '@xmartlabs/react-native-line';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { setUserData } from '@utils/authStorage';
+import { removeAuthData, setUserData } from '@utils/authStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '@api/types/authTypes';
 
@@ -41,6 +41,7 @@ const Setting = () => {
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isUnsubscribing, setIsUnsubscribing] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const goBack = () => {
     navigation.goBack();
@@ -106,6 +107,14 @@ const Setting = () => {
   const loginAndSubscribe = async () => {
     try {
       const loginResult = await lineAuthService.signIn();
+      if (loginResult === 'cancelled') {
+        Alert.alert(
+          t('lineSubscription.returnedFromLineWithoutFinishingTitle'),
+          t('lineSubscription.returnedFromLineWithoutFinishingMessage'),
+          [{ text: t('common.ok') }]
+        );
+        return false;
+      }
       if (!loginResult) return false;
       if (!loginResult.idToken) {
         Alert.alert(t('common.error'), t('lineSubscription.failedToGetIdToken'));
@@ -257,6 +266,48 @@ const Setting = () => {
     navigation.navigate('ListFace', { type: '' });
   };
 
+  const deleteAccount = async () => {
+    if (!user?.id) {
+      Alert.alert(t('common.error'), t('setting.userIDDoesNotExist'));
+      return;
+    }
+    setIsDeletingAccount(true);
+    try {
+      const response = await authService.deleteUser();
+      if (response.data.success) {
+        Alert.alert(t('common.confirm'), t('setting.userDeletedSuccessfully'), [
+          {
+            text: t('common.ok'),
+            onPress: async () => {
+              await removeAuthData();
+              dispatch(logout());
+            },
+          },
+        ]);
+      } else {
+        Alert.alert(t('common.confirm'), t('setting.failedToDeleteUser'), [
+          {
+            text: t('common.ok'),
+          },
+        ]);
+      }
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(t('common.confirm'), t('setting.deleteAccountConfirmation'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.ok'),
+        onPress: async () => {
+          await deleteAccount();
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={styles.wrapper}>
       <ImageBackground
@@ -283,6 +334,13 @@ const Setting = () => {
                 <Text style={styles.settingText}>{t('faceUpload.title')}</Text>
               </View>
               <Icon name="chevron-right" size={24} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.lineButton, styles.unsubscribeButton]}
+              onPress={handleDeleteAccount}
+              disabled={isDeletingAccount}
+            >
+              <Text style={styles.buttonText}>{t('setting.deleteAccount')}</Text>
             </TouchableOpacity>
             {/* LINE Official Account Section */}
             <View style={styles.section}>
@@ -333,6 +391,11 @@ const Setting = () => {
           </ScrollView>
         </SafeAreaView>
       </ImageBackground>
+      {isDeletingAccount && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="white" />
+        </View>
+      )}
     </View>
   );
 };

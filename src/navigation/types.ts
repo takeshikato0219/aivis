@@ -64,7 +64,10 @@ export type AppStackParamList = {
   Setting: undefined;
   FaceUpload: { type: string };
   ConnectionSuccessful: { cameraData: Camera };
-  SettingAI: { camera: Camera };
+  SettingAI: {
+    camera: Camera;
+    latestFirmwareUpdate?: { description: string; id: string; version: string } | null;
+  };
   ListFace: { type: string };
   DetailFace: { memberId: string; relationships?: MemberRelationship[] };
   AiDetectionRules: { camera: Camera };
@@ -86,6 +89,12 @@ export type AppStackParamList = {
   };
   CustomerReport: { title: string; icon: string; cameraId: string; detected_at?: string };
   Policy: { type: string };
+  UpdateCamera:
+    | {
+        camera: Camera;
+        latestFirmwareUpdate?: { description: string; id: string; version: string } | null;
+      }
+    | undefined;
 };
 
 // ===== NAVIGATION PROPS =====

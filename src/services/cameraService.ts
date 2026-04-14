@@ -138,6 +138,13 @@ class CameraService {
     );
     return response.data;
   }
+
+  async updateVersionCamera(cameraId: string): Promise<any> {
+    const response = await axiosInstance.post(
+      `${API_ENDPOINTS.CAMERAS}/${cameraId}/update-firmware`
+    );
+    return response.data;
+  }
 }
 
 export default new CameraService();

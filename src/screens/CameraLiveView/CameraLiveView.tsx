@@ -15,6 +15,7 @@ import {
   AppState,
   AppStateStatus,
   Image,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
@@ -29,10 +30,15 @@ import { getStyles } from './CameraLiveView.styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LogoDetail from '@assets/svg/logo-detail.svg';
 import { useTranslation } from 'react-i18next';
+import Video from 'react-native-video';
+import { captureRef, captureScreen } from 'react-native-view-shot';
 import { WebView } from 'react-native-webview';
 import {
   buildIOSStreamInlineHtml,
   buildStreamHtmlUrl,
+  buildStreamHtmlUrlForAndroid,
+  buildHlsStreamUrlFromWs,
+  getStreamOriginBaseUrl,
   getInjectedStreamPlayerJS,
 } from '@utils/streamUtils';
 import { StreamQuality } from '@api/types/cameraTypes';
@@ -52,6 +58,8 @@ const CameraLiveView: React.FC = () => {
   const navigation = useNavigation<CameraLiveScreenNavigationProp>();
   const route = useRoute<CameraLiveScreenRouteProp>();
   const videoContainerRef = useRef<View>(null);
+  /** Android ExoPlayer surface — view-shot captures this wrapper (TextureView). */
+  const androidVideoSurfaceRef = useRef<View>(null);
   const captureResolveRef = useRef<((base64: string) => void) | null>(null);
   const hasInitialStreamRef = useRef(false);
   const prevStreamUrlRef = useRef<string>('');
@@ -74,12 +82,18 @@ const CameraLiveView: React.FC = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
   const [currentQuality, setCurrentQuality] = useState<StreamQuality>(STREAM_QUALITIES[2]);
-  const [timeExp, setTimeExp] = useState<string | null>(null);
+  const [expMinutes, setExpMinutes] = useState<number | null>(null);
   const [streamHtmlUrl, setStreamHtmlUrl] = useState('');
   const [micUrl, setMicUrl] = useState('');
   const [isTalkingDelayed, setIsTalkingDelayed] = useState(false);
   const [isMicProcessing, setIsMicProcessing] = useState(false);
   const [lastFrameBase64, setLastFrameBase64] = useState<string | null>(null);
+  const [videoReloadKey, setVideoReloadKey] = useState(0);
+
+  const isAndroidNativeHls = Platform.OS === 'android';
+  const reloadNativePlayer = useCallback(() => {
+    setVideoReloadKey((k) => k + 1);
+  }, []);
 
   // useLiveStream hook — auto-retry, heartbeat, NetInfo monitoring
   const {
@@ -93,7 +107,26 @@ const CameraLiveView: React.FC = () => {
     handleWebViewHttpError: onWebViewHttpError,
     handleManualRetry,
     handleWebViewMessage,
-  } = useLiveStream({ maxRetries: 5, heartbeatTimeout: 30000 });
+    markNativePlaybackConnected,
+    markNativePlaybackFailed,
+  } = useLiveStream({
+    maxRetries: 5,
+    heartbeatTimeout: 30000,
+    ...(isAndroidNativeHls && {
+      playbackSurface: 'native-hls' as const,
+      onReloadNativePlayer: reloadNativePlayer,
+    }),
+  });
+
+  const hlsUrl = useMemo(
+    () => (streamWsUrl ? buildHlsStreamUrlFromWs(streamWsUrl) : ''),
+    [streamWsUrl]
+  );
+  const micWebViewBaseUrl = useMemo(
+    () => (streamWsUrl ? getStreamOriginBaseUrl(streamWsUrl) : ''),
+    [streamWsUrl]
+  );
+  const useAndroidExoHls = isAndroidNativeHls && !!hlsUrl;
 
   const { micState, toggleMic, stopMic, handleMicMessage } = useMic({
     micUrl: micUrl,
@@ -120,6 +153,12 @@ const CameraLiveView: React.FC = () => {
 
   // Derive live status: only "connected" means truly live
   const isLive = connectionStatus === 'connected' && !!streamHtmlUrl && !isWebViewLoading;
+
+  useEffect(() => {
+    if (!isLive && isTalking) {
+      stopMic();
+    }
+  }, [isLive, isTalking, stopMic]);
 
   // Animation effect for quality modal
   useEffect(() => {
@@ -162,10 +201,13 @@ const CameraLiveView: React.FC = () => {
     try {
       const res = await cameraService.getLiveStreamUrl(cameraId);
       if (res.success && res.data) {
-        setTimeExp(res.data.time_exp);
+        setExpMinutes(res.data.exp_minutes ?? null);
         setStreamWsUrl(res.data.live_url);
         setMicUrl(res.data.mic || '');
-        const newHtmlUrl = buildStreamHtmlUrl(res.data.live_url);
+        const newHtmlUrl =
+          Platform.OS === 'android'
+            ? buildStreamHtmlUrlForAndroid(res.data.live_url)
+            : buildStreamHtmlUrl(res.data.live_url);
         setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
       }
     } catch (e) {
@@ -179,30 +221,48 @@ const CameraLiveView: React.FC = () => {
   }, [fetchLiveUrl]);
 
   useEffect(() => {
-    if (!timeExp) return;
-    const refreshMs = new Date(timeExp).getTime() - Date.now() - 2 * 60 * 1000;
-    if (refreshMs > 0) {
-      const timer = setTimeout(fetchLiveUrl, refreshMs);
-      return () => clearTimeout(timer);
-    }
-  }, [timeExp, fetchLiveUrl]);
+    if (!expMinutes || expMinutes <= 2) return;
+    const refreshMs = (expMinutes - 2) * 60 * 1000;
+    const timer = setTimeout(fetchLiveUrl, refreshMs);
+    return () => clearTimeout(timer);
+  }, [expMinutes, fetchLiveUrl]);
 
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const backgroundEnteredAtRef = useRef<number | null>(null);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
-        fetchLiveUrl().then(() => {
-          webViewRef.current?.reload();
-        });
+      const prev = appStateRef.current;
+
+      if (nextAppState === 'background') {
+        backgroundEnteredAtRef.current = Date.now();
       }
+
+      if (prev === 'background' && nextAppState === 'active') {
+        const entered = backgroundEnteredAtRef.current;
+        backgroundEnteredAtRef.current = null;
+        const msInBackground = entered != null ? Date.now() - entered : Infinity;
+        if (msInBackground >= 800) {
+          fetchLiveUrl().then(() => {
+            if (useAndroidExoHls) {
+              reloadNativePlayer();
+            } else {
+              webViewRef.current?.reload();
+            }
+          });
+        }
+      }
+
       appStateRef.current = nextAppState;
     });
     return () => {
       subscription.remove();
     };
-  }, [fetchLiveUrl, webViewRef]);
+  }, [fetchLiveUrl, webViewRef, useAndroidExoHls, reloadNativePlayer]);
 
   const forceVideoPlay = useCallback(() => {
+    if (useAndroidExoHls) {
+      return;
+    }
     webViewRef.current?.injectJavaScript(`
       (function(){
         var v = document.querySelector('video');
@@ -210,7 +270,7 @@ const CameraLiveView: React.FC = () => {
         true;
       })();
     `);
-  }, [webViewRef]);
+  }, [webViewRef, useAndroidExoHls]);
 
   useFocusEffect(
     useCallback(() => {
@@ -227,12 +287,16 @@ const CameraLiveView: React.FC = () => {
     if (!currentUrl) return;
     if (hasInitialStreamRef.current && prevStreamUrlRef.current !== currentUrl) {
       prevStreamUrlRef.current = currentUrl;
-      webViewRef.current?.reload();
+      if (useAndroidExoHls) {
+        reloadNativePlayer();
+      } else {
+        webViewRef.current?.reload();
+      }
     } else if (!hasInitialStreamRef.current) {
       hasInitialStreamRef.current = true;
       prevStreamUrlRef.current = currentUrl;
     }
-  }, [streamWsUrl, streamHtmlUrl, webViewRef]);
+  }, [streamWsUrl, streamHtmlUrl, webViewRef, useAndroidExoHls, reloadNativePlayer]);
 
   useEffect(() => {
     if (!isLive || !streamWsUrl) return;
@@ -241,10 +305,72 @@ const CameraLiveView: React.FC = () => {
     return () => timers.forEach((t) => clearTimeout(t));
   }, [isLive, streamWsUrl, forceVideoPlay]);
 
-  const INJECTED_JS = getInjectedStreamPlayerJS(Platform.OS as 'ios' | 'android');
+  // Auto-reload every 3s if stream has no actual video data (black screen)
+  const hasVideoDataRef = useRef(false);
+  useEffect(() => {
+    if (!streamHtmlUrl) return;
+    // Android hosted player: pixel checks are unreliable (WebGL/cross-origin); avoid reload thrash.
+    if (Platform.OS === 'android') return;
+
+    // Reset when stream URL changes
+    hasVideoDataRef.current = false;
+
+    const checkAndReload = () => {
+      // Inject JS to sample pixels from video/canvas
+      webViewRef.current?.injectJavaScript(`
+        (function(){
+          try {
+            var hasData = false;
+            var video = document.querySelector('video');
+            var canvas = document.querySelector('canvas');
+            if (video && video.readyState >= 2 && video.videoWidth > 0) {
+              var c = document.createElement('canvas');
+              c.width = 16; c.height = 16;
+              var ctx = c.getContext('2d');
+              ctx.drawImage(video, 0, 0, 16, 16);
+              var d = ctx.getImageData(0, 0, 16, 16).data;
+              for (var i = 0; i < d.length; i += 4) {
+                if (d[i] > 5 || d[i+1] > 5 || d[i+2] > 5) { hasData = true; break; }
+              }
+            } else if (canvas && canvas.width > 0) {
+              var ctx2 = canvas.getContext('2d');
+              var d2 = ctx2.getImageData(0, 0, Math.min(canvas.width, 16), Math.min(canvas.height, 16)).data;
+              for (var j = 0; j < d2.length; j += 4) {
+                if (d2[j] > 5 || d2[j+1] > 5 || d2[j+2] > 5) { hasData = true; break; }
+              }
+            }
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'videoDataCheck', hasData: hasData}));
+          } catch(e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({type:'videoDataCheck', hasData: false}));
+          }
+        })();
+        true;
+      `);
+    };
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const graceTimer = setTimeout(() => {
+      if (!hasVideoDataRef.current) checkAndReload();
+      intervalId = setInterval(() => {
+        if (!hasVideoDataRef.current) {
+          checkAndReload();
+        }
+      }, 3000);
+    }, 10000);
+
+    return () => {
+      clearTimeout(graceTimer);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [streamHtmlUrl, webViewRef]);
+
+  const streamPlayerInjectedJs = useMemo(
+    () => (Platform.OS === 'android' ? '' : getInjectedStreamPlayerJS('ios')),
+    []
+  );
 
   const inlineStreamSource = useMemo(() => {
-    if (!streamWsUrl) return null;
+    if (!streamWsUrl || Platform.OS === 'android') return null;
     const result = buildIOSStreamInlineHtml(streamWsUrl);
     return result.html ? result : null;
   }, [streamWsUrl]);
@@ -252,16 +378,18 @@ const CameraLiveView: React.FC = () => {
   const toggleMute = useCallback(() => {
     setIsMuted((prev) => {
       const next = !prev;
-      webViewRef.current?.injectJavaScript(`
+      if (!useAndroidExoHls) {
+        webViewRef.current?.injectJavaScript(`
       (function(){
         var muted = ${next};
         document.querySelectorAll('video').forEach(function(v){ v.muted = muted; });
         true;
       })();
     `);
+      }
       return next;
     });
-  }, [webViewRef]);
+  }, [webViewRef, useAndroidExoHls]);
 
   const requestFullscreen = () => {
     setIsFullscreen(true);
@@ -273,6 +401,35 @@ const CameraLiveView: React.FC = () => {
 
   const captureFrameFromWebView = useCallback((): Promise<string | null> => {
     return new Promise((resolve) => {
+      if (useAndroidExoHls) {
+        const timeout = setTimeout(() => resolve(null), 5000);
+        const finish = (data: string | null) => {
+          clearTimeout(timeout);
+          resolve(data);
+        };
+        const tryCapture = () => {
+          if (!androidVideoSurfaceRef.current) {
+            finish(null);
+            return;
+          }
+          captureRef(androidVideoSurfaceRef, {
+            format: 'jpg',
+            quality: 0.85,
+            result: 'data-uri',
+            handleGLSurfaceViewOnAndroid: true,
+          })
+            .then((dataUri) => {
+              if (dataUri && dataUri.length > 200) {
+                return dataUri;
+              }
+              return captureScreen({ format: 'jpg', quality: 0.85, result: 'data-uri' });
+            })
+            .then((uri) => finish(uri && uri.length > 80 ? uri : null))
+            .catch(() => finish(null));
+        };
+        requestAnimationFrame(() => tryCapture());
+        return;
+      }
       if (!webViewRef.current) {
         resolve(null);
         return;
@@ -316,7 +473,7 @@ const CameraLiveView: React.FC = () => {
         true;
       `);
     });
-  }, [webViewRef]);
+  }, [webViewRef, useAndroidExoHls]);
 
   useEffect(() => {
     if (!isLive || !streamHtmlUrl) return;
@@ -393,7 +550,7 @@ const CameraLiveView: React.FC = () => {
   }, [t, captureFrameFromWebView]);
 
   const toggleTalk = useCallback(async () => {
-    if (isMicProcessing) return;
+    if (isMicProcessing || !isLive) return;
     setIsMicProcessing(true);
     try {
       const micPermission = await checkMicPermission();
@@ -426,7 +583,7 @@ const CameraLiveView: React.FC = () => {
     } finally {
       setIsMicProcessing(false);
     }
-  }, [toggleMic, t, isMicProcessing]);
+  }, [toggleMic, t, isMicProcessing, isLive]);
 
   const closeQualityModal = () => {
     setIsAnimating(false);
@@ -573,73 +730,140 @@ const CameraLiveView: React.FC = () => {
 
   const renderVideoPlayer = () => {
     return (
-      <View style={styles.videoContainer}>
+      <View style={styles.videoPlayerRoot}>
         {streamHtmlUrl ? (
           <>
-            <WebView
-              key={`stream-${cameraId}`}
-              ref={webViewRef}
-              source={
-                inlineStreamSource
-                  ? { html: inlineStreamSource.html, baseUrl: inlineStreamSource.baseUrl }
-                  : { uri: streamHtmlUrl }
-              }
-              style={styles.videoContainer}
-              javaScriptEnabled
-              domStorageEnabled
-              cacheEnabled={false}
-              mediaPlaybackRequiresUserAction={false}
-              allowsInlineMediaPlayback
-              allowsFullscreenVideo={false}
-              scrollEnabled={false}
-              bounces={false}
-              overScrollMode="never"
-              injectedJavaScript={INJECTED_JS}
-              allowsBackForwardNavigationGestures={false}
-              showsHorizontalScrollIndicator={false}
-              showsVerticalScrollIndicator={false}
-              startInLoadingState={false}
-              originWhitelist={['*']}
-              mixedContentMode="always"
-              setBuiltInZoomControls={false}
-              setSupportMultipleWindows={false}
-              mediaCapturePermissionGrantType="grant"
-              {...(Platform.OS === 'android' && {
-                androidLayerType: 'hardware',
-              })}
-              {...(Platform.OS === 'ios' && {
-                allowsAirPlayForMediaPlayback: false,
-                dataDetectorTypes: 'none',
-                decelerationRate: 'normal',
-                useWebKit: true,
-              })}
-              onContentProcessDidTerminate={() => {
-                webViewRef.current?.reload();
-              }}
-              onLoad={handleWebViewLoad}
-              onError={onWebViewError}
-              onHttpError={onWebViewHttpError}
-              onMessage={(event) => {
-                try {
-                  const data = JSON.parse(event.nativeEvent.data);
-                  if (data.type === 'frameCaptured' && captureResolveRef.current) {
-                    captureResolveRef.current(data.data || '');
-                    return;
-                  }
-                  if (data.type === '__mic_state') {
-                    handleMicMessage(data);
-                    return;
-                  }
-                  if (data.type === 'needReload') {
-                    webViewRef.current?.reload();
-                    return;
-                  }
-                } catch {
-                  // ignore parse errors
+            {useAndroidExoHls ? (
+              <>
+                <View
+                  ref={androidVideoSurfaceRef}
+                  style={styles.videoNativeSurface}
+                  collapsable={false}
+                  pointerEvents="box-none"
+                >
+                  <Video
+                    key={`exo-${cameraId}-${videoReloadKey}`}
+                    source={{ uri: hlsUrl, type: 'm3u8' }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode="cover"
+                    paused={false}
+                    muted={isMuted}
+                    controls={false}
+                    useTextureView
+                    ignoreSilentSwitch="ignore"
+                    playInBackground={false}
+                    allowsExternalPlayback={false}
+                    onLoad={() => markNativePlaybackConnected()}
+                    onError={(e) => {
+                      console.warn('[CameraLive] ExoPlayer HLS error', e);
+                      markNativePlaybackFailed();
+                    }}
+                  />
+                </View>
+                <WebView
+                  key={`mic-wv-${cameraId}`}
+                  ref={webViewRef}
+                  source={{
+                    html: '<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head><body></body></html>',
+                    baseUrl: micWebViewBaseUrl,
+                  }}
+                  style={styles.micWebViewHidden}
+                  javaScriptEnabled
+                  domStorageEnabled
+                  mediaPlaybackRequiresUserAction={false}
+                  allowsInlineMediaPlayback
+                  mediaCapturePermissionGrantType="grant"
+                  originWhitelist={['*']}
+                  mixedContentMode="always"
+                  setSupportMultipleWindows={false}
+                  setBuiltInZoomControls={false}
+                  overScrollMode="never"
+                  userAgent="Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                  thirdPartyCookiesEnabled
+                  androidLayerType="none"
+                  onMessage={(event) => {
+                    try {
+                      const data = JSON.parse(event.nativeEvent.data);
+                      if (data.type === '__mic_state') {
+                        handleMicMessage(data);
+                      }
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                />
+              </>
+            ) : (
+              <WebView
+                key={`stream-${cameraId}`}
+                ref={webViewRef}
+                source={
+                  inlineStreamSource
+                    ? { html: inlineStreamSource.html, baseUrl: inlineStreamSource.baseUrl }
+                    : { uri: streamHtmlUrl }
                 }
-                handleWebViewMessage(event);
-              }}
-            />
+                style={styles.videoContainer}
+                javaScriptEnabled
+                domStorageEnabled
+                cacheEnabled={false}
+                mediaPlaybackRequiresUserAction={false}
+                allowsInlineMediaPlayback
+                allowsFullscreenVideo={false}
+                scrollEnabled={false}
+                bounces={false}
+                overScrollMode="never"
+                injectedJavaScript={streamPlayerInjectedJs}
+                allowsBackForwardNavigationGestures={false}
+                showsHorizontalScrollIndicator={false}
+                showsVerticalScrollIndicator={false}
+                startInLoadingState={false}
+                originWhitelist={['*']}
+                mixedContentMode="always"
+                setBuiltInZoomControls={false}
+                setSupportMultipleWindows={false}
+                mediaCapturePermissionGrantType="grant"
+                {...(Platform.OS === 'ios' && {
+                  allowsAirPlayForMediaPlayback: false,
+                  dataDetectorTypes: 'none',
+                  decelerationRate: 'normal',
+                  useWebKit: true,
+                })}
+                onContentProcessDidTerminate={() => {
+                  webViewRef.current?.reload();
+                }}
+                onLoad={handleWebViewLoad}
+                onError={onWebViewError}
+                onHttpError={onWebViewHttpError}
+                onMessage={(event) => {
+                  try {
+                    const data = JSON.parse(event.nativeEvent.data);
+                    if (data.type === 'frameCaptured' && captureResolveRef.current) {
+                      captureResolveRef.current(data.data || '');
+                      return;
+                    }
+                    if (data.type === '__mic_state') {
+                      handleMicMessage(data);
+                      return;
+                    }
+                    if (data.type === 'needReload') {
+                      webViewRef.current?.reload();
+                      return;
+                    }
+                    if (data.type === 'videoDataCheck') {
+                      hasVideoDataRef.current = data.hasData;
+                      if (!data.hasData) {
+                        console.log('Black screen detected, auto-reloading stream...');
+                        fetchLiveUrl().then(() => handleManualRetry());
+                      }
+                      return;
+                    }
+                  } catch {
+                    // ignore parse errors
+                  }
+                  handleWebViewMessage(event);
+                }}
+              />
+            )}
             {/* Show last frame when stream is not live */}
             {!isLive && lastFrameBase64 && (
               <View
@@ -824,13 +1048,22 @@ const CameraLiveView: React.FC = () => {
                 <View style={styles.topLeft}>
                   <View style={[styles.liveIndicator, !isLive && styles.offlineIndicator]}>
                     <View style={[styles.liveRedDot, !isLive && styles.offlineDot]} />
-                    <Text style={styles.liveText}>{isLive ? 'Live' : 'Offline'}</Text>
+                    <Text style={styles.liveText}>{isLive ? 'Live' : t('common.loading')}</Text>
                   </View>
                 </View>
 
-                <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                  <Icon name="close" size={24} color="#FFF" />
-                </TouchableOpacity>
+                <View style={styles.reconnectStyle}>
+                  <TouchableOpacity
+                    style={styles.controlButtonFullscreen}
+                    onPress={handleReconnect}
+                  >
+                    <Icon name="reload" size={22} color="#FFF" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+                    <Icon name="close" size={24} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Fullscreen Right Controls */}
@@ -852,16 +1085,21 @@ const CameraLiveView: React.FC = () => {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.mainButton}
+                  style={[styles.mainButton, !isLive && styles.mainButtonDisabled]}
                   onPress={toggleTalk}
-                  disabled={isMicProcessing}
+                  disabled={isMicProcessing || !isLive}
                 >
-                  <View style={[styles.iconCircle, isTalkingDelayed && styles.iconCircleActive]}>
+                  <View
+                    style={[
+                      styles.iconCircleFullScreen,
+                      isTalkingDelayed && styles.iconCircleActive,
+                    ]}
+                  >
                     <View style={styles.micIconRow}>
                       {isTalking && !isTalkingDelayed ? (
                         <ActivityIndicator size="small" color="#44ef52" />
                       ) : (
-                        <Icon name="microphone" size={28} color="#FFF" />
+                        <Icon name="microphone" size={22} color={isLive ? '#FFF' : '#666'} />
                       )}
                     </View>
                   </View>
@@ -900,10 +1138,13 @@ const CameraLiveView: React.FC = () => {
             <View style={styles.topLeft}>
               <View style={[styles.liveIndicator, !isLive && styles.offlineIndicator]}>
                 <View style={[styles.liveRedDot, !isLive && styles.offlineDot]} />
-                <Text style={styles.liveText}>{isLive ? 'Live' : 'Offline'}</Text>
+                <Text style={styles.liveText}>{isLive ? 'Live' : t('common.loading')}</Text>
               </View>
             </View>
             <View style={styles.hdStyle}>
+              <TouchableOpacity style={styles.reloadButton} onPress={handleReconnect}>
+                <Icon name="reload" size={22} color="#FFF" />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                 <Icon name="close" size={24} color="#FFF" />
               </TouchableOpacity>
@@ -932,13 +1173,17 @@ const CameraLiveView: React.FC = () => {
           <Text style={styles.mainButtonText}>{t('cameraLive.video')}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.mainButton} onPress={toggleTalk} disabled={isMicProcessing}>
+        <TouchableOpacity
+          style={[styles.mainButton, !isLive && styles.mainButtonDisabled]}
+          onPress={toggleTalk}
+          disabled={isMicProcessing || !isLive}
+        >
           <View style={[styles.iconCircle, isTalkingDelayed && styles.iconCircleActive]}>
             <View style={styles.micIconRow}>
               {isTalking && !isTalkingDelayed ? (
                 <ActivityIndicator size="small" color="#44ef52" />
               ) : (
-                <Icon name="microphone" size={28} color="#FFF" />
+                <Icon name="microphone" size={28} color={isLive ? '#FFF' : '#666'} />
               )}
             </View>
           </View>

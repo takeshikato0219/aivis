@@ -116,6 +116,7 @@ export const styles = StyleSheet.create({
   },
   unsubscribeButton: {
     backgroundColor: '#FF6B6B',
+    marginBottom: 10,
   },
   buttonText: {
     color: 'white',
@@ -146,5 +147,12 @@ export const styles = StyleSheet.create({
   },
   marginLine: {
     marginTop: 8,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
   },
 });

@@ -4,7 +4,7 @@ import { Text, Card, List } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppSetup } from '@hooks/useAppSetup';
 import { styles } from './Notifications.styles';
-import HomeBackgroundImage from '@assets/png/home-background.png';
+import HomeBackgroundImage from '@assets/webp/home-background.webp';
 import BackIcon from '@assets/svg/icon-back.svg';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -206,7 +206,7 @@ const Notifications = () => {
                   const onPress = () => {
                     if (!item.is_seen) handleMarkAsRead(item.id);
                     if (isDailyPasserby) {
-                      const dateValue = item.sent_at || item.created_at;
+                      const dateValue = item.created_at;
                       const detectedAt = dateValue
                         ? new Date(dateValue).toISOString().slice(0, 10)
                         : undefined;
@@ -217,7 +217,7 @@ const Notifications = () => {
                         detected_at: detectedAt,
                       });
                     } else {
-                      const dateValue = item.sent_at || item.created_at;
+                      const dateValue = item.created_at;
                       const detectedAt = dateValue
                         ? new Date(dateValue).toISOString().slice(0, 10)
                         : undefined;
@@ -240,11 +240,7 @@ const Notifications = () => {
                       <Card.Content>
                         <List.Item
                           title={item.message}
-                          description={
-                            item.sent_at || item.created_at
-                              ? new Date(item.sent_at || item.created_at).toLocaleString()
-                              : ''
-                          }
+                          description={new Date(item.created_at).toLocaleString()}
                           onPress={onPress}
                         />
                       </Card.Content>

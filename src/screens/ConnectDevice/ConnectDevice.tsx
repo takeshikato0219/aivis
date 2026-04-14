@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ConnectDeviceScreenNavigationProp } from '@navigation/types';
 import { SerializableDevice } from '@redux/slices/bleSlice';
-import HomeBackgroundImage from '@assets/png/home-background.png';
+import HomeBackgroundImage from '@assets/webp/home-background.webp';
 import BackIcon from '@assets/svg/icon-back.svg';
 import BluetoothIcon from '@assets/svg/bluetooth-icon.svg';
 import { styles } from './ConnectDevice.styles';
