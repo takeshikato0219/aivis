@@ -39,7 +39,6 @@ Tài liệu mô tả từng màn hình theo codebase hiện tại (mã nguồn m
 |----------|-----------|
 | Kết nối thiết bị (quét BLE) | [ConnectDevice.md](./ConnectDevice.md) |
 | Mã ghép đôi | [PairingCode.md](./PairingCode.md) |
-| Hotspot Wi‑Fi camera | [ConnectWifiHotspot.md](./ConnectWifiHotspot.md) |
 | Thiết lập mạng (Wi‑Fi / LAN / LTE) | [NetworkSetup.md](./NetworkSetup.md) |
 | Kết nối thành công | [ConnectionSuccessful.md](./ConnectionSuccessful.md) |
 

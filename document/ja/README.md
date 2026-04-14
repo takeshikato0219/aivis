@@ -39,7 +39,6 @@
 |------|----------------|
 | デバイス接続（BLE スキャン） | [ConnectDevice.md](./ConnectDevice.md) |
 | ペアリングコード | [PairingCode.md](./PairingCode.md) |
-| カメラ Wi‑Fi ホットスポット | [ConnectWifiHotspot.md](./ConnectWifiHotspot.md) |
 | ネットワーク設定（Wi‑Fi / LAN / LTE） | [NetworkSetup.md](./NetworkSetup.md) |
 | 接続成功 | [ConnectionSuccessful.md](./ConnectionSuccessful.md) |
 
