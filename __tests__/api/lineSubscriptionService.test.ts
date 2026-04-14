@@ -19,7 +19,8 @@ jest.mock('@/i18n', () => ({
         'lineSubscription.subscribeSuccessAlertTitle': 'Subscription Successful',
         'lineSubscription.subscriptionSuccess': 'Successfully subscribed to LINE Official Account',
         'lineSubscription.subscribeFailedTitle': 'Subscription Failed',
-        'lineSubscription.subscribeFailedMessage': 'Unable to subscribe to LINE Official Account. Please try again.',
+        'lineSubscription.subscribeFailedMessage':
+          'Unable to subscribe to LINE Official Account. Please try again.',
         'common.ok': 'OK',
       };
       return map[key] || key;

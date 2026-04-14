@@ -19,7 +19,6 @@ import ChangePassword from '@screens/ChangePassword/ChangePassword';
 import DetectionZoneSetup from '@screens/DetectionZoneSetup/DetectionZoneSetup';
 import ConnectDevice from '@screens/ConnectDevice/ConnectDevice';
 import PairingCode from '@screens/PairingCode/PairingCode';
-import ConnectWifiHotspot from '@screens/ConnectWifiHotspot/ConnectWifiHotspot';
 import NetworkSetup from '@screens/NetworkSetup/NetworkSetup';
 import Setting from '@screens/Setting/Setting';
 import FaceUpload from '@screens/FaceUpload/FaceUpload';
@@ -161,13 +160,6 @@ const AppNavigator = () => {
           options={{
             headerShown: false,
             gestureEnabled: false,
-          }}
-        />
-        <Stack.Screen
-          name="ConnectWifiHotspot"
-          component={ConnectWifiHotspot}
-          options={{
-            headerShown: false,
           }}
         />
         <Stack.Screen

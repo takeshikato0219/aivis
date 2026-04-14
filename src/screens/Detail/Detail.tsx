@@ -306,6 +306,7 @@ const Detail = () => {
       getRulesMaster();
       getModes();
       getDetail();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [camera.id, getDetail])
   );
 

@@ -62,18 +62,14 @@ describe('streamUtils', () => {
       const wsUrl = 'ws://localhost:8554/api/ws?src=mycam&token=xyz';
       const result = buildStreamHtmlUrl(wsUrl);
 
-      expect(result).toBe(
-        'http://localhost:8554/stream.html?src=mycam&mode=mse,hls&autoplay=true'
-      );
+      expect(result).toBe('http://localhost:8554/stream.html?src=mycam&mode=mse,hls&autoplay=true');
     });
 
     it('should default src to "camera" when src param is missing', () => {
       const wsUrl = 'wss://example.com/api/ws?token=abc';
       const result = buildStreamHtmlUrl(wsUrl);
 
-      expect(result).toBe(
-        'https://example.com/stream.html?src=camera&mode=mse,hls&autoplay=true'
-      );
+      expect(result).toBe('https://example.com/stream.html?src=camera&mode=mse,hls&autoplay=true');
     });
 
     it('should encode special characters in src param', () => {
