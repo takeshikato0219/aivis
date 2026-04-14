@@ -1,4 +1,62 @@
 /**
+ * Read a query value from a full ws/http(s) URL without using `URLSearchParams` alone.
+ * Some React Native / Hermes builds truncate base64 padding (`=`, `==`) when using
+ * `searchParams.get('token')` on long JWT-like values.
+ *
+ * @param urlString - e.g. `wss://host/api/ws?src=camera&token=eyJ...ifQ==`
+ */
+export function getQueryParamFromUrl(urlString: string, key: string): string | null {
+  if (!urlString || !key) return null;
+  const q = urlString.indexOf('?');
+  if (q < 0) return null;
+  const hashIdx = urlString.indexOf('#', q + 1);
+  const query = urlString.slice(q + 1, hashIdx === -1 ? undefined : hashIdx);
+  const prefix = `${key}=`;
+  const segments = query.split('&');
+  for (const seg of segments) {
+    if (seg.startsWith(prefix)) {
+      const raw = seg.slice(prefix.length);
+      try {
+        return decodeURIComponent(raw.replace(/\+/g, ' '));
+      } catch {
+        return raw;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Raw `token` value as in API `live_url` (substring after `token=` until `&` or end), **not** passed through
+ * `encodeURIComponent`. Some servers require literal `==` padding; `encodeURIComponent` turns `=` into `%3D`
+ * and breaks those backends.
+ */
+export function getRawTokenValueFromUrl(urlString: string): string | null {
+  if (!urlString) return null;
+  const q = urlString.indexOf('?');
+  if (q < 0) return null;
+  const hashIdx = urlString.indexOf('#', q + 1);
+  const query = urlString.slice(q + 1, hashIdx === -1 ? undefined : hashIdx);
+  const m = query.match(/(?:^|&)token=([^&]*)/);
+  return m ? m[1] : null;
+}
+
+/** Decode token for base64/JWT checks (`+`, `%XX`, etc.). */
+export function decodeStreamTokenFromUrlValue(raw: string): string {
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, ' '));
+  } catch {
+    return raw;
+  }
+}
+
+function appendTokenQueryFromLiveUrl(wsUrl: string): string {
+  const raw = getRawTokenValueFromUrl(wsUrl);
+  if (raw == null || raw === '') return '';
+  return `&token=${raw}`;
+}
+
+/**
  * Build stream URL from RTSP URL
  * @param rtspUrl - RTSP URL or full HTTP/HTTPS URL
  * @returns Formatted stream URL
@@ -35,11 +93,50 @@ export const buildStreamHtmlUrl = (wsUrl?: string): string => {
 };
 
 /**
- * Sinh ra injectedJavaScript cho WebView stream player.
- * Ẩn logo, progress, thời gian, chỉ giữ video/canvas full-screen.
- * Android: hiện native controls. iOS: ẩn controls, hiện custom mute button.
- * @param platform 'ios' | 'android'
+ * Android WebView / fallback: full mode list + optional token (same query as WS) so stream.html can negotiate webrtc/mjpeg.
+ * @platform android — use from CameraLiveView fetch only; iOS keeps {@link buildStreamHtmlUrl}.
  */
+export const buildStreamHtmlUrlForAndroid = (wsUrl?: string): string => {
+  if (!wsUrl) return '';
+  try {
+    const httpUrl = wsUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+    const parsed = new URL(httpUrl);
+    const src = parsed.searchParams.get('src') || 'camera';
+    const baseUrl = `${parsed.protocol}//${parsed.host}`;
+    const tokenQs = appendTokenQueryFromLiveUrl(wsUrl);
+    return `${baseUrl}/stream.html?src=${encodeURIComponent(src)}&mode=webrtc,mse,hls,mjpeg&autoplay=true${tokenQs}`;
+  } catch {
+    return '';
+  }
+};
+
+/** HLS playlist URL (ExoPlayer / AVPlayer) — same path as inline player fallback. */
+export function buildHlsStreamUrlFromWs(wsUrl: string): string {
+  if (!wsUrl) return '';
+  try {
+    const httpUrl = wsUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+    const parsed = new URL(httpUrl);
+    const src = parsed.searchParams.get('src') || 'camera';
+    const baseUrl = `${parsed.protocol}//${parsed.host}`;
+    const tokenQs = appendTokenQueryFromLiveUrl(wsUrl);
+    return `${baseUrl}/api/stream.m3u8?src=${encodeURIComponent(src)}${tokenQs}`;
+  } catch {
+    return '';
+  }
+}
+
+/** HTTPS origin for WebView baseUrl (mic getUserMedia needs secure context). */
+export function getStreamOriginBaseUrl(wsUrl: string): string {
+  if (!wsUrl) return '';
+  try {
+    const httpUrl = wsUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+    const parsed = new URL(httpUrl);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return '';
+  }
+}
+
 export function getInjectedStreamPlayerJS(platform: 'ios' | 'android'): string {
   return `(function(){
     var isIOS = ${platform === 'ios'};
@@ -260,9 +357,8 @@ export function buildIOSStreamInlineHtml(wsUrl: string): { html: string; baseUrl
     return { html: '', baseUrl: '' };
   }
   const src = parsed.searchParams.get('src') || 'camera';
-  const token = parsed.searchParams.get('token') || '';
   const baseUrl = `${parsed.protocol}//${parsed.host}`;
-  const hlsUrl = `${baseUrl}/api/stream.m3u8?src=${encodeURIComponent(src)}${token ? '&token=' + encodeURIComponent(token) : ''}`;
+  const hlsUrl = `${baseUrl}/api/stream.m3u8?src=${encodeURIComponent(src)}${appendTokenQueryFromLiveUrl(wsUrl)}`;
 
   const html = `<!DOCTYPE html>
 <html>
@@ -367,7 +463,7 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
   function tryHLS() {
     sendRN('protocol', { protocol: 'hls' });
     sendRN('buffering');
-    video.src = '${hlsUrl}';
+    video.src = ${JSON.stringify(hlsUrl)};
     video.muted = true;
     video.play().catch(function(){});
   }
@@ -383,7 +479,8 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
 
     sendRN('protocol', { protocol: 'mse' });
 
-    var MSClass = window.MediaSource;
+    // Android 12+ Chromium / WebView: ManagedMediaSource is preferred for live MSE (background + codec path).
+    var MSClass = window.ManagedMediaSource || window.MediaSource;
     if (!MSClass) {
       tryHLS();
       return;
@@ -391,7 +488,7 @@ video::-webkit-media-controls-volume-slider{display:none!important;}
 
     try {
       var connectTS = Date.now();
-      var wsUrl = '${wsUrl}';
+      var wsUrl = ${JSON.stringify(wsUrl)};
       var ws = new WebSocket(wsUrl);
       ws.binaryType = 'arraybuffer';
       _currentWs = ws;

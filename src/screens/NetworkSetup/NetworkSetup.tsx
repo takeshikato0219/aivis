@@ -2,7 +2,6 @@ import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   ImageBackground,
   Keyboard,
   StatusBar,
@@ -11,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WifiIcon from '@assets/svg/wifi-vector.svg';
 import LanIcon from '@assets/svg/ethernet-port.svg';
@@ -415,43 +415,51 @@ const NetworkSetup: React.FC = () => {
               ))}
             </View>
 
-            {/* Main Content Area */}
-            <View style={styles.contentContainer}>
-              {/* WiFi Tab Content */}
-              {activeTab === 'wifi' && (
-                <>
-                  <Text style={styles.availableTitle}>{t('networkSetup.availableNetworks')}</Text>
-                  {bleConnected ? (
-                    <>
-                      <TouchableOpacity
-                        style={styles.rescanButton}
-                        onPress={() => scanWifi(true)}
-                        disabled={wifiScanStatus === 1}
-                      >
-                        <Text
-                          style={[
-                            styles.rescanText,
-                            wifiScanStatus === 1
-                              ? styles.rescanTextScanning
-                              : styles.rescanTextActive,
-                          ]}
-                        >
-                          {wifiScanStatus === 1
-                            ? t('networkSetup.scanning')
-                            : t('networkSetup.rescan')}
-                        </Text>
-                      </TouchableOpacity>
+            {/* WiFi Tab – KeyboardAwareScrollView auto-scrolls to focused input */}
+            {activeTab === 'wifi' && (
+              <KeyboardAwareScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.wifiScrollContent}
+                enableOnAndroid
+                extraScrollHeight={80}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.availableTitle}>{t('networkSetup.availableNetworks')}</Text>
 
-                      {wifiScanStatus === 1 ? (
-                        <ActivityIndicator style={styles.scanningIndicator} size="large" />
-                      ) : (
-                        <FlatList
-                          data={getCurrentWifiList()}
-                          keyExtractor={(item) => item.id}
-                          contentContainerStyle={styles.paddingBottomFlatList}
-                          style={styles.listStyle}
-                          renderItem={({ item }) => (
+                {bleConnected ? (
+                  <>
+                    <TouchableOpacity
+                      style={styles.rescanButton}
+                      onPress={() => scanWifi(true)}
+                      disabled={wifiScanStatus === 1}
+                    >
+                      <Text
+                        style={[
+                          styles.rescanText,
+                          wifiScanStatus === 1
+                            ? styles.rescanTextScanning
+                            : styles.rescanTextActive,
+                        ]}
+                      >
+                        {wifiScanStatus === 1
+                          ? t('networkSetup.scanning')
+                          : t('networkSetup.rescan')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {wifiScanStatus === 1 ? (
+                      <ActivityIndicator style={styles.scanningIndicator} size="large" />
+                    ) : (
+                      <View style={styles.wifiListContainer}>
+                        {getCurrentWifiList().length === 0 ? (
+                          <Text style={styles.emptyWifiText}>
+                            {t('networkSetup.noAvailableWifi')}
+                          </Text>
+                        ) : (
+                          getCurrentWifiList().map((item) => (
                             <TouchableOpacity
+                              key={item.id}
                               style={[
                                 styles.networkItem,
                                 item.id === selectedWifi?.id && styles.networkItemActive,
@@ -476,56 +484,108 @@ const NetworkSetup: React.FC = () => {
                               </View>
                               {item.id === selectedWifi?.id && <CheckIcon height={22} width={22} />}
                             </TouchableOpacity>
-                          )}
-                          ListEmptyComponent={
-                            wifiScanStatus !== 1 ? (
-                              <Text style={styles.emptyWifiText}>
-                                {t('networkSetup.noAvailableWifi')}
-                              </Text>
-                            ) : null
-                          }
-                        />
-                      )}
-
-                      {selectedWifi && selectedWifi.secure && (
-                        <View style={styles.passwordSection}>
-                          <Text style={styles.passLabel}>
-                            {t('networkSetup.passwordFor')} "{selectedWifi?.name}"
-                          </Text>
-                          <TextInput
-                            value={passwordInput.value}
-                            onChangeText={passwordInput.handleChange}
-                            icon={LockIconComponent}
-                            secureTextEntry
-                            placeholder={t('auth.placeHolderPassword')}
-                            autoCapitalize="none"
-                            autoComplete="password"
-                            disabled={isLoading}
-                            error={!!passwordInput.error}
-                            style={styles.input}
-                            testID="password-input"
-                            placeholderTextColor={COLORS.BBBBBB}
-                          />
-                        </View>
-                      )}
-                    </>
-                  ) : (
-                    <View style={styles.iosWifiContainer}>
-                      <Text style={styles.iosWifiInstruction}>
-                        {t(
-                          'networkSetup.pleaseConnectToDeviceViaBluetoothFirstToScanAndConfigureWiFiNetworks'
+                          ))
                         )}
-                      </Text>
-                      <Text style={styles.iosCurrentWifiText}>
-                        {t('networkSetup.bluetoothConnectionRequired')}
-                      </Text>
-                    </View>
-                  )}
-                </>
-              )}
+                      </View>
+                    )}
 
-              {activeTab === 'lan' && (
-                <View style={styles.container}>
+                    {selectedWifi && selectedWifi.secure && (
+                      <View style={styles.passwordSection}>
+                        <Text style={styles.passLabel}>
+                          {t('networkSetup.passwordFor')} "{selectedWifi?.name}"
+                        </Text>
+                        <TextInput
+                          value={passwordInput.value}
+                          onChangeText={passwordInput.handleChange}
+                          icon={LockIconComponent}
+                          secureTextEntry
+                          placeholder={t('auth.placeHolderPassword')}
+                          autoCapitalize="none"
+                          autoComplete="password"
+                          disabled={isLoading}
+                          error={!!passwordInput.error}
+                          style={styles.input}
+                          testID="password-input"
+                          placeholderTextColor={COLORS.BBBBBB}
+                        />
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <View style={styles.iosWifiContainer}>
+                    <Text style={styles.iosWifiInstruction}>
+                      {t(
+                        'networkSetup.pleaseConnectToDeviceViaBluetoothFirstToScanAndConfigureWiFiNetworks'
+                      )}
+                    </Text>
+                    <Text style={styles.iosCurrentWifiText}>
+                      {t('networkSetup.bluetoothConnectionRequired')}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Bottom Section inside scroll so button is always reachable */}
+                <View style={styles.wifiBottomSection}>
+                  <View style={styles.divider} />
+                  <View style={styles.systemCheck}>
+                    <Text style={styles.progressLabel}>
+                      {t('networkSetup.systemCheck')}{' '}
+                      <Text style={styles.inProgress}>{t('networkSetup.inProgress')}</Text>
+                    </Text>
+                    <View style={styles.progressBarBg}>
+                      <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
+                    </View>
+                    <Text style={styles.checkDescription}>
+                      {t('networkSetup.checkingInternetConnection')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.connectBtn,
+                      (!bleConnected ||
+                        connecting ||
+                        wifiScanStatus === 1 ||
+                        !selectedWifi ||
+                        (selectedWifi?.secure &&
+                          (!passwordInput.value || !!passwordInput.error))) &&
+                        styles.connectBtnDisabled,
+                    ]}
+                    onPress={handleConnect}
+                    disabled={
+                      !bleConnected ||
+                      connecting ||
+                      wifiScanStatus === 1 ||
+                      !selectedWifi ||
+                      (selectedWifi?.secure && (!passwordInput.value || !!passwordInput.error))
+                    }
+                  >
+                    {connecting || wifiScanStatus === 1 ? (
+                      <ActivityIndicator color="#0A2540" />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.connectBtnText,
+                          (!bleConnected ||
+                            connecting ||
+                            wifiScanStatus === 1 ||
+                            !selectedWifi ||
+                            (selectedWifi?.secure &&
+                              (!passwordInput.value || !!passwordInput.error))) &&
+                            styles.connectBtnTextDisabled,
+                        ]}
+                      >
+                        {t('bluetoothScreen.connect')}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </KeyboardAwareScrollView>
+            )}
+
+            {/* LAN Tab */}
+            {activeTab === 'lan' && (
+              <>
+                <View style={styles.contentContainer}>
                   <Text style={styles.availableTitle}>{t('networkSetup.availableNetworks')}</Text>
                   <TouchableOpacity
                     style={styles.rescanButton}
@@ -539,10 +599,39 @@ const NetworkSetup: React.FC = () => {
                   </TouchableOpacity>
                   <View style={styles.tabContentCenter}>{lanStatusContent}</View>
                 </View>
-              )}
+                <View style={styles.bottomContainer}>
+                  <View style={styles.divider} />
+                  <TouchableOpacity
+                    style={[
+                      styles.connectBtn,
+                      (!lanConnected || lanStatusLoading || connectingNetSetup) &&
+                        styles.connectBtnDisabled,
+                    ]}
+                    onPress={handleConnectLAN}
+                    disabled={!lanConnected || lanStatusLoading || connectingNetSetup}
+                  >
+                    {connectingNetSetup ? (
+                      <ActivityIndicator color="#0A2540" />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.connectBtnText,
+                          (!lanConnected || lanStatusLoading || connectingNetSetup) &&
+                            styles.connectBtnTextDisabled,
+                        ]}
+                      >
+                        {t('bluetoothScreen.connect')}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
 
-              {activeTab === 'lte' && (
-                <View style={styles.container}>
+            {/* LTE Tab */}
+            {activeTab === 'lte' && (
+              <>
+                <View style={styles.contentContainer}>
                   <Text style={styles.availableTitle}>{t('networkSetup.availableLte')}</Text>
                   <TouchableOpacity
                     style={styles.rescanButton}
@@ -556,122 +645,33 @@ const NetworkSetup: React.FC = () => {
                   </TouchableOpacity>
                   <View style={styles.tabContentCenter}>{lteStatusContent}</View>
                 </View>
-              )}
-            </View>
-
-            {/* Bottom Section - Progress and Connect Button */}
-            {activeTab === 'wifi' && (
-              <View style={styles.bottomContainer}>
-                <View style={styles.divider} />
-                <View style={styles.systemCheck}>
-                  <Text style={styles.progressLabel}>
-                    {t('networkSetup.systemCheck')}{' '}
-                    <Text style={styles.inProgress}>{t('networkSetup.inProgress')}</Text>
-                  </Text>
-                  <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
-                  </View>
-                  <Text style={styles.checkDescription}>
-                    {t('networkSetup.checkingInternetConnection')}
-                  </Text>
+                <View style={styles.bottomContainer}>
+                  <View style={styles.divider} />
+                  <TouchableOpacity
+                    style={[
+                      styles.connectBtn,
+                      (!lteConnected || lteStatusLoading || connectingNetSetup) &&
+                        styles.connectBtnDisabled,
+                    ]}
+                    onPress={handleConnectLte}
+                    disabled={!lteConnected || lteStatusLoading || connectingNetSetup}
+                  >
+                    {connectingNetSetup ? (
+                      <ActivityIndicator color="#0A2540" />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.connectBtnText,
+                          (!lteConnected || lteStatusLoading || connectingNetSetup) &&
+                            styles.connectBtnTextDisabled,
+                        ]}
+                      >
+                        {t('bluetoothScreen.connect')}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={[
-                    styles.connectBtn,
-                    (!bleConnected ||
-                      connecting ||
-                      wifiScanStatus === 1 ||
-                      !selectedWifi ||
-                      (selectedWifi?.secure && (!passwordInput.value || !!passwordInput.error))) &&
-                      styles.connectBtnDisabled,
-                  ]}
-                  onPress={handleConnect}
-                  disabled={
-                    !bleConnected ||
-                    connecting ||
-                    wifiScanStatus === 1 ||
-                    !selectedWifi ||
-                    (selectedWifi?.secure && (!passwordInput.value || !!passwordInput.error))
-                  }
-                >
-                  {connecting || wifiScanStatus === 1 ? (
-                    <ActivityIndicator color="#0A2540" />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.connectBtnText,
-                        (!bleConnected ||
-                          connecting ||
-                          wifiScanStatus === 1 ||
-                          !selectedWifi ||
-                          (selectedWifi?.secure &&
-                            (!passwordInput.value || !!passwordInput.error))) &&
-                          styles.connectBtnTextDisabled,
-                      ]}
-                    >
-                      {t('bluetoothScreen.connect')}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {activeTab === 'lte' && (
-              <View style={styles.bottomContainer}>
-                <View style={styles.divider} />
-                <TouchableOpacity
-                  style={[
-                    styles.connectBtn,
-                    (!lteConnected || lteStatusLoading || connectingNetSetup) &&
-                      styles.connectBtnDisabled,
-                  ]}
-                  onPress={handleConnectLte}
-                  disabled={!lteConnected || lteStatusLoading || connectingNetSetup}
-                >
-                  {connectingNetSetup ? (
-                    <ActivityIndicator color="#0A2540" />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.connectBtnText,
-                        (!lteConnected || lteStatusLoading || connectingNetSetup) &&
-                          styles.connectBtnTextDisabled,
-                      ]}
-                    >
-                      {t('bluetoothScreen.connect')}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {activeTab === 'lan' && (
-              <View style={styles.bottomContainer}>
-                <View style={styles.divider} />
-                <TouchableOpacity
-                  style={[
-                    styles.connectBtn,
-                    (!lanConnected || lanStatusLoading || connectingNetSetup) &&
-                      styles.connectBtnDisabled,
-                  ]}
-                  onPress={handleConnectLAN}
-                  disabled={!lanConnected || lanStatusLoading || connectingNetSetup}
-                >
-                  {connectingNetSetup ? (
-                    <ActivityIndicator color="#0A2540" />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.connectBtnText,
-                        (!lanConnected || lanStatusLoading || connectingNetSetup) &&
-                          styles.connectBtnTextDisabled,
-                      ]}
-                    >
-                      {t('bluetoothScreen.connect')}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
+              </>
             )}
           </SafeAreaView>
         </ImageBackground>

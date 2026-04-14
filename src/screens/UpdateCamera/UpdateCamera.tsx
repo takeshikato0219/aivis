@@ -6,6 +6,7 @@ import BackIcon from '@assets/svg/icon-back.svg';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import DownloadIcon from '@assets/svg/download-arrow-icon.svg';
+import { showCommonAlert } from '@components/Alert/Alert';
 import cameraService from '@/services/cameraService';
 
 type UpdateCameraStackParamList = {
@@ -24,6 +25,7 @@ const UpdateCamera = () => {
 
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
   const [newVersion, setNewVersion] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -40,6 +42,46 @@ const UpdateCamera = () => {
     };
     fetchDetail();
   }, [camera?.id]);
+
+  const updateCamera = async () => {
+    if (!camera?.id || !latestFirmwareUpdate || isUpdating) return;
+    setIsUpdating(true);
+    try {
+      const response = await cameraService.updateVersionCamera(camera.id);
+      if (response.success) {
+        showCommonAlert({
+          title: '',
+          message: response.message || t('common.success'),
+          buttons: [{ text: t('common.ok') }],
+        });
+      } else {
+        showCommonAlert({
+          title: '',
+          message: response.message || t('common.error'),
+          buttons: [{ text: t('common.ok') }],
+        });
+      }
+    } catch (error) {
+      let errorMessage = t('common.error');
+      if (
+        error &&
+        typeof error === 'object' &&
+        'message' in error &&
+        typeof (error as any).message === 'string'
+      ) {
+        errorMessage = (error as any).message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      showCommonAlert({
+        title: '',
+        message: errorMessage,
+        buttons: [{ text: t('common.ok') }],
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -73,10 +115,10 @@ const UpdateCamera = () => {
             style={[
               styles.styleButton,
               styles.styleButtonRelative,
-              !latestFirmwareUpdate && styles.styleButtonDisabled,
+              (!latestFirmwareUpdate || isUpdating) && styles.styleButtonDisabled,
             ]}
-            onPress={() => {}}
-            disabled={!latestFirmwareUpdate}
+            onPress={updateCamera}
+            disabled={!latestFirmwareUpdate || isUpdating}
           >
             {latestFirmwareUpdate && (
               <View style={styles.newBadgeContainer}>

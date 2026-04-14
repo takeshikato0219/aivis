@@ -669,7 +669,7 @@
     "note": "Note",
     "noteDescription": "When updating the camera version, the system will temporarily stop working for a moment. Please wait until the update is complete.",
     "aNewUpdateIsAvailable": "A new update is available",
-    "new": "NEW",
+    "new": "NEW UPDATE",
     "currentlyThereIsNoUpdateAvailable": "Currently, there is no update available.",
     "latest": "Latest"
   }

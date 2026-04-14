@@ -11,6 +11,12 @@ export interface CameraStatus {
   name_trans: string;
 }
 
+export interface CameraLatestFirmwareUpdate {
+  description: string;
+  id: string;
+  version: string;
+}
+
 export interface Camera {
   id: string;
   name: string;
@@ -22,6 +28,8 @@ export interface Camera {
   user_id?: string;
   created_at?: string;
   updated_at?: string;
+  /** Present when the list/detail API includes firmware availability */
+  latest_firmware_update?: CameraLatestFirmwareUpdate | null;
 }
 
 export interface RegisterCameraResponse {
@@ -225,11 +233,7 @@ export interface CameraDetailData {
   stream_secret_key: string;
   cloudflare_tunnel_token: string;
   version: string;
-  latest_firmware_update?: {
-    description: string;
-    id: string;
-    version: string;
-  } | null;
+  latest_firmware_update?: CameraLatestFirmwareUpdate | null;
 }
 
 export interface CameraDetailResponse {

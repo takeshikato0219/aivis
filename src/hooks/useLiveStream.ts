@@ -11,6 +11,8 @@ export interface UseLiveStreamConfig {
   initialLoadingMin?: number;
   initialLoadingMax?: number;
   initialGracePeriod?: number;
+  playbackSurface?: 'webview' | 'native-hls';
+  onReloadNativePlayer?: () => void;
 }
 
 export type StreamProtocol = 'mse' | 'hls' | 'mjpeg' | null;
@@ -28,9 +30,13 @@ export interface UseLiveStreamReturn {
   handleManualRetry: () => void;
   handleWebViewMessage: (event: any) => void;
   cleanup: () => void;
+  markNativePlaybackConnected: () => void;
+  markNativePlaybackFailed: () => void;
 }
 
-const DEFAULT_CONFIG: Required<UseLiveStreamConfig> = {
+const DEFAULT_CONFIG: Required<Omit<UseLiveStreamConfig, 'onReloadNativePlayer'>> & {
+  onReloadNativePlayer?: () => void;
+} = {
   maxRetries: 5,
   heartbeatInterval: 10000,
   heartbeatTimeout: 45000,
@@ -39,9 +45,12 @@ const DEFAULT_CONFIG: Required<UseLiveStreamConfig> = {
   initialLoadingMin: 3000,
   initialLoadingMax: 40000,
   initialGracePeriod: 8000,
+  playbackSurface: 'webview',
+  onReloadNativePlayer: undefined,
 };
 
 export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamReturn => {
+  const merged = { ...DEFAULT_CONFIG, ...config };
   const {
     maxRetries,
     heartbeatInterval,
@@ -50,7 +59,10 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     retryMaxDelay,
     initialLoadingMax,
     initialGracePeriod,
-  } = { ...DEFAULT_CONFIG, ...config };
+    playbackSurface,
+    onReloadNativePlayer,
+  } = merged;
+  const isNativeHls = playbackSurface === 'native-hls';
 
   const webViewRef = useRef<WebView>(null);
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -75,6 +87,9 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   }, [retryCount]);
 
   const startHeartbeatMonitoring = useCallback(() => {
+    if (isNativeHls) {
+      return;
+    }
     // Clear existing interval
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
@@ -92,7 +107,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
         handleConnectionLostRef.current();
       }
     }, heartbeatInterval);
-  }, [heartbeatInterval, heartbeatTimeout]);
+  }, [heartbeatInterval, heartbeatTimeout, isNativeHls]);
 
   const handleConnectionLost = useCallback(() => {
     // Prevent multiple simultaneous calls
@@ -151,16 +166,20 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
 
       // Reload and reset heartbeat
       lastHeartbeatRef.current = Date.now();
-      webViewRef.current?.reload();
+      if (isNativeHls) {
+        onReloadNativePlayer?.();
+      } else {
+        webViewRef.current?.reload();
+      }
 
       // Start monitoring again after reload
       setTimeout(() => {
-        if (webViewRef.current) {
+        if (!isNativeHls && webViewRef.current) {
           startHeartbeatMonitoring();
         }
       }, 1000);
     }, delay);
-  }, [maxRetries, retryBaseDelay, retryMaxDelay, startHeartbeatMonitoring]);
+  }, [maxRetries, retryBaseDelay, retryMaxDelay, startHeartbeatMonitoring, isNativeHls, onReloadNativePlayer]);
 
   // Keep ref updated with latest callback
   useEffect(() => {
@@ -233,13 +252,17 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     setConnectionStatus('connecting');
     setIsReconnecting(false);
     lastHeartbeatRef.current = Date.now();
-    webViewRef.current?.reload();
+    if (isNativeHls) {
+      onReloadNativePlayer?.();
+    } else {
+      webViewRef.current?.reload();
+    }
 
     graceTimerRef.current = setTimeout(() => {
       graceTimerRef.current = null;
       startHeartbeatMonitoring();
     }, initialGracePeriod);
-  }, [startHeartbeatMonitoring, initialGracePeriod]);
+  }, [startHeartbeatMonitoring, initialGracePeriod, isNativeHls, onReloadNativePlayer]);
 
   const handleWebViewMessage = useCallback(
     (event: any) => {
@@ -326,6 +349,9 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   // Initial loading timeout — fires once per mount. If no connection after
   // initialLoadingMax, trigger connection lost to begin retry cycle.
   useEffect(() => {
+    if (isNativeHls) {
+      return undefined;
+    }
     const timer = setTimeout(() => {
       setIsLoading((prevLoading) => {
         if (prevLoading) {
@@ -338,7 +364,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     }, initialLoadingMax);
 
     return () => clearTimeout(timer);
-  }, [initialLoadingMax]);
+  }, [initialLoadingMax, isNativeHls]);
 
   // Network status monitoring - auto-retry when network is restored
   useEffect(() => {
@@ -355,7 +381,11 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
         setConnectionStatus('connecting');
         setIsReconnecting(false);
         setTimeout(() => {
-          webViewRef.current?.reload();
+          if (isNativeHls) {
+            onReloadNativePlayer?.();
+          } else {
+            webViewRef.current?.reload();
+          }
           lastHeartbeatRef.current = Date.now();
           if (graceTimerRef.current) {
             clearTimeout(graceTimerRef.current);
@@ -379,12 +409,34 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     return () => {
       unsubscribe();
     };
-  }, [connectionStatus, startHeartbeatMonitoring, initialGracePeriod]);
+  }, [connectionStatus, startHeartbeatMonitoring, initialGracePeriod, isNativeHls, onReloadNativePlayer]);
 
   // Cleanup timers on unmount
   useEffect(() => {
     return cleanup;
   }, [cleanup]);
+
+  const markNativePlaybackConnected = useCallback(() => {
+    if (!isNativeHls) {
+      return;
+    }
+    lastHeartbeatRef.current = Date.now();
+    hasEverConnectedRef.current = true;
+    setIsLoading(false);
+    setConnectionStatus('connected');
+    setIsReconnecting(false);
+    retryCountRef.current = 0;
+    setRetryCount(0);
+    setStreamProtocol('hls');
+  }, [isNativeHls]);
+
+  const markNativePlaybackFailed = useCallback(() => {
+    if (!isNativeHls) {
+      return;
+    }
+    setIsLoading(false);
+    setConnectionStatus('failed');
+  }, [isNativeHls]);
 
   return {
     webViewRef,
@@ -399,5 +451,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     handleManualRetry,
     handleWebViewMessage,
     cleanup,
+    markNativePlaybackConnected,
+    markNativePlaybackFailed,
   };
 };

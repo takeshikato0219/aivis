@@ -80,11 +80,14 @@ export const styles = StyleSheet.create({
     paddingVertical: 2,
     zIndex: 10,
     alignSelf: 'flex-end',
+    height: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   newBadgeText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 1,
   },
 });

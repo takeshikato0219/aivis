@@ -23,6 +23,30 @@ export const getStyles = (width: number, height: number) => {
       height: '100%',
       backgroundColor: '#000',
     },
+    /** Root inside videoWrapper — minHeight:0 so flex children (Exo) can fill on Android */
+    videoPlayerRoot: {
+      flex: 1,
+      width: '100%',
+      minHeight: 0,
+      alignSelf: 'stretch',
+      position: 'relative',
+      backgroundColor: '#000',
+      overflow: 'hidden',
+    },
+    /** react-native-video must fill parent; flex alone is unreliable on Android */
+    videoNativeSurface: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: '#000',
+    },
+    micWebViewHidden: {
+      position: 'absolute',
+      width: 1,
+      height: 1,
+      opacity: 0,
+      left: -100,
+      top: -100,
+      overflow: 'hidden',
+    },
 
     // Fullscreen Mode
     fullscreenContainer: {
@@ -147,6 +171,9 @@ export const getStyles = (width: number, height: number) => {
       paddingTop: 8,
       zIndex: 11,
       elevation: 11,
+    },
+    topOverlayEnd: {
+      justifyContent: 'flex-end',
     },
     topLeft: {
       flexDirection: 'row',

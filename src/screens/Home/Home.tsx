@@ -60,6 +60,9 @@ const Home = () => {
   const [hasCamerasInAllTab, setHasCamerasInAllTab] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastFrameUris, setLastFrameUris] = useState<{ [cameraId: string]: string | null }>({});
+  const [hasFirmwareNewByCameraId, setHasFirmwareNewByCameraId] = useState<Record<string, boolean>>(
+    {}
+  );
   const [unreadCount, setUnreadCount] = useState(0);
 
   const { syncUserData } = useUserSync();
@@ -212,6 +215,37 @@ const Home = () => {
     setIsRefreshing(false);
   }, [fetchCameraList, selectedFacilityId]);
 
+  useEffect(() => {
+    if (cameraList.length === 0) {
+      setHasFirmwareNewByCameraId({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const next: Record<string, boolean> = {};
+      await Promise.all(
+        cameraList.map(async (cam) => {
+          if (cam.latest_firmware_update !== undefined) {
+            next[cam.id] = !!cam.latest_firmware_update;
+            return;
+          }
+          try {
+            const res = await cameraService.getDetailCamera(cam.id);
+            next[cam.id] = !!(res.success && res.data?.latest_firmware_update);
+          } catch {
+            next[cam.id] = false;
+          }
+        })
+      );
+      if (!cancelled) {
+        setHasFirmwareNewByCameraId(next);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cameraList]);
+
   // Load last frame URIs for all cameras
   const loadLastFrames = useCallback(async (cameras: Camera[]) => {
     const uris: { [cameraId: string]: string | null } = {};
@@ -288,14 +322,28 @@ const Home = () => {
 
             const lastFrameUri = lastFrameUris[camera.id] || null;
 
+            const showFirmwareNew =
+              camera.latest_firmware_update !== undefined
+                ? !!camera.latest_firmware_update
+                : !!hasFirmwareNewByCameraId[camera.id];
+
             return (
               <TouchableOpacity onPress={() => goToDetail(camera)} key={camera.id}>
                 <View style={styles.card}>
-                  <View style={styles.videoWrapper}>
-                    <Image
-                      source={lastFrameUri ? { uri: lastFrameUri, cache: 'reload' } : RetangleImage}
-                      style={styles.cardImage}
-                    />
+                  <View style={styles.cardMediaSection}>
+                    <View style={styles.videoWrapper}>
+                      <Image
+                        source={
+                          lastFrameUri ? { uri: lastFrameUri, cache: 'reload' } : RetangleImage
+                        }
+                        style={styles.cardImage}
+                      />
+                    </View>
+                    {showFirmwareNew && (
+                      <View style={styles.firmwareNewBadge} pointerEvents="none">
+                        <Text style={styles.firmwareNewBadgeText}>{t('updateCamera.new')}</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.cardBadge}>
                     <View

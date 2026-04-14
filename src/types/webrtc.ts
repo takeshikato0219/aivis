@@ -1,3 +1,4 @@
+import { decodeStreamTokenFromUrlValue, getRawTokenValueFromUrl } from '../utils/streamUtils';
 import { MicState as _MicState } from '../redux/slices/streamSlice';
 export { StreamStatus, MicState, type TokenInfo } from '../redux/slices/streamSlice';
 
@@ -22,13 +23,9 @@ interface TokenPayload {
 // ─── Token Utils ──────────────────────────────────────────────────────────────
 
 function extractToken(url: string): string | null {
-  try {
-    return new URL(
-      url.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://')
-    ).searchParams.get('token');
-  } catch {
-    return null;
-  }
+  const raw = getRawTokenValueFromUrl(url);
+  if (raw == null || raw === '') return null;
+  return decodeStreamTokenFromUrlValue(raw);
 }
 function decodeToken(token: string) {
   try {

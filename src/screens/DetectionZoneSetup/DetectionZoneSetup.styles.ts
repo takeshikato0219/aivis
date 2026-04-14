@@ -36,6 +36,29 @@ export const styles = StyleSheet.create({
     marginBottom: 16,
     marginHorizontal: 15,
   },
+  /** Matches CameraLiveView — minHeight:0 so ExoPlayer fills on Android */
+  videoPlayerRoot: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+    alignSelf: 'stretch',
+    position: 'relative',
+    backgroundColor: '#000',
+    overflow: 'hidden',
+  },
+  videoNativeSurface: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+  },
+  micWebViewHidden: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+    left: -100,
+    top: -100,
+    overflow: 'hidden',
+  },
   cameraPreview: {
     flex: 1,
     backgroundColor: '#000',

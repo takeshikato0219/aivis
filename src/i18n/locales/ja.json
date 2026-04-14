@@ -707,7 +707,7 @@
     "note": "注意",
     "noteDescription": "カメラのバージョンを更新する際、システムは一時的に停止します。更新が完了するまでしばらくお待ちください。",
     "aNewUpdateIsAvailable": "新しいアップデートがあります",
-    "new": "新着",
+    "new": "アップデート",
     "currentlyThereIsNoUpdateAvailable": "現在、利用可能なアップデートはありません。",
     "latest": "最新"
   }

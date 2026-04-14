@@ -271,7 +271,7 @@ const Detail = () => {
     }
   }, [camera.id]);
 
-  const getDetail = async () => {
+  const getDetail = useCallback(async () => {
     try {
       const response = await cameraService.getDetailCamera(camera.id);
       if (response.success && response.data) {
@@ -279,20 +279,12 @@ const Detail = () => {
         setLatestFirmwareUpdate(response.data.latest_firmware_update ?? null);
         if (typeof response.data.mode_id === 'string') {
           setDetailModeId(response.data.mode_id);
-          if (modes.length > 0) {
-            const foundIdx = modes.findIndex(
-              (mode: any) => String(mode.id) === response.data.mode_id
-            );
-            if (foundIdx !== -1 && foundIdx !== activeIndex) {
-              setActiveIndex(foundIdx);
-            }
-          }
         }
       }
     } catch (err) {
       console.warn('Failed to fetch camera detail:', err);
     }
-  };
+  }, [camera.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -314,8 +306,7 @@ const Detail = () => {
       getRulesMaster();
       getModes();
       getDetail();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [camera.id])
+    }, [camera.id, getDetail])
   );
 
   useEffect(() => {
@@ -572,12 +563,12 @@ const Detail = () => {
             <View style={styles.newBadgeWrapper}>
               <TouchableOpacity onPress={handleSetupDetectionZone}>
                 <SettingsIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
+                {hasLatestFirmwareUpdate && (
+                  <View style={styles.newBadgeContainer}>
+                    <Text style={styles.newBadgeText}>{t('updateCamera.new')}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
-              {hasLatestFirmwareUpdate && (
-                <View style={styles.newBadgeContainer}>
-                  <Text style={styles.newBadgeText}>{t('updateCamera.new')}</Text>
-                </View>
-              )}
             </View>
           </View>
           <ScrollView
