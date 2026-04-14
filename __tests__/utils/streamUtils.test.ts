@@ -53,7 +53,7 @@ describe('streamUtils', () => {
     it('should extract domain from wss:// URL and build stream.html URL', () => {
       const wsUrl = `wss://avisaitest-nginx001.wpstories.org/api/ws?src=camera&token=abc123`;
       const result = buildStreamHtmlUrl(wsUrl);
-      const expected = `${mockBaseUrl}/stream.html?src=camera&mode=webrtc,mse,hls,mjpeg&autoplay=true`;
+      const expected = `${mockBaseUrl}/stream.html?src=camera&mode=mse,hls&autoplay=true`;
 
       expect(result).toBe(expected);
     });
@@ -63,7 +63,7 @@ describe('streamUtils', () => {
       const result = buildStreamHtmlUrl(wsUrl);
 
       expect(result).toBe(
-        'http://localhost:8554/stream.html?src=mycam&mode=webrtc,mse,hls,mjpeg&autoplay=true'
+        'http://localhost:8554/stream.html?src=mycam&mode=mse,hls&autoplay=true'
       );
     });
 
@@ -72,7 +72,7 @@ describe('streamUtils', () => {
       const result = buildStreamHtmlUrl(wsUrl);
 
       expect(result).toBe(
-        'https://example.com/stream.html?src=camera&mode=webrtc,mse,hls,mjpeg&autoplay=true'
+        'https://example.com/stream.html?src=camera&mode=mse,hls&autoplay=true'
       );
     });
 
@@ -81,7 +81,7 @@ describe('streamUtils', () => {
       const result = buildStreamHtmlUrl(wsUrl);
 
       expect(result).toBe(
-        `https://example.com/stream.html?src=${encodeURIComponent('camera/stream1')}&mode=webrtc,mse,hls,mjpeg&autoplay=true`
+        `https://example.com/stream.html?src=${encodeURIComponent('camera/stream1')}&mode=mse,hls&autoplay=true`
       );
     });
 
