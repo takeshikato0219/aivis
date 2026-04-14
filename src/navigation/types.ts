@@ -59,7 +59,6 @@ export type AppStackParamList = {
     wifi?: any;
     isWifi?: boolean;
   };
-  ConnectWifiHotspot: { wifi: any };
   NetworkSetup: { cameraAp: string };
   Setting: undefined;
   FaceUpload: { type: string };
@@ -127,12 +126,6 @@ export type ConnectDeviceScreenNavigationProp = CompositeNavigationProp<
 
 export type PairingCodeScreenNavigationProp = StackNavigationProp<AppStackParamList, 'PairingCode'>;
 export type PairingCodeScreenRouteProp = RouteProp<AppStackParamList, 'PairingCode'>;
-
-export type ConnectWifiHotspotNavigationProp = StackNavigationProp<
-  AppStackParamList,
-  'ConnectWifiHotspot'
->;
-export type ConnectWifiHotspotRouteProp = RouteProp<AppStackParamList, 'ConnectWifiHotspot'>;
 
 export type NetworkSetupNavigationProp = StackNavigationProp<AppStackParamList, 'NetworkSetup'>;
 export type NetworkSetupRouteProp = RouteProp<AppStackParamList, 'NetworkSetup'>;

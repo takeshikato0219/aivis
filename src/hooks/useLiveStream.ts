@@ -179,7 +179,14 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
         }
       }, 1000);
     }, delay);
-  }, [maxRetries, retryBaseDelay, retryMaxDelay, startHeartbeatMonitoring, isNativeHls, onReloadNativePlayer]);
+  }, [
+    maxRetries,
+    retryBaseDelay,
+    retryMaxDelay,
+    startHeartbeatMonitoring,
+    isNativeHls,
+    onReloadNativePlayer,
+  ]);
 
   // Keep ref updated with latest callback
   useEffect(() => {
@@ -409,7 +416,13 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     return () => {
       unsubscribe();
     };
-  }, [connectionStatus, startHeartbeatMonitoring, initialGracePeriod, isNativeHls, onReloadNativePlayer]);
+  }, [
+    connectionStatus,
+    startHeartbeatMonitoring,
+    initialGracePeriod,
+    isNativeHls,
+    onReloadNativePlayer,
+  ]);
 
   // Cleanup timers on unmount
   useEffect(() => {
