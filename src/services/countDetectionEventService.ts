@@ -88,7 +88,25 @@ export function applyCountIncrement(
   data: CountDetectionData | null,
   code: string
 ): CountDetectionData | null {
-  if (!data) return null;
+  if (!data) {
+    if (
+      code === 'enterprise_attendance_in' ||
+      code === 'enterprise_attendance_out' ||
+      code === 'attendance_checkin' ||
+      code === 'attendance_checkout'
+    ) {
+      return null;
+    }
+    if (code === 'home_return_count') return null;
+    if (code === 'enterprise_attendance') {
+      return { enterprise_attendance: { in: 1, out: 0 } } as CountDetectionData;
+    }
+    if (code === 'attendance') {
+      return { attendance: { checkin: 1, checkout: 0 } } as CountDetectionData;
+    }
+    // Partial / not-yet-loaded count API: FCM can still bump plain numeric rule keys (e.g. unexpected_incident).
+    return { [code]: 1 } as CountDetectionData;
+  }
 
   if (code === 'attendance_checkin') {
     return bumpAttendanceSub(data, 'checkin');
@@ -151,7 +169,15 @@ export function applyCountIncrement(
   }
 
   const key = code as keyof CountDetectionData;
-  if (!key || !(key in data)) return data;
+  if (!key) return data;
+
+  if (!(key in data)) {
+    if (code === 'home_return_count') return data;
+    return {
+      ...data,
+      [key]: 1,
+    } as CountDetectionData;
+  }
 
   const value = data[key];
 

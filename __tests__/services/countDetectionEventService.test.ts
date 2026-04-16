@@ -34,8 +34,17 @@ describe('countDetectionEventService', () => {
   });
 
   describe('applyCountIncrement', () => {
-    it('returns null when data is null', () => {
-      expect(applyCountIncrement(null, 'visitor_count')).toBeNull();
+    it('seeds a plain numeric rule when data is null', () => {
+      expect(applyCountIncrement(null, 'visitor_count')).toEqual({ visitor_count: 1 });
+    });
+
+    it('returns null when data is null for enterprise_attendance_in/out (needs existing state)', () => {
+      expect(applyCountIncrement(null, 'enterprise_attendance_in')).toBeNull();
+      expect(applyCountIncrement(null, 'enterprise_attendance_out')).toBeNull();
+    });
+
+    it('seeds unexpected_incident when data is null', () => {
+      expect(applyCountIncrement(null, 'unexpected_incident')).toEqual({ unexpected_incident: 1 });
     });
 
     it('increments a plain numeric rule key', () => {
@@ -52,9 +61,12 @@ describe('countDetectionEventService', () => {
       });
     });
 
-    it('does not change data when key is missing', () => {
+    it('initializes a missing plain numeric rule key to 1', () => {
       const data: CountDetectionData = { visitor_count: 1 };
-      expect(applyCountIncrement(data, 'vip_customer_detection')).toEqual(data);
+      expect(applyCountIncrement(data, 'vip_customer_detection')).toEqual({
+        visitor_count: 1,
+        vip_customer_detection: 1,
+      });
     });
 
     it('enterprise_attendance_in bumps in when enterprise_attendance is in/out', () => {
@@ -155,8 +167,8 @@ describe('countDetectionEventService', () => {
       expect(result).toEqual({ visitor_count: 1, vip_customer_detection: 1 });
     });
 
-    it('returns null when starting from null and codes non-empty', () => {
-      expect(applyCountIncrements(null, ['visitor_count'])).toBeNull();
+    it('seeds from null when codes non-empty', () => {
+      expect(applyCountIncrements(null, ['visitor_count'])).toEqual({ visitor_count: 1 });
     });
   });
 });
