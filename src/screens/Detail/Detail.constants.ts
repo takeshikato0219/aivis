@@ -17,6 +17,7 @@ import IconAttendance from '@assets/svg/attendance-icon.svg';
 import IconBan from '@assets/svg/ban-sign-icon.svg';
 import IconHelmet from '@assets/svg/helmet-icon.svg';
 import IconVip from '@assets/svg/vip-label-icon.svg';
+import IconHospital from '@assets/svg/hospital-icon.svg';
 import type { WorkflowType } from './Detail.types';
 
 export type RuleHandlerType = 'notification' | 'customerReport' | 'restrictedZone' | 'none';
@@ -95,12 +96,6 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
       handlerType: 'notification',
     },
     {
-      code: 'unexpected_incident',
-      icon: IconPerson,
-      iconName: 'IconPerson',
-      handlerType: 'notification',
-    },
-    {
       code: 'helmet_wearing',
       icon: IconHelmet,
       iconName: 'IconHelmet',
@@ -123,6 +118,14 @@ export const RULE_CONFIGS_BY_WORKFLOW: Record<WorkflowType, RuleConfigStatic[]> 
       icon: IconBan,
       iconName: 'IconBan',
       handlerType: 'restrictedZone',
+    },
+  ],
+  Hospital: [
+    {
+      code: 'unexpected_incident',
+      icon: IconHospital,
+      iconName: 'IconHospital',
+      handlerType: 'notification',
     },
   ],
 };

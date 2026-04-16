@@ -30,9 +30,9 @@
 -keep class com.google.mlkit.** { *; }
 -dontwarn com.google.mlkit.**
 
-# Exoplayer (react-native-video)
--keep class com.google.android.exoplayer2.** { *; }
--dontwarn com.google.android.exoplayer2.**
+# Media3 (react-native-video 6.x uses androidx.media3 instead of exoplayer2)
+-keep class androidx.media3.** { *; }
+-dontwarn androidx.media3.**
 
 # BLE
 -keep class com.polidea.rxandroidble.** { *; }
@@ -52,13 +52,6 @@
 -keep class com.linecorp.linesdk.** { *; }
 -dontwarn com.linecorp.linesdk.**
 
-# Databinding classes
--keep class **.BR { *; }
-
-# Android databinding
--keep class androidx.databinding.** { *; }
--dontwarn androidx.databinding.**
-
 # Preserve crash stack traces (Firebase Crashlytics)
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
@@ -68,11 +61,6 @@
 -keep class com.google.android.gms.** { *; }
 -keep class io.invertase.firebase.** { *; }
 -dontwarn io.invertase.firebase.**
--keep class com.google.firebase.messaging.FirebaseMessagingService { *; }
--keep class com.google.firebase.messaging.RemoteMessage { *; }
--keep class io.invertase.firebase.messaging.ReactNativeFirebaseMessagingService { *; }
--keep class io.invertase.firebase.messaging.ReactNativeFirebaseMessagingHeadlessService { *; }
--keep class io.invertase.firebase.messaging.ReactNativeFirebaseMessagingReceiver { *; }
 
 # ShortcutBadger (app icon badge)
 -keep class me.leolin.shortcutbadger.impl.** { <init>(...); }

@@ -58,7 +58,6 @@ const CameraLiveView: React.FC = () => {
   const navigation = useNavigation<CameraLiveScreenNavigationProp>();
   const route = useRoute<CameraLiveScreenRouteProp>();
   const videoContainerRef = useRef<View>(null);
-  /** Android ExoPlayer surface — view-shot captures this wrapper (TextureView). */
   const androidVideoSurfaceRef = useRef<View>(null);
   const captureResolveRef = useRef<((base64: string) => void) | null>(null);
   const hasInitialStreamRef = useRef(false);

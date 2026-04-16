@@ -33,6 +33,7 @@ import IconHelmet from '@assets/svg/helmet-icon.svg';
 import IconMark from '@assets/svg/face-mask-icon.svg';
 import IconGlove from '@assets/svg/gloves-icon.svg';
 import IconVip from '@assets/svg/vip-label-icon.svg';
+import IconHospital from '@assets/svg/hospital-icon.svg';
 
 import { DetailScreenNavigationProp, DetailScreenRouteProp } from '@navigation/types';
 import { COLORS } from '@constants/theme';
@@ -67,6 +68,7 @@ const ICONS = [
   IconAttendance,
   IconHelmet,
   IconVip,
+  IconHospital,
 ];
 const ICON_NAMES = [
   'IconHome',
@@ -81,6 +83,7 @@ const ICON_NAMES = [
   'IconAttendance',
   'IconHelmet',
   'IconVip',
+  'IconHospital',
 ];
 
 const LIVING_ITEM_BASE = { id: '4', name: 'ライブカメラ', status: true, counter: '1' };
@@ -90,6 +93,7 @@ const ItemSeparator = () => <View style={styles.itemSeparator} />;
 const getWorkflowType = (workflowName: string): WorkflowType => {
   if (workflowName === 'Store') return 'Store';
   if (workflowName === 'Enterprise') return 'Enterprise';
+  if (workflowName === 'Hospital') return 'Hospital';
   return 'Family';
 };
 
@@ -381,7 +385,7 @@ const Detail = () => {
 
   const creatureDetectionIdx = cameraListWithIcons.findIndex((item) => item.icon === IconBear);
   const cameraListWithIconsWithLive: CameraListItem[] =
-    workflowType === 'Enterprise'
+    workflowType === 'Enterprise' || workflowType === 'Hospital'
       ? [iconLiveItem, ...cameraListWithIcons]
       : creatureDetectionIdx !== -1
         ? [
@@ -393,15 +397,19 @@ const Detail = () => {
 
   const CAMERA_LIST: CameraListItem[] = [
     ...cameraListWithIconsWithLive,
-    {
-      id: '6',
-      name: '人物登録',
-      status: true,
-      counter: `${countFace}人`,
-      icon: IconListFace,
-      iconName: 'IconListFace',
-      handler: goToFaceUpload,
-    },
+    ...(workflowType === 'Hospital'
+      ? []
+      : [
+          {
+            id: '6',
+            name: '人物登録',
+            status: true,
+            counter: `${countFace}人`,
+            icon: IconListFace,
+            iconName: 'IconListFace',
+            handler: goToFaceUpload,
+          },
+        ]),
   ];
 
   const fetchMembers = useCallback(async () => {
@@ -417,8 +425,10 @@ const Detail = () => {
 
   useFocusEffect(
     useCallback(() => {
-      fetchMembers();
-    }, [fetchMembers])
+      if (workflowType !== 'Hospital') {
+        fetchMembers();
+      }
+    }, [fetchMembers, workflowType])
   );
 
   const getCameraListItemPressHandler = (item: CameraListItem, idx: number) => {

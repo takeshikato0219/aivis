@@ -119,6 +119,8 @@ const mapDetectionToNotificationItem = (d: Detection): NotificationItem => {
 
 const PAGE_SIZE = 15;
 
+const VISITOR_COUNT_WITH_VIP_EVENT_TYPE = 'visitor_count,vip_customer_detection';
+
 const ListNotificationCamera = () => {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -150,9 +152,11 @@ const ListNotificationCamera = () => {
         setLoadingMore(true);
       }
       try {
+        const eventTypeForApi =
+          eventType === 'visitor_count' ? VISITOR_COUNT_WITH_VIP_EVENT_TYPE : eventType;
         const response = await notificationsService.getNotificationWithType(
           cameraId,
-          eventType,
+          eventTypeForApi,
           selectedDate,
           { page: pageToLoad, per_page: PAGE_SIZE }
         );

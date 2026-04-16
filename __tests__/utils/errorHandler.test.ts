@@ -1,4 +1,8 @@
-import ErrorHandler, { ErrorType } from '../../src/utils/errorHandler';
+import ErrorHandler, {
+  ErrorType,
+  getApiErrorDisplayMessage,
+  formatApiValidationErrors,
+} from '../../src/utils/errorHandler';
 
 // Mock showCommonAlert
 jest.mock('../../src/components/Alert/Alert', () => ({
@@ -131,5 +135,57 @@ describe('ErrorHandler', () => {
     ErrorHandler.setScreen('HomeScreen');
     // This should not throw
     expect(() => ErrorHandler.setScreen('HomeScreen')).not.toThrow();
+  });
+});
+
+describe('getApiErrorDisplayMessage', () => {
+  it('returns main message if no validation errors', () => {
+    const error = { message: 'Main error' };
+    expect(getApiErrorDisplayMessage(error)).toBe('Main error');
+  });
+  it('returns formatted message with validation errors', () => {
+    const error = {
+      message: 'Main error',
+      apiResponse: {
+        errors: {
+          field1: ['Error 1'],
+          field2: ['Error 2', 'Error 3'],
+        },
+      },
+    };
+    expect(getApiErrorDisplayMessage(error)).toContain('Main error');
+    expect(getApiErrorDisplayMessage(error)).toContain('field1: Error 1');
+    expect(getApiErrorDisplayMessage(error)).toContain('field2: Error 2');
+    expect(getApiErrorDisplayMessage(error)).toContain('field2: Error 3');
+  });
+  it('returns default message if no message', () => {
+    expect(getApiErrorDisplayMessage({})).toBe('An error occurred');
+  });
+});
+
+describe('formatApiValidationErrors', () => {
+  it('returns empty string if no errors', () => {
+    expect(formatApiValidationErrors(undefined)).toBe('');
+    expect(formatApiValidationErrors(null)).toBe('');
+    expect(formatApiValidationErrors({})).toBe('');
+  });
+  it('formats single error', () => {
+    const apiResponse = { errors: { field: ['Error message'] } };
+    expect(formatApiValidationErrors(apiResponse)).toBe('• field: Error message');
+  });
+  it('formats multiple errors and fields', () => {
+    const apiResponse = { errors: { field1: ['Error 1'], field2: ['Error 2', 'Error 3'] } };
+    expect(formatApiValidationErrors(apiResponse)).toContain('• field1: Error 1');
+    expect(formatApiValidationErrors(apiResponse)).toContain('• field2: Error 2');
+    expect(formatApiValidationErrors(apiResponse)).toContain('• field2: Error 3');
+  });
+  it('formats images.N fields as Image N+1', () => {
+    const apiResponse = { errors: { 'images.0': ['Error 0'], 'images.1': ['Error 1'] } };
+    expect(formatApiValidationErrors(apiResponse)).toContain('• Image 1: Error 0');
+    expect(formatApiValidationErrors(apiResponse)).toContain('• Image 2: Error 1');
+  });
+  it('ignores non-array error values', () => {
+    const apiResponse = { errors: { field: 'not-an-array' } as any };
+    expect(formatApiValidationErrors(apiResponse)).toBe('');
   });
 });
