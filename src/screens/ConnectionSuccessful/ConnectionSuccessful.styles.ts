@@ -79,7 +79,6 @@ export const styles = StyleSheet.create({
     height: 245,
     position: 'relative',
   },
-  /** Same layout as DetectionZoneSetup live preview (ExoPlayer + hidden mic WebView) */
   videoPlayerRoot: {
     flex: 1,
     width: '100%',
@@ -90,7 +89,7 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   videoNativeSurface: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
   },
   micWebViewHidden: {
@@ -108,19 +107,19 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   streamOverlayContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 15,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingIndicatorInOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   errorInOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#000',

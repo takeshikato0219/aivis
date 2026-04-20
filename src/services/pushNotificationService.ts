@@ -62,7 +62,7 @@ class PushNotificationService {
     if (Platform.OS !== 'android') return true;
 
     try {
-      const apiLevel = Platform.Version as number;
+      const apiLevel = Platform.Version;
       if (apiLevel >= 33) {
         const permission =
           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS ??
