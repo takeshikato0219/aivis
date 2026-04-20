@@ -20,10 +20,12 @@ export type StreamProtocol = 'mse' | 'hls' | 'mjpeg' | null;
 
 export type PlayerLoadPhase = 'connecting' | 'buffering' | 'connected';
 
+export type ConnectionStatus = 'connecting' | 'connected' | 'failed';
+
 export interface UseLiveStreamReturn {
   webViewRef: RefObject<WebView | null>;
   isLoading: boolean;
-  connectionStatus: 'connecting' | 'connected' | 'failed';
+  connectionStatus: ConnectionStatus;
   playerLoadPhase: PlayerLoadPhase;
   isReconnecting: boolean;
   retryCount: number;
@@ -77,12 +79,12 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   const hasEverConnectedRef = useRef<boolean>(false);
   const handleConnectionLostRef = useRef<() => void>(() => {});
   const heartbeatTimeoutRef = useRef(heartbeatTimeout);
-  const connectionStatusRef = useRef<'connecting' | 'connected' | 'failed'>('connecting');
+  const connectionStatusRef = useRef<ConnectionStatus>('connecting');
   const playerScriptSignaledRef = useRef(false);
   const lastBufferingSignalDebugAtRef = useRef(0);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'failed'>(
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(
     'connecting'
   );
   const [playerLoadPhase, setPlayerLoadPhase] = useState<PlayerLoadPhase>('connecting');

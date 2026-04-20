@@ -5,9 +5,18 @@ import { Linking } from 'react-native';
 let isLineSdkConfigured = false;
 let configurePromise: Promise<void> | null = null;
 
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return '';
+}
+
 function isSetupAlreadyCompletedError(error: unknown): boolean {
-  const message =
-    error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  const message = extractErrorMessage(error);
   return message.includes('already completed');
 }
 
