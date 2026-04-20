@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, RefObject } from 'react';
 import { WebView } from 'react-native-webview';
 import NetInfo from '@react-native-community/netinfo';
+import { streamDebugLog } from '@utils/streamDebugLog';
 
 export interface UseLiveStreamConfig {
   maxRetries?: number;
@@ -17,10 +18,13 @@ export interface UseLiveStreamConfig {
 
 export type StreamProtocol = 'mse' | 'hls' | 'mjpeg' | null;
 
+export type PlayerLoadPhase = 'connecting' | 'buffering' | 'connected';
+
 export interface UseLiveStreamReturn {
   webViewRef: RefObject<WebView | null>;
   isLoading: boolean;
   connectionStatus: 'connecting' | 'connected' | 'failed';
+  playerLoadPhase: PlayerLoadPhase;
   isReconnecting: boolean;
   retryCount: number;
   streamProtocol: StreamProtocol;
@@ -72,14 +76,27 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   const retryCountRef = useRef<number>(0);
   const hasEverConnectedRef = useRef<boolean>(false);
   const handleConnectionLostRef = useRef<() => void>(() => {});
+  const heartbeatTimeoutRef = useRef(heartbeatTimeout);
+  const connectionStatusRef = useRef<'connecting' | 'connected' | 'failed'>('connecting');
+  const playerScriptSignaledRef = useRef(false);
+  const lastBufferingSignalDebugAtRef = useRef(0);
 
   const [isLoading, setIsLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'failed'>(
     'connecting'
   );
+  const [playerLoadPhase, setPlayerLoadPhase] = useState<PlayerLoadPhase>('connecting');
   const [retryCount, setRetryCount] = useState(0);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [streamProtocol, setStreamProtocol] = useState<StreamProtocol>(null);
+
+  useEffect(() => {
+    heartbeatTimeoutRef.current = heartbeatTimeout;
+  }, [heartbeatTimeout]);
+
+  useEffect(() => {
+    connectionStatusRef.current = connectionStatus;
+  }, [connectionStatus]);
 
   // Keep retryCountRef in sync with state
   useEffect(() => {
@@ -102,12 +119,16 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     heartbeatIntervalRef.current = setInterval(() => {
       const timeSinceLastHeartbeat = Date.now() - lastHeartbeatRef.current;
       // If no heartbeat for timeout period, consider connection lost
-      if (timeSinceLastHeartbeat > heartbeatTimeout) {
+      if (timeSinceLastHeartbeat > heartbeatTimeoutRef.current) {
         console.warn('Heartbeat timeout detected, connection may be lost');
+        streamDebugLog('heartbeatTimeout', {
+          msSinceHeartbeat: timeSinceLastHeartbeat,
+          limitMs: heartbeatTimeoutRef.current,
+        });
         handleConnectionLostRef.current();
       }
     }, heartbeatInterval);
-  }, [heartbeatInterval, heartbeatTimeout, isNativeHls]);
+  }, [heartbeatInterval, isNativeHls]);
 
   const handleConnectionLost = useCallback(() => {
     // Prevent multiple simultaneous calls
@@ -139,6 +160,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     // Set reconnecting state immediately so UI shows reconnecting overlay
     setIsReconnecting(true);
     setConnectionStatus('connecting');
+    setPlayerLoadPhase('connecting');
 
     // Calculate delay with exponential backoff (max retryMaxDelay)
     const delay = Math.min(retryBaseDelay * Math.pow(2, currentRetryCount), retryMaxDelay);
@@ -151,6 +173,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
 
       const newRetryCount = retryCountRef.current + 1;
       console.log(`Executing retry ${newRetryCount}/${maxRetries}`);
+      streamDebugLog('streamRetry', { attempt: newRetryCount, maxRetries });
 
       // Update both ref and state
       retryCountRef.current = newRetryCount;
@@ -166,6 +189,8 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
 
       // Reload and reset heartbeat
       lastHeartbeatRef.current = Date.now();
+      playerScriptSignaledRef.current = false;
+      lastBufferingSignalDebugAtRef.current = 0;
       if (isNativeHls) {
         onReloadNativePlayer?.();
       } else {
@@ -203,10 +228,26 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       graceTimerRef.current = null;
     }
 
+    if (playerScriptSignaledRef.current) {
+      streamDebugLog('webViewLoadSoft');
+      lastHeartbeatRef.current = Date.now();
+      graceTimerRef.current = setTimeout(
+        () => {
+          graceTimerRef.current = null;
+          startHeartbeatMonitoring();
+        },
+        hasEverConnectedRef.current ? 2000 : initialGracePeriod
+      );
+      return;
+    }
+
     setConnectionStatus('connecting');
     setIsLoading(true);
     setStreamProtocol(null);
     setIsReconnecting(false);
+    setPlayerLoadPhase('connecting');
+    lastBufferingSignalDebugAtRef.current = 0;
+    streamDebugLog('webViewLoad');
 
     lastHeartbeatRef.current = Date.now();
 
@@ -223,6 +264,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   }, [startHeartbeatMonitoring, initialGracePeriod]);
 
   const handleWebViewError = useCallback(() => {
+    streamDebugLog('webViewError');
     setIsLoading(false);
     setConnectionStatus('failed');
     handleConnectionLost();
@@ -253,11 +295,14 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       graceTimerRef.current = null;
     }
 
+    playerScriptSignaledRef.current = false;
+    lastBufferingSignalDebugAtRef.current = 0;
     retryCountRef.current = 0;
     setRetryCount(0);
     setIsLoading(true);
     setConnectionStatus('connecting');
     setIsReconnecting(false);
+    setPlayerLoadPhase('connecting');
     lastHeartbeatRef.current = Date.now();
     if (isNativeHls) {
       onReloadNativePlayer?.();
@@ -278,28 +323,45 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
 
         if (data.type === 'heartbeat') {
           lastHeartbeatRef.current = Date.now();
+          playerScriptSignaledRef.current = true;
           if (connectionStatus !== 'failed') {
             setConnectionStatus('connected');
             setIsLoading(false);
             setIsReconnecting(false);
+            setPlayerLoadPhase('connected');
           }
           return;
         }
 
         if (data.type === 'playing' || data.type === 'connected') {
           lastHeartbeatRef.current = Date.now();
+          playerScriptSignaledRef.current = true;
           hasEverConnectedRef.current = true;
           setIsLoading(false);
           setConnectionStatus('connected');
           setIsReconnecting(false);
+          setPlayerLoadPhase('connected');
           retryCountRef.current = 0;
           setRetryCount(0);
+          streamDebugLog('playerPlaying', { via: data.type });
           return;
         }
 
         // JS is alive and actively trying to connect — reset heartbeat to prevent timeout
         if (data.type === 'jsReady' || data.type === 'buffering') {
           lastHeartbeatRef.current = Date.now();
+          playerScriptSignaledRef.current = true;
+          if (connectionStatusRef.current !== 'connected') {
+            setPlayerLoadPhase('buffering');
+          }
+          if (__DEV__) {
+            const now = Date.now();
+            const minGapMs = 18000;
+            if (now - lastBufferingSignalDebugAtRef.current >= minGapMs) {
+              lastBufferingSignalDebugAtRef.current = now;
+              streamDebugLog('playerBufferingSignal', { type: data.type });
+            }
+          }
           return;
         }
 
@@ -328,7 +390,9 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
 
         if (data.type === 'protocol' && data.protocol) {
           lastHeartbeatRef.current = Date.now();
+          playerScriptSignaledRef.current = true;
           setStreamProtocol(data.protocol);
+          streamDebugLog('streamProtocol', { protocol: data.protocol });
           return;
         }
       } catch {
@@ -363,6 +427,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       setIsLoading((prevLoading) => {
         if (prevLoading) {
           console.warn('Initial loading timeout - no connection established');
+          streamDebugLog('initialLoadingTimeout', { initialLoadingMax });
           handleConnectionLostRef.current();
           return false;
         }
@@ -375,19 +440,39 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
 
   // Network status monitoring - auto-retry when network is restored
   useEffect(() => {
-    let wasConnected = true;
+    const netReachableOk = (state: {
+      isConnected: boolean | null;
+      isInternetReachable: boolean | null;
+    }) => {
+      if (!state.isConnected) {
+        return false;
+      }
+      const r = state.isInternetReachable;
+      // Cellular often reports null until a probe completes; treat as reachable to avoid false negatives.
+      return r === null || r === true;
+    };
+
+    let wasNetOk = true;
+
+    NetInfo.fetch?.()?.then?.((state) => {
+      wasNetOk = netReachableOk(state);
+    });
 
     const unsubscribe = NetInfo.addEventListener((state) => {
-      const isConnected = state.isConnected && state.isInternetReachable;
+      const isConnected = netReachableOk(state);
 
-      if (isConnected && !wasConnected) {
+      if (isConnected && !wasNetOk) {
         console.log('Network restored, attempting auto-retry');
+        streamDebugLog('netRestored');
         retryCountRef.current = 0;
         setRetryCount(0);
         setIsLoading(true);
         setConnectionStatus('connecting');
         setIsReconnecting(false);
+        setPlayerLoadPhase('connecting');
         setTimeout(() => {
+          playerScriptSignaledRef.current = false;
+          lastBufferingSignalDebugAtRef.current = 0;
           if (isNativeHls) {
             onReloadNativePlayer?.();
           } else {
@@ -405,12 +490,13 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
       }
 
       // Network lost - trigger connection lost
-      if (!isConnected && wasConnected && connectionStatus === 'connected') {
+      if (!isConnected && wasNetOk && connectionStatus === 'connected') {
         console.warn('Network lost detected');
+        streamDebugLog('netLost');
         handleConnectionLostRef.current();
       }
 
-      wasConnected = !!isConnected;
+      wasNetOk = isConnected;
     });
 
     return () => {
@@ -438,9 +524,11 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     setIsLoading(false);
     setConnectionStatus('connected');
     setIsReconnecting(false);
+    setPlayerLoadPhase('connected');
     retryCountRef.current = 0;
     setRetryCount(0);
     setStreamProtocol('hls');
+    streamDebugLog('nativeHlsOnLoad');
   }, [isNativeHls]);
 
   const markNativePlaybackFailed = useCallback(() => {
@@ -449,12 +537,15 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
     }
     setIsLoading(false);
     setConnectionStatus('failed');
+    setPlayerLoadPhase('connecting');
+    streamDebugLog('nativeHlsError');
   }, [isNativeHls]);
 
   return {
     webViewRef,
     isLoading,
     connectionStatus,
+    playerLoadPhase,
     isReconnecting,
     retryCount,
     streamProtocol,

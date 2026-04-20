@@ -120,7 +120,7 @@ describe('biometricService', () => {
 
       await svc.disableBiometricLogin();
       expect(Keychain.resetGenericPassword).toHaveBeenCalledWith({
-        service: 'com.timima01app.biometric',
+        service: 'com.aivis.camera.ai.biometric',
       });
       expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@biometric_enabled');
     });

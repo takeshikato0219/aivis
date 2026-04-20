@@ -307,7 +307,7 @@
 					"-framework",
 					ReplayKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.timima01app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aivis.camera.ai;
 				PRODUCT_NAME = Timima01App;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -342,7 +342,7 @@
 					"-framework",
 					ReplayKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.timima01app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aivis.camera.ai;
 				PRODUCT_NAME = Timima01App;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

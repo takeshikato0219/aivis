@@ -46,6 +46,8 @@ import { useLiveStream } from '@hooks/useLiveStream';
 import { useMic } from '@hooks/useMic';
 import { MicState } from '@redux/slices/streamSlice';
 import { checkMicPermission, requestMicPermission, openAppSettings } from '@utils/permissions';
+import NetInfo from '@react-native-community/netinfo';
+import { streamDebugLog } from '@utils/streamDebugLog';
 
 const STREAM_QUALITIES: StreamQuality[] = [
   { label: '流畅', value: 'low', resolution: '640x480', bitrate: 256 },
@@ -62,6 +64,7 @@ const CameraLiveView: React.FC = () => {
   const captureResolveRef = useRef<((base64: string) => void) | null>(null);
   const hasInitialStreamRef = useRef(false);
   const prevStreamUrlRef = useRef<string>('');
+  const isLiveRef = useRef(false);
   const { cameraId } = route.params;
   const { t } = useTranslation();
 
@@ -88,10 +91,18 @@ const CameraLiveView: React.FC = () => {
   const [isMicProcessing, setIsMicProcessing] = useState(false);
   const [lastFrameBase64, setLastFrameBase64] = useState<string | null>(null);
   const [videoReloadKey, setVideoReloadKey] = useState(0);
+  const [isCellularNetwork, setIsCellularNetwork] = useState(false);
+  const nativeHlsStallAttemptsRef = useRef(0);
 
   const isAndroidNativeHls = Platform.OS === 'android';
   const reloadNativePlayer = useCallback(() => {
     setVideoReloadKey((k) => k + 1);
+  }, []);
+
+  useEffect(() => {
+    const sub = NetInfo.addEventListener((s) => setIsCellularNetwork(s.type === 'cellular'));
+    NetInfo.fetch().then((s) => setIsCellularNetwork(s.type === 'cellular'));
+    return () => sub();
   }, []);
 
   // useLiveStream hook — auto-retry, heartbeat, NetInfo monitoring
@@ -99,6 +110,7 @@ const CameraLiveView: React.FC = () => {
     webViewRef,
     isLoading: isWebViewLoading,
     connectionStatus,
+    playerLoadPhase,
     isReconnecting,
     retryCount,
     handleWebViewLoad,
@@ -110,7 +122,10 @@ const CameraLiveView: React.FC = () => {
     markNativePlaybackFailed,
   } = useLiveStream({
     maxRetries: 5,
-    heartbeatTimeout: 30000,
+    heartbeatInterval: 10000,
+    heartbeatTimeout: isCellularNetwork ? 60000 : 45000,
+    initialGracePeriod: isCellularNetwork ? 14000 : 8000,
+    initialLoadingMax: isCellularNetwork ? 70000 : 55000,
     ...(isAndroidNativeHls && {
       playbackSurface: 'native-hls' as const,
       onReloadNativePlayer: reloadNativePlayer,
@@ -121,11 +136,48 @@ const CameraLiveView: React.FC = () => {
     () => (streamWsUrl ? buildHlsStreamUrlFromWs(streamWsUrl) : ''),
     [streamWsUrl]
   );
+  const useAndroidExoHls = isAndroidNativeHls && !!hlsUrl;
+
+  useEffect(() => {
+    nativeHlsStallAttemptsRef.current = 0;
+  }, [hlsUrl]);
+
+  // Android Exo HLS: no WebView initialLoadingMax — recover if manifest/segments never reach onLoad.
+  useEffect(() => {
+    if (!useAndroidExoHls || !hlsUrl) {
+      return undefined;
+    }
+    if (connectionStatus !== 'connecting') {
+      return undefined;
+    }
+
+    const stallMs = isCellularNetwork ? 75000 : 55000;
+    const timer = setTimeout(() => {
+      if (nativeHlsStallAttemptsRef.current >= 2) {
+        streamDebugLog('nativeHlsStallGiveUp');
+        markNativePlaybackFailed();
+        return;
+      }
+      nativeHlsStallAttemptsRef.current += 1;
+      streamDebugLog('nativeHlsStallReload', { attempt: nativeHlsStallAttemptsRef.current });
+      reloadNativePlayer();
+    }, stallMs);
+
+    return () => clearTimeout(timer);
+  }, [
+    useAndroidExoHls,
+    hlsUrl,
+    connectionStatus,
+    videoReloadKey,
+    isCellularNetwork,
+    reloadNativePlayer,
+    markNativePlaybackFailed,
+  ]);
+
   const micWebViewBaseUrl = useMemo(
     () => (streamWsUrl ? getStreamOriginBaseUrl(streamWsUrl) : ''),
     [streamWsUrl]
   );
-  const useAndroidExoHls = isAndroidNativeHls && !!hlsUrl;
 
   const { micState, toggleMic, stopMic, handleMicMessage } = useMic({
     micUrl: micUrl,
@@ -152,6 +204,23 @@ const CameraLiveView: React.FC = () => {
 
   // Derive live status: only "connected" means truly live
   const isLive = connectionStatus === 'connected' && !!streamHtmlUrl && !isWebViewLoading;
+
+  useEffect(() => {
+    isLiveRef.current = isLive;
+  }, [isLive]);
+
+  const streamLoadingMessage = useMemo(() => {
+    if (!streamHtmlUrl) {
+      return t('bluetoothScreen.connecting');
+    }
+    if (playerLoadPhase === 'buffering') {
+      return t('liveStream.bufferingStream');
+    }
+    if (playerLoadPhase === 'connecting') {
+      return t('liveStream.startingPlayer');
+    }
+    return t('liveStream.loadingStream');
+  }, [streamHtmlUrl, playerLoadPhase, t]);
 
   useEffect(() => {
     if (!isLive && isTalking) {
@@ -197,9 +266,11 @@ const CameraLiveView: React.FC = () => {
   const [fetchUrlError, setFetchUrlError] = useState(false);
   const fetchLiveUrl = useCallback(async () => {
     setFetchUrlError(false);
+    streamDebugLog('fetchLiveUrlStart', { cameraId });
     try {
       const res = await cameraService.getLiveStreamUrl(cameraId);
       if (res.success && res.data) {
+        streamDebugLog('fetchLiveUrlOk', { expMinutes: res.data.exp_minutes ?? null });
         setExpMinutes(res.data.exp_minutes ?? null);
         setStreamWsUrl(res.data.live_url);
         setMicUrl(res.data.mic || '');
@@ -211,6 +282,7 @@ const CameraLiveView: React.FC = () => {
       }
     } catch (e) {
       console.warn('getLiveStreamUrl failed:', e);
+      streamDebugLog('fetchLiveUrlError', { message: String(e) });
       setFetchUrlError(true);
     }
   }, [cameraId]);
@@ -355,7 +427,7 @@ const CameraLiveView: React.FC = () => {
           checkAndReload();
         }
       }, 3000);
-    }, 10000);
+    }, 28000);
 
     return () => {
       clearTimeout(graceTimer);
@@ -752,9 +824,16 @@ const CameraLiveView: React.FC = () => {
                     ignoreSilentSwitch="ignore"
                     playInBackground={false}
                     allowsExternalPlayback={false}
+                    onLoadStart={() => streamDebugLog('nativeHlsLoadStart')}
                     onLoad={() => markNativePlaybackConnected()}
+                    onBuffer={({ isBuffering }) => {
+                      if (isBuffering) {
+                        streamDebugLog('nativeHlsBuffering');
+                      }
+                    }}
                     onError={(e) => {
                       console.warn('[CameraLive] ExoPlayer HLS error', e);
+                      streamDebugLog('nativeHlsOnError');
                       markNativePlaybackFailed();
                     }}
                   />
@@ -850,8 +929,10 @@ const CameraLiveView: React.FC = () => {
                     }
                     if (data.type === 'videoDataCheck') {
                       hasVideoDataRef.current = data.hasData;
-                      if (!data.hasData) {
+                      // Only recover from black screen after we were live — avoid reload loops during slow 4G buffer.
+                      if (!data.hasData && isLiveRef.current) {
                         console.log('Black screen detected, auto-reloading stream...');
+                        streamDebugLog('videoDataCheckBlackReload');
                         fetchLiveUrl().then(() => handleManualRetry());
                       }
                       return;
@@ -885,18 +966,14 @@ const CameraLiveView: React.FC = () => {
         {!isLive && !isReconnecting && !showErrorOverlay && !lastFrameBase64 && !fetchUrlError ? (
           <View style={[styles.videoContainer, styles.loadingOverlay]}>
             <ActivityIndicator size="small" color="#FFF" />
-            <Text style={styles.loadingText}>
-              {!streamHtmlUrl ? t('bluetoothScreen.connecting') : t('liveStream.loadingStream')}
-            </Text>
+            <Text style={styles.loadingText}>{streamLoadingMessage}</Text>
           </View>
         ) : null}
 
         {!isLive && !isReconnecting && !showErrorOverlay && lastFrameBase64 && !fetchUrlError ? (
           <View style={styles.loadingIndicatorOverlay}>
             <ActivityIndicator size="small" color="#FFF" />
-            <Text style={styles.loadingText}>
-              {!streamHtmlUrl ? t('bluetoothScreen.connecting') : t('liveStream.loadingStream')}
-            </Text>
+            <Text style={styles.loadingText}>{streamLoadingMessage}</Text>
           </View>
         ) : null}
 

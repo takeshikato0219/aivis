@@ -115,4 +115,3 @@ describe('streamSlice', () => {
     expect(state).toEqual(initialState);
   });
 });
-

@@ -289,7 +289,7 @@
     "connecting": "Connecting...",
     "troubleConnecting": "Trouble connecting?",
     "signal": "Signal",
-    "unknownDevice": "Unknown Device",
+    "unknownDevice": "Aivis camera",
     "noWiFiAccessPointFound": "No WiFi access point found.",
     "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Select a connection method to setup your Jetson Orin camera.",
     "connectionLost": "Connection Lost",
@@ -298,7 +298,9 @@
     "pleaseTurnOnBluetoothToScanForNearbyCameras": "Please turn on Bluetooth to scan for nearby cameras.",
     "unableToOpenSettings": "Unable to open settings",
     "pleaseOpenBluetoothSettingsManually": "Please open Bluetooth settings manually.",
-    "openSettings": "Open settings"
+    "openSettings": "Open settings",
+    "cameraConnectionTimeoutTitle": "Lost connection",
+    "cameraConnectionTimeoutMessage": "Lost connection with the camera. Please try again."
   },
   "pairingCode": {
     "pairingCode": "Pairing Code",
@@ -315,7 +317,7 @@
     "successfullyConnected": "Successfully Connected to Jetson Orin",
     "communicationEstablished": "Communication established via AP Mode. You are now ready to register this device.",
     "cancelSetup": "Cancel Setup",
-    "serial": "Serial:"
+    "serial": "Model ID: "
   },
   "QRScan": {
     "cameraAccess": "Camera access",
@@ -555,6 +557,8 @@
     "connectionLost": "Connection lost",
     "reconnectFailed": "Failed to reconnect. Please try again.",
     "loadingStream": "Loading live stream...",
+    "startingPlayer": "Starting player…",
+    "bufferingStream": "Loading…",
     "onlineAndReady": "Online and ready"
   },
   "settingAI": {
@@ -671,6 +675,8 @@
     "aNewUpdateIsAvailable": "A new update is available",
     "new": "NEW UPDATE",
     "currentlyThereIsNoUpdateAvailable": "Currently, there is no update available.",
-    "latest": "Latest"
+    "latest": "Latest",
+    "updateWillBePerformedOnTheCamera": "The update will be performed on the camera. Click OK to close and wait until you receive a notification that the update is complete.",
+    "anErrorOccurredDuringTheUpdateProcess": "An error occurred during the update process. Please try again."
   }
 }

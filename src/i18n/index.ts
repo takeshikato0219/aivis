@@ -63,6 +63,7 @@ export const initI18n = async () => {
     resources,
     lng: initialLanguage,
     fallbackLng: 'en',
+    showSupportNotice: false,
     compatibilityJSON: 'v4',
     interpolation: {
       escapeValue: false,

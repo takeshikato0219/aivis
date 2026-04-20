@@ -1,7 +1,7 @@
 import { pushNotificationService } from '@/services/pushNotificationService';
 
-const AuthorizationStatus = { AUTHORIZED: 1, PROVISIONAL: 2, DENIED: 3 };
 jest.mock('@react-native-firebase/messaging', () => {
+  const AuthorizationStatus = { AUTHORIZED: 1, PROVISIONAL: 2, DENIED: 3 };
   const mockMessaging = {
     requestPermission: jest.fn(),
     getToken: jest.fn(),
@@ -11,12 +11,21 @@ jest.mock('@react-native-firebase/messaging', () => {
     getInitialNotification: jest.fn(),
     deleteToken: jest.fn(),
   };
-  const messagingFactory = () => mockMessaging;
-  messagingFactory.AuthorizationStatus = AuthorizationStatus;
   return {
     __esModule: true,
-    default: messagingFactory,
     AuthorizationStatus,
+    getMessaging: jest.fn(() => mockMessaging),
+    getToken: (m: { getToken: jest.Mock }, opts?: unknown) => m.getToken(opts),
+    requestPermission: (m: { requestPermission: jest.Mock }, opts?: unknown) =>
+      m.requestPermission(opts),
+    deleteToken: (m: { deleteToken: jest.Mock }, opts?: unknown) => m.deleteToken(opts),
+    onMessage: (m: { onMessage: jest.Mock }, listener: unknown) => m.onMessage(listener),
+    onNotificationOpenedApp: (m: { onNotificationOpenedApp: jest.Mock }, listener: unknown) =>
+      m.onNotificationOpenedApp(listener),
+    onTokenRefresh: (m: { onTokenRefresh: jest.Mock }, listener: unknown) =>
+      m.onTokenRefresh(listener),
+    getInitialNotification: (m: { getInitialNotification: jest.Mock }) =>
+      m.getInitialNotification(),
   };
 });
 jest.mock('@notifee/react-native', () => ({
@@ -191,8 +200,8 @@ jest.mock('@react-navigation/native', () => ({
   createNavigationContainerRef: jest.fn(() => ({ isReady: () => true, dispatch: jest.fn() })),
 }));
 
-// Use messaging() to get the singleton mock
-const messaging = require('@react-native-firebase/messaging').default();
+const { getMessaging, AuthorizationStatus } = require('@react-native-firebase/messaging');
+const messaging = getMessaging();
 const notifee = require('@notifee/react-native');
 const authService = require('@/services/authService');
 const { emitCountDetectionEvent } = require('@/services/countDetectionEventService');

@@ -325,7 +325,7 @@
     "connecting": "接続中...",
     "troubleConnecting": "接続でお困りですか？",
     "signal": "Signal",
-    "unknownDevice": "不明なデバイス",
+    "unknownDevice": "Aivis camera",
     "noWiFiAccessPointFound": "Wi-Fiアクセスポイントが見つかりませんでした。",
     "selectAConnectionMethodToSetupYourJetsonOrinCamera": "Jetson Orin カメラをセットアップするための接続方法を選択してください。",
     "connectionLost": "接続が切断されました",
@@ -334,7 +334,9 @@
     "pleaseTurnOnBluetoothToScanForNearbyCameras": "近くのカメラをスキャンするためにBluetoothをオンにしてください。",
     "unableToOpenSettings": "設定を開くことができません",
     "pleaseOpenBluetoothSettingsManually": "Bluetoothの設定を手動で開いてください。",
-    "openSettings": "設定を開く"
+    "openSettings": "設定を開く",
+    "cameraConnectionTimeoutTitle": "接続が切れました",
+    "cameraConnectionTimeoutMessage": "カメラとの接続が切れました。もう一度お試しください。"
   },
   "pairingCode": {
     "pairingCode": "ペアリングコード",
@@ -596,6 +598,8 @@
     "connectionLost": "接続が失われました",
     "reconnectFailed": "再接続に失敗しました。もう一度お試しください。",
     "loadingStream": "ライブストリームを読み込み中...",
+    "startingPlayer": "プレーヤーを起動中…",
+    "bufferingStream": "読み込み中…",
     "onlineAndReady": "オンライン・準備完了"
   },
   "settingAI": {
@@ -709,6 +713,8 @@
     "aNewUpdateIsAvailable": "新しいアップデートがあります",
     "new": "アップデート",
     "currentlyThereIsNoUpdateAvailable": "現在、利用可能なアップデートはありません。",
-    "latest": "最新"
+    "latest": "最新",
+    "updateWillBePerformedOnTheCamera": "アップデートはカメラで実行されます。OKをクリックして閉じ、アップデート完了の通知があるまでお待ちください。",
+    "anErrorOccurredDuringTheUpdateProcess": "アップデート中にエラーが発生しました。もう一度お試しください。"
   }
 }

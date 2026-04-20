@@ -15,11 +15,8 @@ jest.mock('@/i18n', () => ({
   getCurrentLanguage: jest.fn(() => 'en'),
 }));
 
-jest.mock('@/services/authService', () => ({
-  __esModule: true,
-  default: {
-    refreshToken: jest.fn(),
-  },
+jest.mock('@/api/refreshAccessToken', () => ({
+  refreshAccessToken: jest.fn(),
 }));
 
 jest.mock('../../src/utils/errorHandler', () => ({
@@ -219,10 +216,10 @@ describe('axiosConfig response errors and refresh', () => {
 
   it('skips refresh when request already retried', async () => {
     const ErrorHandler = require('../../src/utils/errorHandler').default;
-    const authService = require('@/services/authService').default;
+    const { refreshAccessToken } = require('@/api/refreshAccessToken');
     const error = unauthorizedError({ url: '/members', _retry: true });
     await expect(getResponseErrorHandler()(error)).rejects.toBe(error);
-    expect(authService.refreshToken).not.toHaveBeenCalled();
+    expect(refreshAccessToken).not.toHaveBeenCalled();
     expect(ErrorHandler.handleApiError).toHaveBeenCalledWith(error);
   });
 
@@ -262,10 +259,10 @@ describe('axiosConfig response errors and refresh', () => {
   });
 
   it('refreshes tokens, dispatches setTokens, updates storage, and retries request', async () => {
-    const authService = require('@/services/authService').default;
+    const { refreshAccessToken } = require('@/api/refreshAccessToken');
     const updateTokens = require('@utils/authStorage').updateTokens;
 
-    authService.refreshToken.mockResolvedValue({
+    refreshAccessToken.mockResolvedValue({
       access_token: 'new-access',
       refresh_token: 'new-refresh',
     });
@@ -273,7 +270,7 @@ describe('axiosConfig response errors and refresh', () => {
     const error = unauthorizedError({ url: '/api/protected' });
     const result = await getResponseErrorHandler()(error);
 
-    expect(authService.refreshToken).toHaveBeenCalledWith('refresh');
+    expect(refreshAccessToken).toHaveBeenCalledWith('refresh');
     expect(mockStore.dispatch).toHaveBeenCalledWith(
       setTokens({ accessToken: 'new-access', refreshToken: 'new-refresh' })
     );
@@ -283,10 +280,10 @@ describe('axiosConfig response errors and refresh', () => {
   });
 
   it('reuses previous refresh token when API omits refresh_token', async () => {
-    const authService = require('@/services/authService').default;
+    const { refreshAccessToken } = require('@/api/refreshAccessToken');
     const updateTokens = require('@utils/authStorage').updateTokens;
 
-    authService.refreshToken.mockResolvedValue({ access_token: 'new-access' });
+    refreshAccessToken.mockResolvedValue({ access_token: 'new-access' });
 
     await getResponseErrorHandler()(unauthorizedError({ url: '/api/protected' }));
 
@@ -299,9 +296,9 @@ describe('axiosConfig response errors and refresh', () => {
   it('logs out when refresh fails', async () => {
     const ErrorHandler = require('../../src/utils/errorHandler').default;
     const removeAuthData = require('@utils/authStorage').removeAuthData;
-    const authService = require('@/services/authService').default;
+    const { refreshAccessToken } = require('@/api/refreshAccessToken');
 
-    authService.refreshToken.mockRejectedValue(new Error('refresh fail'));
+    refreshAccessToken.mockRejectedValue(new Error('refresh fail'));
 
     const error = unauthorizedError({ url: '/api/protected' });
     await expect(getResponseErrorHandler()(error)).rejects.toBe(error);

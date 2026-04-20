@@ -11,7 +11,7 @@ const rnBiometrics = new ReactNativeBiometrics({
 });
 
 const BIOMETRIC_ENABLED_KEY = '@biometric_enabled';
-const KEYCHAIN_SERVICE = 'com.timima01app.biometric';
+const KEYCHAIN_SERVICE = 'com.aivis.camera.ai.biometric';
 
 type BiometryType = 'FaceID' | 'TouchID' | 'Biometrics' | undefined;
 

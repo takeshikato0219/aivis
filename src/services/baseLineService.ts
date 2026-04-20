@@ -1,15 +1,22 @@
 import Line from '@xmartlabs/react-native-line';
 import { Linking } from 'react-native';
 
-// Global flag to prevent multiple LINE SDK setups
+// Global flag + in-flight promise so concurrent constructors only call native setup once
 let isLineSdkConfigured = false;
+let configurePromise: Promise<void> | null = null;
+
+function isSetupAlreadyCompletedError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  return message.includes('already completed');
+}
 
 /**
  * Base class for LINE services providing common functionality
  * including SDK configuration, authentication checks, and utility methods
  */
 export abstract class BaseLineService {
-  protected channelId = '2009514097';
+  protected channelId = '2009814613';
 
   constructor() {
     this.configure();
@@ -23,14 +30,27 @@ export abstract class BaseLineService {
     if (isLineSdkConfigured) {
       return;
     }
-
-    try {
-      const setupParams = { channelId: this.channelId };
-      await Line.setup(setupParams);
-      isLineSdkConfigured = true;
-    } catch (error: any) {
-      console.log('[LINE] Setup error caught:', error);
+    if (configurePromise) {
+      return configurePromise;
     }
+
+    configurePromise = (async () => {
+      try {
+        const setupParams = { channelId: this.channelId };
+        await Line.setup(setupParams);
+        isLineSdkConfigured = true;
+      } catch (error: unknown) {
+        if (isSetupAlreadyCompletedError(error)) {
+          isLineSdkConfigured = true;
+          return;
+        }
+        console.log('[LINE] Setup error caught:', error);
+      } finally {
+        configurePromise = null;
+      }
+    })();
+
+    return configurePromise;
   }
 
   /**
