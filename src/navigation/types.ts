@@ -131,6 +131,11 @@ export type PairingCodeScreenRouteProp = RouteProp<AppStackParamList, 'PairingCo
 export type NetworkSetupNavigationProp = StackNavigationProp<AppStackParamList, 'NetworkSetup'>;
 export type NetworkSetupRouteProp = RouteProp<AppStackParamList, 'NetworkSetup'>;
 
+export type ConnectionSuccessfulScreenNavigationProp = StackNavigationProp<
+  AppStackParamList,
+  'ConnectionSuccessful'
+>;
+
 export type ConnectionSuccessfulScreenRouteProp = RouteProp<
   AppStackParamList,
   'ConnectionSuccessful'

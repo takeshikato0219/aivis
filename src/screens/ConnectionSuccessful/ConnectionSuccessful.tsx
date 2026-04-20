@@ -30,7 +30,10 @@ import MoveRightIcon from '@assets/svg/vector-right.svg';
 import CameraLiveViewIcon from '@assets/webp/camera-live.webp';
 import IconPencil from '@assets/svg/pencil-icon.svg';
 import SettingIcon from '@assets/svg/settings-icon-incisor.svg';
-import { ConnectionSuccessfulScreenRouteProp } from '@navigation/types';
+import {
+  ConnectionSuccessfulScreenRouteProp,
+  ConnectionSuccessfulScreenNavigationProp,
+} from '@navigation/types';
 import { CameraStatus } from '@api/types/cameraTypes';
 import {
   buildStreamHtmlUrl,
@@ -55,7 +58,7 @@ interface CameraInfo {
 
 const ConnectionSuccessful: React.FC = () => {
   const responsive = useResponsive();
-  const navigation = useNavigation();
+  const navigation = useNavigation<ConnectionSuccessfulScreenNavigationProp>();
   const route = useRoute<ConnectionSuccessfulScreenRouteProp>();
   const { t } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
@@ -779,7 +782,7 @@ const ConnectionSuccessful: React.FC = () => {
           // eslint-disable-next-line react-native/no-inline-styles
           style={[styles.primaryButton, cameraNameError ? { opacity: 0.5 } : null]}
           onPress={() => {
-            navigation.navigate('Home' as any);
+            navigation.navigate('Home');
           }}
           disabled={!!cameraNameError}
         >
@@ -793,7 +796,7 @@ const ConnectionSuccessful: React.FC = () => {
           // eslint-disable-next-line react-native/no-inline-styles
           style={[styles.secondaryButton, cameraNameError ? { opacity: 0.5 } : null]}
           onPress={() => {
-            (navigation as any).navigate('ListFace', { type: '' });
+            navigation.navigate('ListFace', { type: '' });
           }}
           disabled={!!cameraNameError}
         >
