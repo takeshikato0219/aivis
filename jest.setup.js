@@ -125,7 +125,7 @@ jest.mock('react-native-device-info', () => ({
   getUniqueId: jest.fn(() => Promise.resolve('unique-id-12345')),
   getVersion: jest.fn(() => '1.0.0'),
   getBuildNumber: jest.fn(() => '1'),
-  getBundleId: jest.fn(() => 'com.timima01app'),
+  getBundleId: jest.fn(() => 'com.aivis.camera.ai'),
   getDeviceName: jest.fn(() => Promise.resolve('Test Device')),
   isEmulator: jest.fn(() => Promise.resolve(false)),
 }));

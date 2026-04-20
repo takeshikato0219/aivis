@@ -262,6 +262,7 @@ const NetworkSetup: React.FC = () => {
     navigation.replace('SetupComplete', {
       cameraName,
       ssid: connectedSsid,
+      deviceId: route.params?.deviceId,
     });
   };
 
@@ -349,7 +350,7 @@ const NetworkSetup: React.FC = () => {
   };
 
   const handleBackToScan = async () => {
-    jetsonBLEService.disconnect();
+    await jetsonBLEService.disconnect();
     navigation.reset({
       index: 1,
       routes: [{ name: 'Home' }, { name: 'ConnectDevice' }],
@@ -416,7 +417,6 @@ const NetworkSetup: React.FC = () => {
               ))}
             </View>
 
-            {/* WiFi Tab – KeyboardAwareScrollView auto-scrolls to focused input */}
             {activeTab === 'wifi' && (
               <KeyboardAwareScrollView
                 style={styles.scrollView}

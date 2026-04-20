@@ -210,7 +210,7 @@ const ConnectDevice: React.FC = () => {
                       </View>
                       <View style={styles.deviceInfo}>
                         <Text style={styles.deviceName} numberOfLines={2} ellipsizeMode="tail">
-                          {item.name || t('bluetoothScreen.unknownDevice')}
+                          {item.localName || item.name || t('bluetoothScreen.unknownDevice')}
                         </Text>
                         <View style={styles.signalRow}>
                           <View style={styles.signalDot} />

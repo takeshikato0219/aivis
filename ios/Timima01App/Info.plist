@@ -23,30 +23,31 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
-        <array>
-            <!-- Google OAuth -->
-            <dict>
-                <key>CFBundleURLSchemes</key>
-                <array>
-                    <string>com.googleusercontent.apps.531701025722-4kn96h41jre9ut0nf65e15t0117l3k20</string>
-                </array>
-            </dict>
-            <!-- LINE SDK -->
-            <dict>
-                <key>CFBundleTypeRole</key>
-                <string>Editor</string>
-                <key>CFBundleURLName</key>
-                <string>line3rdp</string>
-                <key>CFBundleURLSchemes</key>
-                <array>
-                    <string>line3rdp.com.timima01app</string>
-                </array>
-            </dict>
-        </array>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-    <string>App needs Bluetooth to find and connect to camera devices nearby.</string>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.531701025722-4kn96h41jre9ut0nf65e15t0117l3k20</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>line3rdp</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>line3rdp.com.aivis.camera.ai</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>lineauth2</string>
+		<string>line</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -66,16 +67,18 @@
 	</dict>
 	<key>NSBiometricUsageDescription</key>
 	<string>We need biometric authentication to securely log you in</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>App needs Bluetooth to find and connect to camera devices nearby.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>$(PRODUCT_NAME) needs access to your camera to take photos</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>We need Face ID to securely log you in</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>App needs access to local network for WiFi connections</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>App needs location access to scan WiFi networks</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
-	<key>NSLocationAlwaysUsageDescription</key>
-    <string>App needs location access to scan WiFi networks</string>
-	<key>NSLocalNetworkUsageDescription</key>
-    <string>App needs access to local network for WiFi connections</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>The app needs microphone access to communicate via the camera.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -95,6 +98,10 @@
 		<string>Feather.ttf</string>
 		<string>Entypo.ttf</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -109,14 +116,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>LSApplicationQueriesSchemes</key>
-        <array>
-            <string>lineauth2</string>
-            <string>line</string>
-        </array>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
 </dict>
 </plist>

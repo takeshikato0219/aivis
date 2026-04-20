@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:878075758960:android:78ebed5d0be1017feca7b5",
+        "android_client_info": {
+          "package_name": "com.aivis.camera.ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBw90T7tjkK7cgoZeaFKYtDoqkL4rWwH9c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:878075758960:android:d2ac26e6c47b303deca7b5",
         "android_client_info": {
           "package_name": "com.timima01app"

@@ -77,6 +77,53 @@ export const styles = StyleSheet.create({
   streamWrapper: {
     width: '100%',
     height: 245,
+    position: 'relative',
+  },
+  videoPlayerRoot: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+    alignSelf: 'stretch',
+    position: 'relative',
+    backgroundColor: '#000',
+    overflow: 'hidden',
+  },
+  videoNativeSurface: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#000',
+  },
+  micWebViewHidden: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+    left: -100,
+    top: -100,
+    overflow: 'hidden',
+  },
+  webViewContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+    overflow: 'hidden',
+  },
+  streamOverlayContainer: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingIndicatorInOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  errorInOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+    padding: 20,
   },
   webView: {
     flex: 1,

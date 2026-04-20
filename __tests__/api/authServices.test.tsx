@@ -1,10 +1,14 @@
 // __tests__/api/authService.test.ts
 import AuthService from '@/services/authService';
 import { LoginRequest } from '@api/types/authTypes';
-import axiosInstance from '../../src/api/axiosConfig';
+import axiosInstance from '../../src/api/axiosInstance';
+import { refreshAccessToken } from '@api/refreshAccessToken';
 import { API_ENDPOINTS } from '@api/apiEndpoints';
 
-jest.mock('../../src/api/axiosConfig');
+jest.mock('../../src/api/axiosInstance');
+jest.mock('@api/refreshAccessToken', () => ({
+  refreshAccessToken: jest.fn(),
+}));
 
 describe('AuthService', () => {
   afterEach(() => {
@@ -191,17 +195,15 @@ describe('AuthService', () => {
     expect(result).toEqual(mockUserData);
   });
 
-  it('refreshToken calls axios with correct params', async () => {
+  it('refreshToken delegates to refreshAccessToken', async () => {
     const mockResponse = {
       access_token: 'new-access-token',
       refresh_token: 'new-refresh-token',
     };
-    (axiosInstance.post as jest.Mock).mockResolvedValue({ data: { data: mockResponse } });
+    (refreshAccessToken as jest.Mock).mockResolvedValue(mockResponse);
 
     const result = await AuthService.refreshToken('old-refresh-token');
-    expect(axiosInstance.post).toHaveBeenCalledWith(API_ENDPOINTS.AUTH.REFRESH_TOKEN, {
-      refresh_token: 'old-refresh-token',
-    });
+    expect(refreshAccessToken).toHaveBeenCalledWith('old-refresh-token');
     expect(result).toEqual(mockResponse);
   });
 
