@@ -495,12 +495,7 @@ const ConnectionSuccessful: React.FC = () => {
       prevStreamUrlRef.current = '';
       setVideoReloadKey((k) => k + 1);
     }
-  }, [
-    persistLastFrameOnLeave,
-    cleanupLiveStream,
-    useAndroidExoHls,
-    webViewRef,
-  ]);
+  }, [persistLastFrameOnLeave, cleanupLiveStream, useAndroidExoHls, webViewRef]);
 
   useFocusEffect(
     useCallback(() => {

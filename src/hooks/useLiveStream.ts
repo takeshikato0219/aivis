@@ -84,9 +84,7 @@ export const useLiveStream = (config: UseLiveStreamConfig = {}): UseLiveStreamRe
   const lastBufferingSignalDebugAtRef = useRef(0);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(
-    'connecting'
-  );
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [playerLoadPhase, setPlayerLoadPhase] = useState<PlayerLoadPhase>('connecting');
   const [retryCount, setRetryCount] = useState(0);
   const [isReconnecting, setIsReconnecting] = useState(false);
