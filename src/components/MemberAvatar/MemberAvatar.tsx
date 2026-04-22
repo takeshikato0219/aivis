@@ -4,7 +4,6 @@ import {
   Image,
   ImageStyle,
   ImageURISource,
-  InteractionManager,
   Platform,
   StyleProp,
   StyleSheet,
@@ -71,7 +70,10 @@ function avatarCacheKey(uri: string, decodeMax: number): string {
 }
 
 function rememberResolvedAvatar(cacheKey: string, fileUri: string) {
-  if (resolvedAvatarFileByKey.size >= AVATAR_RESOLVED_CACHE_MAX && !resolvedAvatarFileByKey.has(cacheKey)) {
+  if (
+    resolvedAvatarFileByKey.size >= AVATAR_RESOLVED_CACHE_MAX &&
+    !resolvedAvatarFileByKey.has(cacheKey)
+  ) {
     const first = resolvedAvatarFileByKey.keys().next().value as string | undefined;
     if (first !== undefined) {
       resolvedAvatarFileByKey.delete(first);
@@ -333,7 +335,7 @@ export function MemberAvatar({
     let cancelled = false;
 
     let fetchTimeoutId: ReturnType<typeof setTimeout> | undefined;
-    let interactionTask: { cancel?: () => void } | undefined;
+    let deferredLoad: { cancel?: () => void } | undefined;
 
     void (async () => {
       const cached = resolvedAvatarFileByKey.get(cacheKey);
@@ -359,7 +361,7 @@ export function MemberAvatar({
       const ac = new AbortController();
       fetchAbortRef.current = ac;
 
-      interactionTask = InteractionManager.runAfterInteractions(() => {
+      const immediateId = setImmediate(() => {
         if (cancelled) return;
 
         fetchTimeoutId = setTimeout(() => ac.abort(), FETCH_IMAGE_TIMEOUT_MS);
@@ -431,6 +433,7 @@ export function MemberAvatar({
           }
         })();
       });
+      deferredLoad = { cancel: () => clearImmediate(immediateId) };
     })();
 
     return () => {
@@ -439,7 +442,7 @@ export function MemberAvatar({
         clearTimeout(fetchTimeoutId);
       }
       fetchAbortRef.current?.abort();
-      interactionTask?.cancel?.();
+      deferredLoad?.cancel?.();
     };
   }, [normalizedUri, retryIndex, givenUp, retryOrGiveUp, decodeMax]);
 
