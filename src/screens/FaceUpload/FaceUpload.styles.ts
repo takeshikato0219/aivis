@@ -21,6 +21,11 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
+  /** Keeps list header actions above FlatList so ScrollView does not steal touches (Android/iOS). */
+  listFaceScreenHeader: {
+    zIndex: 10,
+    elevation: 10,
+  },
   closeButton: {
     width: 40,
     height: 40,

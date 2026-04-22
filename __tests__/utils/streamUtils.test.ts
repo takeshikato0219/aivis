@@ -9,6 +9,7 @@ import {
   getStreamOriginBaseUrl,
   getInjectedStreamPlayerJS,
   buildIOSStreamInlineHtml,
+  applyWsStreamSrc,
 } from '../../src/utils/streamUtils';
 
 describe('streamUtils', () => {
@@ -134,6 +135,45 @@ describe('streamUtils', () => {
     });
     it('should return null for empty input', () => {
       expect(getRawTokenValueFromUrl('')).toBeNull();
+    });
+  });
+
+  describe('applyWsStreamSrc', () => {
+    it('should return empty string for empty input', () => {
+      expect(applyWsStreamSrc('', 'camera')).toBe('');
+    });
+
+    it('should replace src=camera with src=camera_mobile and preserve token', () => {
+      const wsUrl =
+        'wss://camera001-stream.unlimited.io.vn/api/ws?src=camera&token=eyJwYXlsb2FkIjoiYSJ9.signature==';
+      const out = applyWsStreamSrc(wsUrl, 'camera_mobile');
+      expect(out).toContain('src=camera_mobile');
+      expect(out).toContain('token=eyJwYXlsb2FkIjoiYSJ9.signature==');
+      expect(getRawTokenValueFromUrl(out)).toBe(getRawTokenValueFromUrl(wsUrl));
+    });
+
+    it('should replace src=camera_mobile back to src=camera', () => {
+      const wsUrl = 'wss://host/api/ws?src=camera_mobile&token=tok%2Bxx%3D%3D';
+      const out = applyWsStreamSrc(wsUrl, 'camera');
+      expect(out).toContain('src=camera');
+      expect(getRawTokenValueFromUrl(out)).toBe(getRawTokenValueFromUrl(wsUrl));
+    });
+
+    it('should add src=camera_mobile when only token is present (logical camera)', () => {
+      const wsUrl = 'wss://host/api/ws?token=abc123';
+      const out = applyWsStreamSrc(wsUrl, 'camera_mobile');
+      expect(out).toContain('src=camera_mobile');
+      expect(out).toContain('token=abc123');
+    });
+
+    it('should not change URL when src is neither camera nor camera_mobile for mobile target', () => {
+      const wsUrl = 'wss://host/api/ws?src=other&token=t';
+      expect(applyWsStreamSrc(wsUrl, 'camera_mobile')).toBe(wsUrl);
+    });
+
+    it('should not change URL when targeting camera but src is not camera_mobile', () => {
+      const wsUrl = 'wss://host/api/ws?src=camera&token=t';
+      expect(applyWsStreamSrc(wsUrl, 'camera')).toBe(wsUrl);
     });
   });
 
