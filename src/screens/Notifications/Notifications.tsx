@@ -19,6 +19,13 @@ import IconHome from '@assets/svg/icon-home.svg';
 import IconPerson from '@assets/svg/icon-person.svg';
 import IconSuspect from '@assets/svg/icon-suspect.svg';
 import IconBear from '@assets/svg/icon-bear.svg';
+import IconMark from '@assets/svg/face-mask-icon.svg';
+import IconGlove from '@assets/svg/gloves-icon.svg';
+import IconBan from '@assets/svg/ban-sign-icon.svg';
+import IconAttendance from '@assets/svg/attendance-icon.svg';
+import IconHelmet from '@assets/svg/helmet-icon.svg';
+import IconVip from '@assets/svg/vip-label-icon.svg';
+import IconHospital from '@assets/svg/hospital-icon.svg';
 import LoadingComponent from '@components/Loading/Loading';
 
 const PAGE_SIZE = 10;
@@ -43,6 +50,17 @@ const Notifications = () => {
     daily_passerby: { icon: IconPerson, iconName: 'IconPerson' },
     unregistered_detection: { icon: IconSuspect, iconName: 'IconSuspect' },
     creature_detection: { icon: IconBear, iconName: 'IconBear' },
+    visitor_count: { icon: IconHome, iconName: 'IconHome' },
+    vip_customer_detection: { icon: IconVip, iconName: 'IconVip' },
+    customer_attribute_report: { icon: IconPerson, iconName: 'IconPerson' },
+    suspicious_behavior_detection: { icon: IconSuspect, iconName: 'IconSuspect' },
+    access_prohibition_detection: { icon: IconBan, iconName: 'IconBan' },
+    enterprise_attendance: { icon: IconAttendance, iconName: 'IconAttendance' },
+    helmet_wearing: { icon: IconHelmet, iconName: 'IconHelmet' },
+    mask_wearing: { icon: IconMark, iconName: 'IconMark' },
+    glove_wearing: { icon: IconGlove, iconName: 'IconGlove' },
+    restricted_area_intrusion: { icon: IconBan, iconName: 'IconBan' },
+    unexpected_incident: { icon: IconHospital, iconName: 'IconHospital' },
   };
 
   const defaultIcon = IconHome;
