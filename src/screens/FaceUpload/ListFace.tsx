@@ -65,9 +65,7 @@ const ListFaceMemberRow = memo(function ListFaceMemberRow({
         />
         <View>
           <Text style={styles.memberName}>{item.name}</Text>
-          {relationship && (
-            <Text style={styles.memberRelationship}>{relationship.name_trans}</Text>
-          )}
+          {relationship && <Text style={styles.memberRelationship}>{relationship.name_trans}</Text>}
         </View>
       </View>
       <Icon name="chevron-right" size={24} color="#888" />

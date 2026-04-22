@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react-native';
 import { useJetsonBLE } from '../../src/hooks/useJetsonBLE';
 import { useAppSelector } from '@redux/store';
 import { jetsonBLEService } from '@/services/jetsonBLEService';
