@@ -1,0 +1,21 @@
+/* Camera */
+NSCameraUsageDescription = "写真を撮影するため、カメラへのアクセスが必要です。";
+
+/* Microphone */
+NSMicrophoneUsageDescription = "カメラを通じて通話するため、マイクへのアクセスが必要です。";
+
+/* Photo Library */
+NSPhotoLibraryUsageDescription = "写真を選択するため、フォトライブラリへのアクセスが必要です。";
+NSPhotoLibraryAddUsageDescription = "写真をライブラリに保存するため、アクセスが必要です。";
+
+/* Bluetooth */
+NSBluetoothAlwaysUsageDescription = "近くのカメラデバイスを検索・接続するため、Bluetoothへのアクセスが必要です。";
+
+/* Biometrics */
+NSBiometricUsageDescription = "安全にログインするため、生体認証が必要です。";
+NSFaceIDUsageDescription = "安全にログインするため、Face IDが必要です。";
+
+/* Network & Location */
+NSLocalNetworkUsageDescription = "Wi-Fi接続のため、ローカルネットワークへのアクセスが必要です。";
+NSLocationAlwaysUsageDescription = "Wi-Fiネットワークをスキャンするため、位置情報へのアクセスが必要です。";
+NSLocationWhenInUseUsageDescription = "Wi-Fiネットワークをスキャンするため、位置情報へのアクセスが必要です。";

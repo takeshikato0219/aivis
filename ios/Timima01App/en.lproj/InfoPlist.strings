@@ -1,0 +1,21 @@
+/* Camera */
+NSCameraUsageDescription = "$(PRODUCT_NAME) needs access to your camera to take photos";
+
+/* Microphone */
+NSMicrophoneUsageDescription = "The app needs microphone access to communicate via the camera.";
+
+/* Photo Library */
+NSPhotoLibraryUsageDescription = "$(PRODUCT_NAME) needs access to your photo library to select photos";
+NSPhotoLibraryAddUsageDescription = "$(PRODUCT_NAME) needs access to save photos to your library";
+
+/* Bluetooth */
+NSBluetoothAlwaysUsageDescription = "App needs Bluetooth to find and connect to camera devices nearby.";
+
+/* Biometrics */
+NSBiometricUsageDescription = "We need biometric authentication to securely log you in";
+NSFaceIDUsageDescription = "We need Face ID to securely log you in";
+
+/* Network & Location */
+NSLocalNetworkUsageDescription = "App needs access to local network for WiFi connections";
+NSLocationAlwaysUsageDescription = "App needs location access to scan WiFi networks";
+NSLocationWhenInUseUsageDescription = "App needs location access to scan WiFi networks";

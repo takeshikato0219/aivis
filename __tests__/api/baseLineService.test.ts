@@ -17,7 +17,7 @@ jest.mock('react-native', () => ({
 
 const freshService = () => {
   jest.resetModules();
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+
   const { BaseLineService } = require('@/services/baseLineService');
   class TestLineService extends BaseLineService {}
   return new TestLineService() as InstanceType<typeof BaseLineService>;
@@ -65,10 +65,7 @@ describe('BaseLineService', () => {
       mockSetup.mockRejectedValueOnce(new Error('some other error'));
       const service = freshService();
       await (service as any).configure();
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[LINE] Setup error caught:',
-        expect.any(Error)
-      );
+      expect(consoleSpy).toHaveBeenCalledWith('[LINE] Setup error caught:', expect.any(Error));
       // Flag NOT set → second call should try again
       mockSetup.mockResolvedValueOnce(undefined);
       await (service as any).configure();
@@ -141,7 +138,7 @@ describe('BaseLineService', () => {
       mockSetup.mockResolvedValue(undefined);
       const service = freshService();
       // Must require react-native AFTER freshService() to get the same mock instance
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+
       const { Linking: FreshLinking } = require('react-native');
       (FreshLinking.canOpenURL as jest.Mock).mockResolvedValueOnce(true);
       await expect((service as any).isLineAppInstalled()).resolves.toBe(true);
@@ -151,7 +148,7 @@ describe('BaseLineService', () => {
     it('should return false when canOpenURL resolves false', async () => {
       mockSetup.mockResolvedValue(undefined);
       const service = freshService();
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+
       const { Linking: FreshLinking } = require('react-native');
       (FreshLinking.canOpenURL as jest.Mock).mockResolvedValueOnce(false);
       await expect((service as any).isLineAppInstalled()).resolves.toBe(false);
@@ -160,7 +157,7 @@ describe('BaseLineService', () => {
     it('should return false and log error when canOpenURL throws', async () => {
       mockSetup.mockResolvedValue(undefined);
       const service = freshService();
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+
       const { Linking: FreshLinking } = require('react-native');
       (FreshLinking.canOpenURL as jest.Mock).mockRejectedValueOnce(new Error('fail'));
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();

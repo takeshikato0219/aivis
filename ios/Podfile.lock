@@ -1897,7 +1897,7 @@ PODS:
     - SocketRocket
   - react-native-biometrics (3.0.1):
     - React-Core
-  - react-native-ble-plx (3.5.1):
+  - react-native-ble-plx (3.5.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2187,7 +2187,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-video (6.19.1):
+  - react-native-video (6.19.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2205,7 +2205,7 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-video/Video (= 6.19.1)
+    - react-native-video/Video (= 6.19.0)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -2216,7 +2216,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-video/Fabric (6.19.1):
+  - react-native-video/Fabric (6.19.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2244,7 +2244,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-video/Video (6.19.1):
+  - react-native-video/Video (6.19.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -3822,7 +3822,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: 60a42c90f1db2c852d5e06577f3d3d5d3233d45b
   React-microtasksnativemodule: 044e6549d565f0a5f23b01cf3ed745541cb980e0
   react-native-biometrics: 352e5a794bfffc46a0c86725ea7dc62deb085bdc
-  react-native-ble-plx: 4edb4fb2137bbada7b34223f02d27b0a724489f6
+  react-native-ble-plx: 3a77f3783c967b0e05faf9f3ee90d74c6ed795cc
   react-native-cameraroll: aa5f6fe38b5574f1066a37ceaad5ece494a157a5
   react-native-image-picker: b99d9c1f2ddbef491eb49e1103e5c2ce78b9ab37
   react-native-image-resizer: 823dbca28ed2e78feb780ac9eb53db0bb8c6dd4c
@@ -3832,7 +3832,7 @@ SPEC CHECKSUMS:
   react-native-record-screen: c2af1bf7726e899187fa0a0f832b07f6d8c7b764
   react-native-render-html: 984dfe2294163d04bf5fe25d7c9f122e60e05ebe
   react-native-safe-area-context: 7e0ba374906d8f5009aaf96cd19d4866d8de342b
-  react-native-video: deda3dbd14c35feece29f246ff772d29c061d428
+  react-native-video: d7c758820331cdbccbc4388d7533680ab2a44320
   react-native-view-shot: a52222a76e68bf04449fd18a4efeb899a4ab21d7
   react-native-webview: 21fdd62caca650645e429b4a84941626612616ef
   React-NativeModulesApple: a4af348fce12730a7bc424559e8207b35e6ac046
