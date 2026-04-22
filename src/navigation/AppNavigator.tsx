@@ -1,148 +1,261 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Platform } from 'react-native';
-import { useTheme } from 'react-native-paper';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { AppStackParamList, BottomTabParamList } from './types';
-import { COLORS } from '@constants/theme';
+import { AppStackParamList } from './types';
+import { DARK_COLORS } from '@constants/theme';
+import BLEConnectionHandler from '@components/BLEConnectionHandler/BLEConnectionHandler';
 
 // Import Screens
-import HomeScreen from '@screens/HomeScreen/HomeScreen';
-import SearchScreen from '@screens/SearchScreen/SearchScreen';
-import NotificationsScreen from '@screens/NotificationsScreen/NotificationsScreen';
-import ProfileScreen from '@screens/ProfileScreen/ProfileScreen';
-import DemoScreen from '@screens/DemoScreen/DemoScreen';
+import Home from '@screens/Home/Home';
+import Notifications from '@screens/Notifications/Notifications';
+import Introduce from '@screens/Introduce/Introduce';
+import Detail from '@screens/Detail/Detail';
+import CameraLiveView from '@screens/CameraLiveView/CameraLiveView';
+import QRScanner from '@screens/QRScanner/QRScanner';
+import CameraSetup from '@screens/CameraSetup/CameraSetup';
+import SetupComplete from '@screens/SetupComplete/SetupComplete';
+import Profile from '@screens/Profile/Profile';
+import EditProfile from '@screens/EditProfile/EditProfile';
+import ChangePassword from '@screens/ChangePassword/ChangePassword';
+import DetectionZoneSetup from '@screens/DetectionZoneSetup/DetectionZoneSetup';
+import ConnectDevice from '@screens/ConnectDevice/ConnectDevice';
+import PairingCode from '@screens/PairingCode/PairingCode';
+import NetworkSetup from '@screens/NetworkSetup/NetworkSetup';
+import Setting from '@screens/Setting/Setting';
+import FaceUpload from '@screens/FaceUpload/FaceUpload';
+import ConnectionSuccessful from '@screens/ConnectionSuccessful/ConnectionSuccessful';
+import SettingAI from '@screens/SettingAI/SettingAI';
+import ListFace from '@screens/FaceUpload/ListFace';
+import DetailFace from '@screens/FaceUpload/DetailFace';
+import AiDetectionRules from '@screens/AiDetectionRules/AiDetectionRules';
+import WorkSchedule from '@screens/WorkSchedule/WorkSchedule';
+import UploadDetectZone from '@screens/DetectionZoneSetup/UploadDetectZone';
+import ListNotificationCamera from '@screens/ListNotificationCamera/ListNotificationCamera';
+import CustomerReport from '@screens/CustomerReport/CustomerReport';
+import Policy from '@screens/Policy/Policy';
+import UpdateCamera from '@screens/UpdateCamera/UpdateCamera';
 
 const Stack = createStackNavigator<AppStackParamList>();
-const Tab = createBottomTabNavigator<BottomTabParamList>();
-
-// ===== TAB ICON HELPER =====
-const getTabBarIcon =
-  (routeName: keyof BottomTabParamList) =>
-  ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
-    let iconName = 'home';
-
-    switch (routeName) {
-      case 'HomeTab':
-        iconName = focused ? 'home' : 'home-outline';
-        break;
-      case 'SearchTab':
-        iconName = focused ? 'search' : 'search-outline';
-        break;
-      case 'NotificationsTab':
-        iconName = focused ? 'notifications' : 'notifications-outline';
-        break;
-      case 'ProfileTab':
-        iconName = focused ? 'person' : 'person-outline';
-        break;
-    }
-
-    return <Icon name={iconName} size={size} color={color} />;
-  };
-
-// ===== BOTTOM TAB NAVIGATOR =====
-const BottomTabNavigator = () => {
-  const theme = useTheme();
-
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary || COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
-        tabBarStyle: {
-          backgroundColor: theme.colors.surface || COLORS.background,
-          borderTopWidth: 1,
-          borderTopColor: theme.colors.outline || COLORS.border,
-          height: Platform.OS === 'ios' ? 88 : 60,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-          paddingTop: 8,
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: -2,
-          },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
-        tabBarIcon: getTabBarIcon(route.name),
-      })}
-    >
-      {/* Direct screen components */}
-      <Tab.Screen
-        name="HomeTab"
-        component={HomeScreen}
-        options={{
-          tabBarLabel: 'Home',
-        }}
-      />
-
-      <Tab.Screen
-        name="SearchTab"
-        component={SearchScreen}
-        options={{
-          tabBarLabel: 'Search',
-        }}
-      />
-
-      <Tab.Screen
-        name="NotificationsTab"
-        component={NotificationsScreen}
-        options={{
-          tabBarLabel: 'Notifications',
-          tabBarBadge: 3,
-        }}
-      />
-
-      <Tab.Screen
-        name="ProfileTab"
-        component={ProfileScreen}
-        options={{
-          tabBarLabel: 'Profile',
-        }}
-      />
-    </Tab.Navigator>
-  );
-};
 
 // ===== APP STACK NAVIGATOR (Wrap BottomTab + Modal Screens) =====
 const AppNavigator = () => {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: COLORS.background,
-        },
-        headerTintColor: COLORS.text,
-        headerTitleStyle: {
-          fontWeight: '600',
-          fontSize: 18,
-        },
-      }}
-    >
-      {/* Main BottomTab */}
-      <Stack.Screen
-        name="MainTabs"
-        component={BottomTabNavigator}
-        options={{ headerShown: false }}
-      />
-
-      {/* Modal/Overlay Screens */}
-      <Stack.Screen
-        name="Demo"
-        component={DemoScreen}
-        options={{
-          title: 'Design Components',
+    <>
+      <BLEConnectionHandler />
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: DARK_COLORS.background,
+          },
+          headerTintColor: DARK_COLORS.text,
+          headerTitleStyle: {
+            fontWeight: '600',
+            fontSize: 18,
+          },
         }}
-      />
-    </Stack.Navigator>
+      >
+        <Stack.Screen
+          name="Introduce"
+          component={Introduce}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Home"
+          component={Home}
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="Detail"
+          component={Detail}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="CameraLive"
+          component={CameraLiveView}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Notifications"
+          component={Notifications}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="QRScanner"
+          component={QRScanner}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="CameraSetup"
+          component={CameraSetup}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="SetupComplete"
+          component={SetupComplete}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={Profile}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="EditProfile"
+          component={EditProfile}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ChangePassword"
+          component={ChangePassword}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="DetectionZoneSetup"
+          component={DetectionZoneSetup}
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="ConnectDevice"
+          component={ConnectDevice}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="PairingCode"
+          component={PairingCode}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="NetworkSetup"
+          component={NetworkSetup}
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="Setting"
+          component={Setting}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="FaceUpload"
+          component={FaceUpload}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ConnectionSuccessful"
+          component={ConnectionSuccessful}
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="SettingAI"
+          component={SettingAI}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ListFace"
+          component={ListFace}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="DetailFace"
+          component={DetailFace}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="AiDetectionRules"
+          component={AiDetectionRules}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="WorkSchedule"
+          component={WorkSchedule}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="UploadDetectZone"
+          component={UploadDetectZone}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="ListNotificationCamera"
+          component={ListNotificationCamera}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="CustomerReport"
+          component={CustomerReport}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Policy"
+          component={Policy}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="UpdateCamera"
+          component={UpdateCamera}
+          options={{
+            headerShown: false,
+          }}
+        />
+      </Stack.Navigator>
+    </>
   );
 };
 

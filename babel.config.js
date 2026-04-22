@@ -15,6 +15,7 @@ module.exports = {
           '. jsx',
           '.js',
           '.json',
+          '.svg',
         ],
         alias: {
           '@': './src',
@@ -30,6 +31,7 @@ module.exports = {
           '@types': './src/types',
           '@i18n': './src/i18n',
           '@locales': './src/locales',
+          '@assets': './src/assets',
         },
       },
     ],

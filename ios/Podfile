@@ -5,14 +5,22 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+platform :ios, '15.5'
 prepare_react_native_project!
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
+# Firebase iOS SDK v9+ requires use_frameworks (static linkage)
+use_frameworks! :linkage => :static
+$RNFirebaseAsStaticFramework = true
+
+require_relative '../node_modules/react-native-permissions/scripts/setup'
+
+setup_permissions([
+  'Camera',
+  'Microphone',
+  'PhotoLibrary',
+  'PhotoLibraryAddOnly',
+  'Notifications'
+])
 
 target 'Timima01App' do
   config = use_native_modules!
@@ -30,5 +38,27 @@ target 'Timima01App' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |bc|
+        bc.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
+      end
+    end
+
+    # Fix: react-native-record-screen uses RPScreenRecorder (ReplayKit) but podspec doesn't declare it
+    # Add ReplayKit to xcconfig so it persists across pod install
+    ['Pods-Timima01App.debug.xcconfig', 'Pods-Timima01App.release.xcconfig'].each do |config_name|
+      config_path = File.join(installer.sandbox.root, 'Target Support Files', 'Pods-Timima01App', config_name)
+      if File.exist?(config_path)
+        config_content = File.read(config_path)
+        unless config_content.include?('ReplayKit')
+          config_content = config_content.gsub(
+            /(OTHER_LDFLAGS = .+)/,
+            "\\1 -framework \"ReplayKit\""
+          )
+          File.write(config_path, config_content)
+        end
+      end
+    end
   end
 end

@@ -7,6 +7,20 @@ import { useErrorHandler } from '../../src/hooks/useErrorHandler';
 jest.mock('react-native', () => ({
   Alert: { alert: jest.fn() },
 }));
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'common.error': 'Error',
+        'common.networkError': 'Network Error',
+        'common.authError': 'Auth Error',
+        'offline.title': 'No Internet Connection',
+        'offline.pleaseCheckYourConnection': 'Please check your connection.',
+      };
+      return translations[key] || key;
+    },
+  }),
+}));
 jest.mock('../../src/utils/errorHandler', () => ({
   handleApiError: jest.fn(),
   showErrorAlert: jest.fn(),
@@ -75,7 +89,8 @@ describe('useErrorHandler', () => {
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'No Internet Connection',
-      'Please check your connection.'
+      'Please check your connection.',
+      undefined
     );
   });
 });

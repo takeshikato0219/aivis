@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { showCommonAlert } from '@components/Alert/Alert';
 
 export enum ErrorType {
   NETWORK = 'NETWORK_ERROR',
@@ -13,9 +13,56 @@ export interface AppError {
   message: string;
   originalError?: any;
   statusCode?: number;
+  apiStatusCode?: number;
+  apiResponse?: ApiErrorResponse;
   timestamp: number;
   screen?: string;
   action?: string;
+}
+
+/** API validation errors: { "images.0": ["error msg"], "field": ["msg1", "msg2"] } */
+export interface ApiErrorResponse {
+  message?: string;
+  success?: boolean;
+  errors?: Record<string, string[]>;
+  [key: string]: any;
+}
+
+/**
+ * Get and format all validation errors from the API response for display.
+ * @param error - Error object from catch (may have apiResponse if passed through axios interceptor)
+ * @returns Full string: main message + list of validation errors
+ */
+export function getApiErrorDisplayMessage(error: any): string {
+  const mainMessage = error?.message || 'An error occurred';
+  const apiResponse = error?.apiResponse as ApiErrorResponse | undefined;
+  const validationErrors = formatApiValidationErrors(apiResponse);
+  if (validationErrors) {
+    return `${mainMessage}\n\n${validationErrors}`;
+  }
+  return mainMessage;
+}
+
+/**
+ * Format object errors từ API (vd: { "images.0": ["msg"], "field": ["msg"] }) thành chuỗi hiển thị.
+ */
+export function formatApiValidationErrors(apiResponse?: ApiErrorResponse | null): string {
+  const errors = apiResponse?.errors;
+  if (!errors || typeof errors !== 'object') return '';
+
+  const lines: string[] = [];
+  for (const [field, messages] of Object.entries(errors)) {
+    if (Array.isArray(messages) && messages.length > 0) {
+      // images.0 -> "Image 1", images.1 -> "Image 2" (user-friendly, 1-based)
+      let label = field;
+      if (field.startsWith('images.')) {
+        const idx = parseInt(field.replace('images.', ''), 10);
+        label = !isNaN(idx) ? `Image ${idx + 1}` : field;
+      }
+      messages.forEach((msg) => lines.push(`• ${label}: ${msg}`));
+    }
+  }
+  return lines.join('\n');
 }
 
 class ErrorHandler {
@@ -58,15 +105,18 @@ class ErrorHandler {
     let errorType = ErrorType.API;
     let message = 'An error occurred';
     let statusCode: number | undefined;
-
+    let apiStatusCode: number | undefined;
+    let apiResponse: any;
     if (error.response) {
-      statusCode = error.response.status;
-      message = error.response.data?.message || error.message;
-      if (statusCode !== undefined && (statusCode === 401 || statusCode === 403)) {
+      const httpStatusCode = error.response.status;
+      apiResponse = error.response.data;
+      apiStatusCode = apiResponse?.status_code;
+      statusCode = apiStatusCode || httpStatusCode;
+      message = apiResponse?.message || error.message || message;
+
+      // Handle specific HTTP status codes
+      if (httpStatusCode === 401 || httpStatusCode === 403) {
         errorType = ErrorType.AUTHENTICATION;
-        message = 'Please login again';
-      } else if (statusCode !== undefined && statusCode >= 500) {
-        message = 'Server error';
       }
     } else if (error.request) {
       errorType = ErrorType.NETWORK;
@@ -77,11 +127,12 @@ class ErrorHandler {
       type: errorType,
       message,
       originalError: error,
-      statusCode,
+      statusCode: statusCode,
+      apiStatusCode,
+      apiResponse,
       timestamp: Date.now(),
       action: endpoint,
     };
-
     this.logError(appError);
     return appError;
   }
@@ -103,11 +154,15 @@ class ErrorHandler {
   }
 
   showErrorAlert(error: AppError, title = 'Error') {
-    Alert.alert(title, error.message, [{ text: 'OK' }]);
+    showCommonAlert({ title, message: error.message, buttons: [{ text: 'OK' }] });
   }
 
   private showFatalErrorAlert(error: Error) {
-    Alert.alert('Application Error', `Please restart the app.\n${error.message}`, [{ text: 'OK' }]);
+    showCommonAlert({
+      title: 'Application Error',
+      message: `Please restart the app.\n${error.message}`,
+      buttons: [{ text: 'OK' }],
+    });
   }
 
   getErrorLogs(): AppError[] {

@@ -1,0 +1,63 @@
+<svg
+        width="440"
+        height="956"
+        viewBox="0 0 440 956"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+>
+    <defs>
+        <!-- BLUR -->
+        <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="128" />
+        </filter>
+
+        <!-- BRIGHT ANGULAR-LIKE 1 -->
+        <radialGradient id="grad1" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#00D8FF" stop-opacity="0.75"/>
+            <stop offset="25%" stop-color="#00EFFF" stop-opacity="0.6"/>
+            <stop offset="45%" stop-color="#00FF59" stop-opacity="0.45"/>
+            <stop offset="70%" stop-color="#00FF59" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#00FF59" stop-opacity="0"/>
+        </radialGradient>
+
+        <!-- BRIGHT ANGULAR-LIKE 2 -->
+        <radialGradient id="grad2" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#0050FF" stop-opacity="0.75"/>
+            <stop offset="25%" stop-color="#008CFF" stop-opacity="0.6"/>
+            <stop offset="45%" stop-color="#00FFFF" stop-opacity="0.45"/>
+            <stop offset="70%" stop-color="#00FFFF" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#00FFFF" stop-opacity="0"/>
+        </radialGradient>
+
+        <clipPath id="clip">
+            <rect width="440" height="956" rx="16"/>
+        </clipPath>
+    </defs>
+
+    <g clip-path="url(#clip)">
+        <!-- BACKGROUND -->
+        <rect width="440" height="956" rx="16" fill="#020205"/>
+
+        <!-- TOP LEFT -->
+        <g filter="url(#blur)">
+            <circle
+                    cx="59.2365"
+                    cy="13.2365"
+                    r="272"
+                    fill="url(#grad1)"
+                    transform="rotate(-37.3434 59.2365 13.2365)"
+            />
+        </g>
+
+        <!-- BOTTOM RIGHT -->
+        <g filter="url(#blur)">
+            <circle
+                    cx="331.511"
+                    cy="982.511"
+                    r="272"
+                    fill="url(#grad2)"
+                    transform="rotate(43.3748 331.511 982.511)"
+            />
+        </g>
+    </g>
+</svg>

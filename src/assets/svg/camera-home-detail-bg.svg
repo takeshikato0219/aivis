@@ -1,0 +1,56 @@
+<svg
+        width="440"
+        height="1384"
+        viewBox="0 0 440 1384"
+        xmlns="http://www.w3.org/2000/svg"
+>
+    <defs>
+        <!-- Top-left glow (bright green) -->
+        <radialGradient id="grad1" cx="15%" cy="28%" r="75%">
+            <stop offset="0%" stop-color="#08FF00" stop-opacity="0.7" />
+            <stop offset="35%" stop-color="#08FF00" stop-opacity="0.45" />
+            <stop offset="65%" stop-color="#08FF00" stop-opacity="0.2" />
+            <stop offset="100%" stop-color="#020205" stop-opacity="0" />
+        </radialGradient>
+
+        <!-- Bottom-right glow (mint green) -->
+        <radialGradient id="grad2" cx="95%" cy="72%" r="75%">
+            <stop offset="0%" stop-color="#00FFB6" stop-opacity="0.6" />
+            <stop offset="40%" stop-color="#00C96A" stop-opacity="0.4" />
+            <stop offset="70%" stop-color="#008D04" stop-opacity="0.2" />
+            <stop offset="100%" stop-color="#020205" stop-opacity="0" />
+        </radialGradient>
+
+        <!-- Strong blur -->
+        <filter id="blur160">
+            <feGaussianBlur stdDeviation="160" />
+        </filter>
+
+        <clipPath id="clip">
+            <rect width="440" height="1384" rx="16" />
+        </clipPath>
+    </defs>
+
+    <g clip-path="url(#clip)">
+        <!-- Background -->
+        <rect width="440" height="1384" fill="#020205" />
+
+        <!-- Glow 1 -->
+        <circle
+                cx="60"
+                cy="380"
+                r="420"
+                fill="url(#grad1)"
+                filter="url(#blur160)"
+        />
+
+        <!-- Glow 2 -->
+        <circle
+                cx="460"
+                cy="1000"
+                r="420"
+                fill="url(#grad2)"
+                filter="url(#blur160)"
+        />
+    </g>
+</svg>

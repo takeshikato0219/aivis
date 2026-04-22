@@ -125,7 +125,7 @@ jest.mock('react-native-device-info', () => ({
   getUniqueId: jest.fn(() => Promise.resolve('unique-id-12345')),
   getVersion: jest.fn(() => '1.0.0'),
   getBuildNumber: jest.fn(() => '1'),
-  getBundleId: jest.fn(() => 'com.timima01app'),
+  getBundleId: jest.fn(() => 'com.aivis.camera.ai'),
   getDeviceName: jest.fn(() => Promise.resolve('Test Device')),
   isEmulator: jest.fn(() => Promise.resolve(false)),
 }));
@@ -206,6 +206,15 @@ jest.mock('react-native-safe-area-context', () => {
     SafeAreaConsumer: ({ children }) => children(inset),
     useSafeAreaInsets: jest.fn(() => inset),
     useSafeAreaFrame: jest.fn(() => ({ x: 0, y: 0, width: 390, height: 844 })),
+    // Required by @react-navigation/stack StackView
+    SafeAreaInsetsContext: {
+      Consumer: ({ children }) => (typeof children === 'function' ? children(inset) : children),
+      Provider: ({ children }) => children,
+    },
+    initialWindowMetrics: {
+      frame: { x: 0, y: 0, width: 390, height: 844 },
+      insets: { top: 0, left: 0, right: 0, bottom: 0 },
+    },
   };
 });
 

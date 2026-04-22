@@ -1,0 +1,1471 @@
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  FlatList,
+  Image,
+  Keyboard,
+  Modal,
+  Platform,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+  ScrollView,
+} from 'react-native';
+import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import FaceDetection, { Face, FaceDetectionOptions } from '@react-native-ml-kit/face-detection';
+import ImageResizer from '@bam.tech/react-native-image-resizer';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { styles } from './FaceUpload.styles';
+import { useInput } from '@hooks/useInput';
+import TextInput from '@components/TextInput/TextInput';
+import faceService, { MemberRelationship } from '@/services/faceService';
+import { COLORS } from '@constants/theme';
+import BackIcon from '@assets/svg/icon-back.svg';
+import { isName } from '@utils/validate';
+import { getApiErrorDisplayMessage } from '@utils/errorHandler';
+import {
+  filterFacesInFrameForPose,
+  getSingleFaceFrameIssue,
+  validateFacePose,
+} from '@utils/faceUploadFaceValidation';
+import { ListFaceRouteProp } from '@navigation/types';
+import { launchImageLibrary } from 'react-native-image-picker';
+
+type FacePosition = 'center' | 'left' | 'right' | 'up' | 'down';
+
+const FaceUpload: React.FC = () => {
+  const navigation = useNavigation();
+  const { t } = useTranslation();
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const route = useRoute<ListFaceRouteProp>();
+  const type = route?.params?.type;
+
+  const FACE_POSITIONS = [
+    {
+      key: 'center',
+      label: t('faceUpload.center'),
+      instruction: t('faceUpload.lookStraightAtTheCamera'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'left',
+      label: t('faceUpload.turnLeftFace'),
+      instruction: t('faceUpload.slowlyTurnYourHeadLEFT'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'right',
+      label: t('faceUpload.turnRightFace'),
+      instruction: t('faceUpload.slowlyTurnYourHeadRIGHT'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'up',
+      label: t('faceUpload.lookUpFace'),
+      instruction: t('faceUpload.slowlyTiltYourHeadUP'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+    {
+      key: 'down',
+      label: t('faceUpload.lookDownFace'),
+      instruction: t('faceUpload.slowlyTiltYourHeadDOWN'),
+      memo: t('faceUpload.pleaseAlignYourFaceWithinTheRectangle'),
+      scanDuration: 3000,
+      prepareTime: 2000,
+    },
+  ] as const;
+
+  interface FaceData {
+    positionIndex: number;
+    imageUri: string;
+    timestamp: number;
+    scanProgress: number;
+  }
+
+  const [currentPositionIndex, setCurrentPositionIndex] = useState(0);
+  const [capturedFaces, setCapturedFaces] = useState<FaceData[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [lastCapturedImage, setLastCapturedImage] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [prepareProgress, setPrepareProgress] = useState(0);
+  const [isPreparing, setIsPreparing] = useState(false);
+
+  // Form state
+  const [showForm, setShowForm] = useState(true);
+  const [memberRelationships, setMemberRelationships] = useState<MemberRelationship[]>([]);
+  const [selectedRelationship, setSelectedRelationship] = useState<MemberRelationship | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isLoadingRelationships, setIsLoadingRelationships] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [relationshipError, setRelationshipError] = useState<string | undefined>(undefined);
+  const [choosePhotoError, setChoosePhotoError] = useState<string | undefined>(undefined);
+  const nameInput = useInput({
+    validateFn: isName,
+  });
+
+  // Face detection options for static images
+  const faceDetectionOptions: FaceDetectionOptions = {
+    performanceMode: 'accurate',
+    landmarkMode: 'all',
+    contourMode: 'none',
+    classificationMode: 'none',
+    minFaceSize: Platform.OS === 'ios' ? 0.1 : 0.15,
+    trackingEnabled: false,
+  };
+
+  const getPositionErrorMessage = (position: FacePosition): string => {
+    switch (position) {
+      case 'center':
+        return t('faceUpload.pleaseFaceTheCameraStraightAhead');
+      case 'left':
+        return t('faceUpload.pleaseTurnYourFaceToTheLEFT');
+      case 'right':
+        return t('faceUpload.pleaseTurnYourFaceToTheRIGHT');
+      case 'up':
+        return t('faceUpload.pleaseTiltYourHeadUP');
+      case 'down':
+        return t('faceUpload.pleaseTiltYourHeadDOWN');
+      default:
+        return t('faceUpload.pleasePositionYourFaceCorrectly');
+    }
+  };
+
+  const device = useCameraDevice('front');
+  const camera = useRef<Camera>(null);
+  const scanTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const prepareTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const successAnim = useRef(new Animated.Value(0)).current;
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const particleAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  const currentPosition = FACE_POSITIONS[currentPositionIndex];
+
+  useEffect(() => {
+    if (!hasPermission) {
+      requestPermission();
+    }
+  }, [hasPermission, requestPermission]);
+
+  useEffect(() => {
+    const fetchRelationships = async () => {
+      setIsLoadingRelationships(true);
+      try {
+        const data = await faceService.getMemberRelationships();
+        setMemberRelationships(data);
+      } catch (error) {
+        console.error('Failed to fetch member relationships:', error);
+      } finally {
+        setIsLoadingRelationships(false);
+      }
+    };
+    fetchRelationships();
+  }, []);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.03,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [scaleAnim]);
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, [currentPositionIndex, fadeAnim]);
+
+  useEffect(() => {
+    if (isProcessing || showPreview || showForm) return;
+
+    const initTimer = setTimeout(() => {
+      startPrepare();
+    }, 1000);
+
+    return () => {
+      clearTimeout(initTimer);
+      stopPrepare();
+      stopScanning();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPositionIndex, isProcessing, showPreview, showForm]);
+
+  const startPrepare = () => {
+    setIsPreparing(true);
+    setPrepareProgress(0);
+
+    const startTime = Date.now();
+    progressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / currentPosition.prepareTime) * 100, 100);
+      setPrepareProgress(progress);
+
+      if (progress >= 100) {
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
+      }
+    }, 50);
+
+    prepareTimerRef.current = setTimeout(() => {
+      stopPrepare();
+      startScanning();
+    }, currentPosition.prepareTime);
+  };
+
+  const stopPrepare = () => {
+    setIsPreparing(false);
+    setPrepareProgress(0);
+
+    if (prepareTimerRef.current) {
+      clearTimeout(prepareTimerRef.current);
+      prepareTimerRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
+
+  const startScanning = () => {
+    setIsScanning(true);
+    setScanProgress(0);
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanLineAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanLineAnim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.timing(particleAnim, {
+        toValue: 1,
+        duration: 1500,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    const startTime = Date.now();
+    progressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / currentPosition.scanDuration) * 100, 100);
+      setScanProgress(progress);
+
+      if (progress >= 100) {
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
+      }
+    }, 50);
+
+    scanTimerRef.current = setTimeout(() => {
+      stopScanning();
+      void handleCaptureFace();
+    }, currentPosition.scanDuration);
+  };
+
+  const stopScanning = () => {
+    setIsScanning(false);
+    scanLineAnim.stopAnimation();
+    particleAnim.stopAnimation();
+    pulseAnim.stopAnimation();
+    scanLineAnim.setValue(0);
+    particleAnim.setValue(0);
+
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
+
+  const handleCaptureFace = async () => {
+    if (isProcessing || !camera.current) {
+      return;
+    }
+
+    setIsProcessing(true);
+    stopScanning();
+
+    try {
+      const photo = await camera.current.takePhoto({
+        flash: 'off',
+      });
+      let imageUri = photo.path.startsWith('file://') ? photo.path : `file://${photo.path}`;
+      let imgWidth: number | null = null;
+      let imgHeight: number | null = null;
+
+      if (Platform.OS === 'ios') {
+        // Resize before detection: ImageResizer outputs normalized pixels (orientation applied).
+        // ML Kit often fails on raw camera images due to EXIF orientation - resize fixes this.
+        try {
+          const resizedImage = await ImageResizer.createResizedImage(
+            imageUri,
+            1920,
+            1920,
+            'JPEG',
+            100,
+            0,
+            undefined,
+            false
+          );
+          imageUri = resizedImage.uri;
+          imgWidth = resizedImage.width;
+          imgHeight = resizedImage.height;
+        } catch (resizeError) {
+          console.error('Image resize error:', resizeError);
+        }
+      } else {
+        try {
+          const resizedImage = await ImageResizer.createResizedImage(
+            imageUri,
+            1920,
+            1920,
+            'JPEG',
+            100,
+            0,
+            undefined,
+            false
+          );
+          imageUri = resizedImage.uri;
+        } catch (resizeError) {
+          console.error('Image resize error:', resizeError);
+        }
+      }
+
+      // Detect faces in the captured image
+      const allFaces = await FaceDetection.detect(imageUri, faceDetectionOptions);
+
+      const positionKey = currentPosition.key;
+
+      let faces: Face[];
+
+      let usedWidth: number | null = null;
+      let usedHeight: number | null = null;
+
+      if (Platform.OS === 'ios') {
+        if (imgWidth != null && imgHeight != null) {
+          faces = filterFacesInFrameForPose(allFaces, imgWidth, imgHeight, positionKey);
+          if (faces.length === 0 && allFaces.length > 0) {
+            faces = filterFacesInFrameForPose(allFaces, imgHeight, imgWidth, positionKey);
+            if (faces.length > 0) {
+              usedWidth = imgHeight;
+              usedHeight = imgWidth;
+            } else {
+              usedWidth = imgWidth;
+              usedHeight = imgHeight;
+            }
+          } else if (faces.length > 0 || allFaces.length > 0) {
+            usedWidth = imgWidth;
+            usedHeight = imgHeight;
+          }
+        } else {
+          faces = [];
+        }
+      } else {
+        faces = await new Promise<Face[]>((resolve) => {
+          Image.getSize(
+            imageUri,
+            (w, h) => {
+              usedWidth = w;
+              usedHeight = h;
+              resolve(filterFacesInFrameForPose(allFaces, w, h, positionKey));
+            },
+            () => resolve([])
+          );
+        });
+      }
+
+      const getFrameRejectionReason = (): string | null => {
+        if (allFaces.length === 0 || allFaces.length > 1) return null;
+        if (usedWidth == null || usedHeight == null) return t('faceUpload.faceOutsideFrame');
+        const issue = getSingleFaceFrameIssue(allFaces[0], usedWidth, usedHeight, positionKey);
+        if (issue === 'outside') return t('faceUpload.faceOutsideFrame');
+        if (issue === 'too_far') return t('faceUpload.faceTooFar');
+        if (issue === 'too_close') return t('faceUpload.faceTooClose');
+        return null;
+      };
+
+      // Check if exactly one face is detected and in correct position
+      if (faces.length === 1 && validateFacePose(faces[0], positionKey)) {
+        const faceData: FaceData = {
+          positionIndex: currentPositionIndex,
+          imageUri,
+          timestamp: Date.now(),
+          scanProgress: scanProgress,
+        };
+
+        setCapturedFaces((prev) => [...prev, faceData]);
+        setLastCapturedImage(imageUri);
+        setShowPreview(true);
+
+        // Success animation
+        Animated.sequence([
+          Animated.timing(successAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.delay(600),
+          Animated.timing(successAnim, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]).start();
+
+        // Progress bar animation
+        const progress = ((currentPositionIndex + 1) / FACE_POSITIONS.length) * 100;
+        Animated.timing(progressAnim, {
+          toValue: progress,
+          duration: 500,
+          useNativeDriver: false,
+        }).start();
+
+        // Move to next position or complete
+        setTimeout(() => {
+          setShowPreview(false);
+          if (currentPositionIndex < FACE_POSITIONS.length - 1) {
+            setCurrentPositionIndex(currentPositionIndex + 1);
+            setIsProcessing(false);
+          } else {
+            handleComplete([...capturedFaces, faceData]);
+          }
+        }, 1400);
+      } else {
+        // Show error based on detection result
+        let errorMessage = '';
+
+        if (faces.length === 0) {
+          errorMessage =
+            allFaces.length > 0
+              ? (getFrameRejectionReason() ?? t('faceUpload.faceOutsideFrame'))
+              : t('faceUpload.noFaceDetected');
+        } else if (faces.length > 1) {
+          errorMessage = t('faceUpload.multipleFacesDetected');
+        } else if (faces.length === 1) {
+          errorMessage = getPositionErrorMessage(currentPosition.key);
+        }
+
+        Alert.alert(t('faceUpload.faceDetectionError'), errorMessage, [
+          {
+            text: t('common.retry') || 'Retry',
+            onPress: () => {
+              setIsProcessing(false);
+            },
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Capture/Face detection error:', error);
+      Alert.alert(
+        t('faceUpload.captureError') || 'Capture Error',
+        t('faceUpload.tryAgain') || 'Please try again'
+      );
+      setIsProcessing(false);
+    }
+  };
+
+  const uploadFaces = async (allFaces: { position: number; imageUri: string }[]) => {
+    if (allFaces.length < 1) {
+      Alert.alert(
+        t('faceUpload.validationError') || 'Validation Error',
+        t('faceUpload.mustHaveAtLeastOneImage') ||
+          'Must capture at least 1 face image before uploading',
+        [
+          {
+            text: t('common.retry') || 'Retry',
+            onPress: () => {
+              setIsProcessing(false);
+              startScanning();
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      const imageIndices: number[] = [];
+      formData.append('name', nameInput.value);
+      if (selectedRelationship) {
+        formData.append('relationship_type_id', selectedRelationship.id);
+      }
+      for (const face of allFaces) {
+        imageIndices.push(face.position);
+        formData.append('images', {
+          uri: face.imageUri,
+          type: 'image/jpeg',
+          name: `${face.position}.jpg`,
+        });
+      }
+      formData.append('sort_orders', imageIndices.join(','));
+      await faceService.uploadFaces(formData);
+      Alert.alert(
+        t('faceUpload.uploadSuccess') || 'Success',
+        t('faceUpload.uploadSuccessMessage') || 'Face data uploaded successfully!',
+        [
+          {
+            text: t('common.ok') || 'OK',
+            onPress: () => {
+              navigation.goBack();
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Upload error:', error);
+      const displayMessage = getApiErrorDisplayMessage(error);
+      Alert.alert(t('faceUpload.uploadFailed') || 'Upload Failed', displayMessage, [
+        {
+          text: t('common.retry') || 'Retry',
+          onPress: () => {
+            restartCaptureFromBeginning();
+          },
+        },
+      ]);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleComplete = async (allFaces: FaceData[]) => {
+    await uploadFaces(
+      allFaces.map(({ positionIndex, imageUri }) => ({ position: positionIndex, imageUri }))
+    );
+  };
+
+  const stopAllScanning = () => {
+    stopPrepare();
+    stopScanning();
+
+    setIsProcessing(false);
+    setIsPreparing(false);
+    setIsScanning(false);
+
+    // stop animation
+    scanLineAnim.stopAnimation();
+    particleAnim.stopAnimation();
+    pulseAnim.stopAnimation();
+
+    scanLineAnim.setValue(0);
+    particleAnim.setValue(0);
+
+    if (scanTimerRef.current) {
+      clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+
+    if (prepareTimerRef.current) {
+      clearTimeout(prepareTimerRef.current);
+      prepareTimerRef.current = null;
+    }
+
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
+
+  /** After submit fails in capture flow: reset all poses and let useEffect run startPrepare again. */
+  const restartCaptureFromBeginning = () => {
+    stopAllScanning();
+    setIsUploading(false);
+    setIsProcessing(false);
+    setCurrentPositionIndex(0);
+    setCapturedFaces([]);
+    setLastCapturedImage(null);
+    setShowPreview(false);
+    progressAnim.setValue(0);
+  };
+
+  const handleRetake = () => {
+    Alert.alert(
+      t('faceUpload.retake') || 'Retake?',
+      t('faceUpload.retakeConfirm') || 'Do you want to retake this scan?',
+      [
+        { text: t('common.cancel') || 'Cancel', style: 'cancel' },
+        {
+          text: t('common.yes') || 'Yes',
+          onPress: () => {
+            setCapturedFaces((prev) => prev.slice(0, -1));
+            setIsProcessing(false);
+            setShowPreview(false);
+          },
+        },
+      ]
+    );
+  };
+
+  const validateForm = (): boolean => {
+    const isNameValid = nameInput.validate();
+    const isRelationshipValid = selectedRelationship !== null;
+
+    // Set relationship error
+    if (!isRelationshipValid) {
+      setRelationshipError(t('validate.relationshipRequired'));
+    } else {
+      setRelationshipError(undefined);
+    }
+
+    if (type !== 'capture') {
+      const hasAtLeastOneImage = images.some((img) => img.uri);
+      if (!hasAtLeastOneImage) {
+        setChoosePhotoError(t('faceUpload.pleaseChooseAtLeastOneImage'));
+        return false;
+      } else {
+        setChoosePhotoError(undefined);
+      }
+    }
+
+    if (!isNameValid) {
+      return false;
+    }
+
+    return isRelationshipValid;
+  };
+
+  const handleStartScan = () => {
+    if (validateForm()) {
+      setShowForm(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      if (!validateForm()) {
+        return;
+      }
+      setIsUploading(true);
+      const imageIndices: number[] = [];
+      const imageFiles: { uri: string; type: string; name: string }[] = [];
+      images.forEach((img, idx) => {
+        if (img.uri) {
+          imageIndices.push(idx);
+          imageFiles.push({
+            uri: img.uri,
+            type: 'image/jpeg',
+            name: `${FACE_POSITION_TITLES[idx]?.key || 'center'}.jpg`,
+          });
+        }
+      });
+      const formData = new FormData();
+      formData.append('name', nameInput.value);
+      if (selectedRelationship) {
+        formData.append('relationship_type_id', selectedRelationship.id);
+      }
+      formData.append('sort_orders', imageIndices.join(','));
+      imageFiles.forEach((file) => formData.append('images', file as any));
+      const response = await faceService.uploadFaces(formData);
+      if (response.success) {
+        Alert.alert(
+          t('faceUpload.uploadSuccess') || 'Success',
+          t('faceUpload.uploadSuccessMessage') || 'Face data uploaded successfully!',
+          [
+            {
+              text: t('common.ok') || 'OK',
+              onPress: () => {
+                navigation.goBack();
+              },
+            },
+          ]
+        );
+      }
+      setIsUploading(false);
+    } catch (error) {
+      console.error('Upload error:', error);
+      const displayMessage = getApiErrorDisplayMessage(error);
+      Alert.alert('', displayMessage, [
+        {
+          text: t('common.ok') || 'OK',
+        },
+      ]);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const FACE_POSITION_TITLES = [
+    {
+      key: 'center',
+      getTitle: (trans: any) => trans('faceUpload.frontView'),
+      getInstruction: (trans: any) => trans('faceUpload.lookStraight'),
+    },
+    {
+      key: 'left',
+      getTitle: (trans: any) => trans('faceUpload.leftSide'),
+      getInstruction: (trans: any) => trans('faceUpload.turnLeft'),
+    },
+    {
+      key: 'right',
+      getTitle: (trans: any) => trans('faceUpload.rightSide'),
+      getInstruction: (trans: any) => trans('faceUpload.turnRight'),
+    },
+    {
+      key: 'up',
+      getTitle: (trans: any) => trans('faceUpload.lookingUp'),
+      getInstruction: (trans: any) => trans('faceUpload.lookUp'),
+    },
+    {
+      key: 'down',
+      getTitle: (trans: any) => trans('faceUpload.lookingDown'),
+      getInstruction: (trans: any) => trans('faceUpload.lookDown'),
+    },
+  ] as const;
+
+  const [images, setImages] = useState<{ uri: string | null; id: number | null }[]>([
+    { uri: null, id: 1 },
+    { uri: null, id: 2 },
+    { uri: null, id: 3 },
+    { uri: null, id: 4 },
+    { uri: null, id: 5 },
+  ]);
+
+  const handleImagePress = async (index: number) => {
+    const result = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1 });
+    if (result.assets && result.assets.length > 0) {
+      const newImages = [...images];
+      newImages[index] = {
+        uri: result.assets[0].uri || null,
+        id: index + 1,
+      };
+      setImages(newImages);
+      setChoosePhotoError(undefined);
+    }
+  };
+
+  const renderChoosePhoto = () => (
+    <View style={styles.detailSection}>
+      <Text style={styles.detailSectionTitle}>{t('faceUpload.images') || 'Images'}</Text>
+      <Text style={styles.detailSectionTitle}>{t('faceUpload.selectPhoto')}</Text>
+      <View style={styles.imagesGrid}>
+        {[0, 1, 2, 3, 4].map((index) => (
+          <View key={index} style={styles.imageItemContainerPhoto}>
+            <Text style={styles.imageTitle}>
+              {index + 1}. {FACE_POSITION_TITLES[index]?.getTitle?.(t) || `Position ${index + 1}`}
+            </Text>
+            <TouchableOpacity style={styles.imageItem} onPress={() => handleImagePress(index)}>
+              {images[index].uri ? (
+                <>
+                  <Image
+                    source={{ uri: images[index].uri! }}
+                    style={styles.imagePreview}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    style={styles.imageOverlay}
+                    onPress={() => {
+                      const newImages = [...images];
+                      newImages[index] = { uri: null, id: index + 1 };
+                      setImages(newImages);
+                    }}
+                  >
+                    <Icon name="close" size={24} color="#fff" />
+                    <Text style={styles.imageIndex}>{index + 1}</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <View style={styles.imageOverlay}>
+                  <Icon name="plus" size={32} color="#ccc" />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+      {choosePhotoError && <Text style={styles.errorChoosePhoto}>{choosePhotoError}</Text>}
+      <TouchableOpacity
+        style={styles.saveButtonChoosePhoto}
+        onPress={handleSave}
+        disabled={isUploading}
+      >
+        <Text style={styles.startButtonText}>{t('workSchedule.save')}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const progressPercentage = progressAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
+
+  const scanLineTranslateY = scanLineAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-162.5, 162.5],
+  });
+
+  if (!hasPermission) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.permissionContainer}>
+          <Text style={styles.permissionTitle}>
+            {t('faceUpload.permissionRequired') || 'Camera Permission Required'}
+          </Text>
+          <Text style={styles.permissionText}>
+            {t('faceUpload.cameraPermissionNeeded') || 'We need camera access to scan your face'}
+          </Text>
+          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+            <Text style={styles.permissionButtonText}>
+              {t('common.grantPermission') || 'Grant Permission'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!device) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.permissionContainer}>
+          <Text style={styles.errorText}>
+            {t('faceUpload.noCamera') || 'No camera device found'}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Form UI - Show before scanning
+  if (showForm) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <BackIcon width={styles.buttonIcon.width} height={styles.buttonIcon.height} />
+            </TouchableOpacity>
+            <View style={styles.viewTitle}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {t('faceUpload.title') || 'Face Registration'}
+              </Text>
+            </View>
+            <View style={styles.styleWidth} />
+          </View>
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={styles.scrollContentContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Form Content */}
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={styles.formContainer}>
+                <Text style={styles.formTitle}>
+                  {t('faceUpload.enterInformation') || 'Enter Information'}
+                </Text>
+                {type === 'capture' ? (
+                  <Text style={styles.formSubtitle}>
+                    {t('faceUpload.fillFormBeforeScan') ||
+                      'Please fill in the information below before starting face scan'}
+                  </Text>
+                ) : (
+                  <Text style={styles.formSubtitle}>
+                    {t('faceUpload.pleaseEnterTheRequiredInformation')}
+                  </Text>
+                )}
+
+                {/* Member Relationship Dropdown */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>
+                    {t('faceUpload.memberRelationship') || 'Member Relationship'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.dropdownButton}
+                    onPress={() => setShowDropdown(true)}
+                    disabled={isLoadingRelationships}
+                  >
+                    {isLoadingRelationships ? (
+                      <ActivityIndicator size="small" color="#4CAF50" />
+                    ) : (
+                      <>
+                        <Text
+                          style={[
+                            styles.dropdownButtonText,
+                            !selectedRelationship && styles.dropdownPlaceholder,
+                          ]}
+                        >
+                          {selectedRelationship?.name_trans ||
+                            t('faceUpload.selectRelationship') ||
+                            'Select relationship'}
+                        </Text>
+                        <Icon name="chevron-down" size={24} color="#fff" />
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  {relationshipError && (
+                    <Text style={styles.errorInputText}>{relationshipError}</Text>
+                  )}
+                </View>
+
+                {/* Name Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>{t('faceUpload.name') || 'Name'}</Text>
+                  <TextInput
+                    value={nameInput.value}
+                    onChangeText={nameInput.handleChange}
+                    placeholder={t('faceUpload.enterName') || 'Enter name'}
+                    autoCapitalize="words"
+                    error={!!nameInput.error}
+                    style={styles.textInput}
+                    placeholderTextColor={COLORS.BBBBBB}
+                  />
+                  {nameInput.error && (
+                    <Text style={styles.errorInputText}>{t('validate.' + nameInput.error)}</Text>
+                  )}
+                </View>
+
+                {type === 'capture' ? (
+                  <TouchableOpacity
+                    style={styles.startButton}
+                    onPress={handleStartScan}
+                    disabled={isLoadingRelationships}
+                  >
+                    <Icon name="face-recognition" size={24} color="#fff" />
+                    <Text style={styles.startButtonText}>
+                      {t('faceUpload.startScan') || 'Start Face Scan'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  renderChoosePhoto()
+                )}
+              </View>
+            </TouchableWithoutFeedback>
+          </ScrollView>
+
+          {/* Dropdown Modal */}
+          <Modal
+            visible={showDropdown}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowDropdown(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setShowDropdown(false)}
+            >
+              <View style={styles.dropdownModal}>
+                <View style={styles.dropdownHeader}>
+                  <Text style={styles.dropdownTitle}>
+                    {t('faceUpload.selectRelationship') || 'Select Relationship'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setShowDropdown(false)}>
+                    <Icon name="close" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+                <FlatList
+                  data={memberRelationships}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.dropdownItem,
+                        selectedRelationship?.id === item.id && styles.dropdownItemActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedRelationship(item);
+                        setRelationshipError(undefined);
+                        setShowDropdown(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          selectedRelationship?.id === item.id && styles.dropdownItemTextActive,
+                        ]}
+                      >
+                        {item.name_trans}
+                      </Text>
+                      {selectedRelationship?.id === item.id && (
+                        <Icon name="check" size={20} color="#4CAF50" />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  ListEmptyComponent={
+                    <View style={styles.emptyList}>
+                      <Text style={styles.emptyListText}>
+                        {t('faceUpload.noRelationships') || 'No relationships available'}
+                      </Text>
+                    </View>
+                  }
+                />
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        </SafeAreaView>
+        {/* Uploading Overlay */}
+        {isUploading && (
+          <View style={styles.uploadingOverlay}>
+            <ActivityIndicator size="large" color="#4CAF50" />
+            <Text style={styles.uploadingText}>{t('faceUpload.uploading')}</Text>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
+
+      {/* Camera */}
+      <Camera
+        ref={camera}
+        style={styles.absoluteFill}
+        device={device}
+        isActive={!showPreview && !showForm}
+        photo={true}
+      />
+
+      {/* Preview overlay */}
+      {showPreview && lastCapturedImage && (
+        <View style={styles.absoluteFill}>
+          <Image source={{ uri: lastCapturedImage }} style={styles.absoluteFill} />
+          <Animated.View
+            style={[
+              styles.successOverlay,
+              {
+                opacity: successAnim,
+              },
+            ]}
+          >
+            <View style={styles.successBadge}>
+              <Text style={styles.successText}>✓</Text>
+            </View>
+          </Animated.View>
+        </View>
+      )}
+
+      {/* UI Overlay */}
+      <View style={styles.overlay}>
+        {/* Header */}
+        <SafeAreaView edges={['top']}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                stopAllScanning();
+                Alert.alert(
+                  t('common.cancel') || 'Cancel',
+                  t('faceUpload.cancelConfirm') || 'Are you sure you want to cancel?',
+                  [
+                    {
+                      text: t('common.cancel') || 'Cancel',
+                      style: 'cancel',
+                      onPress: () => {
+                        setIsProcessing(false);
+                        startScanning();
+                      },
+                    },
+                    { text: t('common.yes') || 'Yes', onPress: () => navigation.goBack() },
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.title}>{t('faceUpload.title') || 'Face ID Setup'}</Text>
+
+            <View style={styles.styleWidth} />
+          </View>
+        </SafeAreaView>
+
+        {/* Progress Bar */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <Animated.View style={[styles.progressFill, { width: progressPercentage }]} />
+          </View>
+          <Text style={styles.progressText}>
+            {currentPositionIndex + 1} / {FACE_POSITIONS.length}
+          </Text>
+        </View>
+
+        {/* Face Frame Container */}
+        <View style={styles.faceFrameContainer}>
+          <Animated.View
+            style={[
+              styles.faceFrame,
+              {
+                transform: [{ scale: scaleAnim }],
+              },
+            ]}
+          >
+            {/* Prepare Progress Ring */}
+            {isPreparing && (
+              <View style={styles.holdProgressRing}>
+                <Svg width={270} height={351} viewBox="0 0 270 351">
+                  <Circle
+                    cx={135}
+                    cy={175.5}
+                    r={130}
+                    stroke="rgba(255, 255, 255, 0.2)"
+                    strokeWidth={4}
+                    fill="none"
+                  />
+                  <Circle
+                    cx={135}
+                    cy={175.5}
+                    r={130}
+                    stroke="#FFFFFF"
+                    strokeWidth={4}
+                    fill="none"
+                    strokeDasharray={2 * Math.PI * 130}
+                    strokeDashoffset={2 * Math.PI * 130 * (1 - prepareProgress / 100)}
+                    strokeLinecap="round"
+                    transform="rotate(-90 135 175.5)"
+                  />
+                </Svg>
+              </View>
+            )}
+
+            {/* Scanning Line */}
+            {isScanning && (
+              <Animated.View
+                style={[
+                  styles.scanLine,
+                  {
+                    transform: [{ translateY: scanLineTranslateY }],
+                  },
+                ]}
+              >
+                <View style={styles.scanLineGlow} />
+              </Animated.View>
+            )}
+
+            {/* Scanning Particles */}
+            {isScanning && (
+              <Animated.View
+                style={[
+                  styles.scanParticles,
+                  {
+                    opacity: particleAnim.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [0.3, 1, 0.3],
+                    }),
+                  },
+                ]}
+              >
+                {[...Array(8)].map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.particle,
+                      {
+                        left: `${i * 12.5 + 6}%`,
+                        top: `${20 + Math.sin(i) * 30}%`,
+                      },
+                    ]}
+                  />
+                ))}
+              </Animated.View>
+            )}
+
+            <FaceFrameSVG
+              isScanning={isScanning}
+              scanProgress={scanProgress}
+              isPreparing={isPreparing}
+            />
+
+            {/* Corner Indicators with Pulse */}
+            {isScanning && (
+              <Animated.View
+                style={[
+                  styles.cornerIndicators,
+                  {
+                    transform: [{ scale: pulseAnim }],
+                  },
+                ]}
+              >
+                {/* eslint-disable-next-line react-native/no-inline-styles */}
+                <View style={[styles.cornerDot, { top: 10, left: 10 }]} />
+                {/* eslint-disable-next-line react-native/no-inline-styles */}
+                <View style={[styles.cornerDot, { top: 10, right: 10 }]} />
+                {/* eslint-disable-next-line react-native/no-inline-styles */}
+                <View style={[styles.cornerDot, { bottom: 10, left: 10 }]} />
+                {/* eslint-disable-next-line react-native/no-inline-styles */}
+                <View style={[styles.cornerDot, { bottom: 10, right: 10 }]} />
+              </Animated.View>
+            )}
+          </Animated.View>
+
+          {/* Position Arrow */}
+          {currentPosition.key !== 'center' && !isProcessing && (
+            <PositionArrow position={currentPosition.key} />
+          )}
+        </View>
+
+        {/* Instructions */}
+        <Animated.View style={[styles.instructionsContainer, { opacity: fadeAnim }]}>
+          <Text style={styles.instruction}>{currentPosition.memo}</Text>
+          <Text style={styles.positionLabel}>{currentPosition.label.toUpperCase()}</Text>
+          <Text style={styles.instruction}>{currentPosition.instruction}</Text>
+
+          {/* Status */}
+          {isPreparing && (
+            <View style={styles.feedbackContainer}>
+              {/* eslint-disable-next-line react-native/no-inline-styles */}
+              <Text style={[styles.feedbackText, { color: '#FFFFFF' }]}>
+                {t('faceUpload.getReady') || 'Get ready...'}
+              </Text>
+            </View>
+          )}
+
+          {isScanning && (
+            <View style={styles.scanProgressContainer}>
+              <Text style={styles.scanProgressText}>
+                {t('faceUpload.scanning') || 'Scanning'}: {Math.round(scanProgress)}%
+              </Text>
+              <View style={styles.miniProgressBar}>
+                <View style={[styles.miniProgressFill, { width: `${scanProgress}%` }]} />
+              </View>
+            </View>
+          )}
+        </Animated.View>
+
+        {/* Position Indicators */}
+        <View style={styles.positionsIndicator}>
+          {FACE_POSITIONS.map((pos, index) => (
+            <View
+              key={pos.key}
+              style={[
+                styles.positionDot,
+                index < currentPositionIndex && styles.positionDotCompleted,
+                index === currentPositionIndex && styles.positionDotActive,
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Retake Button */}
+        {showPreview && (
+          <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
+            <TouchableOpacity style={styles.retakeButton} onPress={handleRetake}>
+              <Text style={styles.retakeButtonText}>{t('faceUpload.retake') || 'Retake'}</Text>
+            </TouchableOpacity>
+          </SafeAreaView>
+        )}
+      </View>
+
+      {/* Uploading Overlay */}
+      {isUploading && (
+        <View style={styles.uploadingOverlay}>
+          <ActivityIndicator size="large" color="#4CAF50" />
+          <Text style={styles.uploadingText}>{t('faceUpload.uploading') || 'Uploading...'}</Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
+// Face Frame SVG Component
+const FaceFrameSVG: React.FC<{
+  isScanning: boolean;
+  scanProgress: number;
+  isPreparing: boolean;
+}> = ({ isScanning, scanProgress, isPreparing }) => {
+  const color = isScanning ? '#4CAF50' : isPreparing ? '#FFFFFF' : '#FFFFFF';
+  const size = 250;
+  const strokeWidth = 4;
+  const cornerLength = 50;
+
+  return (
+    <Svg width={size} height={size * 1.3} viewBox={`0 0 ${size} ${size * 1.3}`}>
+      <Defs>
+        <LinearGradient id="scanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <Stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <Stop offset={`${scanProgress}%`} stopColor={color} stopOpacity="1" />
+          <Stop offset="100%" stopColor={color} stopOpacity="0.3" />
+        </LinearGradient>
+        <LinearGradient id="cornerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <Stop offset="0%" stopColor={color} stopOpacity="1" />
+          <Stop offset="100%" stopColor={color} stopOpacity="0.6" />
+        </LinearGradient>
+      </Defs>
+
+      {/* Top-left corner */}
+      <Path
+        d={`M ${strokeWidth / 2} ${cornerLength} L ${strokeWidth / 2} ${strokeWidth / 2} L ${cornerLength} ${strokeWidth / 2}`}
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Top-right corner */}
+      <Path
+        d={`M ${size - cornerLength} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${strokeWidth / 2} L ${size - strokeWidth / 2} ${cornerLength}`}
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Bottom-left corner */}
+      <Path
+        d={`M ${strokeWidth / 2} ${size * 1.3 - cornerLength} L ${strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${cornerLength} ${size * 1.3 - strokeWidth / 2}`}
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Bottom-right corner */}
+      <Path
+        d={`M ${size - cornerLength} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - strokeWidth / 2} L ${size - strokeWidth / 2} ${size * 1.3 - cornerLength}`}
+        stroke={isScanning ? 'url(#scanGrad)' : 'url(#cornerGrad)'}
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Scanning grid lines */}
+      {isScanning && (
+        <>
+          {[...Array(5)].map((_, i) => (
+            <Line
+              key={`h-${i}`}
+              x1={strokeWidth}
+              y1={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
+              x2={size - strokeWidth}
+              y2={strokeWidth + (i * (size * 1.3 - strokeWidth * 2)) / 4}
+              stroke={color}
+              strokeWidth={0.5}
+              opacity={0.3}
+            />
+          ))}
+          {[...Array(4)].map((_, i) => (
+            <Line
+              key={`v-${i}`}
+              x1={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
+              y1={strokeWidth}
+              x2={strokeWidth + (i * (size - strokeWidth * 2)) / 3}
+              y2={size * 1.3 - strokeWidth}
+              stroke={color}
+              strokeWidth={0.5}
+              opacity={0.3}
+            />
+          ))}
+        </>
+      )}
+
+      {/* Center dot */}
+      <Circle cx={size / 2} cy={size * 0.65} r={isScanning ? 6 : 8} fill={color} opacity={0.8} />
+    </Svg>
+  );
+};
+
+// Position Arrow Component
+const PositionArrow: React.FC<{ position: FacePosition }> = ({ position }) => {
+  const getArrowStyle = () => {
+    const base = { position: 'absolute' as const };
+    switch (position) {
+      case 'left':
+        return { ...base, left: 30, top: '50%', marginTop: -30 };
+      case 'right':
+        return { ...base, right: 30, top: '50%', marginTop: -30 };
+      case 'up':
+        return { ...base, top: 80, left: '50%', marginLeft: -30 };
+      case 'down':
+        return { ...base, bottom: 180, left: '50%', marginLeft: -30 };
+      default:
+        return base;
+    }
+  };
+
+  const getRotation = () => {
+    switch (position) {
+      case 'left':
+        return '180deg';
+      case 'right':
+        return '0deg';
+      case 'up':
+        return '270deg';
+      case 'down':
+        return '90deg';
+      default:
+        return '0deg';
+    }
+  };
+
+  return (
+    <View style={[styles.arrow, getArrowStyle()]}>
+      <Text style={[styles.arrowText, { transform: [{ rotate: getRotation() }] }]}>→</Text>
+    </View>
+  );
+};
+
+export default FaceUpload;

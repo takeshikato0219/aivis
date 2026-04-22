@@ -1,42 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAppSelector } from '@redux/store';
 import { RootStackParamList } from './types';
-import { StyleSheet, ActivityIndicator, View } from 'react-native';
 import { COLORS } from '@constants/theme';
-
-// Import navigators
+import SplashScreen from '@screens/Splash/SplashScreen';
 import AuthNavigator from './AuthNavigator';
 import AppNavigator from './AppNavigator';
+import { navigationRef } from './navigationRef';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
-  const { isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
 
-  const styles = StyleSheet.create({
-    center: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-  });
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+  const [showSplash, setShowSplash] = useState(true);
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
   return (
     <NavigationContainer
+      ref={navigationRef}
       theme={{
         dark: false,
         colors: {
           primary: COLORS.primary,
-          background: COLORS.background,
+          background: 'transparent',
           card: COLORS.card,
           text: COLORS.text,
           border: COLORS.border,
@@ -51,7 +42,7 @@ const RootNavigator = () => {
       }}
     >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
+        {isAuthenticated ? (
           // User is logged in → Show App Navigator
           <Stack.Screen name="App" component={AppNavigator} />
         ) : (

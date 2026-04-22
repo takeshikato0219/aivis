@@ -1,0 +1,2 @@
+# Gradle can emit these under a dependency after local builds; never bake them into patches.
+android/buildOutput*

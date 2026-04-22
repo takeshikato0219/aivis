@@ -1,6 +1,7 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CompositeNavigationProp } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
+import { MemberRelationship } from '@/services/faceService';
 
 // ===== ROOT STACK =====
 export type RootStackParamList = {
@@ -15,57 +16,137 @@ export type AuthStackParamList = {
   ForgotPassword: undefined;
   ResetPassword: { token: string };
   VerifyEmail: { email: string };
+  Policy: { type: string };
 };
 
 // ===== APP STACK =====
 export type AppStackParamList = {
-  MainTabs: undefined;
-  Demo: undefined;
-  NetworkDebug: undefined;
-};
-
-// ===== BOTTOM TAB =====
-export type BottomTabParamList = {
-  HomeTab: undefined;
-  SearchTab: undefined;
-  NotificationsTab: undefined;
-  ProfileTab: { userId?: string };
+  Introduce: undefined;
+  Home: undefined;
+  Notifications: { userId?: string };
+  Detail: {
+    camera: Camera;
+    workflowStatuses: WorkflowStatus[];
+  };
+  CameraLive: {
+    cameraId: string;
+    cameraName?: string;
+    baseUrl?: string;
+  };
+  QRScanner: undefined;
+  CameraSetup: { qrData: string | null };
+  SetupComplete: { cameraName: string; ssid: string; deviceId?: string };
+  Profile: undefined;
+  EditProfile: undefined;
+  ChangePassword: undefined;
+  DetectionZoneSetup: {
+    camera: Camera;
+    zoneType?: 'detection' | 'restricted' | 'entry_exit';
+    typeId?: string;
+    liveUrl: string;
+  };
+  ConnectDevice: undefined;
+  PairingCode: {
+    device?: {
+      id: string;
+      name?: string | null;
+      isConnectable?: boolean | null;
+      localName?: string | null;
+      manufacturerData?: any;
+      serviceUUIDs?: string[] | null;
+    };
+    pairingCode?: string;
+    wifi?: any;
+    isWifi?: boolean;
+  };
+  NetworkSetup: { cameraAp: string; deviceId?: string };
+  Setting: undefined;
+  FaceUpload: { type: string };
+  ConnectionSuccessful: { cameraData: Camera };
+  SettingAI: {
+    camera: Camera;
+    latestFirmwareUpdate?: { description: string; id: string; version: string } | null;
+  };
+  ListFace: { type: string };
+  DetailFace: { memberId: string; relationships?: MemberRelationship[] };
+  AiDetectionRules: { camera: Camera };
+  WorkSchedule: {
+    camera: Camera;
+    ruleId: string;
+    title: string;
+    code: string;
+  };
+  UploadDetectZone: {
+    camera: Camera;
+  };
+  ListNotificationCamera: {
+    title: string;
+    icon: string;
+    code: string;
+    cameraId: string;
+    detected_at?: string;
+  };
+  CustomerReport: { title: string; icon: string; cameraId: string; detected_at?: string };
+  Policy: { type: string };
+  UpdateCamera:
+    | {
+        camera: Camera;
+        latestFirmwareUpdate?: { description: string; id: string; version: string } | null;
+      }
+    | undefined;
 };
 
 // ===== NAVIGATION PROPS =====
 
+export type HomeScreenNavigationProp = CompositeNavigationProp<
+  StackNavigationProp<AppStackParamList, 'Home'>,
+  StackNavigationProp<RootStackParamList, 'App'>
+>;
+
 // Auth
 export type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'>;
 
-// Bottom Tab Screens với App Stack + Tab Navigation access
-export type HomeScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<BottomTabParamList, 'HomeTab'>,
-  StackNavigationProp<AppStackParamList>
->;
+export type DetailScreenNavigationProp = StackNavigationProp<AppStackParamList, 'Detail'>;
+export type DetailScreenRouteProp = RouteProp<AppStackParamList, 'Detail'>;
 
-export type SearchScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<BottomTabParamList, 'SearchTab'>,
-  StackNavigationProp<AppStackParamList>
->;
+export type CameraLiveScreenNavigationProp = StackNavigationProp<AppStackParamList, 'CameraLive'>;
+export type CameraLiveScreenRouteProp = RouteProp<AppStackParamList, 'CameraLive'>;
 
-export type NotificationsScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<BottomTabParamList, 'NotificationsTab'>,
-  StackNavigationProp<AppStackParamList>
->;
+export type CameraSetupScreenNavigationProp = StackNavigationProp<AppStackParamList, 'CameraSetup'>;
 
-export type ProfileScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<BottomTabParamList, 'ProfileTab'>,
-  StackNavigationProp<AppStackParamList>
->;
-
-export type ProfileScreenRouteProp = RouteProp<BottomTabParamList, 'ProfileTab'>;
-
-// App Stack Screens
-export type DemoScreenNavigationProp = StackNavigationProp<AppStackParamList, 'Demo'>;
-export type NetworkDebugScreenNavigationProp = StackNavigationProp<
+export type SetupCompleteScreenNavigationProp = StackNavigationProp<
   AppStackParamList,
-  'NetworkDebug'
+  'SetupComplete'
 >;
+export type SetupCompleteScreenRouteProp = RouteProp<AppStackParamList, 'SetupComplete'>;
+
+export type ConnectDeviceScreenNavigationProp = CompositeNavigationProp<
+  StackNavigationProp<AppStackParamList, 'ConnectDevice'>,
+  StackNavigationProp<RootStackParamList, 'App'>
+>;
+
+export type PairingCodeScreenNavigationProp = StackNavigationProp<AppStackParamList, 'PairingCode'>;
+export type PairingCodeScreenRouteProp = RouteProp<AppStackParamList, 'PairingCode'>;
+
+export type NetworkSetupNavigationProp = StackNavigationProp<AppStackParamList, 'NetworkSetup'>;
+export type NetworkSetupRouteProp = RouteProp<AppStackParamList, 'NetworkSetup'>;
+
+export type ConnectionSuccessfulScreenNavigationProp = StackNavigationProp<
+  AppStackParamList,
+  'ConnectionSuccessful'
+>;
+
+export type ConnectionSuccessfulScreenRouteProp = RouteProp<
+  AppStackParamList,
+  'ConnectionSuccessful'
+>;
+
+export type DetailFaceNavigationProp = StackNavigationProp<AppStackParamList, 'DetailFace'>;
+export type DetailFaceRouteProp = RouteProp<AppStackParamList, 'DetailFace'>;
+
+export type WorkScheduleRouteProp = RouteProp<AppStackParamList, 'WorkSchedule'>;
+
+export type ListFaceRouteProp = RouteProp<AppStackParamList, 'ListFace'>;
 
 // ===== DECLARE GLOBAL =====
 declare global {

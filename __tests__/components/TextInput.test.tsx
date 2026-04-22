@@ -42,4 +42,20 @@ describe('TextInput', () => {
     fireEvent.press(icon);
     expect(icon).toBeTruthy();
   });
+
+  it('renders without label', () => {
+    const { queryByText, getByDisplayValue } = render(
+      <TextInput value="Test Value" onChangeText={() => {}} />
+    );
+    expect(queryByText('Test Label')).toBeNull();
+    expect(getByDisplayValue('Test Value')).toBeTruthy();
+  });
+
+  it('renders with function icon', () => {
+    const IconComponent = () => <React.Fragment>Icon</React.Fragment>;
+    const { getByTestId } = render(
+      <TextInput label="Icon" value="" onChangeText={() => {}} icon={IconComponent} />
+    );
+    expect(getByTestId('left-icon-adornment')).toBeTruthy();
+  });
 });

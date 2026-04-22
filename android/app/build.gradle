@@ -1,6 +1,27 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "com.google.gms.google-services"
+
+// Only ship icon fonts used in JS. The package's fonts.gradle often falls back to
+// "*.ttf" when `project.hasProperty("vectoricons")` is false; trim after copy.
+def vectorIconFontAllowlist = ["MaterialIcons.ttf", "MaterialCommunityIcons.ttf"] as Set
+apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+afterEvaluate {
+    def copyFonts = tasks.findByName("copyReactNativeVectorIconFonts")
+    if (copyFonts != null) {
+        copyFonts.doLast {
+            def fontsDir = file("$buildDir/intermediates/ReactNativeVectorIcons/fonts")
+            if (fontsDir.directory) {
+                fontsDir.eachFile { f ->
+                    if (f.isFile() && !vectorIconFontAllowlist.contains(f.name)) {
+                        f.delete()
+                    }
+                }
+            }
+        }
+    }
+}
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -57,7 +78,7 @@ react {
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -77,13 +98,14 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.timima01app"
+    namespace "com.aivis.camera.ai"
     defaultConfig {
-        applicationId "com.timima01app"
+        applicationId "com.aivis.camera.ai"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        resConfigs "en", "ja"
     }
     signingConfigs {
         debug {
@@ -102,7 +124,16 @@ android {
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+    splits {
+        abi {
+            enable true
+            reset()
+            include "arm64-v8a"
+            universalApk false
         }
     }
 }
@@ -110,6 +141,8 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    implementation("androidx.activity:activity:1.9.+")
+    implementation 'com.google.android.gms:play-services-auth:20.7.0'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

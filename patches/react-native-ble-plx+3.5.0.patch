@@ -1,0 +1,28 @@
+diff --git a/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/utils/SafePromise.java b/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/utils/SafePromise.java
+index 0203473..b191e21 100644
+--- a/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/utils/SafePromise.java
++++ b/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/utils/SafePromise.java
+@@ -22,18 +22,23 @@ public class SafePromise {
+ 
+   public void reject(String code, String message) {
+     if (isFinished.compareAndSet(false, true)) {
++      // Guard against null code — PromiseImpl.reject requires non-null code
++      // or it throws NullPointerException on Android.
++      if (code == null) { return; }
+       promise.reject(code, message);
+     }
+   }
+ 
+   public void reject(String code, Throwable e) {
+     if (isFinished.compareAndSet(false, true)) {
++      if (code == null) { return; }
+       promise.reject(code, e);
+     }
+   }
+ 
+   public void reject(String code, String message, Throwable e) {
+     if (isFinished.compareAndSet(false, true)) {
++      if (code == null) { return; }
+       promise.reject(code, message, e);
+     }
+   }
