@@ -35,7 +35,7 @@ export type AppStackParamList = {
   };
   QRScanner: undefined;
   CameraSetup: { qrData: string | null };
-  SetupComplete: { cameraName: string; ssid: string };
+  SetupComplete: { cameraName: string; ssid: string; deviceId?: string };
   Profile: undefined;
   EditProfile: undefined;
   ChangePassword: undefined;
@@ -59,7 +59,7 @@ export type AppStackParamList = {
     wifi?: any;
     isWifi?: boolean;
   };
-  NetworkSetup: { cameraAp: string };
+  NetworkSetup: { cameraAp: string; deviceId?: string };
   Setting: undefined;
   FaceUpload: { type: string };
   ConnectionSuccessful: { cameraData: Camera };
@@ -118,6 +118,7 @@ export type SetupCompleteScreenNavigationProp = StackNavigationProp<
   AppStackParamList,
   'SetupComplete'
 >;
+export type SetupCompleteScreenRouteProp = RouteProp<AppStackParamList, 'SetupComplete'>;
 
 export type ConnectDeviceScreenNavigationProp = CompositeNavigationProp<
   StackNavigationProp<AppStackParamList, 'ConnectDevice'>,
@@ -129,6 +130,11 @@ export type PairingCodeScreenRouteProp = RouteProp<AppStackParamList, 'PairingCo
 
 export type NetworkSetupNavigationProp = StackNavigationProp<AppStackParamList, 'NetworkSetup'>;
 export type NetworkSetupRouteProp = RouteProp<AppStackParamList, 'NetworkSetup'>;
+
+export type ConnectionSuccessfulScreenNavigationProp = StackNavigationProp<
+  AppStackParamList,
+  'ConnectionSuccessful'
+>;
 
 export type ConnectionSuccessfulScreenRouteProp = RouteProp<
   AppStackParamList,

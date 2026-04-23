@@ -1,17 +1,14 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useLiveStream } from '@hooks/useLiveStream';
+import type { ConnectionStatus } from '@/hooks/useLiveStream';
+import NetInfo from '@react-native-community/netinfo';
 
-// Mock NetInfo - must return a function for unsubscribe (jest.setup mock can be cleared)
+// Captured NetInfo listener for simulating network state changes in tests
+let netInfoListener: ((state: any) => void) | null = null; // eslint-disable-line @typescript-eslint/no-unused-vars
+
 jest.mock('@react-native-community/netinfo', () => ({
-  addEventListener: () => () => {},
-  fetch: jest.fn(() =>
-    Promise.resolve({
-      isConnected: true,
-      isInternetReachable: true,
-      type: 'wifi',
-      details: { isConnectionExpensive: false },
-    })
-  ),
+  addEventListener: jest.fn(),
+  fetch: jest.fn(),
 }));
 
 // Mock timers
@@ -26,14 +23,33 @@ const mockWebViewRef = {
 
 describe('useLiveStream', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    netInfoListener = null;
     jest.clearAllTimers();
+
+    // Restore mock implementations after resetMocks clears them
+    (NetInfo.addEventListener as jest.Mock).mockImplementation((listener: (state: any) => void) => {
+      netInfoListener = listener;
+      return () => {
+        netInfoListener = null;
+      };
+    });
+    (NetInfo.fetch as jest.Mock).mockResolvedValue({
+      isConnected: true,
+      isInternetReachable: true,
+      type: 'wifi',
+      details: { isConnectionExpensive: false },
+    });
+
+    mockWebViewRef.current.reload.mockReset ? mockWebViewRef.current.reload.mockReset() : jest.fn();
   });
 
   afterEach(() => {
     jest.clearAllTimers();
   });
 
+  // ─────────────────────────────────────────────
+  // Initial state
+  // ─────────────────────────────────────────────
   describe('initial state', () => {
     it('should initialize with default config', () => {
       const { result } = renderHook(() => useLiveStream());
@@ -43,6 +59,8 @@ describe('useLiveStream', () => {
       expect(result.current.retryCount).toBe(0);
       expect(result.current.isReconnecting).toBe(false);
       expect(result.current.webViewRef.current).toBeNull();
+      expect(result.current.playerLoadPhase).toBe('connecting');
+      expect(result.current.streamProtocol).toBeNull();
     });
 
     it('should initialize with custom config', () => {
@@ -58,16 +76,19 @@ describe('useLiveStream', () => {
       expect(result.current.connectionStatus).toBe('connecting');
       expect(result.current.retryCount).toBe(0);
       expect(result.current.isReconnecting).toBe(false);
+      expect(result.current.playerLoadPhase).toBe('connecting');
     });
   });
 
+  // ─────────────────────────────────────────────
+  // Initial loading timeout
+  // ─────────────────────────────────────────────
   describe('initial loading', () => {
     it('should set loading to false after initial loading timeout when no connection', async () => {
       const { result } = renderHook(() => useLiveStream({ initialLoadingMax: 10000 }));
 
       expect(result.current.isLoading).toBe(true);
 
-      // Fast-forward past initial loading max — no heartbeat/connected message, triggers retry/failed
       act(() => {
         jest.advanceTimersByTime(10000);
       });
@@ -87,7 +108,6 @@ describe('useLiveStream', () => {
         result.current.handleWebViewLoad();
       });
 
-      // Connected + not loading only after heartbeat/playing messages (not on load alone)
       const heartbeatEvent = {
         nativeEvent: {
           data: JSON.stringify({ type: 'heartbeat', timestamp: Date.now() }),
@@ -100,7 +120,6 @@ describe('useLiveStream', () => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.connectionStatus).toBe('connected');
 
-      // Initial-loading timeout should not fire before 50s; state stays stable
       act(() => {
         jest.advanceTimersByTime(10000);
       });
@@ -108,8 +127,25 @@ describe('useLiveStream', () => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.connectionStatus).toBe('connected');
     });
+
+    it('should skip initial loading timeout for native-hls surface', () => {
+      const { result } = renderHook(() =>
+        useLiveStream({ playbackSurface: 'native-hls', initialLoadingMax: 1000 })
+      );
+
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      // Timer should not have fired for native-hls
+      expect(result.current.isReconnecting).toBe(false);
+      expect(result.current.isLoading).toBe(true);
+    });
   });
 
+  // ─────────────────────────────────────────────
+  // WebView event handlers
+  // ─────────────────────────────────────────────
   describe('WebView event handlers', () => {
     describe('handleWebViewLoad', () => {
       it('should update state when WebView loads successfully', () => {
@@ -132,6 +168,7 @@ describe('useLiveStream', () => {
 
         expect(result.current.isLoading).toBe(false);
         expect(result.current.connectionStatus).toBe('connected');
+        expect(result.current.playerLoadPhase).toBe('connected');
         expect(result.current.isReconnecting).toBe(false);
         expect(result.current.retryCount).toBe(0);
       });
@@ -226,11 +263,15 @@ describe('useLiveStream', () => {
         expect(result.current.isLoading).toBe(true);
         expect(result.current.connectionStatus).toBe('connecting');
         expect(result.current.isReconnecting).toBe(false);
+        expect(result.current.playerLoadPhase).toBe('connecting');
         expect(mockWebViewRef.current.reload).toHaveBeenCalled();
       });
     });
   });
 
+  // ─────────────────────────────────────────────
+  // WebView message handling
+  // ─────────────────────────────────────────────
   describe('WebView message handling', () => {
     it('should handle heartbeat messages', () => {
       const { result } = renderHook(() => useLiveStream());
@@ -250,6 +291,100 @@ describe('useLiveStream', () => {
       // Heartbeat confirms connection - sets connected when loading
       expect(result.current.connectionStatus).toBe('connected');
       expect(result.current.isLoading).toBe(false);
+      expect(result.current.playerLoadPhase).toBe('connected');
+    });
+
+    it('should handle playing messages', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'playing' }) },
+        });
+      });
+
+      expect(result.current.connectionStatus).toBe('connected');
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isReconnecting).toBe(false);
+      expect(result.current.retryCount).toBe(0);
+      expect(result.current.playerLoadPhase).toBe('connected');
+    });
+
+    it('should handle connected messages', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'connected' }) },
+        });
+      });
+
+      expect(result.current.connectionStatus).toBe('connected');
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.playerLoadPhase).toBe('connected');
+    });
+
+    it('should handle jsReady messages (reset heartbeat, set buffering phase)', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'jsReady' }) },
+        });
+      });
+
+      expect(result.current.playerLoadPhase).toBe('buffering');
+      // Should not change connection status to connected
+      expect(result.current.connectionStatus).toBe('connecting');
+    });
+
+    it('should handle buffering messages (reset heartbeat, set buffering phase)', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'buffering' }) },
+        });
+      });
+
+      expect(result.current.playerLoadPhase).toBe('buffering');
+    });
+
+    it('should handle failed messages and trigger reconnection', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'failed' }) },
+        });
+      });
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isReconnecting).toBe(true);
+    });
+
+    it('should handle wsClose messages and trigger reconnection', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'wsClose' }) },
+        });
+      });
+
+      expect(result.current.isReconnecting).toBe(true);
+    });
+
+    it('should handle wsError messages and trigger reconnection', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'wsError' }) },
+        });
+      });
+
+      expect(result.current.isReconnecting).toBe(true);
     });
 
     it('should handle connection-lost messages', () => {
@@ -331,6 +466,59 @@ describe('useLiveStream', () => {
       expect(result.current.isReconnecting).toBe(true);
     });
 
+    it('should handle stalled messages only when hasEverConnected', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      // Stalled before any connection - should NOT reconnect
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'stalled' }) },
+        });
+      });
+
+      expect(result.current.isReconnecting).toBe(false);
+
+      // Mark as ever connected via playing message
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'playing' }) },
+        });
+      });
+
+      // Now stalled should trigger reconnection
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'stalled' }) },
+        });
+      });
+
+      expect(result.current.isReconnecting).toBe(true);
+    });
+
+    it('should handle protocol messages and set streamProtocol', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'protocol', protocol: 'hls' }) },
+        });
+      });
+
+      expect(result.current.streamProtocol).toBe('hls');
+    });
+
+    it('should handle mse protocol messages', () => {
+      const { result } = renderHook(() => useLiveStream());
+
+      act(() => {
+        result.current.handleWebViewMessage({
+          nativeEvent: { data: JSON.stringify({ type: 'protocol', protocol: 'mse' }) },
+        });
+      });
+
+      expect(result.current.streamProtocol).toBe('mse');
+    });
+
     it('should handle malformed JSON gracefully', () => {
       const { result } = renderHook(() => useLiveStream());
       const mockEvent = {
@@ -347,6 +535,64 @@ describe('useLiveStream', () => {
     });
   });
 
+  // ─────────────────────────────────────────────
+  // Native HLS playback surface
+  // ─────────────────────────────────────────────
+  describe('native-hls playback surface', () => {
+    it('markNativePlaybackConnected should set connected state and streamProtocol to hls', () => {
+      const { result } = renderHook(() => useLiveStream({ playbackSurface: 'native-hls' }));
+
+      act(() => {
+        result.current.markNativePlaybackConnected();
+      });
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.connectionStatus).toBe('connected');
+      expect(result.current.isReconnecting).toBe(false);
+      expect(result.current.retryCount).toBe(0);
+      expect(result.current.playerLoadPhase).toBe('connected');
+      expect(result.current.streamProtocol).toBe('hls');
+    });
+
+    it('markNativePlaybackFailed should set failed state', () => {
+      const { result } = renderHook(() => useLiveStream({ playbackSurface: 'native-hls' }));
+
+      act(() => {
+        result.current.markNativePlaybackFailed();
+      });
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.connectionStatus).toBe('failed');
+      expect(result.current.playerLoadPhase).toBe('connecting');
+    });
+
+    it('markNativePlaybackConnected should do nothing for webview surface', () => {
+      const { result } = renderHook(() => useLiveStream({ playbackSurface: 'webview' }));
+
+      act(() => {
+        result.current.markNativePlaybackConnected();
+      });
+
+      // No state change expected
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.connectionStatus).toBe('connecting');
+    });
+
+    it('markNativePlaybackFailed should do nothing for webview surface', () => {
+      const { result } = renderHook(() => useLiveStream({ playbackSurface: 'webview' }));
+
+      act(() => {
+        result.current.markNativePlaybackFailed();
+      });
+
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.connectionStatus).toBe('connecting');
+    });
+  });
+
+  // ─────────────────────────────────────────────
+  // Retry logic
+  // ─────────────────────────────────────────────
   describe('retry logic', () => {
     it('should retry with exponential backoff', () => {
       const { result } = renderHook(() =>
@@ -438,6 +684,9 @@ describe('useLiveStream', () => {
     });
   });
 
+  // ─────────────────────────────────────────────
+  // Heartbeat monitoring
+  // ─────────────────────────────────────────────
   describe('heartbeat monitoring', () => {
     it('should detect heartbeat timeout', async () => {
       const { result } = renderHook(() =>
@@ -503,6 +752,9 @@ describe('useLiveStream', () => {
     });
   });
 
+  // ─────────────────────────────────────────────
+  // Cleanup
+  // ─────────────────────────────────────────────
   describe('cleanup', () => {
     it('should clear all timers on cleanup', () => {
       const { result } = renderHook(() => useLiveStream());
@@ -563,6 +815,9 @@ describe('useLiveStream', () => {
     });
   });
 
+  // ─────────────────────────────────────────────
+  // Configuration
+  // ─────────────────────────────────────────────
   describe('configuration', () => {
     it('should use default configuration when none provided', () => {
       const { result } = renderHook(() => useLiveStream());
@@ -616,6 +871,9 @@ describe('useLiveStream', () => {
     });
   });
 
+  // ─────────────────────────────────────────────
+  // Edge cases
+  // ─────────────────────────────────────────────
   describe('edge cases', () => {
     it('should handle rapid consecutive errors', () => {
       const { result } = renderHook(() =>
@@ -705,5 +963,14 @@ describe('useLiveStream', () => {
       expect(result.current.isReconnecting).toBe(false);
       expect(result.current.connectionStatus).toBe('connecting');
     });
+  });
+
+  // ─────────────────────────────────────────────
+  // Type check
+  // ─────────────────────────────────────────────
+  it('should return connectionStatus of type ConnectionStatus', () => {
+    const { result } = renderHook(() => useLiveStream());
+    const status: ConnectionStatus = result.current.connectionStatus;
+    expect(['connecting', 'connected', 'failed']).toContain(status);
   });
 });

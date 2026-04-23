@@ -28,7 +28,7 @@ import DrawerMenu from '@components/DrawerMenu/DrawerMenu';
 import { HomeScreenNavigationProp } from '@navigation/types';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useUserSync } from '@hooks/useUserSync';
-import CleanShotIcon from '@assets/svg/clean-shot.svg';
+import CleanShotImage from '@assets/webp/clean-shot.webp';
 import IconBlue from '@assets/svg/icon-blue.svg';
 import cameraService from '@/services/cameraService';
 import { Camera, WorkflowStatus } from '@api/types/cameraTypes';
@@ -376,7 +376,7 @@ const Home = () => {
     if (activeIndex === 0) {
       return (
         <View style={styles.styleEmptyList}>
-          <CleanShotIcon />
+          <Image source={CleanShotImage} style={styles.styleCleanShotImage} />
           <Text style={styles.textStyleReady}>{t('home.readyToPair')}</Text>
           <View style={styles.styleViewCameraAndEnsure}>
             <IconBlue />

@@ -56,6 +56,49 @@ function appendTokenQueryFromLiveUrl(wsUrl: string): string {
   return `&token=${raw}`;
 }
 
+export type WsStreamSrcName = 'camera' | 'camera_mobile';
+
+/**
+ * Replace only the `src` query on a WebSocket `live_url` without rewriting `token=` (padding-sensitive).
+ * - Target `camera_mobile`: only when current `src` is missing or `camera`.
+ * - Target `camera`: only when current `src` is `camera_mobile`.
+ * Other `src` values are returned unchanged.
+ */
+export function applyWsStreamSrc(wsUrl: string, targetSrc: WsStreamSrcName): string {
+  if (!wsUrl) return '';
+  const current = getQueryParamFromUrl(wsUrl, 'src');
+  const effectiveCurrent = current ?? 'camera';
+
+  if (targetSrc === 'camera_mobile') {
+    if (effectiveCurrent !== 'camera') return wsUrl;
+  } else {
+    if (effectiveCurrent !== 'camera_mobile') return wsUrl;
+  }
+
+  const q = wsUrl.indexOf('?');
+  if (q < 0) {
+    return `${wsUrl}?src=${targetSrc}`;
+  }
+  const hashIdx = wsUrl.indexOf('#', q + 1);
+  const beforeQuery = wsUrl.slice(0, q + 1);
+  const query = wsUrl.slice(q + 1, hashIdx === -1 ? undefined : hashIdx);
+  const hash = hashIdx === -1 ? '' : wsUrl.slice(hashIdx);
+
+  const segments = query.split('&');
+  let replaced = false;
+  const newSegments = segments.map((seg) => {
+    if (seg.startsWith('src=')) {
+      replaced = true;
+      return `src=${targetSrc}`;
+    }
+    return seg;
+  });
+  if (!replaced) {
+    newSegments.unshift(`src=${targetSrc}`);
+  }
+  return beforeQuery + newSegments.join('&') + hash;
+}
+
 /**
  * Build stream URL from RTSP URL
  * @param rtspUrl - RTSP URL or full HTTP/HTTPS URL

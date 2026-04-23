@@ -1,4 +1,14 @@
-import messaging from '@react-native-firebase/messaging';
+import {
+  AuthorizationStatus,
+  deleteToken as deleteFcmToken,
+  getInitialNotification,
+  getMessaging,
+  getToken,
+  onMessage,
+  onNotificationOpenedApp,
+  onTokenRefresh,
+  requestPermission,
+} from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance, AndroidStyle, EventType } from '@notifee/react-native';
 import { PermissionsAndroid, Platform } from 'react-native';
 import RNFS from 'react-native-fs';
@@ -37,6 +47,8 @@ const RULE_ICON_MAP: Record<string, string> = {
 
 const DEFAULT_ICON = 'IconHome';
 
+const messaging = getMessaging();
+
 class PushNotificationService {
   private unsubscribeForeground: (() => void) | null = null;
   private unsubscribeNotificationOpened: (() => void) | null = null;
@@ -50,7 +62,7 @@ class PushNotificationService {
     if (Platform.OS !== 'android') return true;
 
     try {
-      const apiLevel = Platform.Version as number;
+      const apiLevel = Platform.Version;
       if (apiLevel >= 33) {
         const permission =
           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS ??
@@ -82,10 +94,10 @@ class PushNotificationService {
           return null;
         }
       } else {
-        const authStatus = await messaging().requestPermission();
+        const authStatus = await requestPermission(messaging);
         const enabled =
-          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-          authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+          authStatus === AuthorizationStatus.AUTHORIZED ||
+          authStatus === AuthorizationStatus.PROVISIONAL;
 
         if (!enabled) {
           console.log('[PushNotification] iOS permission denied');
@@ -93,9 +105,8 @@ class PushNotificationService {
         }
       }
 
-      const token = await messaging().getToken();
+      const token = await getToken(messaging);
       if (token) {
-        console.log('[PushNotification] FCM token obtained', token);
         return token;
       }
       return null;
@@ -344,7 +355,7 @@ class PushNotificationService {
       }
 
       // Listen for foreground messages
-      this.unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
+      this.unsubscribeForeground = onMessage(messaging, async (remoteMessage) => {
         console.log('[PushNotification] Foreground message:', remoteMessage);
         await this.displayForegroundNotification(remoteMessage);
         const codes = getRuleCodesFromFcmData(remoteMessage?.data);
@@ -358,7 +369,7 @@ class PushNotificationService {
       });
 
       // Listen for Firebase notification opened (app was in background)
-      this.unsubscribeNotificationOpened = messaging().onNotificationOpenedApp((remoteMessage) => {
+      this.unsubscribeNotificationOpened = onNotificationOpenedApp(messaging, (remoteMessage) => {
         console.log('[PushNotification] Firebase notification opened:', remoteMessage);
         const data = this.normalizeNotificationData(remoteMessage?.data ?? {});
         this.handleNotificationOpened(data);
@@ -375,13 +386,13 @@ class PushNotificationService {
       });
 
       // Listen for token refresh
-      this.unsubscribeTokenRefresh = messaging().onTokenRefresh(async (newToken) => {
+      this.unsubscribeTokenRefresh = onTokenRefresh(messaging, async (newToken) => {
         console.log('[PushNotification] Token refreshed');
         await this.registerTokenWithBackend(newToken);
       });
 
       // Check if app was opened from a notification (cold start)
-      const firebaseInitial = await messaging().getInitialNotification();
+      const firebaseInitial = await getInitialNotification(messaging);
       if (firebaseInitial?.data) {
         console.log('[PushNotification] App opened from Firebase notification');
         await this.handleNotificationOpened(this.normalizeNotificationData(firebaseInitial.data));
@@ -417,7 +428,7 @@ class PushNotificationService {
    */
   async deleteToken(): Promise<void> {
     try {
-      await messaging().deleteToken();
+      await deleteFcmToken(messaging);
     } catch (error) {
       console.error('[PushNotification] Error deleting token:', error);
     }

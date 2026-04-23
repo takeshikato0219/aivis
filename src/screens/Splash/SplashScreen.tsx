@@ -23,7 +23,7 @@ const SplashScreen: React.FC<Props> = ({ onFinish }) => {
       } finally {
         setTimeout(() => {
           onFinish();
-        }, 1500);
+        }, 400);
       }
     };
 

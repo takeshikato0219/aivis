@@ -2,8 +2,9 @@
  * @format
  */
 
+import './src/api/axiosConfig';
 import { AppRegistry, Platform } from 'react-native';
-import messaging from '@react-native-firebase/messaging';
+import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance, AndroidStyle } from '@notifee/react-native';
 import App from './App';
 import { name as appName } from './app.json';
@@ -16,7 +17,7 @@ const shouldSuppressNotification = (remoteMessage) =>
   getRuleCodesFromFcmData(remoteMessage?.data).length > 0;
 
 // Background message handler - must be registered before App
-messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
   console.log('[PushNotification] Background message:', remoteMessage);
 
   if (shouldSuppressNotification(remoteMessage)) {

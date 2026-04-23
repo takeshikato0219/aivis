@@ -69,12 +69,15 @@ class FaceService {
     return response.data.data;
   }
 
-  async getMembers(params?: {
-    sort_by?: string;
-    sort_order?: string;
-    page?: number;
-    per_page?: number;
-  }): Promise<MembersResponse> {
+  async getMembers(
+    params?: {
+      sort_by?: string;
+      sort_order?: string;
+      page?: number;
+      per_page?: number;
+    },
+    options?: { signal?: AbortSignal }
+  ): Promise<MembersResponse> {
     const response = await axiosInstance.get<MembersResponse>(API_ENDPOINTS.MEMBERS, {
       params: {
         sort_by: 'created_at',
@@ -83,6 +86,7 @@ class FaceService {
         per_page: 20,
         ...params,
       },
+      signal: options?.signal,
     });
     return response.data;
   }

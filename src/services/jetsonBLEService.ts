@@ -21,7 +21,9 @@ import {
   AuthStatus,
   setNetworkStatus,
 } from '@redux/slices/bleSlice';
-import { Platform, PermissionsAndroid } from 'react-native';
+import { Alert, Platform, PermissionsAndroid } from 'react-native';
+import i18n from '@/i18n';
+import { navigationRef } from '@navigation/navigationRef';
 
 // =============================================================================
 // UUIDs — must match config.py on Jetson
@@ -93,6 +95,7 @@ const toSerializableDevice = (device: Device): SerializableDevice => ({
 // =============================================================================
 
 const SCAN_TIMEOUT_MS = 10000;
+const BLE_WAIT_POWERED_ON_MS = 10000;
 
 // =============================================================================
 // BLE SERVICE SINGLETON
@@ -109,6 +112,45 @@ class JetsonBLEService {
   private isConnected = false;
   private isDisconnecting = false;
   private isCleaningUp = false;
+  private connectionTimeoutAlertLock = false;
+
+  private presentConnectionTimeoutAlert(): void {
+    if (this.connectionTimeoutAlertLock) {
+      return;
+    }
+    this.connectionTimeoutAlertLock = true;
+
+    Alert.alert(
+      i18n.t('bluetoothScreen.cameraConnectionTimeoutTitle'),
+      i18n.t('bluetoothScreen.cameraConnectionTimeoutMessage'),
+      [
+        {
+          text: i18n.t('common.ok'),
+          onPress: () => {
+            this.connectionTimeoutAlertLock = false;
+            void (async () => {
+              await this.disconnect();
+              if (navigationRef.isReady()) {
+                navigationRef.reset({
+                  index: 0,
+                  routes: [
+                    {
+                      name: 'App',
+                      state: {
+                        routes: [{ name: 'Home' }, { name: 'ConnectDevice' }],
+                        index: 1,
+                      },
+                    },
+                  ],
+                });
+              }
+            })();
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // INITIALIZATION
@@ -128,11 +170,48 @@ class JetsonBLEService {
   }
 
   /**
+   * Wait until the BLE adapter reports PoweredOn (iOS starts as Unknown until CoreBluetooth is ready).
+   * Resolves false if Bluetooth is off, unsupported, unauthorized, or the wait times out.
+   */
+  private waitForBlePoweredOn(timeoutMs: number = BLE_WAIT_POWERED_ON_MS): Promise<boolean> {
+    return new Promise((resolve) => {
+      let finished = false;
+      let sub: Subscription | null = null;
+
+      const done = (ok: boolean) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        try {
+          sub?.remove?.();
+        } catch {}
+        resolve(ok);
+      };
+
+      const timer = setTimeout(() => done(false), timeoutMs);
+
+      // Compare string literals — matches react-native-ble-plx State values (tests mock partial exports safely).
+      sub = bleManager.onStateChange((state) => {
+        if (state === 'PoweredOn') {
+          done(true);
+        } else if (state === 'Unsupported' || state === 'Unauthorized' || state === 'PoweredOff') {
+          done(false);
+        }
+      }, true);
+    });
+  }
+
+  /**
    * Check if there's an existing BLE connection from a previous session
    */
   private async checkExistingConnection(): Promise<void> {
     try {
-      const connectedDevices = await bleManager.connectedDevices([SERVICE_UUID]);
+      const poweredOn = await this.waitForBlePoweredOn();
+      if (!poweredOn) {
+        return;
+      }
+
+      const connectedDevices = (await bleManager.connectedDevices([SERVICE_UUID])) ?? [];
 
       if (connectedDevices.length > 0) {
         const device = connectedDevices[0];
@@ -713,6 +792,7 @@ class JetsonBLEService {
       this.netCheckTimeout = setTimeout(() => {
         console.log('[BLE] Network check timeout');
         store.dispatch(setError('Network status timeout - no response from device'));
+        this.presentConnectionTimeoutAlert();
         this.netCheckTimeout = null;
       }, 10000);
 
@@ -745,6 +825,10 @@ class JetsonBLEService {
         if (finished) return;
         finished = true;
         this.cleanupNetSetupTimeout();
+        // Also cancel any pending network-check timeout — the camera BLE service
+        // may shut down right after confirming setup, so the check would never
+        // receive a response and would fire a false timeout alert.
+        this.cleanupNetCheckTimeout();
         try {
           sub?.remove();
         } catch {}
@@ -784,6 +868,7 @@ class JetsonBLEService {
       this.netSetupTimeout = setTimeout(() => {
         console.log('[BLE] Network setup timeout');
         store.dispatch(setError('Network setup timeout - no response from device'));
+        this.presentConnectionTimeoutAlert();
         done(false);
       }, 30000);
 

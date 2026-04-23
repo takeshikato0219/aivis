@@ -34,6 +34,7 @@ import Video from 'react-native-video';
 import { captureRef, captureScreen } from 'react-native-view-shot';
 import { WebView } from 'react-native-webview';
 import {
+  applyWsStreamSrc,
   buildIOSStreamInlineHtml,
   buildStreamHtmlUrl,
   buildStreamHtmlUrlForAndroid,
@@ -46,6 +47,8 @@ import { useLiveStream } from '@hooks/useLiveStream';
 import { useMic } from '@hooks/useMic';
 import { MicState } from '@redux/slices/streamSlice';
 import { checkMicPermission, requestMicPermission, openAppSettings } from '@utils/permissions';
+import NetInfo from '@react-native-community/netinfo';
+import { streamDebugLog } from '@utils/streamDebugLog';
 
 const STREAM_QUALITIES: StreamQuality[] = [
   { label: '流畅', value: 'low', resolution: '640x480', bitrate: 256 },
@@ -54,15 +57,18 @@ const STREAM_QUALITIES: StreamQuality[] = [
   { label: 'HD', value: 'hd', resolution: '2560x1440', bitrate: 2048 },
 ];
 
+const BUFFER_ESCALATE_MS = 6000;
+const STABLE_DESKTOP_MS = 15000;
+
 const CameraLiveView: React.FC = () => {
   const navigation = useNavigation<CameraLiveScreenNavigationProp>();
   const route = useRoute<CameraLiveScreenRouteProp>();
   const videoContainerRef = useRef<View>(null);
-  /** Android ExoPlayer surface — view-shot captures this wrapper (TextureView). */
   const androidVideoSurfaceRef = useRef<View>(null);
   const captureResolveRef = useRef<((base64: string) => void) | null>(null);
   const hasInitialStreamRef = useRef(false);
   const prevStreamUrlRef = useRef<string>('');
+  const isLiveRef = useRef(false);
   const { cameraId } = route.params;
   const { t } = useTranslation();
 
@@ -78,21 +84,100 @@ const CameraLiveView: React.FC = () => {
   const [showQualityModal, setShowQualityModal] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [streamWsUrl, setStreamWsUrl] = useState<string>('');
+  const [liveUrlFromApi, setLiveUrlFromApi] = useState('');
+  const [preferMobileSrc, setPreferMobileSrc] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [recordingStartTime, setRecordingStartTime] = useState<Date | null>(null);
   const [currentQuality, setCurrentQuality] = useState<StreamQuality>(STREAM_QUALITIES[2]);
   const [expMinutes, setExpMinutes] = useState<number | null>(null);
-  const [streamHtmlUrl, setStreamHtmlUrl] = useState('');
   const [micUrl, setMicUrl] = useState('');
   const [isTalkingDelayed, setIsTalkingDelayed] = useState(false);
   const [isMicProcessing, setIsMicProcessing] = useState(false);
   const [lastFrameBase64, setLastFrameBase64] = useState<string | null>(null);
   const [videoReloadKey, setVideoReloadKey] = useState(0);
+  const [isCellularNetwork, setIsCellularNetwork] = useState(false);
+  const nativeHlsStallAttemptsRef = useRef(0);
+  const bufferingEscalateTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const stableDesktopTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const preferMobileSrcRef = useRef(false);
+
+  const clearBufferingEscalateTimer = useCallback(() => {
+    if (bufferingEscalateTimerRef.current) {
+      clearTimeout(bufferingEscalateTimerRef.current);
+      bufferingEscalateTimerRef.current = null;
+    }
+  }, []);
+
+  const clearStableDesktopTimer = useCallback(() => {
+    if (stableDesktopTimerRef.current) {
+      clearTimeout(stableDesktopTimerRef.current);
+      stableDesktopTimerRef.current = null;
+    }
+  }, []);
+
+  const clearAdaptiveStreamTimers = useCallback(() => {
+    clearBufferingEscalateTimer();
+    clearStableDesktopTimer();
+  }, [clearBufferingEscalateTimer, clearStableDesktopTimer]);
+
+  const handleAdaptiveStreamPlayerMessage = useCallback(
+    (data: { type?: string }) => {
+      const msgType = data.type;
+      if (msgType === 'buffering') {
+        clearStableDesktopTimer();
+        clearBufferingEscalateTimer();
+        bufferingEscalateTimerRef.current = setTimeout(() => {
+          bufferingEscalateTimerRef.current = null;
+          setPreferMobileSrc(true);
+          streamDebugLog('preferMobileSrcOn', { via: 'buffering' });
+        }, BUFFER_ESCALATE_MS);
+        return;
+      }
+      if (msgType === 'heartbeat' || msgType === 'playing' || msgType === 'connected') {
+        clearBufferingEscalateTimer();
+        if (!preferMobileSrcRef.current || stableDesktopTimerRef.current) {
+          return;
+        }
+        stableDesktopTimerRef.current = setTimeout(() => {
+          stableDesktopTimerRef.current = null;
+          setPreferMobileSrc(false);
+          streamDebugLog('preferMobileSrcOff', { via: 'playbackSignal' });
+        }, STABLE_DESKTOP_MS);
+      }
+    },
+    [clearBufferingEscalateTimer, clearStableDesktopTimer]
+  );
+
+  useEffect(() => {
+    preferMobileSrcRef.current = preferMobileSrc;
+  }, [preferMobileSrc]);
+
+  useEffect(() => () => clearAdaptiveStreamTimers(), [clearAdaptiveStreamTimers]);
+
+  const streamWsUrl = useMemo(
+    () => applyWsStreamSrc(liveUrlFromApi, preferMobileSrc ? 'camera_mobile' : 'camera'),
+    [liveUrlFromApi, preferMobileSrc]
+  );
+
+  const streamHtmlUrl = useMemo(
+    () =>
+      streamWsUrl
+        ? Platform.OS === 'android'
+          ? buildStreamHtmlUrlForAndroid(streamWsUrl)
+          : buildStreamHtmlUrl(streamWsUrl)
+        : '',
+    [streamWsUrl]
+  );
 
   const isAndroidNativeHls = Platform.OS === 'android';
   const reloadNativePlayer = useCallback(() => {
     setVideoReloadKey((k) => k + 1);
+  }, []);
+
+  useEffect(() => {
+    const sub = NetInfo.addEventListener((s) => setIsCellularNetwork(s.type === 'cellular'));
+    NetInfo.fetch().then((s) => setIsCellularNetwork(s.type === 'cellular'));
+    return () => sub();
   }, []);
 
   // useLiveStream hook — auto-retry, heartbeat, NetInfo monitoring
@@ -100,6 +185,7 @@ const CameraLiveView: React.FC = () => {
     webViewRef,
     isLoading: isWebViewLoading,
     connectionStatus,
+    playerLoadPhase,
     isReconnecting,
     retryCount,
     handleWebViewLoad,
@@ -111,7 +197,10 @@ const CameraLiveView: React.FC = () => {
     markNativePlaybackFailed,
   } = useLiveStream({
     maxRetries: 5,
-    heartbeatTimeout: 30000,
+    heartbeatInterval: 10000,
+    heartbeatTimeout: isCellularNetwork ? 60000 : 45000,
+    initialGracePeriod: isCellularNetwork ? 14000 : 8000,
+    initialLoadingMax: isCellularNetwork ? 70000 : 55000,
     ...(isAndroidNativeHls && {
       playbackSurface: 'native-hls' as const,
       onReloadNativePlayer: reloadNativePlayer,
@@ -122,11 +211,94 @@ const CameraLiveView: React.FC = () => {
     () => (streamWsUrl ? buildHlsStreamUrlFromWs(streamWsUrl) : ''),
     [streamWsUrl]
   );
+  const useAndroidExoHls = isAndroidNativeHls && !!hlsUrl;
+
+  const handleNativeHlsBuffer = useCallback(
+    ({ isBuffering }: { isBuffering: boolean }) => {
+      if (isBuffering) {
+        streamDebugLog('nativeHlsBuffering');
+        clearStableDesktopTimer();
+        clearBufferingEscalateTimer();
+        bufferingEscalateTimerRef.current = setTimeout(() => {
+          bufferingEscalateTimerRef.current = null;
+          setPreferMobileSrc(true);
+          streamDebugLog('preferMobileSrcOn', { via: 'nativeHlsBuffering' });
+        }, BUFFER_ESCALATE_MS);
+      } else {
+        clearBufferingEscalateTimer();
+        if (preferMobileSrcRef.current && !stableDesktopTimerRef.current) {
+          stableDesktopTimerRef.current = setTimeout(() => {
+            stableDesktopTimerRef.current = null;
+            setPreferMobileSrc(false);
+            streamDebugLog('preferMobileSrcOff', { via: 'nativeHlsStable' });
+          }, STABLE_DESKTOP_MS);
+        }
+      }
+    },
+    [clearBufferingEscalateTimer, clearStableDesktopTimer]
+  );
+
+  useEffect(() => {
+    if (useAndroidExoHls || connectionStatus === 'failed') return undefined;
+    if (playerLoadPhase !== 'buffering') return undefined;
+    clearStableDesktopTimer();
+    clearBufferingEscalateTimer();
+    bufferingEscalateTimerRef.current = setTimeout(() => {
+      bufferingEscalateTimerRef.current = null;
+      setPreferMobileSrc(true);
+      streamDebugLog('preferMobileSrcOn', { via: 'playerLoadPhaseBuffering' });
+    }, BUFFER_ESCALATE_MS);
+    return () => clearBufferingEscalateTimer();
+  }, [
+    useAndroidExoHls,
+    connectionStatus,
+    playerLoadPhase,
+    clearBufferingEscalateTimer,
+    clearStableDesktopTimer,
+  ]);
+
+  useEffect(() => {
+    nativeHlsStallAttemptsRef.current = 0;
+  }, [hlsUrl]);
+
+  // Android Exo HLS: no WebView initialLoadingMax — recover if manifest/segments never reach onLoad.
+  useEffect(() => {
+    if (!useAndroidExoHls || !hlsUrl) {
+      return undefined;
+    }
+    if (connectionStatus !== 'connecting') {
+      return undefined;
+    }
+
+    const stallMs = isCellularNetwork ? 75000 : 55000;
+    const timer = setTimeout(() => {
+      if (nativeHlsStallAttemptsRef.current >= 2) {
+        streamDebugLog('nativeHlsStallGiveUp');
+        markNativePlaybackFailed();
+        return;
+      }
+      nativeHlsStallAttemptsRef.current += 1;
+      setPreferMobileSrc(true);
+      streamDebugLog('preferMobileSrcOn', { via: 'nativeHlsStall' });
+      streamDebugLog('nativeHlsStallReload', { attempt: nativeHlsStallAttemptsRef.current });
+      reloadNativePlayer();
+    }, stallMs);
+
+    return () => clearTimeout(timer);
+  }, [
+    useAndroidExoHls,
+    hlsUrl,
+    connectionStatus,
+    videoReloadKey,
+    isCellularNetwork,
+    reloadNativePlayer,
+    markNativePlaybackFailed,
+  ]);
+
   const micWebViewBaseUrl = useMemo(
     () => (streamWsUrl ? getStreamOriginBaseUrl(streamWsUrl) : ''),
     [streamWsUrl]
   );
-  const useAndroidExoHls = isAndroidNativeHls && !!hlsUrl;
 
   const { micState, toggleMic, stopMic, handleMicMessage } = useMic({
     micUrl: micUrl,
@@ -153,6 +325,23 @@ const CameraLiveView: React.FC = () => {
 
   // Derive live status: only "connected" means truly live
   const isLive = connectionStatus === 'connected' && !!streamHtmlUrl && !isWebViewLoading;
+
+  useEffect(() => {
+    isLiveRef.current = isLive;
+  }, [isLive]);
+
+  const streamLoadingMessage = useMemo(() => {
+    if (!streamHtmlUrl) {
+      return t('bluetoothScreen.connecting');
+    }
+    if (playerLoadPhase === 'buffering') {
+      return t('liveStream.bufferingStream');
+    }
+    if (playerLoadPhase === 'connecting') {
+      return t('liveStream.startingPlayer');
+    }
+    return t('liveStream.loadingStream');
+  }, [streamHtmlUrl, playerLoadPhase, t]);
 
   useEffect(() => {
     if (!isLive && isTalking) {
@@ -198,23 +387,23 @@ const CameraLiveView: React.FC = () => {
   const [fetchUrlError, setFetchUrlError] = useState(false);
   const fetchLiveUrl = useCallback(async () => {
     setFetchUrlError(false);
+    streamDebugLog('fetchLiveUrlStart', { cameraId });
     try {
       const res = await cameraService.getLiveStreamUrl(cameraId);
       if (res.success && res.data) {
+        streamDebugLog('fetchLiveUrlOk', { expMinutes: res.data.exp_minutes ?? null });
+        clearAdaptiveStreamTimers();
         setExpMinutes(res.data.exp_minutes ?? null);
-        setStreamWsUrl(res.data.live_url);
+        setLiveUrlFromApi(res.data.live_url);
+        setPreferMobileSrc(false);
         setMicUrl(res.data.mic || '');
-        const newHtmlUrl =
-          Platform.OS === 'android'
-            ? buildStreamHtmlUrlForAndroid(res.data.live_url)
-            : buildStreamHtmlUrl(res.data.live_url);
-        setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
       }
     } catch (e) {
       console.warn('getLiveStreamUrl failed:', e);
+      streamDebugLog('fetchLiveUrlError', { message: String(e) });
       setFetchUrlError(true);
     }
-  }, [cameraId]);
+  }, [cameraId, clearAdaptiveStreamTimers]);
 
   useEffect(() => {
     fetchLiveUrl();
@@ -356,7 +545,7 @@ const CameraLiveView: React.FC = () => {
           checkAndReload();
         }
       }, 3000);
-    }, 10000);
+    }, 28000);
 
     return () => {
       clearTimeout(graceTimer);
@@ -753,9 +942,12 @@ const CameraLiveView: React.FC = () => {
                     ignoreSilentSwitch="ignore"
                     playInBackground={false}
                     allowsExternalPlayback={false}
+                    onLoadStart={() => streamDebugLog('nativeHlsLoadStart')}
                     onLoad={() => markNativePlaybackConnected()}
+                    onBuffer={handleNativeHlsBuffer}
                     onError={(e) => {
                       console.warn('[CameraLive] ExoPlayer HLS error', e);
+                      streamDebugLog('nativeHlsOnError');
                       markNativePlaybackFailed();
                     }}
                   />
@@ -837,6 +1029,7 @@ const CameraLiveView: React.FC = () => {
                 onMessage={(event) => {
                   try {
                     const data = JSON.parse(event.nativeEvent.data);
+                    handleAdaptiveStreamPlayerMessage(data);
                     if (data.type === 'frameCaptured' && captureResolveRef.current) {
                       captureResolveRef.current(data.data || '');
                       return;
@@ -851,8 +1044,10 @@ const CameraLiveView: React.FC = () => {
                     }
                     if (data.type === 'videoDataCheck') {
                       hasVideoDataRef.current = data.hasData;
-                      if (!data.hasData) {
+                      // Only recover from black screen after we were live — avoid reload loops during slow 4G buffer.
+                      if (!data.hasData && isLiveRef.current) {
                         console.log('Black screen detected, auto-reloading stream...');
+                        streamDebugLog('videoDataCheckBlackReload');
                         fetchLiveUrl().then(() => handleManualRetry());
                       }
                       return;
@@ -886,18 +1081,14 @@ const CameraLiveView: React.FC = () => {
         {!isLive && !isReconnecting && !showErrorOverlay && !lastFrameBase64 && !fetchUrlError ? (
           <View style={[styles.videoContainer, styles.loadingOverlay]}>
             <ActivityIndicator size="small" color="#FFF" />
-            <Text style={styles.loadingText}>
-              {!streamHtmlUrl ? t('bluetoothScreen.connecting') : t('liveStream.loadingStream')}
-            </Text>
+            <Text style={styles.loadingText}>{streamLoadingMessage}</Text>
           </View>
         ) : null}
 
         {!isLive && !isReconnecting && !showErrorOverlay && lastFrameBase64 && !fetchUrlError ? (
           <View style={styles.loadingIndicatorOverlay}>
             <ActivityIndicator size="small" color="#FFF" />
-            <Text style={styles.loadingText}>
-              {!streamHtmlUrl ? t('bluetoothScreen.connecting') : t('liveStream.loadingStream')}
-            </Text>
+            <Text style={styles.loadingText}>{streamLoadingMessage}</Text>
           </View>
         ) : null}
 

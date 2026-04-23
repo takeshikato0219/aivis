@@ -1,4 +1,5 @@
-import axiosInstance from '@api/axiosConfig';
+import axiosInstance from '@api/axiosInstance';
+import { refreshAccessToken } from '@api/refreshAccessToken';
 import { API_ENDPOINTS } from '@api/apiEndpoints';
 import {
   ChangePasswordResponse,
@@ -57,10 +58,7 @@ class AuthService {
   async refreshToken(
     refreshToken: string
   ): Promise<{ access_token: string; refresh_token?: string }> {
-    const response = await axiosInstance.post(API_ENDPOINTS.AUTH.REFRESH_TOKEN, {
-      refresh_token: refreshToken,
-    });
-    return response.data.data || response.data;
+    return refreshAccessToken(refreshToken);
   }
 
   async logout(): Promise<void> {

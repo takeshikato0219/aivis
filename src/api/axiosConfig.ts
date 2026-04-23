@@ -1,21 +1,13 @@
-import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import ErrorHandler from '../utils/errorHandler';
 import NetworkMonitor from '../utils/networkMonitor';
-import { API_BASE_URL, API_ENDPOINTS } from './apiEndpoints';
+import { API_ENDPOINTS } from './apiEndpoints';
 import { store } from '@redux/store';
 import { getCurrentLanguage } from '@/i18n';
-import authService from '../services/authService';
+import { refreshAccessToken } from './refreshAccessToken';
+import axiosInstance from './axiosInstance';
 import { logout, setTokens } from '@redux/slices/authSlice';
 import { removeAuthData, updateTokens } from '@utils/authStorage';
-
-const axiosInstance: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
-  headers: {
-    accept: 'application/json',
-  },
-  withCredentials: false,
-});
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -127,7 +119,7 @@ axiosInstance.interceptors.response.use(
     }
 
     try {
-      const refreshResult = await authService.refreshToken(refreshToken);
+      const refreshResult = await refreshAccessToken(refreshToken);
       const newAccessToken = refreshResult.access_token;
       const newRefreshToken = refreshResult.refresh_token || refreshToken;
 

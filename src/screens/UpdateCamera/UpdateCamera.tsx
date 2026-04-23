@@ -51,13 +51,13 @@ const UpdateCamera = () => {
       if (response.success) {
         showCommonAlert({
           title: '',
-          message: response.message || t('common.success'),
+          message: t('updateCamera.updateWillBePerformedOnTheCamera'),
           buttons: [{ text: t('common.ok') }],
         });
       } else {
         showCommonAlert({
           title: '',
-          message: response.message || t('common.error'),
+          message: t('updateCamera.anErrorOccurredDuringTheUpdateProcess'),
           buttons: [{ text: t('common.ok') }],
         });
       }

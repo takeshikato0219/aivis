@@ -321,4 +321,8 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  styleCleanShotImage: {
+    width: 182,
+    height: 121,
+  },
 });

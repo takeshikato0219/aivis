@@ -1,7 +1,7 @@
 import { ComponentType } from 'react';
 
 /** Workflow types supported by Detail screen */
-export type WorkflowType = 'Family' | 'Store' | 'Enterprise';
+export type WorkflowType = 'Family' | 'Store' | 'Enterprise' | 'Hospital';
 
 /** Rule config for each workflow item (with handler injected) */
 export interface RuleConfig {
@@ -23,8 +23,8 @@ export function isEnterpriseAttendanceInOut(v: unknown): v is EnterpriseAttendan
     v !== null &&
     'in' in v &&
     'out' in v &&
-    typeof (v as EnterpriseAttendanceInOut).in === 'number' &&
-    typeof (v as EnterpriseAttendanceInOut).out === 'number'
+    typeof (v as { in: unknown; out: unknown }).in === 'number' &&
+    typeof (v as { in: unknown; out: unknown }).out === 'number'
   );
 }
 
@@ -60,8 +60,8 @@ export function isAttendanceSubcounts(v: unknown): v is AttendanceSubcounts {
   return (
     typeof v === 'object' &&
     v !== null &&
-    typeof (v as AttendanceSubcounts).checkin === 'number' &&
-    typeof (v as AttendanceSubcounts).checkout === 'number'
+    typeof (v as { checkin: unknown; checkout: unknown }).checkin === 'number' &&
+    typeof (v as { checkin: unknown; checkout: unknown }).checkout === 'number'
   );
 }
 
@@ -80,11 +80,15 @@ export interface StoreCountDetectionData {
 export interface EnterpriseCountDetectionData {
   people_count_ws_url: string;
   enterprise_attendance: number | EnterpriseAttendanceInOut;
-  unexpected_incident: number;
   helmet_wearing: number;
   mask_wearing: number;
   glove_wearing: number;
   restricted_area_intrusion: number;
+}
+
+/** Hospital workflow — same detection keys as Enterprise plus unexpected incident */
+export interface HospitalCountDetectionData extends EnterpriseCountDetectionData {
+  unexpected_incident: number;
 }
 
 /**
@@ -92,7 +96,10 @@ export interface EnterpriseCountDetectionData {
  * Use `key in data` (or similar) before reading a field.
  */
 export type CountDetectionData = Partial<
-  FamilyCountDetectionData & StoreCountDetectionData & EnterpriseCountDetectionData
+  FamilyCountDetectionData &
+    StoreCountDetectionData &
+    EnterpriseCountDetectionData &
+    HospitalCountDetectionData
 >;
 
 /** Filter/mode item for security mode tabs */

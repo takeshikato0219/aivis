@@ -34,6 +34,8 @@ jest.mock('../../src/utils/bleManagerSingleton', () => ({
     connectToDevice: jest.fn(),
     cancelDeviceConnection: jest.fn(),
     onDeviceDisconnected: jest.fn(),
+    state: jest.fn(),
+    onStateChange: jest.fn(),
   },
 }));
 
@@ -104,6 +106,14 @@ jest.mock('react-native', () => ({
     Version: 31,
   },
   PermissionsAndroid: mockPermissionsAndroid,
+  Alert: { alert: jest.fn() },
+}));
+
+jest.mock('@navigation/navigationRef', () => ({
+  navigationRef: {
+    isReady: jest.fn(() => false),
+    dispatch: jest.fn(),
+  },
 }));
 
 // Use real Buffer so stringToBase64 / base64 helpers in jetsonBLEService work
@@ -127,6 +137,7 @@ describe('JetsonBLEService', () => {
     (jetsonBLEService as any).isDisconnecting = false;
     (jetsonBLEService as any).isCleaningUp = false;
     (jetsonBLEService as any).netSetupTimeout = null;
+    (jetsonBLEService as any).connectionTimeoutAlertLock = false;
 
     (store.getState as jest.Mock).mockReturnValue({
       ble: { wifiScanStatus: 0, authStatus: AuthStatus.UNAUTHENTICATED },
@@ -168,6 +179,7 @@ describe('JetsonBLEService', () => {
     });
 
     (bleManager.connectToDevice as jest.Mock).mockResolvedValue(mockDevice);
+    (bleManager.connectedDevices as jest.Mock).mockResolvedValue([]);
     (mockDevice.monitorCharacteristicForService as jest.Mock).mockReturnValue(mockSubscription);
     (bleManager.onDeviceDisconnected as jest.Mock).mockReturnValue(mockSubscription);
 
@@ -179,6 +191,17 @@ describe('JetsonBLEService', () => {
     mockPermissionsAndroid.request.mockResolvedValue('granted');
     (Platform as any).OS = 'android';
     (Platform as any).Version = 31;
+
+    // jest resetMocks: true clears factory implementations — restore BLE state helpers used by checkExistingConnection.
+    (bleManager.state as jest.Mock).mockResolvedValue('PoweredOn');
+    (bleManager.onStateChange as jest.Mock).mockImplementation(
+      (listener: (s: string) => void, emitCurrentState?: boolean) => {
+        if (emitCurrentState) {
+          listener('PoweredOn');
+        }
+        return { remove: jest.fn() };
+      }
+    );
   });
 
   afterEach(() => {

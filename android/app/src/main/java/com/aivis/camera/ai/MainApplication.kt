@@ -1,4 +1,4 @@
-package com.timima01app
+package com.aivis.camera.ai
 
 import android.app.Application
 import com.facebook.react.PackageList

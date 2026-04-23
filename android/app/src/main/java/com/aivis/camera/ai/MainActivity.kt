@@ -1,4 +1,4 @@
-package com.timima01app
+package com.aivis.camera.ai
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

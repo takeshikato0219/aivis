@@ -15,7 +15,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Member, MemberRelationship } from '@/services/faceService';
 import { useTranslation } from 'react-i18next';
-import { MemberAvatar } from '@/components/MemberAvatar';
+import { MemberAvatar, MEMBER_AVATAR_LIST_DECODE_MAX } from '@/components/MemberAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './WorkSchedule.style';
 
@@ -258,6 +258,7 @@ export function GroupedMemberPicker({
                           <View style={styles.memberInfo}>
                             <MemberAvatar
                               uri={avatarUri}
+                              decodeMax={MEMBER_AVATAR_LIST_DECODE_MAX}
                               containerStyle={styles.memberAvatar}
                               imageStyle={styles.memberAvatar}
                               placeholderStyle={styles.memberAvatarPlaceholder}

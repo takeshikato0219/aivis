@@ -21,7 +21,66 @@ import { getCurrentLanguage } from '@/i18n';
 const MAX_RETRIES = 12;
 const STUCK_BEFORE_LOAD_START_MS = 22000;
 const FETCH_IMAGE_TIMEOUT_MS = 25000;
+/** Full-size avatar processing (detail screens, larger tiles). */
 const AVATAR_DECODE_MAX = 512;
+/**
+ * Smaller decode for dense lists (~36px avatars). Cuts native resize work vs full AVATAR_DECODE_MAX.
+ */
+export const MEMBER_AVATAR_LIST_DECODE_MAX = 192;
+
+/** Cap parallel download+decode so many list rows don’t compete with touch / navigation on JS + native bridge. */
+const AVATAR_LOAD_MAX_CONCURRENT = 3;
+
+class AvatarLoadSemaphore {
+  private active = 0;
+  private readonly waiters: Array<() => void> = [];
+
+  constructor(private readonly max: number) {}
+
+  acquire(): Promise<void> {
+    if (this.active < this.max) {
+      this.active++;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      this.waiters.push(() => {
+        this.active++;
+        resolve();
+      });
+    });
+  }
+
+  release(): void {
+    this.active--;
+    const next = this.waiters.shift();
+    if (next) {
+      next();
+    }
+  }
+}
+
+const avatarLoadSemaphore = new AvatarLoadSemaphore(AVATAR_LOAD_MAX_CONCURRENT);
+
+/** In-memory map: processed file URI on disk per logical image (uri + decode tier). Avoids re-download when props re-run (e.g. token refresh, parent re-render). */
+const resolvedAvatarFileByKey = new Map<string, string>();
+const AVATAR_RESOLVED_CACHE_MAX = 150;
+
+function avatarCacheKey(uri: string, decodeMax: number): string {
+  return `${uri}\0${decodeMax}`;
+}
+
+function rememberResolvedAvatar(cacheKey: string, fileUri: string) {
+  if (
+    resolvedAvatarFileByKey.size >= AVATAR_RESOLVED_CACHE_MAX &&
+    !resolvedAvatarFileByKey.has(cacheKey)
+  ) {
+    const first = resolvedAvatarFileByKey.keys().next().value as string | undefined;
+    if (first !== undefined) {
+      resolvedAvatarFileByKey.delete(first);
+    }
+  }
+  resolvedAvatarFileByKey.set(cacheKey, fileUri);
+}
 
 const styles = StyleSheet.create({
   root: { overflow: 'hidden' },
@@ -69,23 +128,6 @@ function isLikelyS3OrCdn(uri: string): boolean {
   }
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function extFromContentType(contentType: string | null): string {
-  const ct = (contentType || '').toLowerCase();
-  if (ct.includes('png')) return 'png';
-  if (ct.includes('webp')) return 'webp';
-  if (ct.includes('jpeg') || ct.includes('jpg')) return 'jpg';
-  return 'jpg';
-}
-
 function fileUriFromResizeResponse(r: ImageResizeResponse): string {
   const u = r.uri;
   return u.startsWith('file://') ? u : `file://${u}`;
@@ -99,15 +141,18 @@ function inputPathForResizer(r: ImageResizeResponse): string {
 /**
  * Avatars should be portrait (chiều dọc). After EXIF is baked in, if pixels are still landscape, rotate 90°.
  */
-async function ensurePortraitPixels(firstPass: ImageResizeResponse): Promise<string> {
+async function ensurePortraitPixels(
+  firstPass: ImageResizeResponse,
+  decodeMax: number
+): Promise<string> {
   if (firstPass.width <= firstPass.height) {
     return fileUriFromResizeResponse(firstPass);
   }
   const inputPath = inputPathForResizer(firstPass);
   const rotated = await ImageResizer.createResizedImage(
     inputPath,
-    AVATAR_DECODE_MAX,
-    AVATAR_DECODE_MAX,
+    decodeMax,
+    decodeMax,
     'JPEG',
     88,
     90,
@@ -120,12 +165,13 @@ async function ensurePortraitPixels(firstPass: ImageResizeResponse): Promise<str
 }
 
 /**
- * Download → temp file → resize (native decode applies EXIF orientation, so avatars aren’t sideways).
+ * Download → temp file (native, no base64 on JS thread) → resize (native decode applies EXIF orientation).
  */
 async function fetchResizeAndGetDisplayUri(
   uri: string,
   accessToken: string | null,
-  signal: AbortSignal
+  signal: AbortSignal,
+  decodeMax: number
 ): Promise<string | null> {
   const headers: Record<string, string> = { Accept: 'image/*' };
   const s3 = isLikelyS3OrCdn(uri);
@@ -136,48 +182,61 @@ async function fetchResizeAndGetDisplayUri(
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  const res = await fetch(uri, { headers, signal });
-  if (!res.ok) return null;
-  const buf = await res.arrayBuffer();
-  if (buf.byteLength === 0) return null;
-
-  const b64 = arrayBufferToBase64(buf);
-  const ext = extFromContentType(res.headers.get('content-type'));
-  const tmpIn = `${RNFS.CachesDirectoryPath}/ma_in_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-  await RNFS.writeFile(tmpIn, b64, 'base64');
+  const tmpIn = `${RNFS.CachesDirectoryPath}/ma_in_${Date.now()}_${Math.random().toString(36).slice(2)}.bin`;
 
   try {
-    const resized = await ImageResizer.createResizedImage(
-      tmpIn,
-      AVATAR_DECODE_MAX,
-      AVATAR_DECODE_MAX,
-      'JPEG',
-      88,
-      0,
-      undefined,
-      false,
-      { mode: 'contain', onlyScaleDown: true }
-    );
-    await RNFS.unlink(tmpIn).catch(() => {});
-    return ensurePortraitPixels(resized);
-  } catch {
-    try {
+    const { promise } = RNFS.downloadFile({
+      fromUrl: uri,
+      toFile: tmpIn,
+      headers,
+      readTimeout: FETCH_IMAGE_TIMEOUT_MS,
+      connectionTimeout: 15000,
+    });
+    const result = await promise;
+    if (signal.aborted) {
       await RNFS.unlink(tmpIn).catch(() => {});
-    } catch {
-      /* ignore */
+      return null;
     }
+    if (result.statusCode < 200 || result.statusCode >= 300 || !result.bytesWritten) {
+      await RNFS.unlink(tmpIn).catch(() => {});
+      return null;
+    }
+
+    try {
+      const resized = await ImageResizer.createResizedImage(
+        tmpIn,
+        decodeMax,
+        decodeMax,
+        'JPEG',
+        88,
+        0,
+        undefined,
+        false,
+        { mode: 'contain', onlyScaleDown: true }
+      );
+      await RNFS.unlink(tmpIn).catch(() => {});
+      return ensurePortraitPixels(resized, decodeMax);
+    } catch {
+      await RNFS.unlink(tmpIn).catch(() => {});
+      return null;
+    }
+  } catch {
+    await RNFS.unlink(tmpIn).catch(() => {});
     return null;
   }
 }
 
 /** Local file already on device — still run through resizer so EXIF orientation is applied to pixels. */
-async function localFileToOrientedDisplayUri(filePathOrUri: string): Promise<string | null> {
+async function localFileToOrientedDisplayUri(
+  filePathOrUri: string,
+  decodeMax: number
+): Promise<string | null> {
   const path = filePathOrUri.replace(/^file:\/\//, '');
   try {
     const resized = await ImageResizer.createResizedImage(
       path,
-      AVATAR_DECODE_MAX,
-      AVATAR_DECODE_MAX,
+      decodeMax,
+      decodeMax,
       'JPEG',
       88,
       0,
@@ -185,7 +244,7 @@ async function localFileToOrientedDisplayUri(filePathOrUri: string): Promise<str
       false,
       { mode: 'contain', onlyScaleDown: true }
     );
-    return ensurePortraitPixels(resized);
+    return ensurePortraitPixels(resized, decodeMax);
   } catch {
     return null;
   }
@@ -201,6 +260,8 @@ export type MemberAvatarProps = {
   iconColor: string;
   iconSize?: number;
   spinnerColor: string;
+  /** Max dimension for native resize (width & height). Lower = faster for small list thumbnails. Default 512. */
+  decodeMax?: number;
 };
 
 export function MemberAvatar({
@@ -213,8 +274,11 @@ export function MemberAvatar({
   iconColor,
   iconSize = 18,
   spinnerColor,
+  decodeMax = AVATAR_DECODE_MAX,
 }: MemberAvatarProps) {
   const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const accessTokenRef = useRef(accessToken);
+  accessTokenRef.current = accessToken;
   const [retryIndex, setRetryIndex] = useState(0);
   const [loading, setLoading] = useState(!!uri);
   const [photoVisible, setPhotoVisible] = useState(false);
@@ -267,58 +331,120 @@ export function MemberAvatar({
   useEffect(() => {
     if (!normalizedUri || givenUp) return undefined;
 
+    const cacheKey = avatarCacheKey(normalizedUri, decodeMax);
     let cancelled = false;
-    fetchAbortRef.current?.abort();
-    const ac = new AbortController();
-    fetchAbortRef.current = ac;
-    const timeoutId = setTimeout(() => ac.abort(), FETCH_IMAGE_TIMEOUT_MS);
 
-    setLoading(true);
-    setPhotoVisible(false);
-    setDisplayFileUri(null);
+    let fetchTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let deferredLoad: { cancel?: () => void } | undefined;
 
-    (async () => {
-      try {
-        if (/^https?:\/\//i.test(normalizedUri)) {
-          const fileUri = await fetchResizeAndGetDisplayUri(normalizedUri, accessToken, ac.signal);
-          clearTimeout(timeoutId);
-          if (cancelled) return;
-          if (fileUri) {
-            setDisplayFileUri(fileUri);
+    void (async () => {
+      const cached = resolvedAvatarFileByKey.get(cacheKey);
+      if (cached && retryIndex === 0) {
+        const path = cached.replace(/^file:\/\//, '');
+        try {
+          if (await RNFS.exists(path)) {
+            if (cancelled) return;
+            setDisplayFileUri(cached);
             setLoading(true);
-          } else {
-            retryOrGiveUp();
+            setPhotoVisible(false);
+            return;
           }
-          return;
+        } catch {
+          /* fall through to network */
         }
-
-        clearTimeout(timeoutId);
-        if (cancelled) return;
-        const local = normalizedUri.startsWith('file://')
-          ? normalizedUri
-          : `file://${normalizedUri}`;
-        const oriented = await localFileToOrientedDisplayUri(local);
-        if (cancelled) return;
-        if (oriented) {
-          setDisplayFileUri(oriented);
-          setLoading(true);
-        } else {
-          setDisplayFileUri(local);
-          setLoading(true);
-        }
-      } catch {
-        clearTimeout(timeoutId);
-        if (cancelled) return;
-        retryOrGiveUp();
+        resolvedAvatarFileByKey.delete(cacheKey);
       }
+
+      if (cancelled) return;
+
+      fetchAbortRef.current?.abort();
+      const ac = new AbortController();
+      fetchAbortRef.current = ac;
+
+      const immediateId = setImmediate(() => {
+        if (cancelled) return;
+
+        fetchTimeoutId = setTimeout(() => ac.abort(), FETCH_IMAGE_TIMEOUT_MS);
+
+        setLoading(true);
+        setPhotoVisible(false);
+        setDisplayFileUri(null);
+
+        void (async () => {
+          let slotHeld = false;
+          const clearFetchTimeout = () => {
+            if (fetchTimeoutId !== undefined) {
+              clearTimeout(fetchTimeoutId);
+              fetchTimeoutId = undefined;
+            }
+          };
+
+          try {
+            await avatarLoadSemaphore.acquire();
+            slotHeld = true;
+            if (cancelled || ac.signal.aborted) return;
+
+            try {
+              if (/^https?:\/\//i.test(normalizedUri)) {
+                const fileUri = await fetchResizeAndGetDisplayUri(
+                  normalizedUri,
+                  accessTokenRef.current,
+                  ac.signal,
+                  decodeMax
+                );
+                clearFetchTimeout();
+                if (cancelled) return;
+                if (fileUri) {
+                  rememberResolvedAvatar(cacheKey, fileUri);
+                  setDisplayFileUri(fileUri);
+                  setLoading(true);
+                } else {
+                  retryOrGiveUp();
+                }
+                return;
+              }
+
+              clearFetchTimeout();
+              if (cancelled) return;
+
+              const local = normalizedUri.startsWith('file://')
+                ? normalizedUri
+                : `file://${normalizedUri}`;
+              const oriented = await localFileToOrientedDisplayUri(local, decodeMax);
+              if (cancelled) return;
+              if (oriented) {
+                rememberResolvedAvatar(cacheKey, oriented);
+                setDisplayFileUri(oriented);
+                setLoading(true);
+              } else {
+                rememberResolvedAvatar(cacheKey, local);
+                setDisplayFileUri(local);
+                setLoading(true);
+              }
+            } catch {
+              clearFetchTimeout();
+              if (cancelled) return;
+              retryOrGiveUp();
+            }
+          } finally {
+            if (slotHeld) {
+              avatarLoadSemaphore.release();
+            }
+          }
+        })();
+      });
+      deferredLoad = { cancel: () => clearImmediate(immediateId) };
     })();
 
     return () => {
       cancelled = true;
-      clearTimeout(timeoutId);
-      ac.abort();
+      if (fetchTimeoutId !== undefined) {
+        clearTimeout(fetchTimeoutId);
+      }
+      fetchAbortRef.current?.abort();
+      deferredLoad?.cancel?.();
     };
-  }, [normalizedUri, retryIndex, accessToken, givenUp, retryOrGiveUp]);
+  }, [normalizedUri, retryIndex, givenUp, retryOrGiveUp, decodeMax]);
 
   useEffect(() => {
     if (!normalizedUri || givenUp || !loading || hasLoadStarted || !displayFileUri)

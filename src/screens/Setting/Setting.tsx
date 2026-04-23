@@ -78,15 +78,6 @@ const Setting = () => {
     }, [loadSubscriptionStatus])
   );
 
-  const checkLineLoginStatus = async (): Promise<boolean> => {
-    try {
-      return await LineSubscriptionService.isSignedIn();
-    } catch (error) {
-      console.error('Error checking LINE login status:', error);
-      return false;
-    }
-  };
-
   const updateUserWithLineId = async (userId: string): Promise<boolean> => {
     try {
       try {
@@ -182,13 +173,9 @@ const Setting = () => {
     try {
       const isUserLoggedInWithLine = !!user?.line_user_id;
       if (isUserLoggedInWithLine) {
-        const isLineLoggedIn = await checkLineLoginStatus();
-        if (!isLineLoggedIn) {
-          showLineLoginAlert();
-          setIsSubscribing(false);
-          return;
-        }
-        await performSubscription();
+        showLineLoginAlert();
+        setIsSubscribing(false);
+        return;
       } else {
         showLineAuthAlert();
         setIsSubscribing(false);

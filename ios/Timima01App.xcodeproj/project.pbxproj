@@ -15,6 +15,7 @@
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		D0E779682EB5DE6494798211 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		FE0A1B2C3D4E5F6000000004 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = FE0A1B2C3D4E5F6000000003 /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +34,8 @@
 		86F7E37ACCA2011799A11A75 /* Pods-Timima01App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Timima01App.release.xcconfig"; path = "Target Support Files/Pods-Timima01App/Pods-Timima01App.release.xcconfig"; sourceTree = "<group>"; };
 		DB7589D7F1495E898E1D1CF7 /* Pods-Timima01App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Timima01App.debug.xcconfig"; path = "Target Support Files/Pods-Timima01App/Pods-Timima01App.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		FE0A1B2C3D4E5F6000000001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Timima01App/en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		FE0A1B2C3D4E5F6000000002 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = Timima01App/ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,6 +62,7 @@
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 				032255272F68075A000EC2B9 /* GoogleService-Info.plist */,
+				FE0A1B2C3D4E5F6000000003 /* InfoPlist.strings */,
 			);
 			name = Timima01App;
 			sourceTree = "<group>";
@@ -156,6 +160,7 @@
 			knownRegions = (
 				en,
 				Base,
+				ja,
 			);
 			mainGroup = 83CBB9F61A601CBA00E9B192;
 			productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
@@ -176,6 +181,7 @@
 				032255282F68075A000EC2B9 /* GoogleService-Info.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				D0E779682EB5DE6494798211 /* PrivacyInfo.xcprivacy in Resources */,
+				FE0A1B2C3D4E5F6000000004 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -282,6 +288,18 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXVariantGroup section */
+		FE0A1B2C3D4E5F6000000003 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				FE0A1B2C3D4E5F6000000001 /* en */,
+				FE0A1B2C3D4E5F6000000002 /* ja */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -307,7 +325,7 @@
 					"-framework",
 					ReplayKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.timima01app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aivis.camera.ai;
 				PRODUCT_NAME = Timima01App;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -342,7 +360,7 @@
 					"-framework",
 					ReplayKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.timima01app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aivis.camera.ai;
 				PRODUCT_NAME = Timima01App;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

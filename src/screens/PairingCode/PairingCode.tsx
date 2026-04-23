@@ -76,6 +76,7 @@ const PairingCode: React.FC = () => {
 
     navigation.navigate('NetworkSetup', {
       cameraAp: device?.name || device?.localName || 'BLE Camera',
+      deviceId: device?.id,
     });
 
     setLoading(false);
