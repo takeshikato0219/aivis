@@ -2,8 +2,6 @@
 
 ソースコード上の各画面（`src/screens/`）の UI／props、ナビゲーション、ロジック・API 呼び出しをまとめた仕様書です。ルートパラメータは `src/navigation/types.ts`（`AppStackParamList`, `AuthStackParamList`）を参照してください。
 
-**ベトナム語版:** [`../vi/README.md`](../vi/README.md)
-
 ## 目次
 
 ### ルート・認証

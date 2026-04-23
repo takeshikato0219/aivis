@@ -1,10 +1,7 @@
-# 画面仕様ドキュメント / Tài liệu spec màn hình
+# 画面仕様ドキュメント
 
-| Ngôn ngữ | Thư mục | Mô tả |
-|----------|---------|--------|
-| Tiếng Việt | [`vi/`](./vi/README.md) | Bản gốc (tiếng Việt), cùng cấu trúc bảng spec. |
-| 日本語 | [`ja/`](./ja/README.md) | 日本語版（同一ファイル名）。 |
+各画面の仕様は [`ja/`](./ja/README.md) を参照してください。
 
-Mã nguồn màn hình: `src/screens/`。Tham số route: `src/navigation/types.ts`（`AppStackParamList`, `AuthStackParamList`）。
+画面のソース: `src/screens/`。ルートパラメータ: `src/navigation/types.ts`（`AppStackParamList`, `AuthStackParamList`）。
 
-**Cấu trúc:** `document/vi/` · `document/ja/` — mỗi thư mục chứa đầy đủ file `.md` spec cùng tên tệp.
+**構成:** `document/ja/` に各画面の `.md` 仕様ファイル（ファイル名は画面ごとに対応）があります。
