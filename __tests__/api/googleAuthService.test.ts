@@ -58,12 +58,12 @@ describe('GoogleAuthService', () => {
     it('should call configure on instantiation', () => {
       expect(mockGoogleSignin.configure).toHaveBeenCalledTimes(1);
       expect(mockGoogleSignin.configure).toHaveBeenCalledWith({
-        webClientId: '531701025722-l31am96d43d4povmpo746lf5t9tm39gv.apps.googleusercontent.com',
+        webClientId: '83904244147-bi1er9v9p7k7kufbhdcq8c3s629t444t.apps.googleusercontent.com',
         offlineAccess: true,
         hostedDomain: '',
         forceCodeForRefreshToken: true,
         accountName: '',
-        iosClientId: '531701025722-4kn96h41jre9ut0nf65e15t0117l3k20.apps.googleusercontent.com',
+        iosClientId: '83904244147-f764aoer68v5pop2sn9qu0ab25pm8a44.apps.googleusercontent.com',
         googleServicePlistPath: '',
         openIdRealm: '',
         profileImageSize: 120,
@@ -79,12 +79,12 @@ describe('GoogleAuthService', () => {
       service.configure();
 
       expect(mockGoogleSignin.configure).toHaveBeenCalledWith({
-        webClientId: '531701025722-l31am96d43d4povmpo746lf5t9tm39gv.apps.googleusercontent.com',
+        webClientId: '83904244147-bi1er9v9p7k7kufbhdcq8c3s629t444t.apps.googleusercontent.com',
         offlineAccess: true,
         hostedDomain: '',
         forceCodeForRefreshToken: true,
         accountName: '',
-        iosClientId: '531701025722-4kn96h41jre9ut0nf65e15t0117l3k20.apps.googleusercontent.com',
+        iosClientId: '83904244147-f764aoer68v5pop2sn9qu0ab25pm8a44.apps.googleusercontent.com',
         googleServicePlistPath: '',
         openIdRealm: '',
         profileImageSize: 120,
