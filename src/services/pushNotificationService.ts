@@ -345,15 +345,11 @@ class PushNotificationService {
   }
 
   /**
-   * Initialize push notifications - call on app startup when user is logged in
+   * Setup notification listeners and handle cold-start notification.
+   * Does NOT request permission — call this right after login.
    */
-  async init(): Promise<void> {
+  async setupListeners(): Promise<void> {
     try {
-      const token = await this.requestPermissionAndGetToken();
-      if (token) {
-        await this.registerTokenWithBackend(token);
-      }
-
       // Listen for foreground messages
       this.unsubscribeForeground = onMessage(messaging, async (remoteMessage) => {
         console.log('[PushNotification] Foreground message:', remoteMessage);
@@ -405,8 +401,32 @@ class PushNotificationService {
         }
       }
     } catch (error) {
-      console.error('[PushNotification] Init error:', error);
+      console.error('[PushNotification] setupListeners error:', error);
     }
+  }
+
+  /**
+   * Request notification permission and register FCM token with backend.
+   * Call this from inside the app (e.g. Home screen) after the user has logged in.
+   */
+  async requestPermissionAndRegister(): Promise<void> {
+    try {
+      const token = await this.requestPermissionAndGetToken();
+      if (token) {
+        await this.registerTokenWithBackend(token);
+      }
+    } catch (error) {
+      console.error('[PushNotification] requestPermissionAndRegister error:', error);
+    }
+  }
+
+  /**
+   * @deprecated Use setupListeners() + requestPermissionAndRegister() separately.
+   * Initialize push notifications - call on app startup when user is logged in.
+   */
+  async init(): Promise<void> {
+    await this.setupListeners();
+    await this.requestPermissionAndRegister();
   }
 
   /**

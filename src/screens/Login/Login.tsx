@@ -234,7 +234,12 @@ const Login: React.FC = () => {
   };
 
   const showBiometricEnablePrompt = async (loginResult: any) => {
-    if (!biometricInfo.available || isBiometricEnabled) {
+    if (!biometricInfo.available) {
+      return;
+    }
+
+    if (isBiometricEnabled) {
+      await disableBiometricLogin();
       await saveCredentials({
         accessToken: loginResult.accessToken,
         refreshToken: loginResult.refreshToken,
@@ -301,6 +306,8 @@ const Login: React.FC = () => {
       return;
     }
 
+    hasPromptedRef.current = true;
+
     try {
       const loginResult = await dispatch(
         loginAsync({
@@ -329,6 +336,8 @@ const Login: React.FC = () => {
       return;
     }
 
+    hasPromptedRef.current = true;
+
     try {
       const googleUser = await googleAuthService.signIn();
       const loginResult = await dispatch(
@@ -352,6 +361,8 @@ const Login: React.FC = () => {
       return;
     }
 
+    hasPromptedRef.current = true;
+
     try {
       const appleUser = await appleAuthService.signIn();
       const loginResult = await dispatch(
@@ -371,6 +382,8 @@ const Login: React.FC = () => {
       handleNetworkError();
       return;
     }
+
+    hasPromptedRef.current = true;
 
     try {
       const lineUser = await lineAuthService.signIn();

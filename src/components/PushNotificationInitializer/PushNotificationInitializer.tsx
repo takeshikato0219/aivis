@@ -15,7 +15,7 @@ const PushNotificationInitializer: React.FC<{ children: React.ReactNode }> = ({ 
 
   useEffect(() => {
     if (isAuthenticated) {
-      void pushNotificationService.init();
+      void pushNotificationService.setupListeners();
     } else {
       // User not logged in: first load or after logout → clear badge
       void appBadgeService.setBadgeCount(0);

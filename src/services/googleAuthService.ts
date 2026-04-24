@@ -14,8 +14,8 @@ export interface GoogleSignInResponse {
 }
 
 export class GoogleAuthService {
-  private webClientId = '531701025722-l31am96d43d4povmpo746lf5t9tm39gv.apps.googleusercontent.com';
-  private iosClientId = '531701025722-4kn96h41jre9ut0nf65e15t0117l3k20.apps.googleusercontent.com';
+  private webClientId = '83904244147-bi1er9v9p7k7kufbhdcq8c3s629t444t.apps.googleusercontent.com';
+  private iosClientId = '83904244147-f764aoer68v5pop2sn9qu0ab25pm8a44.apps.googleusercontent.com';
 
   constructor() {
     this.configure();
@@ -61,6 +61,7 @@ export class GoogleAuthService {
         },
       };
     } catch (error: any) {
+      console.log(error, statusCodes);
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         throw new Error(i18n.t('auth.userCancelledLogin'));
       } else if (error.code === statusCodes.IN_PROGRESS) {

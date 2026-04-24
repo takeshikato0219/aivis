@@ -66,7 +66,7 @@
               <category android:name="android.intent.category.DEFAULT" />
               <category android:name="android.intent.category.BROWSABLE" />
               <data
-                      android:scheme="line3rdp.com.aivis.camera.ai"
+                      android:scheme="line3rdp.jp.co.aivis.camera"
                       android:host="authorize" />
           </intent-filter>
       </activity>

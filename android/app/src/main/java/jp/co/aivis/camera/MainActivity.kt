@@ -1,4 +1,4 @@
-package com.aivis.camera.ai
+package jp.co.aivis.camera
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

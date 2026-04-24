@@ -1,4 +1,4 @@
-package com.aivis.camera.ai
+package jp.co.aivis.camera
 
 import android.app.Application
 import com.facebook.react.PackageList

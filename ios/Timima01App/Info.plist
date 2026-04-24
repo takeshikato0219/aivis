@@ -27,7 +27,7 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.531701025722-4kn96h41jre9ut0nf65e15t0117l3k20</string>
+				<string>com.googleusercontent.apps.83904244147-f764aoer68v5pop2sn9qu0ab25pm8a44</string>
 			</array>
 		</dict>
 		<dict>
@@ -37,7 +37,7 @@
 			<string>line3rdp</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>line3rdp.com.aivis.camera.ai</string>
+				<string>line3rdp.jp.co.aivis.camera</string>
 			</array>
 		</dict>
 	</array>

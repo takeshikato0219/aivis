@@ -309,7 +309,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Timima01App/Timima01App.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 859C8L46L7;
+				DEVELOPMENT_TEAM = 7LHWPMS74H;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Timima01App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
@@ -325,7 +325,7 @@
 					"-framework",
 					ReplayKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.aivis.camera.ai;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.co.aivis.camera;
 				PRODUCT_NAME = Timima01App;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -345,7 +345,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Timima01App/Timima01App.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 859C8L46L7;
+				DEVELOPMENT_TEAM = 7LHWPMS74H;
 				INFOPLIST_FILE = Timima01App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -360,7 +360,7 @@
 					"-framework",
 					ReplayKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.aivis.camera.ai;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.co.aivis.camera;
 				PRODUCT_NAME = Timima01App;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

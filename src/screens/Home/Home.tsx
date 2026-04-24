@@ -37,6 +37,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
 import notificationsService from '@/services/notificationsService';
 import { appBadgeService } from '@/services/appBadgeService';
+import { pushNotificationService } from '@/services/pushNotificationService';
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -67,6 +68,10 @@ const Home = () => {
 
   const { syncUserData } = useUserSync();
   useAppSetup({ screenName: 'Home' });
+
+  useEffect(() => {
+    void pushNotificationService.requestPermissionAndRegister();
+  }, []);
 
   useEffect(() => {
     fetchWorkflowStatuses();
