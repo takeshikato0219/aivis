@@ -100,7 +100,7 @@ class ErrorHandler {
 
   handleApiError(error: any, endpoint?: string): AppError {
     let errorType = ErrorType.API;
-    let message = error.message || 'An error occurred';
+    let message = 'An error occurred';
     let statusCode: number | undefined;
     let apiStatusCode: number | undefined;
     let apiResponse: any;
