@@ -18,4 +18,4 @@ NSFaceIDUsageDescription = "We need Face ID to securely log you in";
 /* Network & Location */
 NSLocalNetworkUsageDescription = "App needs access to local network for WiFi connections";
 NSLocationAlwaysUsageDescription = "App needs location access to scan WiFi networks";
-NSLocationWhenInUseUsageDescription = "App needs location access to scan WiFi networks";
+NSLocationWhenInUseUsageDescription = "Location is used to improve your experience while using the app.";

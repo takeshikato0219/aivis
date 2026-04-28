@@ -78,7 +78,7 @@
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>App needs location access to scan WiFi networks</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>Location is used to improve your experience while using the app.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>The app needs microphone access to communicate via the camera.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
