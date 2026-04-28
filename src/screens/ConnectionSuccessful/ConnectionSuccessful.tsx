@@ -36,6 +36,7 @@ import {
 } from '@navigation/types';
 import { CameraStatus } from '@api/types/cameraTypes';
 import {
+  applyWsStreamSrc,
   buildStreamHtmlUrl,
   buildStreamHtmlUrlForAndroid,
   buildHlsStreamUrlFromWs,
@@ -56,6 +57,9 @@ interface CameraInfo {
   thumbnail?: string;
 }
 
+const BUFFER_ESCALATE_MS = 6000;
+const STABLE_DESKTOP_MS = 15000;
+
 const ConnectionSuccessful: React.FC = () => {
   const responsive = useResponsive();
   const navigation = useNavigation<ConnectionSuccessfulScreenNavigationProp>();
@@ -66,21 +70,92 @@ const ConnectionSuccessful: React.FC = () => {
 
   const streamWidth = screenWidth - 40;
 
-  const [streamWsUrl, setStreamWsUrl] = useState('');
-  const [streamHtmlUrl, setStreamHtmlUrl] = useState('');
-  const [timeExp, setTimeExp] = useState<string | null>(null);
+  const [liveUrlFromApi, setLiveUrlFromApi] = useState('');
+  const [preferMobileSrc, setPreferMobileSrc] = useState(false);
+  const [expMinutes, setExpMinutes] = useState<number | null>(null);
   const [fetchUrlError, setFetchUrlError] = useState(false);
   const [videoReloadKey, setVideoReloadKey] = useState(0);
   const [isCellularNetwork, setIsCellularNetwork] = useState(false);
   const nativeHlsStallAttemptsRef = useRef(0);
+  const bufferingEscalateTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const stableDesktopTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const preferMobileSrcRef = useRef(false);
   const isLiveRef = useRef(false);
   const hasVideoDataRef = useRef(false);
   const androidVideoSurfaceRef = useRef<View>(null);
   const captureResolveRef = useRef<((base64: string) => void) | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const backgroundEnteredAtRef = useRef<number | null>(null);
-  const prevStreamUrlRef = useRef<string>(streamWsUrl || streamHtmlUrl);
+  const prevStreamUrlRef = useRef<string>('');
   const hasInitialStreamRef = useRef(false);
+
+  const clearBufferingEscalateTimer = useCallback(() => {
+    if (bufferingEscalateTimerRef.current) {
+      clearTimeout(bufferingEscalateTimerRef.current);
+      bufferingEscalateTimerRef.current = null;
+    }
+  }, []);
+
+  const clearStableDesktopTimer = useCallback(() => {
+    if (stableDesktopTimerRef.current) {
+      clearTimeout(stableDesktopTimerRef.current);
+      stableDesktopTimerRef.current = null;
+    }
+  }, []);
+
+  const clearAdaptiveStreamTimers = useCallback(() => {
+    clearBufferingEscalateTimer();
+    clearStableDesktopTimer();
+  }, [clearBufferingEscalateTimer, clearStableDesktopTimer]);
+
+  const handleAdaptiveStreamPlayerMessage = useCallback(
+    (data: { type?: string }) => {
+      const msgType = data.type;
+      if (msgType === 'buffering') {
+        clearStableDesktopTimer();
+        clearBufferingEscalateTimer();
+        bufferingEscalateTimerRef.current = setTimeout(() => {
+          bufferingEscalateTimerRef.current = null;
+          setPreferMobileSrc(true);
+          streamDebugLog('preferMobileSrcOn', { via: 'buffering' });
+        }, BUFFER_ESCALATE_MS);
+        return;
+      }
+      if (msgType === 'heartbeat' || msgType === 'playing' || msgType === 'connected') {
+        clearBufferingEscalateTimer();
+        if (!preferMobileSrcRef.current || stableDesktopTimerRef.current) {
+          return;
+        }
+        stableDesktopTimerRef.current = setTimeout(() => {
+          stableDesktopTimerRef.current = null;
+          setPreferMobileSrc(false);
+          streamDebugLog('preferMobileSrcOff', { via: 'playbackSignal' });
+        }, STABLE_DESKTOP_MS);
+      }
+    },
+    [clearBufferingEscalateTimer, clearStableDesktopTimer]
+  );
+
+  useEffect(() => {
+    preferMobileSrcRef.current = preferMobileSrc;
+  }, [preferMobileSrc]);
+
+  useEffect(() => () => clearAdaptiveStreamTimers(), [clearAdaptiveStreamTimers]);
+
+  const streamWsUrl = useMemo(
+    () => applyWsStreamSrc(liveUrlFromApi, preferMobileSrc ? 'camera_mobile' : 'camera'),
+    [liveUrlFromApi, preferMobileSrc]
+  );
+
+  const streamHtmlUrl = useMemo(
+    () =>
+      streamWsUrl
+        ? Platform.OS === 'android'
+          ? buildStreamHtmlUrlForAndroid(streamWsUrl)
+          : buildStreamHtmlUrl(streamWsUrl)
+        : '',
+    [streamWsUrl]
+  );
 
   const isAndroidNativeHls = Platform.OS === 'android';
   const reloadNativePlayer = useCallback(() => {
@@ -126,6 +201,50 @@ const ConnectionSuccessful: React.FC = () => {
   );
   const useAndroidExoHls = isAndroidNativeHls && !!hlsUrl;
 
+  const handleNativeHlsBuffer = useCallback(
+    ({ isBuffering }: { isBuffering: boolean }) => {
+      if (isBuffering) {
+        streamDebugLog('nativeHlsBuffering');
+        clearStableDesktopTimer();
+        clearBufferingEscalateTimer();
+        bufferingEscalateTimerRef.current = setTimeout(() => {
+          bufferingEscalateTimerRef.current = null;
+          setPreferMobileSrc(true);
+          streamDebugLog('preferMobileSrcOn', { via: 'nativeHlsBuffering' });
+        }, BUFFER_ESCALATE_MS);
+      } else {
+        clearBufferingEscalateTimer();
+        if (preferMobileSrcRef.current && !stableDesktopTimerRef.current) {
+          stableDesktopTimerRef.current = setTimeout(() => {
+            stableDesktopTimerRef.current = null;
+            setPreferMobileSrc(false);
+            streamDebugLog('preferMobileSrcOff', { via: 'nativeHlsStable' });
+          }, STABLE_DESKTOP_MS);
+        }
+      }
+    },
+    [clearBufferingEscalateTimer, clearStableDesktopTimer]
+  );
+
+  useEffect(() => {
+    if (useAndroidExoHls || connectionStatus === 'failed') return undefined;
+    if (playerLoadPhase !== 'buffering') return undefined;
+    clearStableDesktopTimer();
+    clearBufferingEscalateTimer();
+    bufferingEscalateTimerRef.current = setTimeout(() => {
+      bufferingEscalateTimerRef.current = null;
+      setPreferMobileSrc(true);
+      streamDebugLog('preferMobileSrcOn', { via: 'playerLoadPhaseBuffering' });
+    }, BUFFER_ESCALATE_MS);
+    return () => clearBufferingEscalateTimer();
+  }, [
+    useAndroidExoHls,
+    connectionStatus,
+    playerLoadPhase,
+    clearBufferingEscalateTimer,
+    clearStableDesktopTimer,
+  ]);
+
   useEffect(() => {
     nativeHlsStallAttemptsRef.current = 0;
   }, [hlsUrl]);
@@ -146,6 +265,8 @@ const ConnectionSuccessful: React.FC = () => {
         return;
       }
       nativeHlsStallAttemptsRef.current += 1;
+      setPreferMobileSrc(true);
+      streamDebugLog('preferMobileSrcOn', { via: 'nativeHlsStall' });
       streamDebugLog('nativeHlsStallReload', { attempt: nativeHlsStallAttemptsRef.current });
       reloadNativePlayer();
     }, stallMs);
@@ -194,30 +315,25 @@ const ConnectionSuccessful: React.FC = () => {
     try {
       const res = await cameraService.getLiveStreamUrl(cameraData.id);
       if (res.success && res.data) {
-        streamDebugLog('fetchLiveUrlOk', { hasTimeExp: !!res.data.time_exp });
-        setTimeExp(res.data.time_exp);
-        setStreamWsUrl(res.data.live_url);
-        const newHtmlUrl =
-          Platform.OS === 'android'
-            ? buildStreamHtmlUrlForAndroid(res.data.live_url)
-            : buildStreamHtmlUrl(res.data.live_url);
-        setStreamHtmlUrl((prev) => (prev === newHtmlUrl ? prev : newHtmlUrl));
+        streamDebugLog('fetchLiveUrlOk', { expMinutes: res.data.exp_minutes ?? null });
+        clearAdaptiveStreamTimers();
+        setExpMinutes(res.data.exp_minutes ?? null);
+        setLiveUrlFromApi(res.data.live_url);
+        setPreferMobileSrc(false);
       }
     } catch (error) {
       console.warn('getLiveStreamUrl failed:', error);
       streamDebugLog('fetchLiveUrlError', { message: String(error) });
       setFetchUrlError(true);
     }
-  }, [cameraData?.id]);
+  }, [cameraData?.id, clearAdaptiveStreamTimers]);
 
   useEffect(() => {
-    if (!timeExp) return;
-    const refreshMs = new Date(timeExp).getTime() - Date.now() - 2 * 60 * 1000;
-    if (refreshMs > 0) {
-      const timer = setTimeout(fetchLiveUrl, refreshMs);
-      return () => clearTimeout(timer);
-    }
-  }, [timeExp, fetchLiveUrl]);
+    if (!expMinutes || expMinutes <= 2) return;
+    const refreshMs = (expMinutes - 2) * 60 * 1000;
+    const timer = setTimeout(fetchLiveUrl, refreshMs);
+    return () => clearTimeout(timer);
+  }, [expMinutes, fetchLiveUrl]);
 
   useEffect(() => {
     fetchLiveUrl().catch(() => {});
@@ -490,15 +606,22 @@ const ConnectionSuccessful: React.FC = () => {
         }
       }
       cleanupLiveStream();
-      setStreamWsUrl('');
-      setStreamHtmlUrl('');
-      setTimeExp(null);
+      clearAdaptiveStreamTimers();
+      setLiveUrlFromApi('');
+      setPreferMobileSrc(false);
+      setExpMinutes(null);
       setFetchUrlError(false);
       hasInitialStreamRef.current = false;
       prevStreamUrlRef.current = '';
       setVideoReloadKey((k) => k + 1);
     }
-  }, [persistLastFrameOnLeave, cleanupLiveStream, useAndroidExoHls, webViewRef]);
+  }, [
+    persistLastFrameOnLeave,
+    cleanupLiveStream,
+    useAndroidExoHls,
+    webViewRef,
+    clearAdaptiveStreamTimers,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -608,11 +731,7 @@ const ConnectionSuccessful: React.FC = () => {
                     allowsExternalPlayback={false}
                     onLoadStart={() => streamDebugLog('nativeHlsLoadStart')}
                     onLoad={() => markNativePlaybackConnected()}
-                    onBuffer={({ isBuffering }) => {
-                      if (isBuffering) {
-                        streamDebugLog('nativeHlsBuffering');
-                      }
-                    }}
+                    onBuffer={handleNativeHlsBuffer}
                     onError={(e) => {
                       console.warn('[ConnectionSuccessful] ExoPlayer HLS error', e);
                       streamDebugLog('nativeHlsOnError');
@@ -650,6 +769,7 @@ const ConnectionSuccessful: React.FC = () => {
                 mixedContentMode="always"
                 setBuiltInZoomControls={false}
                 setSupportMultipleWindows={false}
+                mediaCapturePermissionGrantType="grant"
                 {...(Platform.OS === 'android' && {
                   androidLayerType: 'hardware',
                 })}
@@ -668,6 +788,7 @@ const ConnectionSuccessful: React.FC = () => {
                 onMessage={(event) => {
                   try {
                     const data = JSON.parse(event.nativeEvent.data);
+                    handleAdaptiveStreamPlayerMessage(data);
                     if (data.type === 'frameCaptured' && captureResolveRef.current) {
                       captureResolveRef.current(data.data || '');
                       return;

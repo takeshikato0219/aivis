@@ -43,9 +43,6 @@ export function getApiErrorDisplayMessage(error: any): string {
   return mainMessage;
 }
 
-/**
- * Format object errors từ API (vd: { "images.0": ["msg"], "field": ["msg"] }) thành chuỗi hiển thị.
- */
 export function formatApiValidationErrors(apiResponse?: ApiErrorResponse | null): string {
   const errors = apiResponse?.errors;
   if (!errors || typeof errors !== 'object') return '';
@@ -103,7 +100,7 @@ class ErrorHandler {
 
   handleApiError(error: any, endpoint?: string): AppError {
     let errorType = ErrorType.API;
-    let message = 'An error occurred';
+    let message = error.message || 'An error occurred';
     let statusCode: number | undefined;
     let apiStatusCode: number | undefined;
     let apiResponse: any;

@@ -18,4 +18,4 @@ NSFaceIDUsageDescription = "安全にログインするため、Face IDが必要
 /* Network & Location */
 NSLocalNetworkUsageDescription = "Wi-Fi接続のため、ローカルネットワークへのアクセスが必要です。";
 NSLocationAlwaysUsageDescription = "Wi-Fiネットワークをスキャンするため、位置情報へのアクセスが必要です。";
-NSLocationWhenInUseUsageDescription = "Wi-Fiネットワークをスキャンするため、位置情報へのアクセスが必要です。";
+NSLocationWhenInUseUsageDescription = "位置情報は、アプリの利用体験を向上させるために使用します。";
