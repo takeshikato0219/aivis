@@ -405,7 +405,7 @@ const EditProfile: React.FC = () => {
           value={agencyCodeInput.value}
           onChangeText={agencyCodeInput.handleChange}
           icon={ShopIconComponent}
-          placeholder={t('register.agencyCodePlaceholder')}
+          placeholder={t('register.agencyCode')}
           autoCapitalize="none"
           disabled={true}
           style={styles.input}
