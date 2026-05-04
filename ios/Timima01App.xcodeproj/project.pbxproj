@@ -128,6 +128,7 @@
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				6BD30025B29E8AD8115B25BB /* [CP] Embed Pods Frameworks */,
+				E7F4A2B81D5C4E90B3A2F1D0 /* Generate HermesVM dSYM for App Store */,
 				18C0CC1DA56C6399B1BD9983 /* [CP] Copy Pods Resources */,
 				40D1BA1FC04046BF2BC42779 /* [CP-User] [RNFB] Core Configuration */,
 			);
@@ -251,6 +252,21 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Timima01App/Pods-Timima01App-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		E7F4A2B81D5C4E90B3A2F1D0 /* Generate HermesVM dSYM for App Store */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Generate HermesVM dSYM for App Store";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"${SRCROOT}/scripts/generate-hermesvm-dsym.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 		FFC81A334F366530D92FB143 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -308,7 +324,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Timima01App/Timima01App.entitlements;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 7LHWPMS74H;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Timima01App/Info.plist;
@@ -344,7 +360,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Timima01App/Timima01App.entitlements;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 7LHWPMS74H;
 				INFOPLIST_FILE = Timima01App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
