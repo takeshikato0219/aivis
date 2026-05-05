@@ -2,6 +2,8 @@
 
 A production-ready React Native boilerplate featuring TypeScript, Redux Toolkit, Axios, robust error handling, unit testing, and GitLab CI/CD integration with SonarQube.
 
+**日本語:** [README.ja.md](./README.ja.md)
+
 ---
 
 ## 📋 Table of Contents
@@ -180,10 +182,11 @@ npm install             # or yarn install
 # iOS: Install CocoaPods
 cd ios && pod install && cd ..
 
-# Start Metro bundler and launch app
-yarn ios        # For iOS
-yarn android    # For Android
-yarn start      # Metro server
+# Start Metro and run the app (pick one column — they are equivalent after npm install)
+#   npm script          yarn           npx (local CLI)
+npm run ios              # yarn ios       # npx react-native run-ios
+npm run android          # yarn android   # npx react-native run-android
+npm start                # yarn start     # npx react-native start
 ```
 
 ---
